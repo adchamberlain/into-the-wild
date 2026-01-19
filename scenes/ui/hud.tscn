@@ -1,0 +1,28 @@
+[gd_scene load_steps=2 format=3 uid="uid://hud001"]
+
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
+
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="TimeContainer" type="VBoxContainer" parent="."]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -150.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = 80.0
+grow_horizontal = 0
+
+[node name="TimeLabel" type="Label" parent="TimeContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "8:00 AM"
+horizontal_alignment = 2
+
+[node name="PeriodLabel" type="Label" parent="TimeContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Morning"
+horizontal_alignment = 2

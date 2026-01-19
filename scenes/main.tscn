@@ -1,0 +1,118 @@
+[gd_scene load_steps=16 format=3 uid="uid://main001"]
+
+[ext_resource type="PackedScene" uid="uid://world001" path="res://scenes/world/world.tscn" id="1_world"]
+[ext_resource type="PackedScene" uid="uid://player001" path="res://scenes/player/player.tscn" id="2_player"]
+[ext_resource type="Script" path="res://scripts/world/time_manager.gd" id="3_time"]
+[ext_resource type="Script" path="res://scripts/world/environment_manager.gd" id="4_env"]
+[ext_resource type="PackedScene" uid="uid://hud001" path="res://scenes/ui/hud.tscn" id="5_hud"]
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+ambient_light_source = 2
+ambient_light_color = Color(1, 1, 1, 1)
+ambient_light_energy = 0.5
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
+size = Vector3(200, 1, 200)
+
+[sub_resource type="BoxMesh" id="BoxMesh_floor"]
+size = Vector3(200, 1, 200)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_floor"]
+albedo_color = Color(0.3, 0.55, 0.15, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_marker"]
+size = Vector3(1, 2, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_marker"]
+albedo_color = Color(0.6, 0.4, 0.2, 1)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_tree"]
+top_radius = 0.0
+bottom_radius = 1.5
+height = 3.0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tree"]
+albedo_color = Color(0.2, 0.4, 0.15, 1)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_trunk"]
+top_radius = 0.3
+bottom_radius = 0.4
+height = 2.0
+
+[node name="Main" type="Node3D"]
+
+[node name="TimeManager" type="Node" parent="."]
+script = ExtResource("3_time")
+day_length_minutes = 20.0
+start_hour = 8
+
+[node name="EnvironmentManager" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+script = ExtResource("4_env")
+time_manager_path = NodePath("../TimeManager")
+sun_light_path = NodePath("../DirectionalLight3D")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 20, 0)
+light_color = Color(1, 0.98, 0.95, 1)
+light_energy = 1.0
+shadow_enabled = true
+shadow_bias = 0.03
+directional_shadow_mode = 1
+directional_shadow_max_distance = 100.0
+
+[node name="World" parent="." instance=ExtResource("1_world")]
+
+[node name="Floor" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor"]
+shape = SubResource("BoxShape3D_floor")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Floor"]
+mesh = SubResource("BoxMesh_floor")
+material_override = SubResource("StandardMaterial3D_floor")
+
+[node name="Player" parent="." instance=ExtResource("2_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 0)
+
+[node name="Markers" type="Node3D" parent="."]
+
+[node name="Rock1" type="MeshInstance3D" parent="Markers"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 1, -5)
+mesh = SubResource("BoxMesh_marker")
+material_override = SubResource("StandardMaterial3D_marker")
+
+[node name="Rock2" type="MeshInstance3D" parent="Markers"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 1, 3)
+mesh = SubResource("BoxMesh_marker")
+material_override = SubResource("StandardMaterial3D_marker")
+
+[node name="Rock3" type="MeshInstance3D" parent="Markers"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 1, 10)
+mesh = SubResource("BoxMesh_marker")
+material_override = SubResource("StandardMaterial3D_marker")
+
+[node name="Tree1Trunk" type="MeshInstance3D" parent="Markers"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 1, -8)
+mesh = SubResource("CylinderMesh_trunk")
+material_override = SubResource("StandardMaterial3D_marker")
+
+[node name="Tree1Top" type="MeshInstance3D" parent="Markers"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 3.5, -8)
+mesh = SubResource("CylinderMesh_tree")
+material_override = SubResource("StandardMaterial3D_tree")
+
+[node name="Tree2Trunk" type="MeshInstance3D" parent="Markers"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 1, 5)
+mesh = SubResource("CylinderMesh_trunk")
+material_override = SubResource("StandardMaterial3D_marker")
+
+[node name="Tree2Top" type="MeshInstance3D" parent="Markers"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 3.5, 5)
+mesh = SubResource("CylinderMesh_tree")
+material_override = SubResource("StandardMaterial3D_tree")
+
+[node name="HUD" parent="." instance=ExtResource("5_hud")]
+time_manager_path = NodePath("../TimeManager")
