@@ -1,0 +1,56 @@
+{
+  "resources": {
+    "branch": {
+      "name": "Branch",
+      "category": "wood",
+      "description": "A fallen tree branch. Useful for fires and simple tools.",
+      "gather_amount": 1,
+      "interaction_text": "Gather",
+      "edible": false
+    },
+    "river_rock": {
+      "name": "River Rock",
+      "category": "stone",
+      "description": "A smooth stone from the riverbed. Good for tools and fire rings.",
+      "gather_amount": 1,
+      "interaction_text": "Pick up",
+      "edible": false
+    },
+    "berry": {
+      "name": "Wild Berry",
+      "category": "plant",
+      "description": "Edible berries found on bushes. Restores a small amount of hunger.",
+      "gather_amount": 3,
+      "interaction_text": "Pick",
+      "edible": true,
+      "hunger_restore": 15
+    },
+    "mushroom": {
+      "name": "Mushroom",
+      "category": "plant",
+      "description": "A forest mushroom. Can be eaten raw or cooked.",
+      "gather_amount": 1,
+      "interaction_text": "Pick",
+      "edible": true,
+      "hunger_restore": 10
+    }
+  },
+  "categories": {
+    "wood": {
+      "name": "Wood",
+      "color": [0.55, 0.35, 0.2]
+    },
+    "stone": {
+      "name": "Stone",
+      "color": [0.5, 0.5, 0.5]
+    },
+    "plant": {
+      "name": "Plants",
+      "color": [0.3, 0.6, 0.3]
+    }
+  },
+  "food_values": {
+    "berry": 15,
+    "mushroom": 10
+  }
+}

@@ -1,6 +1,9 @@
-[gd_scene load_steps=4 format=3 uid="uid://player001"]
+[gd_scene load_steps=7 format=3 uid="uid://player001"]
 
 [ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="1_player"]
+[ext_resource type="Script" path="res://scripts/player/inventory.gd" id="2_inventory"]
+[ext_resource type="Script" path="res://scripts/player/player_stats.gd" id="3_stats"]
+[ext_resource type="Script" path="res://scripts/player/equipment.gd" id="4_equipment"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
 radius = 0.4
@@ -25,3 +28,16 @@ mesh = SubResource("CapsuleMesh_1")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
 current = true
 fov = 75.0
+
+[node name="InteractionRay" type="RayCast3D" parent="Camera3D"]
+target_position = Vector3(0, 0, -3)
+collision_mask = 1
+
+[node name="Inventory" type="Node" parent="."]
+script = ExtResource("2_inventory")
+
+[node name="PlayerStats" type="Node" parent="."]
+script = ExtResource("3_stats")
+
+[node name="Equipment" type="Node" parent="."]
+script = ExtResource("4_equipment")

@@ -1,28 +1,216 @@
-[gd_scene load_steps=2 format=3 uid="uid://hud001"]
+[gd_scene load_steps=5 format=3 uid="uid://hud001"]
 
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health_bg"]
+bg_color = Color(0.3, 0.1, 0.1, 0.8)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health_fill"]
+bg_color = Color(0.8, 0.2, 0.2, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hunger_bg"]
+bg_color = Color(0.25, 0.2, 0.1, 0.8)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hunger_fill"]
+bg_color = Color(0.85, 0.6, 0.2, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1_hud")
+
+[node name="StatsContainer" type="VBoxContainer" parent="."]
+anchors_preset = 0
+offset_left = 30.0
+offset_top = 30.0
+offset_right = 380.0
+offset_bottom = 150.0
+
+[node name="HealthContainer" type="HBoxContainer" parent="StatsContainer"]
+layout_mode = 2
+
+[node name="HealthLabel" type="Label" parent="StatsContainer/HealthContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.4, 0.4, 1)
+theme_override_font_sizes/font_size = 32
+text = "HP"
+
+[node name="HealthBar" type="ProgressBar" parent="StatsContainer/HealthContainer"]
+custom_minimum_size = Vector2(280, 35)
+layout_mode = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_health_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_health_fill")
+max_value = 100.0
+value = 100.0
+show_percentage = false
+
+[node name="HungerContainer" type="HBoxContainer" parent="StatsContainer"]
+layout_mode = 2
+
+[node name="HungerLabel" type="Label" parent="StatsContainer/HungerContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.75, 0.4, 1)
+theme_override_font_sizes/font_size = 32
+text = "FD"
+
+[node name="HungerBar" type="ProgressBar" parent="StatsContainer/HungerContainer"]
+custom_minimum_size = Vector2(280, 35)
+layout_mode = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_hunger_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_hunger_fill")
+max_value = 100.0
+value = 100.0
+show_percentage = false
 
 [node name="TimeContainer" type="VBoxContainer" parent="."]
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -150.0
-offset_top = 20.0
-offset_right = -20.0
-offset_bottom = 80.0
+offset_left = -280.0
+offset_top = 30.0
+offset_right = -30.0
+offset_bottom = 140.0
 grow_horizontal = 0
 
 [node name="TimeLabel" type="Label" parent="TimeContainer"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 48
 text = "8:00 AM"
 horizontal_alignment = 2
 
 [node name="PeriodLabel" type="Label" parent="TimeContainer"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 32
 text = "Morning"
+horizontal_alignment = 2
+
+[node name="InteractionPrompt" type="Label" parent="."]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -250.0
+offset_top = -120.0
+offset_right = 250.0
+offset_bottom = -60.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.7)
+theme_override_constants/shadow_offset_x = 3
+theme_override_constants/shadow_offset_y = 3
+theme_override_font_sizes/font_size = 48
+text = "[E] Gather Branch"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="InventoryPanel" type="PanelContainer" parent="."]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 30.0
+offset_top = -400.0
+offset_right = 400.0
+offset_bottom = -30.0
+grow_vertical = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="InventoryPanel"]
+layout_mode = 2
+
+[node name="InventoryTitle" type="Label" parent="InventoryPanel/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 0.8, 1)
+theme_override_font_sizes/font_size = 42
+text = "Inventory"
+
+[node name="Separator" type="HSeparator" parent="InventoryPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="ItemList" type="VBoxContainer" parent="InventoryPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="EmptyLabel" type="Label" parent="InventoryPanel/VBoxContainer/ItemList"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_font_sizes/font_size = 36
+text = "(empty)"
+
+[node name="EquippedContainer" type="VBoxContainer" parent="."]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -350.0
+offset_top = -120.0
+offset_right = -30.0
+offset_bottom = -30.0
+grow_horizontal = 0
+grow_vertical = 0
+
+[node name="EquippedLabel" type="Label" parent="EquippedContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.9, 1, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.7)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 32
+text = "Equipped: None"
+horizontal_alignment = 2
+
+[node name="EquipHintLabel" type="Label" parent="EquippedContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+theme_override_font_sizes/font_size = 24
+text = "[1-4] Equip  [Q] Unequip  [R] Use"
+horizontal_alignment = 2
+
+[node name="ControlsContainer" type="VBoxContainer" parent="."]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -420.0
+offset_top = 140.0
+offset_right = -30.0
+offset_bottom = 600.0
+grow_horizontal = 0
+
+[node name="ControlsTitle" type="Label" parent="ControlsContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 0.8, 1)
+theme_override_font_sizes/font_size = 38
+text = "Controls"
+horizontal_alignment = 2
+
+[node name="ControlsList" type="Label" parent="ControlsContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.75, 0.75, 1)
+theme_override_font_sizes/font_size = 32
+text = "WASD - Move
+Space - Jump
+Shift - Sprint
+E - Interact/Gather
+F - Eat food
+C - Crafting menu
+Q - Unequip
+R - Use/Chop/Place
+1 - Torch
+2 - Stone Axe
+3 - Campfire Kit
+4 - Rope"
 horizontal_alignment = 2

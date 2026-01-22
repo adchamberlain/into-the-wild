@@ -1,5 +1,8 @@
 extends CharacterBody3D
-## First-person player controller with WASD movement, mouse look, jumping, and sprinting.
+## First-person player controller with WASD movement, mouse look, jumping, sprinting, and interaction.
+
+signal interaction_target_changed(target: Node, interaction_text: String)
+signal interaction_cleared()
 
 # Movement settings
 @export var walk_speed: float = 5.0
@@ -11,14 +14,29 @@ extends CharacterBody3D
 @export var camera_pitch_min: float = -89.0
 @export var camera_pitch_max: float = 89.0
 
+# Interaction settings
+@export var interaction_distance: float = 3.0
+
 # Node references
 @onready var camera: Camera3D = $Camera3D
 @onready var head: Node3D = $Camera3D
+@onready var interaction_ray: RayCast3D = $Camera3D/InteractionRay
+@onready var inventory: Inventory = $Inventory
+@onready var stats: PlayerStats = $PlayerStats
+@onready var equipment: Equipment = $Equipment
 
 # State
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 var current_speed: float = walk_speed
 var is_sprinting: bool = false
+var current_interaction_target: Node = null
+
+# Food values (hunger restored per item)
+const FOOD_VALUES: Dictionary = {
+	"berry": 15.0,
+	"mushroom": 10.0,
+	"berry_pouch": 40.0,
+}
 
 
 func _ready() -> void:
@@ -27,19 +45,35 @@ func _ready() -> void:
 	# Ensure camera is active
 	if camera:
 		camera.current = true
+	# Setup interaction raycast
+	if interaction_ray:
+		interaction_ray.target_position = Vector3(0, 0, -interaction_distance)
+		interaction_ray.enabled = true
 
 
 func _input(event: InputEvent) -> void:
 	# Handle mouse look
 	if event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
 		_handle_mouse_look(event)
+		return
 
 	# Toggle mouse capture with Escape
-	if event.is_action_pressed("ui_cancel"):
+	if event is InputEventKey and event.pressed and not event.echo and event.is_action("ui_cancel"):
 		if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
 			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 		else:
 			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+
+	# Handle interaction (E key)
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.is_action("interact") or event.physical_keycode == KEY_E:
+			_try_interact()
+		# Handle eating (F key)
+		if event.physical_keycode == KEY_F:
+			_try_eat()
+		# Handle using equipped item (R key) - for placing campfire, etc.
+		if event.physical_keycode == KEY_R:
+			_try_use_equipped()
 
 
 func _handle_mouse_look(event: InputEventMouseMotion) -> void:
@@ -94,6 +128,84 @@ func _physics_process(delta: float) -> void:
 		velocity.z = move_toward(velocity.z, 0, current_speed)
 
 	move_and_slide()
+
+	# Update interaction target
+	_update_interaction_target()
+
+
+func _update_interaction_target() -> void:
+	if not interaction_ray:
+		return
+
+	var new_target: Node = null
+
+	if interaction_ray.is_colliding():
+		var collider: Node = interaction_ray.get_collider()
+		# Check if collider is interactable
+		if collider and collider.is_in_group("interactable"):
+			new_target = collider
+
+	# Only emit signals if target changed
+	if new_target != current_interaction_target:
+		current_interaction_target = new_target
+		if current_interaction_target:
+			var interaction_text: String = _get_interaction_text(current_interaction_target)
+			interaction_target_changed.emit(current_interaction_target, interaction_text)
+		else:
+			interaction_cleared.emit()
+
+
+func _get_interaction_text(target: Node) -> String:
+	if target.has_method("get_interaction_text"):
+		return target.get_interaction_text()
+	return "Interact"
+
+
+func _try_interact() -> void:
+	if current_interaction_target and current_interaction_target.has_method("interact"):
+		current_interaction_target.interact(self)
+
+
+func get_inventory() -> Inventory:
+	return inventory
+
+
+func get_stats() -> PlayerStats:
+	return stats
+
+
+func get_equipment() -> Equipment:
+	return equipment
+
+
+func _try_use_equipped() -> void:
+	if equipment:
+		equipment.use_equipped()
+
+
+func _try_eat() -> void:
+	if not inventory or not stats:
+		return
+
+	# Try to eat any available food, prioritizing items with most hunger restore
+	var best_food: String = ""
+	var best_value: float = 0.0
+
+	for food_type: String in FOOD_VALUES:
+		if inventory.has_item(food_type) and FOOD_VALUES[food_type] > best_value:
+			best_food = food_type
+			best_value = FOOD_VALUES[food_type]
+
+	if best_food != "":
+		# Only eat if not already full
+		if stats.hunger < stats.max_hunger:
+			inventory.remove_item(best_food, 1)
+			stats.eat(best_value)
+			print("[Player] Ate 1 %s" % best_food)
+		else:
+			print("[Player] Already full, can't eat")
+	else:
+		print("[Player] No food in inventory")
 
 
 func _notification(what: int) -> void:
