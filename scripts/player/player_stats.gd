@@ -22,6 +22,14 @@ signal player_died()
 var health: float = 100.0
 var hunger: float = 100.0
 
+# Config toggles (set by ConfigMenu)
+var hunger_depletion_enabled: bool = false
+var health_drain_enabled: bool = false
+var weather_damage_enabled: bool = false
+
+# Weather effects
+var hunger_multiplier: float = 1.0
+
 # Reference to player for checking sprint state
 var player: CharacterBody3D
 
@@ -42,7 +50,13 @@ func _process(delta: float) -> void:
 
 
 func _update_hunger(delta: float) -> void:
+	if not hunger_depletion_enabled:
+		return
+
 	var depletion: float = hunger_depletion_rate
+
+	# Apply weather multiplier (e.g., heat wave)
+	depletion *= hunger_multiplier
 
 	# Check if player is sprinting
 	if player and "is_sprinting" in player and player.is_sprinting:
@@ -58,8 +72,8 @@ func _update_hunger(delta: float) -> void:
 func _update_health(delta: float) -> void:
 	var old_health: float = health
 
-	if hunger <= 0.0:
-		# Starving: drain health
+	if hunger <= 0.0 and health_drain_enabled:
+		# Starving: drain health (only if enabled)
 		health = max(0.0, health - health_drain_rate * delta)
 	elif hunger >= max_hunger:
 		# Full: regenerate health

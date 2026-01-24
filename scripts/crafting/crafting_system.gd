@@ -58,6 +58,20 @@ func _load_recipes() -> void:
 			"output_type": "berry_pouch",
 			"output_amount": 1,
 			"description": "Concentrated berries. Restores more hunger."
+		},
+		"shelter_kit": {
+			"name": "Shelter Kit",
+			"inputs": {"branch": 6, "rope": 2},
+			"output_type": "shelter_kit",
+			"output_amount": 1,
+			"description": "Materials to build a basic lean-to shelter."
+		},
+		"storage_box": {
+			"name": "Storage Box",
+			"inputs": {"wood": 4, "rope": 1},
+			"output_type": "storage_box",
+			"output_amount": 1,
+			"description": "A wooden box to store extra items."
 		}
 	}
 

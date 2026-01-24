@@ -3,10 +3,15 @@ extends CanvasLayer
 
 @export var time_manager_path: NodePath
 @export var player_path: NodePath
+@export var campsite_manager_path: NodePath
+@export var weather_manager_path: NodePath
 
 # Time display
 @onready var time_label: Label = $TimeContainer/TimeLabel
 @onready var period_label: Label = $TimeContainer/PeriodLabel
+@onready var campsite_level_label: Label = $TimeContainer/CampsiteLevelLabel
+@onready var weather_label: Label = $TimeContainer/WeatherLabel
+@onready var protection_label: Label = $TimeContainer/ProtectionLabel
 
 # Interaction
 @onready var interaction_prompt: Label = $InteractionPrompt
@@ -28,6 +33,12 @@ var player: Node
 var inventory: Node
 var stats: Node
 var equipment: Node
+var campsite_manager: Node
+var weather_manager: Node
+
+# Weather damage flash
+var weather_damage_flash_timer: float = 0.0
+var last_player_health: float = 100.0
 
 # Cache of item labels for quick updates
 var item_labels: Dictionary = {}
@@ -72,6 +83,27 @@ func _ready() -> void:
 				equipment.item_equipped.connect(_on_item_equipped)
 				equipment.item_unequipped.connect(_on_item_unequipped)
 
+	# Connect to campsite manager
+	if campsite_manager_path:
+		campsite_manager = get_node_or_null(campsite_manager_path)
+	if not campsite_manager and player:
+		# Try to find campsite manager as sibling of player
+		campsite_manager = player.get_parent().get_node_or_null("CampsiteManager")
+	if campsite_manager:
+		if campsite_manager.has_signal("campsite_level_changed"):
+			campsite_manager.campsite_level_changed.connect(_on_campsite_level_changed)
+		_update_campsite_level_display()
+
+	# Connect to weather manager
+	if weather_manager_path:
+		weather_manager = get_node_or_null(weather_manager_path)
+	if not weather_manager and player:
+		weather_manager = player.get_parent().get_node_or_null("WeatherManager")
+	if weather_manager:
+		if weather_manager.has_signal("weather_changed"):
+			weather_manager.weather_changed.connect(_on_weather_changed)
+		_update_weather_display()
+
 	# Hide interaction prompt initially
 	if interaction_prompt:
 		interaction_prompt.visible = false
@@ -79,6 +111,8 @@ func _ready() -> void:
 	# Initialize displays
 	_update_inventory_display()
 	_update_equipped_display()
+	_update_campsite_level_display()
+	_update_weather_display()
 
 
 func _update_time_display() -> void:
@@ -143,7 +177,8 @@ func _update_equipped_display() -> void:
 		equipped_label.text = "Equipped: " + item_name
 
 		# Add hint for placeable items
-		if equipment.get_equipped() == "campfire_kit":
+		var equipped_type: String = equipment.get_equipped()
+		if equipped_type in ["campfire_kit", "shelter_kit", "storage_box"]:
 			equipped_label.text += " [R to place]"
 	else:
 		equipped_label.text = "Equipped: None"
@@ -195,3 +230,93 @@ func _update_inventory_display() -> void:
 		var label: Label = item_labels[resource_type]
 		label.queue_free()
 		item_labels.erase(resource_type)
+
+
+func _on_campsite_level_changed(new_level: int) -> void:
+	_update_campsite_level_display()
+
+
+func _update_campsite_level_display() -> void:
+	if not campsite_level_label:
+		return
+
+	if campsite_manager:
+		var level: int = campsite_manager.get_level()
+		var description: String = campsite_manager.get_level_description()
+		campsite_level_label.text = "Camp Lvl %d: %s" % [level, description]
+	else:
+		campsite_level_label.text = "Camp Lvl 1"
+
+
+func _process(delta: float) -> void:
+	# Update protection status continuously
+	_update_protection_display()
+
+	# Handle weather damage flash
+	if weather_damage_flash_timer > 0:
+		weather_damage_flash_timer -= delta
+		if weather_damage_flash_timer <= 0:
+			_reset_damage_flash()
+
+	# Check for weather damage (health decreased)
+	if stats:
+		if stats.health < last_player_health:
+			# Player took damage, check if from weather
+			if weather_manager and weather_manager.is_dangerous_weather() and not weather_manager.is_player_protected():
+				_trigger_damage_flash()
+		last_player_health = stats.health
+
+
+func _on_weather_changed(weather_type: String) -> void:
+	_update_weather_display()
+
+
+func _update_weather_display() -> void:
+	if not weather_label:
+		return
+
+	if weather_manager:
+		var weather_name: String = weather_manager.get_weather_name()
+		var is_dangerous: bool = weather_manager.is_dangerous_weather()
+
+		weather_label.text = "Weather: " + weather_name
+
+		# Color code dangerous weather
+		if is_dangerous:
+			weather_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.4, 1))
+		else:
+			weather_label.add_theme_color_override("font_color", Color(0.7, 0.85, 1.0, 1))
+	else:
+		weather_label.text = "Weather: Clear"
+
+
+func _update_protection_display() -> void:
+	if not protection_label:
+		return
+
+	if weather_manager:
+		var status: String = weather_manager.get_protection_status()
+		var is_protected: bool = weather_manager.is_player_protected()
+		var is_dangerous: bool = weather_manager.is_dangerous_weather()
+
+		protection_label.text = status
+
+		# Color based on danger level
+		if is_dangerous and not is_protected:
+			protection_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3, 1))
+		elif is_protected:
+			protection_label.add_theme_color_override("font_color", Color(0.4, 1.0, 0.4, 1))
+		else:
+			protection_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7, 1))
+	else:
+		protection_label.text = ""
+
+
+func _trigger_damage_flash() -> void:
+	weather_damage_flash_timer = 0.3
+	if protection_label:
+		protection_label.add_theme_color_override("font_color", Color(1.0, 0.0, 0.0, 1))
+
+
+func _reset_damage_flash() -> void:
+	_update_protection_display()

@@ -1,0 +1,33 @@
+[gd_scene load_steps=6 format=3 uid="uid://storage001"]
+
+[ext_resource type="Script" path="res://scripts/campsite/structure_storage.gd" id="1_storage"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_collision"]
+size = Vector3(1.0, 0.6, 0.6)
+
+[sub_resource type="BoxMesh" id="BoxMesh_body"]
+size = Vector3(1.0, 0.6, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wood"]
+albedo_color = Color(0.6, 0.4, 0.25, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_lid"]
+size = Vector3(1.02, 0.08, 0.62)
+
+[node name="StorageContainer" type="StaticBody3D"]
+script = ExtResource("1_storage")
+max_slots = 20
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+shape = SubResource("BoxShape3D_collision")
+
+[node name="Body" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+mesh = SubResource("BoxMesh_body")
+material_override = SubResource("StandardMaterial3D_wood")
+
+[node name="Lid" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.64, 0)
+mesh = SubResource("BoxMesh_lid")
+material_override = SubResource("StandardMaterial3D_wood")

@@ -1,9 +1,10 @@
-[gd_scene load_steps=7 format=3 uid="uid://player001"]
+[gd_scene load_steps=8 format=3 uid="uid://player001"]
 
 [ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/player/inventory.gd" id="2_inventory"]
 [ext_resource type="Script" path="res://scripts/player/player_stats.gd" id="3_stats"]
 [ext_resource type="Script" path="res://scripts/player/equipment.gd" id="4_equipment"]
+[ext_resource type="Script" path="res://scripts/campsite/placement_system.gd" id="5_placement"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
 radius = 0.4
@@ -41,3 +42,6 @@ script = ExtResource("3_stats")
 
 [node name="Equipment" type="Node" parent="."]
 script = ExtResource("4_equipment")
+
+[node name="PlacementSystem" type="Node" parent="."]
+script = ExtResource("5_placement")

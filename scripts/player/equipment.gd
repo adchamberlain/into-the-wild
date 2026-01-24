@@ -32,6 +32,18 @@ const EQUIPPABLE_ITEMS: Dictionary = {
 		"name": "Rope",
 		"slot": 4,
 		"has_light": false
+	},
+	"shelter_kit": {
+		"name": "Shelter Kit",
+		"slot": 5,
+		"has_light": false,
+		"placeable": true
+	},
+	"storage_box": {
+		"name": "Storage Box",
+		"slot": 6,
+		"has_light": false,
+		"placeable": true
 	}
 }
 
@@ -41,6 +53,7 @@ var equipped_item: String = ""
 # References
 var inventory: Inventory
 var player: CharacterBody3D
+var placement_system: Node  # PlacementSystem for placeable items
 
 # Light node for torch
 var torch_light: OmniLight3D = null
@@ -64,7 +77,9 @@ func _setup_references() -> void:
 			var inv_node: Node = parent.get_node_or_null("Inventory")
 			if inv_node is Inventory:
 				inventory = inv_node
-		print("[Equipment] Setup complete, inventory: ", inventory)
+		# Get placement system
+		placement_system = parent.get_node_or_null("PlacementSystem")
+		print("[Equipment] Setup complete, inventory: ", inventory, ", placement: ", placement_system)
 		if inventory:
 			print("[Equipment] Inventory items: ", inventory.get_all_items())
 
@@ -82,6 +97,10 @@ func _input(event: InputEvent) -> void:
 		_try_equip_slot(3)
 	elif event.physical_keycode == KEY_4:
 		_try_equip_slot(4)
+	elif event.physical_keycode == KEY_5:
+		_try_equip_slot(5)
+	elif event.physical_keycode == KEY_6:
+		_try_equip_slot(6)
 	elif event.physical_keycode == KEY_Q:
 		unequip()
 
@@ -276,32 +295,47 @@ func _place_item() -> bool:
 	if not player or not inventory:
 		return false
 
-	# For campfire kit, we'll place a campfire in front of the player
-	if equipped_item == "campfire_kit":
-		# Get position in front of player
-		var forward: Vector3 = -player.global_transform.basis.z
-		var place_pos: Vector3 = player.global_position + forward * 2.0
-		place_pos.y = 0  # Place on ground
-
-		# Create campfire
-		var campfire: Node3D = _create_campfire(place_pos)
-		if campfire:
-			# Add to scene
-			player.get_parent().add_child(campfire)
-
-			# Remove from inventory and unequip
-			inventory.remove_item("campfire_kit", 1)
+	# Delegate to PlacementSystem for all placeable items
+	if placement_system and placement_system.has_method("start_placement"):
+		var success: bool = placement_system.start_placement(equipped_item)
+		if success:
+			# Unequip since we're now in placement mode
 			unequip()
-
-			print("[Equipment] Placed campfire at %s" % place_pos)
-			item_used.emit("campfire_kit")
 			return true
+
+	# Fallback: Legacy campfire placement if no PlacementSystem
+	if equipped_item == "campfire_kit" and not placement_system:
+		return _legacy_place_campfire()
 
 	return false
 
 
-func _create_campfire(pos: Vector3) -> Node3D:
-	# Create a simple campfire node
+## Legacy campfire placement (fallback if PlacementSystem not available).
+func _legacy_place_campfire() -> bool:
+	# Get position in front of player
+	var forward: Vector3 = -player.global_transform.basis.z
+	var place_pos: Vector3 = player.global_position + forward * 2.0
+	place_pos.y = 0  # Place on ground
+
+	# Create campfire
+	var campfire: Node3D = _create_legacy_campfire(place_pos)
+	if campfire:
+		# Add to scene
+		player.get_parent().add_child(campfire)
+
+		# Remove from inventory and unequip
+		inventory.remove_item("campfire_kit", 1)
+		unequip()
+
+		print("[Equipment] Placed campfire at %s" % place_pos)
+		item_used.emit("campfire_kit")
+		return true
+
+	return false
+
+
+func _create_legacy_campfire(pos: Vector3) -> Node3D:
+	# Create a simple campfire node (legacy version without structure system)
 	var campfire: Node3D = Node3D.new()
 	campfire.name = "Campfire"
 	campfire.global_position = pos

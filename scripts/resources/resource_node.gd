@@ -166,13 +166,11 @@ func _play_gather_animation() -> void:
 	# Then fade out and scale to zero
 	tween.tween_property(self, "scale", Vector3.ZERO, gather_animation_duration * 0.7)
 
-	# When animation completes, hide the node
+	# When animation completes, remove the node entirely
 	tween.tween_callback(_on_gather_animation_complete)
 
 
 func _on_gather_animation_complete() -> void:
 	is_animating = false
-	visible = false
-	# Disable collision so raycast doesn't hit it anymore
-	set_collision_layer_value(1, false)
-	set_collision_mask_value(1, false)
+	# Completely remove the node from the scene
+	queue_free()

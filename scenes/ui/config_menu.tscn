@@ -1,0 +1,90 @@
+[gd_scene load_steps=2 format=3 uid="uid://config001"]
+
+[ext_resource type="Script" path="res://scripts/ui/config_menu.gd" id="1_config"]
+
+[node name="ConfigMenu" type="CanvasLayer"]
+layer = 10
+script = ExtResource("1_config")
+
+[node name="Panel" type="PanelContainer" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -180.0
+offset_right = 200.0
+offset_bottom = 180.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="Title" type="Label" parent="Panel/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 0.8, 1)
+theme_override_font_sizes/font_size = 36
+text = "Game Config"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="HungerToggle" type="CheckButton" parent="Panel/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Hunger Depletion"
+
+[node name="HealthToggle" type="CheckButton" parent="Panel/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Health Drain (Starvation)"
+
+[node name="WeatherDamageToggle" type="CheckButton" parent="Panel/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Weather Damage (Storms/Cold)"
+
+[node name="WeatherToggle" type="CheckButton" parent="Panel/VBoxContainer"]
+layout_mode = 2
+button_pressed = true
+theme_override_font_sizes/font_size = 28
+text = "Weather System"
+
+[node name="HSeparator2" type="HSeparator" parent="Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="DayLengthContainer" type="VBoxContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="DayLengthLabel" type="Label" parent="Panel/VBoxContainer/DayLengthContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Day Length"
+
+[node name="DayLengthSlider" type="HSlider" parent="Panel/VBoxContainer/DayLengthContainer"]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+min_value = 1.0
+max_value = 60.0
+value = 20.0
+
+[node name="DayLengthValue" type="Label" parent="Panel/VBoxContainer/DayLengthContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.85, 1.0, 1)
+theme_override_font_sizes/font_size = 24
+text = "20 min"
+horizontal_alignment = 1
+
+[node name="HSeparator3" type="HSeparator" parent="Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="HintLabel" type="Label" parent="Panel/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+theme_override_font_sizes/font_size = 22
+text = "Press TAB to close"
+horizontal_alignment = 1

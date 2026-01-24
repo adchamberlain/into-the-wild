@@ -246,7 +246,8 @@ into-the-wild/
 │   └── ui/
 │       ├── hud.tscn           # Health, hunger bars
 │       ├── inventory.tscn     # Inventory screen
-│       └── crafting.tscn      # Crafting interface
+│       ├── crafting.tscn      # Crafting interface
+│       └── config_menu.tscn   # Game config/debug menu
 ├── scripts/
 │   ├── player/
 │   │   ├── player_controller.gd
@@ -310,6 +311,20 @@ into-the-wild/
 - Save game state to JSON file
 - Load on startup
 - Auto-save periodically
+
+### 7. Config Menu
+In-game configuration menu for toggling game features (useful for testing and accessibility):
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| **Hunger Depletion** | Toggle whether hunger depletes over time | Off |
+| **Health Drain** | Toggle whether health drains when starving | Off |
+| **Weather System** | Toggle dynamic weather changes and effects | On |
+| **Day Length** | Adjust real-time minutes per game day (1-60) | 20 min |
+
+- Accessed via **Tab** key during gameplay
+- Settings apply immediately
+- Allows players to adjust difficulty or focus on building without survival pressure
 
 ---
 

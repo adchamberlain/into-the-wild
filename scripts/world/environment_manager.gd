@@ -39,6 +39,33 @@ var time_manager: Node
 var sun_light: DirectionalLight3D
 var sky_material: ProceduralSkyMaterial
 
+# Weather overlay
+var current_weather: String = "Clear"
+var weather_color_modifiers: Dictionary = {
+	"Clear": Color(1.0, 1.0, 1.0),
+	"Rain": Color(0.7, 0.75, 0.85),
+	"Storm": Color(0.4, 0.42, 0.5),
+	"Fog": Color(0.85, 0.85, 0.88),
+	"Heat Wave": Color(1.1, 1.0, 0.9),
+	"Cold Snap": Color(0.8, 0.85, 1.0)
+}
+var weather_intensity_modifiers: Dictionary = {
+	"Clear": 1.0,
+	"Rain": 0.6,
+	"Storm": 0.3,
+	"Fog": 0.7,
+	"Heat Wave": 1.1,
+	"Cold Snap": 0.8
+}
+var weather_fog_density: Dictionary = {
+	"Clear": 0.0,
+	"Rain": 0.01,
+	"Storm": 0.02,
+	"Fog": 0.08,
+	"Heat Wave": 0.005,
+	"Cold Snap": 0.01
+}
+
 
 func _ready() -> void:
 	if time_manager_path:
@@ -146,3 +173,42 @@ func _update_environment() -> void:
 		# Rotate sun based on time
 		var sun_angle: float = time_manager.get_sun_angle()
 		sun_light.rotation.x = -sun_angle + PI / 2  # Overhead at noon
+
+
+## Set weather overlay effects.
+func set_weather_overlay(weather: String) -> void:
+	current_weather = weather
+	_apply_weather_effects()
+
+
+func _apply_weather_effects() -> void:
+	var color_mod: Color = weather_color_modifiers.get(current_weather, Color(1.0, 1.0, 1.0))
+	var intensity_mod: float = weather_intensity_modifiers.get(current_weather, 1.0)
+	var fog_density: float = weather_fog_density.get(current_weather, 0.0)
+
+	# Apply fog effect
+	if fog_density > 0:
+		environment.fog_enabled = true
+		environment.fog_density = fog_density
+		environment.fog_light_color = color_mod.lightened(0.3)
+		environment.fog_light_energy = 0.5
+	else:
+		environment.fog_enabled = false
+
+	# Adjust ambient light based on weather
+	var base_ambient: Color = environment.ambient_light_color
+	environment.ambient_light_energy = 0.5 * intensity_mod
+
+	# Adjust sun intensity for weather
+	if sun_light:
+		var base_intensity: float = sun_light.light_energy
+		# Store base intensity from time-of-day and apply weather modifier
+		# We'll modulate the light color slightly
+		sun_light.light_color = sun_light.light_color.lerp(color_mod, 0.3)
+
+	# Adjust sky colors for weather
+	if sky_material:
+		var base_sky: Color = sky_material.sky_top_color
+		sky_material.sky_top_color = base_sky.lerp(color_mod, 0.2)
+
+	print("[EnvironmentManager] Applied weather overlay: %s" % current_weather)

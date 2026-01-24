@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=3 uid="uid://main001"]
+[gd_scene load_steps=23 format=3 uid="uid://main001"]
 
 [ext_resource type="PackedScene" uid="uid://world001" path="res://scenes/world/world.tscn" id="1_world"]
 [ext_resource type="PackedScene" uid="uid://player001" path="res://scenes/player/player.tscn" id="2_player"]
@@ -8,6 +8,10 @@
 [ext_resource type="Script" path="res://scripts/resources/resource_node.gd" id="6_resource"]
 [ext_resource type="PackedScene" uid="uid://crafting001" path="res://scenes/ui/crafting_ui.tscn" id="7_crafting"]
 [ext_resource type="PackedScene" uid="uid://tree001" path="res://scenes/resources/tree_resource.tscn" id="8_tree"]
+[ext_resource type="Script" path="res://scripts/campsite/campsite_manager.gd" id="9_campsite"]
+[ext_resource type="Script" path="res://scripts/world/weather_manager.gd" id="10_weather"]
+[ext_resource type="PackedScene" uid="uid://config001" path="res://scenes/ui/config_menu.tscn" id="11_config"]
+[ext_resource type="PackedScene" uid="uid://equip001" path="res://scenes/ui/equipment_menu.tscn" id="12_equip"]
 
 [sub_resource type="Environment" id="Environment_1"]
 background_mode = 1
@@ -15,33 +19,14 @@ ambient_light_source = 2
 ambient_light_color = Color(1, 1, 1, 1)
 ambient_light_energy = 0.5
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
-size = Vector3(200, 1, 200)
-
-[sub_resource type="BoxMesh" id="BoxMesh_floor"]
-size = Vector3(200, 1, 200)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_floor"]
-albedo_color = Color(0.3, 0.55, 0.15, 1)
+[sub_resource type="BoxShape3D" id="BoxShape3D_marker_collision"]
+size = Vector3(1, 2, 1)
 
 [sub_resource type="BoxMesh" id="BoxMesh_marker"]
 size = Vector3(1, 2, 1)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_marker"]
 albedo_color = Color(0.6, 0.4, 0.2, 1)
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_tree"]
-top_radius = 0.0
-bottom_radius = 1.5
-height = 3.0
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tree"]
-albedo_color = Color(0.2, 0.4, 0.15, 1)
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_trunk"]
-top_radius = 0.3
-bottom_radius = 0.4
-height = 2.0
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_branch"]
 size = Vector3(0.6, 0.2, 0.2)
@@ -96,55 +81,40 @@ directional_shadow_max_distance = 100.0
 
 [node name="World" parent="." instance=ExtResource("1_world")]
 
-[node name="Floor" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor"]
-shape = SubResource("BoxShape3D_floor")
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="Floor"]
-mesh = SubResource("BoxMesh_floor")
-material_override = SubResource("StandardMaterial3D_floor")
-
 [node name="Player" parent="." instance=ExtResource("2_player")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 0)
 
 [node name="Markers" type="Node3D" parent="."]
 
-[node name="Rock1" type="MeshInstance3D" parent="Markers"]
+[node name="Rock1" type="StaticBody3D" parent="Markers"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 1, -5)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Markers/Rock1"]
+shape = SubResource("BoxShape3D_marker_collision")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Markers/Rock1"]
 mesh = SubResource("BoxMesh_marker")
 material_override = SubResource("StandardMaterial3D_marker")
 
-[node name="Rock2" type="MeshInstance3D" parent="Markers"]
+[node name="Rock2" type="StaticBody3D" parent="Markers"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 1, 3)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Markers/Rock2"]
+shape = SubResource("BoxShape3D_marker_collision")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Markers/Rock2"]
 mesh = SubResource("BoxMesh_marker")
 material_override = SubResource("StandardMaterial3D_marker")
 
-[node name="Rock3" type="MeshInstance3D" parent="Markers"]
+[node name="Rock3" type="StaticBody3D" parent="Markers"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 1, 10)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Markers/Rock3"]
+shape = SubResource("BoxShape3D_marker_collision")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Markers/Rock3"]
 mesh = SubResource("BoxMesh_marker")
 material_override = SubResource("StandardMaterial3D_marker")
-
-[node name="Tree1Trunk" type="MeshInstance3D" parent="Markers"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 1, -8)
-mesh = SubResource("CylinderMesh_trunk")
-material_override = SubResource("StandardMaterial3D_marker")
-
-[node name="Tree1Top" type="MeshInstance3D" parent="Markers"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 3.5, -8)
-mesh = SubResource("CylinderMesh_tree")
-material_override = SubResource("StandardMaterial3D_tree")
-
-[node name="Tree2Trunk" type="MeshInstance3D" parent="Markers"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 1, 5)
-mesh = SubResource("CylinderMesh_trunk")
-material_override = SubResource("StandardMaterial3D_marker")
-
-[node name="Tree2Top" type="MeshInstance3D" parent="Markers"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 3.5, 5)
-mesh = SubResource("CylinderMesh_tree")
-material_override = SubResource("StandardMaterial3D_tree")
 
 [node name="Resources" type="Node3D" parent="."]
 
@@ -190,6 +160,384 @@ shape = SubResource("BoxShape3D_branch")
 mesh = SubResource("BoxMesh_branch")
 material_override = SubResource("StandardMaterial3D_branch")
 
+[node name="Branch4" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(0.9, 0, 0.4, 0, 1, 0, -0.4, 0, 0.9, -6, 0.1, -4)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch4"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch4"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch5" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0.1, -6)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch5"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch5"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch6" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(0.5, 0, 0.866, 0, 1, 0, -0.866, 0, 0.5, -2, 0.1, 8)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch6"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch6"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch7" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(0.8, 0, -0.6, 0, 1, 0, 0.6, 0, 0.8, 10, 0.1, 0)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch7"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch7"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch8" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(0.707, 0, 0.707, 0, 1, 0, -0.707, 0, 0.707, -8, 0.1, -7)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch8"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch8"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch9" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(0.95, 0, 0.3, 0, 1, 0, -0.3, 0, 0.95, 4, 0.1, -8)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch9"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch9"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch10" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(0.6, 0, -0.8, 0, 1, 0, 0.8, 0, 0.6, -10, 0.1, 2)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch10"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch10"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch11" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, -10)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch11"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch11"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch12" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(0.866, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866, 12, 0.1, 8)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch12"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch12"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch13" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(0.707, 0, -0.707, 0, 1, 0, 0.707, 0, 0.707, -12, 0.1, -3)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch13"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch13"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch14" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(0.9, 0, 0.4, 0, 1, 0, -0.4, 0, 0.9, 5, 0.1, 10)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch14"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch14"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch15" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 0.1, 10)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch15"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch15"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch16" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(0.6, 0, 0.8, 0, 1, 0, -0.8, 0, 0.6, 14, 0.1, -4)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch16"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch16"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch17" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(0.5, 0, -0.866, 0, 1, 0, 0.866, 0, 0.5, -14, 0.1, 6)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch17"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch17"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch18" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(0.8, 0, 0.6, 0, 1, 0, -0.6, 0, 0.8, 2, 0.1, 12)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch18"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch18"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch19" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(0.95, 0, -0.3, 0, 1, 0, 0.3, 0, 0.95, -3, 0.1, -12)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch19"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch19"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch20" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(0.707, 0, 0.707, 0, 1, 0, -0.707, 0, 0.707, 10, 0.1, 12)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch20"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch20"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch21" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(0.866, 0, -0.5, 0, 1, 0, 0.5, 0, 0.866, 15, 0.1, 3)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch21"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch21"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch22" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(0.5, 0, 0.866, 0, 1, 0, -0.866, 0, 0.5, -15, 0.1, -5)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch22"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch22"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch23" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 15)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch23"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch23"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch24" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(0.707, 0, 0.707, 0, 1, 0, -0.707, 0, 0.707, -5, 0.1, 15)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch24"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch24"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch25" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(0.9, 0, -0.4, 0, 1, 0, 0.4, 0, 0.9, 12, 0.1, -12)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch25"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch25"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch26" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(0.6, 0, 0.8, 0, 1, 0, -0.8, 0, 0.6, -12, 0.1, 12)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch26"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch26"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch27" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(0.8, 0, -0.6, 0, 1, 0, 0.6, 0, 0.8, 18, 0.1, 8)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch27"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch27"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch28" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(0.95, 0, 0.3, 0, 1, 0, -0.3, 0, 0.95, -18, 0.1, 0)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch28"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch28"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch29" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(0.707, 0, -0.707, 0, 1, 0, 0.707, 0, 0.707, 8, 0.1, 18)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch29"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch29"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
+[node name="Branch30" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(0.5, 0, 0.866, 0, 1, 0, -0.866, 0, 0.5, -8, 0.1, -18)
+script = ExtResource("6_resource")
+resource_type = "branch"
+resource_amount = 1
+interaction_text = "Gather"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Branch30"]
+shape = SubResource("BoxShape3D_branch")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Branch30"]
+mesh = SubResource("BoxMesh_branch")
+material_override = SubResource("StandardMaterial3D_branch")
+
 [node name="Rock1" type="StaticBody3D" parent="Resources"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.25, 5)
 script = ExtResource("6_resource")
@@ -229,6 +577,34 @@ interaction_text = "Pick up"
 shape = SubResource("SphereShape3D_rock")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Rock3"]
+mesh = SubResource("SphereMesh_rock")
+material_override = SubResource("StandardMaterial3D_rock")
+
+[node name="Rock4" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0.25, 3)
+script = ExtResource("6_resource")
+resource_type = "river_rock"
+resource_amount = 1
+interaction_text = "Pick up"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Rock4"]
+shape = SubResource("SphereShape3D_rock")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Rock4"]
+mesh = SubResource("SphereMesh_rock")
+material_override = SubResource("StandardMaterial3D_rock")
+
+[node name="Rock5" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0.25, -8)
+script = ExtResource("6_resource")
+resource_type = "river_rock"
+resource_amount = 1
+interaction_text = "Pick up"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Rock5"]
+shape = SubResource("SphereShape3D_rock")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Rock5"]
 mesh = SubResource("SphereMesh_rock")
 material_override = SubResource("StandardMaterial3D_rock")
 
@@ -286,9 +662,31 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, 4)
 [node name="Tree4" parent="Resources" instance=ExtResource("8_tree")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, -10)
 
+[node name="Structures" type="Node3D" parent="."]
+
+[node name="CampsiteManager" type="Node" parent="."]
+script = ExtResource("9_campsite")
+player_path = NodePath("../Player")
+
+[node name="WeatherManager" type="Node" parent="."]
+script = ExtResource("10_weather")
+time_manager_path = NodePath("../TimeManager")
+player_path = NodePath("../Player")
+campsite_manager_path = NodePath("../CampsiteManager")
+environment_manager_path = NodePath("../EnvironmentManager")
+
 [node name="HUD" parent="." instance=ExtResource("5_hud")]
 time_manager_path = NodePath("../TimeManager")
 player_path = NodePath("../Player")
+weather_manager_path = NodePath("../WeatherManager")
 
 [node name="CraftingUI" parent="." instance=ExtResource("7_crafting")]
+player_path = NodePath("../Player")
+
+[node name="ConfigMenu" parent="." instance=ExtResource("11_config")]
+time_manager_path = NodePath("../TimeManager")
+weather_manager_path = NodePath("../WeatherManager")
+player_path = NodePath("../Player")
+
+[node name="EquipmentMenu" parent="." instance=ExtResource("12_equip")]
 player_path = NodePath("../Player")
