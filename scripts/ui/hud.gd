@@ -5,6 +5,7 @@ extends CanvasLayer
 @export var player_path: NodePath
 @export var campsite_manager_path: NodePath
 @export var weather_manager_path: NodePath
+@export var save_load_path: NodePath
 
 # Time display
 @onready var time_label: Label = $TimeContainer/TimeLabel
@@ -28,6 +29,12 @@ extends CanvasLayer
 # Equipment
 @onready var equipped_label: Label = $EquippedContainer/EquippedLabel
 
+# Notification
+@onready var notification_label: Label = $NotificationLabel
+
+# Screen fade overlay
+@onready var fade_overlay: ColorRect = $FadeOverlay
+
 var time_manager: Node
 var player: Node
 var inventory: Node
@@ -35,6 +42,10 @@ var stats: Node
 var equipment: Node
 var campsite_manager: Node
 var weather_manager: Node
+var save_load: Node
+
+# Resting state tracking
+var is_player_resting: bool = false
 
 # Weather damage flash
 var weather_damage_flash_timer: float = 0.0
@@ -104,9 +115,22 @@ func _ready() -> void:
 			weather_manager.weather_changed.connect(_on_weather_changed)
 		_update_weather_display()
 
+	# Connect to save/load system
+	if save_load_path:
+		save_load = get_node_or_null(save_load_path)
+	if not save_load and player:
+		save_load = player.get_parent().get_node_or_null("SaveLoad")
+	if save_load:
+		save_load.game_saved.connect(_on_game_saved)
+		save_load.game_loaded.connect(_on_game_loaded)
+
 	# Hide interaction prompt initially
 	if interaction_prompt:
 		interaction_prompt.visible = false
+
+	# Hide notification label initially
+	if notification_label:
+		notification_label.visible = false
 
 	# Initialize displays
 	_update_inventory_display()
@@ -266,6 +290,9 @@ func _process(delta: float) -> void:
 				_trigger_damage_flash()
 		last_player_health = stats.health
 
+	# Check if player is resting and show prompt
+	_update_resting_prompt()
+
 
 func _on_weather_changed(weather_type: String) -> void:
 	_update_weather_display()
@@ -320,3 +347,70 @@ func _trigger_damage_flash() -> void:
 
 func _reset_damage_flash() -> void:
 	_update_protection_display()
+
+
+## Show a notification message.
+func show_notification(message: String, color: Color = Color.WHITE) -> void:
+	if notification_label:
+		notification_label.text = message
+		notification_label.add_theme_color_override("font_color", color)
+		notification_label.visible = true
+		# Hide after 3 seconds
+		get_tree().create_timer(3.0).timeout.connect(func(): notification_label.visible = false)
+
+
+func _on_game_saved(_filepath: String) -> void:
+	show_notification("Game Saved!", Color(0.4, 1.0, 0.4, 1))
+
+
+func _on_game_loaded(_filepath: String) -> void:
+	show_notification("Game Loaded!", Color(0.4, 1.0, 0.4, 1))
+
+
+func _update_resting_prompt() -> void:
+	if not player or not interaction_prompt:
+		return
+
+	# Check if player is resting
+	var player_resting: bool = false
+	if "is_resting" in player:
+		player_resting = player.is_resting
+
+	if player_resting and not is_player_resting:
+		# Just started resting - show get up prompt
+		interaction_prompt.text = "[E] Get Up"
+		interaction_prompt.visible = true
+		is_player_resting = true
+	elif not player_resting and is_player_resting:
+		# Just stopped resting - hide prompt (will be updated by normal interaction system)
+		interaction_prompt.visible = false
+		is_player_resting = false
+
+
+## Fade the screen to black and back. Calls callback after fade out completes.
+func fade_to_black_and_back(fade_out_duration: float, hold_duration: float, fade_in_duration: float, callback: Callable = Callable()) -> void:
+	if not fade_overlay:
+		if callback.is_valid():
+			callback.call()
+		return
+
+	fade_overlay.visible = true
+	fade_overlay.color = Color(0, 0, 0, 0)
+
+	var tween: Tween = create_tween()
+
+	# Fade to black
+	tween.tween_property(fade_overlay, "color", Color(0, 0, 0, 1), fade_out_duration)
+
+	# Call the callback after fade out (e.g., to skip time)
+	if callback.is_valid():
+		tween.tween_callback(callback)
+
+	# Hold black
+	tween.tween_interval(hold_duration)
+
+	# Fade back in
+	tween.tween_property(fade_overlay, "color", Color(0, 0, 0, 0), fade_in_duration)
+
+	# Hide overlay when done
+	tween.tween_callback(func(): fade_overlay.visible = false)

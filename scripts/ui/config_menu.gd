@@ -7,17 +7,23 @@ signal config_changed()
 @export var time_manager_path: NodePath
 @export var weather_manager_path: NodePath
 @export var player_path: NodePath
+@export var save_load_path: NodePath
+@export var resource_manager_path: NodePath
 
 var time_manager: Node
 var weather_manager: Node
 var player: Node
 var player_stats: Node
+var save_load: Node
+var resource_manager: Node
 
 # Config state (defaults)
 var hunger_enabled: bool = false
 var health_drain_enabled: bool = false
 var weather_damage_enabled: bool = false
 var weather_enabled: bool = true
+var unlimited_fire_enabled: bool = false
+var tree_respawn_days: float = 1.0
 var day_length_minutes: float = 20.0
 
 # UI References
@@ -26,8 +32,14 @@ var day_length_minutes: float = 20.0
 @onready var health_toggle: CheckButton = $Panel/VBoxContainer/HealthToggle
 @onready var weather_damage_toggle: CheckButton = $Panel/VBoxContainer/WeatherDamageToggle
 @onready var weather_toggle: CheckButton = $Panel/VBoxContainer/WeatherToggle
+@onready var unlimited_fire_toggle: CheckButton = $Panel/VBoxContainer/UnlimitedFireToggle
 @onready var day_length_slider: HSlider = $Panel/VBoxContainer/DayLengthContainer/DayLengthSlider
 @onready var day_length_label: Label = $Panel/VBoxContainer/DayLengthContainer/DayLengthValue
+@onready var tree_respawn_slider: HSlider = $Panel/VBoxContainer/TreeRespawnContainer/TreeRespawnSlider
+@onready var tree_respawn_label: Label = $Panel/VBoxContainer/TreeRespawnContainer/TreeRespawnValue
+@onready var save_button: Button = $Panel/VBoxContainer/SaveLoadContainer/SaveButton
+@onready var load_button: Button = $Panel/VBoxContainer/SaveLoadContainer/LoadButton
+@onready var save_status_label: Label = $Panel/VBoxContainer/SaveStatusLabel
 
 var is_visible: bool = false
 
@@ -42,6 +54,10 @@ func _ready() -> void:
 		player = get_node_or_null(player_path)
 		if player:
 			player_stats = player.get_node_or_null("PlayerStats")
+	if save_load_path:
+		save_load = get_node_or_null(save_load_path)
+	if resource_manager_path:
+		resource_manager = get_node_or_null(resource_manager_path)
 
 	# Initialize UI state
 	_init_ui()
@@ -57,6 +73,7 @@ func _init_ui() -> void:
 	health_toggle.button_pressed = health_drain_enabled
 	weather_damage_toggle.button_pressed = weather_damage_enabled
 	weather_toggle.button_pressed = weather_enabled
+	unlimited_fire_toggle.button_pressed = unlimited_fire_enabled
 
 	# Set day length slider
 	if time_manager and "day_length_minutes" in time_manager:
@@ -64,22 +81,51 @@ func _init_ui() -> void:
 	day_length_slider.value = day_length_minutes
 	day_length_label.text = "%.0f min" % day_length_minutes
 
+	# Set tree respawn slider
+	if resource_manager and "tree_respawn_time_hours" in resource_manager:
+		tree_respawn_days = resource_manager.tree_respawn_time_hours / 24.0
+	tree_respawn_slider.value = tree_respawn_days
+	tree_respawn_label.text = "%.0f day%s" % [tree_respawn_days, "s" if tree_respawn_days != 1.0 else ""]
+
 	# Connect signals
 	hunger_toggle.toggled.connect(_on_hunger_toggled)
 	health_toggle.toggled.connect(_on_health_toggled)
 	weather_damage_toggle.toggled.connect(_on_weather_damage_toggled)
 	weather_toggle.toggled.connect(_on_weather_toggled)
+	unlimited_fire_toggle.toggled.connect(_on_unlimited_fire_toggled)
 	day_length_slider.value_changed.connect(_on_day_length_changed)
+	tree_respawn_slider.value_changed.connect(_on_tree_respawn_changed)
+
+	# Connect save/load buttons
+	if save_button:
+		save_button.pressed.connect(_on_save_pressed)
+	if load_button:
+		load_button.pressed.connect(_on_load_pressed)
+
+	# Connect save/load signals for status display
+	if save_load:
+		save_load.game_saved.connect(_on_game_saved)
+		save_load.game_loaded.connect(_on_game_loaded)
+		save_load.save_failed.connect(_on_save_failed)
+		save_load.load_failed.connect(_on_load_failed)
 
 	# Apply initial config
 	_apply_config()
 
 
 func _input(event: InputEvent) -> void:
-	# Toggle menu with Tab key
 	if event is InputEventKey and event.pressed:
+		# Toggle menu with Tab key
 		if event.physical_keycode == KEY_TAB:
 			toggle_menu()
+			get_viewport().set_input_as_handled()
+		# Quick save with K (Keep)
+		elif event.physical_keycode == KEY_K:
+			_on_save_pressed()
+			get_viewport().set_input_as_handled()
+		# Quick load with L (Load)
+		elif event.physical_keycode == KEY_L:
+			_on_load_pressed()
 			get_viewport().set_input_as_handled()
 
 
@@ -118,11 +164,24 @@ func _on_weather_toggled(pressed: bool) -> void:
 	print("[ConfigMenu] Weather system: %s" % ("ON" if pressed else "OFF"))
 
 
+func _on_unlimited_fire_toggled(pressed: bool) -> void:
+	unlimited_fire_enabled = pressed
+	_apply_config()
+	print("[ConfigMenu] Unlimited fire burn time: %s" % ("ON" if pressed else "OFF"))
+
+
 func _on_day_length_changed(value: float) -> void:
 	day_length_minutes = value
 	day_length_label.text = "%.0f min" % value
 	_apply_config()
 	print("[ConfigMenu] Day length: %.0f minutes" % value)
+
+
+func _on_tree_respawn_changed(value: float) -> void:
+	tree_respawn_days = value
+	tree_respawn_label.text = "%.0f day%s" % [value, "s" if value != 1.0 else ""]
+	_apply_config()
+	print("[ConfigMenu] Tree respawn time: %.0f days" % value)
 
 
 func _apply_config() -> void:
@@ -148,6 +207,16 @@ func _apply_config() -> void:
 		elif "_seconds_per_game_minute" in time_manager:
 			time_manager._seconds_per_game_minute = (day_length_minutes * 60.0) / (24.0 * 60.0)
 
+	# Apply unlimited fire setting to all fire pits
+	var fire_pits: Array = get_tree().get_nodes_in_group("campsite_structures")
+	for structure: Node in fire_pits:
+		if structure is StructureFirePit:
+			structure.unlimited_fuel = unlimited_fire_enabled
+
+	# Apply tree respawn time
+	if resource_manager and "tree_respawn_time_hours" in resource_manager:
+		resource_manager.tree_respawn_time_hours = tree_respawn_days * 24.0
+
 	config_changed.emit()
 
 
@@ -158,5 +227,47 @@ func get_config() -> Dictionary:
 		"health_drain_enabled": health_drain_enabled,
 		"weather_damage_enabled": weather_damage_enabled,
 		"weather_enabled": weather_enabled,
+		"unlimited_fire_enabled": unlimited_fire_enabled,
+		"tree_respawn_days": tree_respawn_days,
 		"day_length_minutes": day_length_minutes
 	}
+
+
+## Save/Load functions
+func _on_save_pressed() -> void:
+	if save_load:
+		save_load.save_game()
+	else:
+		_show_save_status("Error: Save system not found", Color.RED)
+
+
+func _on_load_pressed() -> void:
+	if save_load:
+		save_load.load_game()
+	else:
+		_show_save_status("Error: Save system not found", Color.RED)
+
+
+func _on_game_saved(_filepath: String) -> void:
+	_show_save_status("Game Saved!", Color.GREEN)
+
+
+func _on_game_loaded(_filepath: String) -> void:
+	_show_save_status("Game Loaded!", Color.GREEN)
+
+
+func _on_save_failed(error: String) -> void:
+	_show_save_status("Save Failed: %s" % error, Color.RED)
+
+
+func _on_load_failed(error: String) -> void:
+	_show_save_status("Load Failed: %s" % error, Color.RED)
+
+
+func _show_save_status(message: String, color: Color) -> void:
+	if save_status_label:
+		save_status_label.text = message
+		save_status_label.modulate = color
+		save_status_label.visible = true
+		# Hide after 3 seconds
+		get_tree().create_timer(3.0).timeout.connect(func(): save_status_label.visible = false)

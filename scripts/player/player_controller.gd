@@ -30,16 +30,23 @@ var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 var current_speed: float = walk_speed
 var is_sprinting: bool = false
 var current_interaction_target: Node = null
+var is_resting: bool = false
+var resting_in_structure: Node = null  # The shelter we're resting in
 
 # Food values (hunger restored per item)
 const FOOD_VALUES: Dictionary = {
 	"berry": 15.0,
 	"mushroom": 10.0,
 	"berry_pouch": 40.0,
+	"cooked_berries": 25.0,
+	"cooked_mushroom": 20.0,
+	"cooked_fish": 40.0,
 }
 
 
 func _ready() -> void:
+	# Add to player group for identification
+	add_to_group("player")
 	# Capture mouse for first-person control
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	# Ensure camera is active
@@ -52,9 +59,10 @@ func _ready() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	# Handle mouse look
+	# Handle mouse look (disabled while resting)
 	if event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
-		_handle_mouse_look(event)
+		if not is_resting:
+			_handle_mouse_look(event)
 		return
 
 	# Toggle mouse capture with Escape
@@ -67,12 +75,16 @@ func _input(event: InputEvent) -> void:
 	# Handle interaction (E key)
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.is_action("interact") or event.physical_keycode == KEY_E:
-			_try_interact()
-		# Handle eating (F key)
-		if event.physical_keycode == KEY_F:
+			# If resting, E key exits rest mode
+			if is_resting and resting_in_structure:
+				resting_in_structure.interact(self)
+			else:
+				_try_interact()
+		# Handle eating (F key) - disabled while resting
+		if event.physical_keycode == KEY_F and not is_resting:
 			_try_eat()
-		# Handle using equipped item (R key) - for placing campfire, etc.
-		if event.physical_keycode == KEY_R:
+		# Handle using equipped item (R key) - disabled while resting
+		if event.physical_keycode == KEY_R and not is_resting:
 			_try_use_equipped()
 
 
@@ -90,6 +102,11 @@ func _handle_mouse_look(event: InputEventMouseMotion) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	# Skip movement processing while resting
+	if is_resting:
+		velocity = Vector3.ZERO
+		return
+
 	# Apply gravity
 	if not is_on_floor():
 		velocity.y -= gravity * delta
@@ -176,6 +193,17 @@ func get_stats() -> PlayerStats:
 
 func get_equipment() -> Equipment:
 	return equipment
+
+
+## Set whether player is in resting state (in a shelter).
+func set_resting(resting: bool, structure: Node = null) -> void:
+	is_resting = resting
+	resting_in_structure = structure if resting else null
+
+	if resting:
+		# Clear interaction target while resting
+		current_interaction_target = null
+		interaction_cleared.emit()
 
 
 func _try_use_equipped() -> void:

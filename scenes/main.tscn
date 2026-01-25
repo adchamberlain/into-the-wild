@@ -12,6 +12,10 @@
 [ext_resource type="Script" path="res://scripts/world/weather_manager.gd" id="10_weather"]
 [ext_resource type="PackedScene" uid="uid://config001" path="res://scenes/ui/config_menu.tscn" id="11_config"]
 [ext_resource type="PackedScene" uid="uid://equip001" path="res://scenes/ui/equipment_menu.tscn" id="12_equip"]
+[ext_resource type="Script" path="res://scripts/resources/resource_manager.gd" id="13_resource_manager"]
+[ext_resource type="Script" path="res://scripts/core/save_load.gd" id="14_save_load"]
+[ext_resource type="PackedScene" uid="uid://storage_ui001" path="res://scenes/ui/storage_ui.tscn" id="15_storage_ui"]
+[ext_resource type="PackedScene" uid="uid://fire_menu001" path="res://scenes/ui/fire_menu.tscn" id="16_fire_menu"]
 
 [sub_resource type="Environment" id="Environment_1"]
 background_mode = 1
@@ -675,10 +679,27 @@ player_path = NodePath("../Player")
 campsite_manager_path = NodePath("../CampsiteManager")
 environment_manager_path = NodePath("../EnvironmentManager")
 
+[node name="ResourceManager" type="Node" parent="."]
+script = ExtResource("13_resource_manager")
+respawn_time_hours = 6.0
+respawn_enabled = true
+time_manager_path = NodePath("../TimeManager")
+resources_container_path = NodePath("../Resources")
+
+[node name="SaveLoad" type="Node" parent="."]
+script = ExtResource("14_save_load")
+player_path = NodePath("../Player")
+time_manager_path = NodePath("../TimeManager")
+weather_manager_path = NodePath("../WeatherManager")
+campsite_manager_path = NodePath("../CampsiteManager")
+resource_manager_path = NodePath("../ResourceManager")
+crafting_system_path = NodePath("../CraftingUI")
+
 [node name="HUD" parent="." instance=ExtResource("5_hud")]
 time_manager_path = NodePath("../TimeManager")
 player_path = NodePath("../Player")
 weather_manager_path = NodePath("../WeatherManager")
+save_load_path = NodePath("../SaveLoad")
 
 [node name="CraftingUI" parent="." instance=ExtResource("7_crafting")]
 player_path = NodePath("../Player")
@@ -687,6 +708,14 @@ player_path = NodePath("../Player")
 time_manager_path = NodePath("../TimeManager")
 weather_manager_path = NodePath("../WeatherManager")
 player_path = NodePath("../Player")
+save_load_path = NodePath("../SaveLoad")
+resource_manager_path = NodePath("../ResourceManager")
 
 [node name="EquipmentMenu" parent="." instance=ExtResource("12_equip")]
+player_path = NodePath("../Player")
+
+[node name="StorageUI" parent="." instance=ExtResource("15_storage_ui")]
+player_path = NodePath("../Player")
+
+[node name="FireMenu" parent="." instance=ExtResource("16_fire_menu")]
 player_path = NodePath("../Player")

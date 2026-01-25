@@ -561,7 +561,15 @@ scenes/ui/hud.tscn                # Cleaned up controls list
 | Health Drain (Starvation) | Health drains when hunger is zero | Off |
 | Weather Damage (Storms/Cold) | Take damage from storms and cold snaps | Off |
 | Weather System | Weather changes dynamically | On |
+| Unlimited Fire Burn Time | Fire never runs out of fuel | Off |
+| Tree Respawn Time | Days until chopped trees respawn (1-7) | 1 day |
 | Day Length | Minutes per game day (1-60) | 20 |
+
+#### Tree Respawning
+- Trees respawn after a configurable number of game days (default: 1 day)
+- Regular resources (branches, rocks, berries) respawn after 6 game hours
+- ResourceManager tracks day rollover for multi-day respawn timers
+- Tree respawn time can be adjusted from 1-7 days in the config menu
 
 #### Controls (Updated)
 - **I** - Equipment menu (shows slots and hotkeys)
@@ -570,15 +578,204 @@ scenes/ui/hud.tscn                # Cleaned up controls list
 
 ---
 
-## Next Session: Phase 7 - Content & Polish
+## Session 6 - Save/Load & Resource Respawning (2026-01-25)
+
+### What Was Built
+
+**Phase 7 (Partial): Save/Load System & Resource Improvements**
+
+#### New Files Created
+
+```
+scripts/core/save_load.gd           # Save/load game state to JSON
+scripts/resources/resource_manager.gd   # Tracks resources and handles respawning
+```
+
+#### Files Modified
+
+```
+scripts/resources/resource_node.gd     # Support for secondary drops, respawning instead of queue_free
+scenes/resources/tree_resource.tscn    # Trees now drop 3 branches + 3 wood
+scripts/ui/config_menu.gd              # Added save/load buttons and F5/F9 shortcuts
+scenes/ui/config_menu.tscn             # Added save/load UI elements
+scripts/ui/hud.gd                      # Added notification system for save/load feedback
+scenes/ui/hud.tscn                     # Added notification label, updated control hints
+scenes/main.tscn                       # Added SaveLoad and ResourceManager nodes
+```
+
+#### Features Implemented
+
+1. **Save/Load System** (`scripts/core/save_load.gd`)
+   - Saves game state to `user://saves/save.json`
+   - Serializes:
+     - Player position, health, hunger
+     - Inventory contents
+     - Time of day (hour, minute)
+     - Weather type and duration
+     - Campsite level, placed structures, crafted tool flag
+     - Depleted resources for respawn tracking
+     - Discovered recipes
+   - Structures are recreated from saved data with full state restoration
+   - Fire pits retain lit/extinguished state
+
+2. **Resource Respawning** (`scripts/resources/resource_manager.gd`)
+   - Depleted resources no longer use `queue_free()` - they hide and disable instead
+   - ResourceManager tracks all resource nodes and their depleted time
+   - Resources respawn after 6 game hours (configurable)
+   - Handles day wrap-around for respawn timing
+   - `respawn_all()` method available for testing
+
+3. **Tree Drop Update** (`resource_node.gd`)
+   - Added `secondary_resource_type` and `secondary_resource_amount` exports
+   - Trees now give **3 wood + 3 branches** when chopped down
+   - Supports any resource having a secondary drop
+
+4. **Save/Load Controls**
+   - **K** - Quick save (works anywhere) - "Keep"
+   - **L** - Quick load (works anywhere) - "Load"
+   - Save/Load buttons in Config Menu (Tab)
+   - Visual feedback: "Game Saved!" / "Game Loaded!" notifications
+
+5. **HUD Updates**
+   - Notification label for save/load feedback (top center, auto-hides)
+   - Updated control hints: "F5-Save  F9-Load"
+
+#### Save File Format
+
+```json
+{
+  "version": 1,
+  "timestamp": "2026-01-25T...",
+  "player": {
+    "position": {"x": 0, "y": 5, "z": 0},
+    "health": 100,
+    "hunger": 100,
+    "inventory": {"branch": 5, "wood": 3, ...},
+    "equipped_item": "stone_axe"
+  },
+  "time": {"hour": 8, "minute": 30},
+  "weather": {"weather_type": 0, "duration_remaining": 50.0},
+  "campsite": {
+    "level": 2,
+    "has_crafted_tool": true,
+    "structures": [...]
+  },
+  "resources": {
+    "depleted": [{"node_name": "Branch1", "depleted_hour": 8, "depleted_minute": 0}]
+  },
+  "crafting": {"discovered_recipes": ["stone_axe", "torch", ...]}
+}
+```
+
+#### Controls (Updated)
+- **K** - Quick save
+- **L** - Quick load
+- **Tab** - Config menu (also has Save/Load buttons)
+
+#### Shelter Resting System
+- Press **E** on shelter to lay down and rest (camera looks up at canvas, +10 health)
+- Press **E** again to get up and exit the shelter
+- Movement and mouse look disabled while resting
+- HUD shows "[E] Get Up" prompt while resting
+- **Sleep feature**: If resting at night (after 7 PM), screen fades to black and time skips to dawn (6 AM)
+  - Full health restore when sleeping through night
+  - +30 hunger restore
+  - Fade-to-black visual effect
+
+#### Storage UI
+- Press **E** on storage box to open storage transfer UI
+- Two-panel layout: Your Inventory (left) and Storage Box (right)
+- Click **>>** to move one item to storage, **<<** to take one item
+- Click **All** to transfer entire stack
+- Press **E** or **Escape** to close
+
+#### Fire Pit Interaction Menu
+- Press **E** on fire to open interaction menu with three options:
+  - **Warm Up** (+15 Health) - Visual flare effect, HUD notification
+  - **Cook Food** - Cook berries/mushrooms/fish for more hunger restoration
+  - **Add Fuel** - Add 1 wood to extend fire burn time by 1 day
+- **Fuel System**: Fire burns fuel over time (1 game day default)
+  - 1 game day = 1200 seconds at default 20-minute day length
+  - Fire dims when fuel runs low (<30%)
+  - Fire extinguishes when fuel depleted
+  - Need 1 wood to relight or extend burn time
+  - Adding 1 wood adds 1 day of burn time (can stockpile up to 2 days)
+  - **Config Option**: "Unlimited Fire Burn Time" toggle in config menu (Tab)
+- **Cooking Recipes**:
+  - Berry → Cooked Berries (+25 hunger vs +15 raw)
+  - Mushroom → Cooked Mushroom (+20 hunger vs +10 raw)
+  - Fish → Cooked Fish (+40 hunger)
+- Visual flare effect on all interactions
+- HUD notifications for feedback
+
+#### Known Issues / Notes
+- Save file located at `user://saves/save.json` (Godot user data folder)
+- Only one save slot currently (could expand to multiple slots later)
+- Resources respawn at their original positions even after loading
+- Structures container must exist for structure recreation
+
+---
+
+## Session 6b - Fire Fuel System & Tree Respawning (2026-01-25)
+
+### What Was Built
+
+**Fire Fuel System Improvements & Tree Respawning**
+
+#### Files Modified
+
+```
+scripts/campsite/structure_fire_pit.gd    # Fuel system: 1 day burn time, wood as fuel
+scripts/ui/fire_menu.gd                   # Uses wood instead of branches for fuel
+scripts/ui/config_menu.gd                 # Added unlimited fire toggle, tree respawn slider
+scenes/ui/config_menu.tscn                # Added toggle and slider UI elements
+scripts/resources/resource_manager.gd     # Separate tree respawn time, day tracking
+scenes/main.tscn                          # Connected ResourceManager to ConfigMenu
+DEV_LOG.md                                # Updated documentation
+```
+
+#### Features Implemented
+
+1. **Fire Fuel System**
+   - Fire burns for 1 game day by default (1200 seconds at 20-minute day length)
+   - Adding 1 wood extends burn time by 1 day
+   - Can stockpile up to 2 days of fuel
+   - Fire dims below 30% fuel, extinguishes at 0%
+   - **Config Toggle**: "Unlimited Fire Burn Time" disables fuel consumption
+
+2. **Tree Respawning**
+   - Trees respawn after configurable number of game days (default: 1 day)
+   - Separate respawn timer for trees vs regular resources
+   - ResourceManager tracks day rollover for multi-day timers
+   - **Config Slider**: "Tree Respawn Time" adjustable from 1-7 days
+   - Regular resources (branches, rocks, berries) still respawn after 6 game hours
+
+3. **Config Menu Updates**
+   - New toggle: "Unlimited Fire Burn Time"
+   - New slider: "Tree Respawn Time (days)"
+   - Panel expanded to accommodate new options
+
+---
+
+## Next Session: Phase 7 - Content & Polish (Continued)
+
+### Completed Features
+- ✅ Save/Load system
+- ✅ Resource respawning (6 hours for regular, 1-7 days for trees)
+- ✅ Storage UI for item transfer
+- ✅ Shelter resting with sleep/time skip
+- ✅ Fire pit interaction menu with cooking
+- ✅ Fire fuel system (1 day burn time, wood as fuel)
+- ✅ Config toggles for survival mechanics
 
 ### Planned Tasks
-1. Additional recipes and structures
-2. Resource respawning system
-3. Storage UI for item transfer
-4. Save/load system for game state
-5. Weather particle effects (rain, snow)
-6. Sound effects and ambient audio
+1. Additional recipes and structures (cooking grate, crafting bench)
+2. Weather particle effects (rain, snow)
+3. Sound effects and ambient audio
+4. Discovery-based crafting system
+5. Level 2/3 campsite content
+6. Fishing system (to use the "fish" cooking recipe)
+7. Game polish and balancing
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

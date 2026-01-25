@@ -29,6 +29,8 @@ script = ExtResource("1_resource")
 resource_type = "wood"
 resource_amount = 3
 interaction_text = "Chop"
+secondary_resource_type = "branch"
+secondary_resource_amount = 3
 required_tool = "axe"
 chops_required = 3
 

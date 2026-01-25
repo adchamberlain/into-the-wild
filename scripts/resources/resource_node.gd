@@ -10,6 +10,10 @@ signal depleted()
 @export var resource_amount: int = 1
 @export var interaction_text: String = "Gather"
 
+# Secondary resource drop (e.g., trees also drop branches)
+@export var secondary_resource_type: String = ""
+@export var secondary_resource_amount: int = 0
+
 # Tool requirement (empty string = no tool needed)
 @export var required_tool: String = ""
 @export var chops_required: int = 1  # How many chops/hits to harvest (for trees)
@@ -24,10 +28,16 @@ var is_animating: bool = false
 var original_scale: Vector3
 var chop_progress: int = 0  # Current chops received
 
+# Respawn tracking
+var depleted_time: float = 0.0  # When the resource was depleted (game time)
+var node_name: String = ""  # Original node name for save/load identification
+
 
 func _ready() -> void:
 	# Store original scale for animation
 	original_scale = scale
+	# Store node name for identification
+	node_name = name
 	# Add to interactable group so raycast can find us
 	add_to_group("interactable")
 	add_to_group("resource_node")
@@ -104,6 +114,9 @@ func _complete_harvest(player: Node) -> void:
 	var inventory: Inventory = _get_player_inventory(player)
 	if inventory:
 		inventory.add_item(resource_type, resource_amount)
+		# Also add secondary resource if defined
+		if secondary_resource_type != "" and secondary_resource_amount > 0:
+			inventory.add_item(secondary_resource_type, secondary_resource_amount)
 
 	# Mark as depleted and hide
 	is_depleted = true
@@ -172,5 +185,35 @@ func _play_gather_animation() -> void:
 
 func _on_gather_animation_complete() -> void:
 	is_animating = false
-	# Completely remove the node from the scene
-	queue_free()
+	# Hide the node instead of destroying it (for respawning)
+	_set_depleted_state(true)
+
+
+## Set the depleted visual state (hidden and non-interactive).
+func _set_depleted_state(depleted: bool) -> void:
+	is_depleted = depleted
+	visible = not depleted
+
+	# Disable/enable collision
+	for child in get_children():
+		if child is CollisionShape3D:
+			child.disabled = depleted
+
+	if depleted:
+		# Remove from interactable group while depleted
+		remove_from_group("interactable")
+	else:
+		# Re-add to interactable group when respawned
+		add_to_group("interactable")
+
+
+## Respawn this resource node (restore to harvestable state).
+func respawn() -> void:
+	# Reset state
+	chop_progress = 0
+	scale = original_scale
+
+	# Restore visibility and collision
+	_set_depleted_state(false)
+
+	print("[Resource] %s respawned" % node_name)

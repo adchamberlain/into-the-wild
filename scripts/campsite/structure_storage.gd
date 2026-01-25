@@ -52,14 +52,31 @@ func open_storage(player: Node) -> void:
 	is_open = true
 	storage_opened.emit()
 
-	# Print storage contents for now (UI integration later)
-	print("[Storage] === Storage Contents ===")
-	var items: Dictionary = storage_inventory.get_all_items()
-	if items.is_empty():
-		print("[Storage] (empty)")
+	# Try to find and open the storage UI
+	var storage_ui: Node = _find_storage_ui()
+	if storage_ui and storage_ui.has_method("open_storage"):
+		storage_ui.open_storage(self)
 	else:
-		for item_type: String in items:
-			print("[Storage] %s: %d" % [item_type.capitalize(), items[item_type]])
+		# Fallback to console output
+		print("[Storage] === Storage Contents ===")
+		var items: Dictionary = storage_inventory.get_all_items()
+		if items.is_empty():
+			print("[Storage] (empty)")
+		else:
+			for item_type: String in items:
+				print("[Storage] %s: %d" % [item_type.capitalize(), items[item_type]])
+
+
+func _find_storage_ui() -> Node:
+	# Look for StorageUI in the scene tree
+	var root: Node = get_tree().root
+	if root.has_node("Main/StorageUI"):
+		return root.get_node("Main/StorageUI")
+	# Try to find it elsewhere
+	var storage_uis: Array = get_tree().get_nodes_in_group("storage_ui")
+	if not storage_uis.is_empty():
+		return storage_uis[0]
+	return null
 
 
 ## Close storage.
