@@ -354,6 +354,11 @@ func _apply_crafting_data(data: Dictionary) -> void:
 		crafting_system.discovered_recipes.clear()
 		for recipe: String in data["discovered_recipes"]:
 			crafting_system.discovered_recipes.append(recipe)
+		# Also add any new recipes that weren't in the save file
+		# This ensures new recipes are available after game updates
+		for recipe_id: String in crafting_system.recipes:
+			if recipe_id not in crafting_system.discovered_recipes:
+				crafting_system.discovered_recipes.append(recipe_id)
 
 
 func _apply_campsite_data(data: Dictionary) -> void:
