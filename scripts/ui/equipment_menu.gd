@@ -21,6 +21,8 @@ const EQUIPMENT_SLOTS: Array = [
 	{"key": "4", "type": "rope", "name": "Rope"},
 	{"key": "5", "type": "shelter_kit", "name": "Shelter Kit"},
 	{"key": "6", "type": "storage_box", "name": "Storage Box"},
+	{"key": "7", "type": "fishing_rod", "name": "Fishing Rod"},
+	{"key": "8", "type": "crafting_bench_kit", "name": "Crafting Bench Kit"},
 ]
 
 # Cached labels for each slot

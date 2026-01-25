@@ -16,6 +16,9 @@
 [ext_resource type="Script" path="res://scripts/core/save_load.gd" id="14_save_load"]
 [ext_resource type="PackedScene" uid="uid://storage_ui001" path="res://scenes/ui/storage_ui.tscn" id="15_storage_ui"]
 [ext_resource type="PackedScene" uid="uid://fire_menu001" path="res://scenes/ui/fire_menu.tscn" id="16_fire_menu"]
+[ext_resource type="PackedScene" uid="uid://mushroom001" path="res://scenes/resources/mushroom.tscn" id="17_mushroom"]
+[ext_resource type="PackedScene" uid="uid://herb001" path="res://scenes/resources/herb.tscn" id="18_herb"]
+[ext_resource type="PackedScene" uid="uid://fishing_spot001" path="res://scenes/resources/fishing_spot.tscn" id="19_fishing"]
 
 [sub_resource type="Environment" id="Environment_1"]
 background_mode = 1
@@ -665,6 +668,69 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, 4)
 
 [node name="Tree4" parent="Resources" instance=ExtResource("8_tree")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, -10)
+
+[node name="Mushroom1" parent="Resources" instance=ExtResource("17_mushroom")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, -9)
+
+[node name="Mushroom2" parent="Resources" instance=ExtResource("17_mushroom")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 0, 6)
+
+[node name="Mushroom3" parent="Resources" instance=ExtResource("17_mushroom")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11, 0, 5)
+
+[node name="Mushroom4" parent="Resources" instance=ExtResource("17_mushroom")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, -11)
+
+[node name="Mushroom5" parent="Resources" instance=ExtResource("17_mushroom")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 12)
+
+[node name="Mushroom6" parent="Resources" instance=ExtResource("17_mushroom")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, -3)
+
+[node name="Mushroom7" parent="Resources" instance=ExtResource("17_mushroom")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, 0, -6)
+
+[node name="Mushroom8" parent="Resources" instance=ExtResource("17_mushroom")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, 14)
+
+[node name="Mushroom9" parent="Resources" instance=ExtResource("17_mushroom")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, 8)
+
+[node name="Mushroom10" parent="Resources" instance=ExtResource("17_mushroom")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 0, 10)
+
+[node name="Herb1" parent="Resources" instance=ExtResource("18_herb")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 3)
+
+[node name="Herb2" parent="Resources" instance=ExtResource("18_herb")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 4)
+
+[node name="Herb3" parent="Resources" instance=ExtResource("18_herb")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0, -2)
+
+[node name="Herb4" parent="Resources" instance=ExtResource("18_herb")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -3)
+
+[node name="Herb5" parent="Resources" instance=ExtResource("18_herb")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, 5)
+
+[node name="Herb6" parent="Resources" instance=ExtResource("18_herb")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, -5)
+
+[node name="Herb7" parent="Resources" instance=ExtResource("18_herb")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 6)
+
+[node name="Herb8" parent="Resources" instance=ExtResource("18_herb")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, 0)
+
+[node name="FishingSpot1" parent="Resources" instance=ExtResource("19_fishing")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 0, -12)
+
+[node name="FishingSpot2" parent="Resources" instance=ExtResource("19_fishing")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, 15)
+
+[node name="FishingSpot3" parent="Resources" instance=ExtResource("19_fishing")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0, -8)
 
 [node name="Structures" type="Node3D" parent="."]
 

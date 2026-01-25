@@ -198,8 +198,12 @@ func _collect_player_data() -> Dictionary:
 
 	# Equipment
 	var equipment: Node = player.get_node_or_null("Equipment")
-	if equipment and "current_item" in equipment:
-		data["equipped_item"] = equipment.current_item
+	if equipment:
+		if "equipped_item" in equipment:
+			data["equipped_item"] = equipment.equipped_item
+		# Save tool durability
+		if equipment.has_method("get_durability_data"):
+			data["tool_durability"] = equipment.get_durability_data()
 
 	return data
 
@@ -313,10 +317,15 @@ func _apply_player_data(data: Dictionary) -> void:
 
 	# Equipment
 	var equipment: Node = player.get_node_or_null("Equipment")
-	if equipment and data.has("equipped_item"):
-		var item: String = data["equipped_item"]
-		if item != "" and equipment.has_method("equip_item"):
-			equipment.equip_item(item)
+	if equipment:
+		# Load tool durability first
+		if data.has("tool_durability") and equipment.has_method("load_durability_data"):
+			equipment.load_durability_data(data["tool_durability"])
+		# Then equip item
+		if data.has("equipped_item"):
+			var item: String = data["equipped_item"]
+			if item != "" and equipment.has_method("equip"):
+				equipment.equip(item)
 
 
 func _apply_time_data(data: Dictionary) -> void:
@@ -391,6 +400,8 @@ func _recreate_structure(struct_data: Dictionary, container: Node) -> void:
 			scene_path = "res://scenes/campsite/structures/basic_shelter.tscn"
 		"storage_container":
 			scene_path = "res://scenes/campsite/structures/storage_container.tscn"
+		"crafting_bench":
+			scene_path = "res://scenes/campsite/structures/crafting_bench.tscn"
 
 	if scene_path == "":
 		push_warning("[SaveLoad] Unknown structure type: %s" % structure_type)

@@ -162,11 +162,11 @@ Players can eventually build a weather vane to get short-term forecasts and plan
 
 ## Crafting System
 
-### Discovery-Based
+### Recipes
 
-- Players discover recipes through experimentation rather than having a full recipe book
-- Combining resources at a crafting station shows possible outcomes based on what you're holding
-- Once discovered, recipes are saved to a journal for reference
+- All recipes are available from the start
+- Crafting menu shows all recipes with required materials
+- Recipes that can be crafted (player has materials) are highlighted
 
 ### Tool Progression
 

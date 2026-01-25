@@ -757,25 +757,139 @@ DEV_LOG.md                                # Updated documentation
 
 ---
 
-## Next Session: Phase 7 - Content & Polish (Continued)
+## Session 7 - High Priority Features (2026-01-25)
+
+### What Was Built
+
+**Four Core Gameplay Features**
+
+#### New Files Created
+
+```
+scripts/resources/fishing_spot.gd       # Fishing location with cast/catch mechanics
+scenes/resources/fishing_spot.tscn      # Visual water area with collision
+scenes/resources/mushroom.tscn          # Mushroom resource (uses resource_node.gd)
+scenes/resources/herb.tscn              # Herb resource (uses resource_node.gd)
+scripts/campsite/structure_crafting_bench.gd  # Crafting bench structure
+scenes/campsite/structures/crafting_bench.tscn  # Wooden workbench
+```
+
+#### Files Modified
+
+```
+scripts/player/equipment.gd             # Added durability system, fishing rod (slot 7), crafting bench kit (slot 8)
+scripts/player/player_controller.gd     # Added herb, fish to FOOD_VALUES, healing_salve as healing item
+scripts/crafting/crafting_system.gd     # Added fishing_rod, healing_salve, crafting_bench_kit recipes
+scripts/campsite/structure_data.gd      # Added crafting_bench structure definition
+scripts/campsite/placement_system.gd    # Added crafting_bench programmatic fallback
+scripts/ui/hud.gd                       # Added durability bar, tool broken notification
+scenes/ui/hud.tscn                      # Added DurabilityBar ProgressBar node
+scripts/ui/equipment_menu.gd            # Added slots 7-8 for new items
+scripts/core/save_load.gd               # Added tool_durability save/load, crafting_bench recreation
+scenes/main.tscn                        # Added 10 mushrooms, 8 herbs, 3 fishing spots
+```
+
+#### Features Implemented
+
+1. **Tool Durability System** (`equipment.gd`)
+   - Tools now have durability that decreases with use
+   - Stone Axe: 150 max durability, -1 per chop
+   - Fishing Rod: 50 max durability, -1 per catch
+   - Durability bar shows under equipped item display
+   - Tool breaks when durability reaches 0 (removed from inventory)
+   - Signals: `durability_changed`, `tool_broken`
+   - Durability saved/loaded with game state
+
+2. **Fishing System** (`fishing_spot.gd` + `fishing_spot.tscn`)
+   - 3 fishing spots placed in world (edges of map)
+   - Requires fishing rod equipped (slot 7)
+   - Multi-step mechanic:
+     1. Look at fishing spot, press R to cast
+     2. Wait 3-8 seconds (random)
+     3. "Fish on the line!" notification appears
+     4. Press R within 2 seconds to catch
+     5. Fish added to inventory, durability used
+   - Fishing spots deplete after catch, respawn later
+   - Visual feedback with water color changes
+
+3. **New World Resources** (mushrooms + herbs)
+   - 10 mushrooms scattered in wooded areas (brown cap, white stem)
+   - 8 herbs near campsite center (green leafy plants)
+   - Both use existing resource_node.gd system
+   - Respawn after 6 game hours
+   - Food values: mushroom (+10 hunger), herb (+5 hunger)
+
+4. **Crafting Bench Structure** (`structure_crafting_bench.gd`)
+   - Placeable wooden workbench
+   - Opens crafting UI when interacted with (E key)
+   - Recipe: 6 wood + 4 branch → crafting_bench_kit
+   - Equip with key 8, place with R
+
+5. **New Recipes**
+   - **Fishing Rod**: 3 branch + 1 rope (tool for catching fish)
+   - **Healing Salve**: 3 herb → instant heal item (+30 health)
+   - **Crafting Bench Kit**: 6 wood + 4 branch (placeable workbench)
+
+6. **Healing Items**
+   - Healing salve provides instant +30 health when used (F key)
+   - Prioritizes healing items when health is low
+
+#### Equipment Slots (Updated)
+
+| Slot | Item | Notes |
+|------|------|-------|
+| 1 | Torch | Light source |
+| 2 | Stone Axe | Chop trees (150 durability) |
+| 3 | Campfire Kit | Placeable fire pit |
+| 4 | Rope | Crafting material |
+| 5 | Shelter Kit | Placeable lean-to |
+| 6 | Storage Box | Placeable storage |
+| 7 | Fishing Rod | Catch fish (50 durability) |
+| 8 | Crafting Bench Kit | Placeable workbench |
+
+#### Resource Summary
+
+| Resource | Location | Amount | Respawn |
+|----------|----------|--------|---------|
+| Mushroom | Wooded areas | 10 nodes | 6 hours |
+| Herb | Near campsite | 8 nodes | 6 hours |
+| Fish | Fishing spots | 3 spots | 6 hours |
+
+#### Gameplay Flow
+
+**Fishing:**
+1. Craft fishing rod (3 branch + 1 rope)
+2. Equip with key 7
+3. Find fishing spot (blue circular water areas)
+4. Look at spot, press R to cast
+5. Wait for "Fish on the line!" notification
+6. Quickly press R to catch
+7. Cook fish at campfire for +40 hunger
+
+**Healing:**
+1. Gather 3 herbs near campsite
+2. Craft healing salve (C menu)
+3. Press F when health is low to use salve (+30 health)
+
+---
+
+## Next Session: Phase 8 - Polish & Content
 
 ### Completed Features
-- ✅ Save/Load system
-- ✅ Resource respawning (6 hours for regular, 1-7 days for trees)
-- ✅ Storage UI for item transfer
-- ✅ Shelter resting with sleep/time skip
-- ✅ Fire pit interaction menu with cooking
-- ✅ Fire fuel system (1 day burn time, wood as fuel)
-- ✅ Config toggles for survival mechanics
+- ✅ Tool durability system with HUD display
+- ✅ Fishing system with multi-step mechanic
+- ✅ Mushrooms and herbs as new resources
+- ✅ Crafting bench placeable structure
+- ✅ Healing salve instant heal item
+- ✅ New recipes (fishing rod, healing salve, crafting bench)
 
 ### Planned Tasks
-1. Additional recipes and structures (cooking grate, crafting bench)
-2. Weather particle effects (rain, snow)
-3. Sound effects and ambient audio
-4. Discovery-based crafting system
-5. Level 2/3 campsite content
-6. Fishing system (to use the "fish" cooking recipe)
-7. Game polish and balancing
+1. Weather particle effects (rain, snow)
+2. Sound effects and ambient audio
+3. Additional structures (cooking grate, water collector)
+4. Level 3 campsite content
+5. Game balancing and polish
+6. Visual improvements (resource indicators, better meshes)
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

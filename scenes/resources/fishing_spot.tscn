@@ -1,0 +1,43 @@
+[gd_scene load_steps=5 format=3 uid="uid://fishing_spot001"]
+
+[ext_resource type="Script" path="res://scripts/resources/fishing_spot.gd" id="1_fishing"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_water"]
+height = 0.2
+radius = 1.5
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_water"]
+top_radius = 1.5
+bottom_radius = 1.5
+height = 0.2
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_water"]
+transparency = 1
+albedo_color = Color(0.2, 0.4, 0.5, 0.7)
+roughness = 0.1
+metallic = 0.3
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_edge"]
+top_radius = 1.6
+bottom_radius = 1.6
+height = 0.15
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_edge"]
+albedo_color = Color(0.4, 0.35, 0.3, 1)
+
+[node name="FishingSpot" type="StaticBody3D"]
+script = ExtResource("1_fishing")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
+shape = SubResource("CylinderShape3D_water")
+
+[node name="WaterMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 0)
+mesh = SubResource("CylinderMesh_water")
+material_override = SubResource("StandardMaterial3D_water")
+
+[node name="EdgeMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.075, 0)
+mesh = SubResource("CylinderMesh_edge")
+material_override = SubResource("StandardMaterial3D_edge")

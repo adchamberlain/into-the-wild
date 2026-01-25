@@ -355,6 +355,8 @@ func _create_structure_programmatically() -> Node3D:
 			return _create_basic_shelter()
 		"storage_container":
 			return _create_storage_container()
+		"crafting_bench":
+			return _create_crafting_bench()
 	return null
 
 
@@ -525,6 +527,65 @@ func _create_storage_container() -> StaticBody3D:
 	storage.add_child(lid)
 
 	return storage
+
+
+func _create_crafting_bench() -> StaticBody3D:
+	var bench: StaticBody3D = StaticBody3D.new()
+	bench.name = "CraftingBench"
+	bench.set_script(load("res://scripts/campsite/structure_crafting_bench.gd"))
+
+	# Collision
+	var collision: CollisionShape3D = CollisionShape3D.new()
+	var box_shape: BoxShape3D = BoxShape3D.new()
+	box_shape.size = Vector3(1.2, 0.8, 0.8)
+	collision.shape = box_shape
+	collision.position.y = 0.4
+	bench.add_child(collision)
+
+	var wood_mat: StandardMaterial3D = StandardMaterial3D.new()
+	wood_mat.albedo_color = Color(0.5, 0.35, 0.2)
+
+	var leg_mat: StandardMaterial3D = StandardMaterial3D.new()
+	leg_mat.albedo_color = Color(0.4, 0.28, 0.15)
+
+	# Table top
+	var top: MeshInstance3D = MeshInstance3D.new()
+	var top_mesh: BoxMesh = BoxMesh.new()
+	top_mesh.size = Vector3(1.2, 0.1, 0.8)
+	top.mesh = top_mesh
+	top.position.y = 0.75
+	top.material_override = wood_mat
+	bench.add_child(top)
+
+	# Legs
+	var leg_mesh: BoxMesh = BoxMesh.new()
+	leg_mesh.size = Vector3(0.1, 0.65, 0.1)
+
+	var leg1: MeshInstance3D = MeshInstance3D.new()
+	leg1.mesh = leg_mesh
+	leg1.position = Vector3(-0.5, 0.325, -0.3)
+	leg1.material_override = leg_mat
+	bench.add_child(leg1)
+
+	var leg2: MeshInstance3D = MeshInstance3D.new()
+	leg2.mesh = leg_mesh
+	leg2.position = Vector3(0.5, 0.325, -0.3)
+	leg2.material_override = leg_mat
+	bench.add_child(leg2)
+
+	var leg3: MeshInstance3D = MeshInstance3D.new()
+	leg3.mesh = leg_mesh
+	leg3.position = Vector3(-0.5, 0.325, 0.3)
+	leg3.material_override = leg_mat
+	bench.add_child(leg3)
+
+	var leg4: MeshInstance3D = MeshInstance3D.new()
+	leg4.mesh = leg_mesh
+	leg4.position = Vector3(0.5, 0.325, 0.3)
+	leg4.material_override = leg_mat
+	bench.add_child(leg4)
+
+	return bench
 
 
 ## Destroy preview instance.

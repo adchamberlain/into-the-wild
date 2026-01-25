@@ -37,10 +37,17 @@ var resting_in_structure: Node = null  # The shelter we're resting in
 const FOOD_VALUES: Dictionary = {
 	"berry": 15.0,
 	"mushroom": 10.0,
+	"herb": 5.0,
+	"fish": 25.0,
 	"berry_pouch": 40.0,
 	"cooked_berries": 25.0,
 	"cooked_mushroom": 20.0,
 	"cooked_fish": 40.0,
+}
+
+# Healing items (instant health restore)
+const HEALING_ITEMS: Dictionary = {
+	"healing_salve": 30.0,
 }
 
 
@@ -214,6 +221,15 @@ func _try_use_equipped() -> void:
 func _try_eat() -> void:
 	if not inventory or not stats:
 		return
+
+	# First check for healing items if health is not full
+	if stats.health < stats.max_health:
+		for heal_type: String in HEALING_ITEMS:
+			if inventory.has_item(heal_type):
+				inventory.remove_item(heal_type, 1)
+				stats.heal(HEALING_ITEMS[heal_type])
+				print("[Player] Used 1 %s, +%.0f health" % [heal_type, HEALING_ITEMS[heal_type]])
+				return
 
 	# Try to eat any available food, prioritizing items with most hunger restore
 	var best_food: String = ""

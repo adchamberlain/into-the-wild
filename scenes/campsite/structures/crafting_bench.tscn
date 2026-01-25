@@ -1,0 +1,50 @@
+[gd_scene load_steps=6 format=3 uid="uid://crafting_bench001"]
+
+[ext_resource type="Script" path="res://scripts/campsite/structure_crafting_bench.gd" id="1_bench"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_collision"]
+size = Vector3(1.2, 0.8, 0.8)
+
+[sub_resource type="BoxMesh" id="BoxMesh_top"]
+size = Vector3(1.2, 0.1, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_top"]
+albedo_color = Color(0.5, 0.35, 0.2, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_leg"]
+size = Vector3(0.1, 0.65, 0.1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_leg"]
+albedo_color = Color(0.4, 0.28, 0.15, 1)
+
+[node name="CraftingBench" type="StaticBody3D"]
+script = ExtResource("1_bench")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+shape = SubResource("BoxShape3D_collision")
+
+[node name="TableTop" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+mesh = SubResource("BoxMesh_top")
+material_override = SubResource("StandardMaterial3D_top")
+
+[node name="Leg1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0.325, -0.3)
+mesh = SubResource("BoxMesh_leg")
+material_override = SubResource("StandardMaterial3D_leg")
+
+[node name="Leg2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.325, -0.3)
+mesh = SubResource("BoxMesh_leg")
+material_override = SubResource("StandardMaterial3D_leg")
+
+[node name="Leg3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0.325, 0.3)
+mesh = SubResource("BoxMesh_leg")
+material_override = SubResource("StandardMaterial3D_leg")
+
+[node name="Leg4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.325, 0.3)
+mesh = SubResource("BoxMesh_leg")
+material_override = SubResource("StandardMaterial3D_leg")

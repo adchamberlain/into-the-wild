@@ -5,6 +5,8 @@ class_name Equipment
 signal item_equipped(item_type: String)
 signal item_unequipped(item_type: String)
 signal item_used(item_type: String)
+signal durability_changed(item_type: String, current: int, max_durability: int)
+signal tool_broken(item_type: String)
 
 # Items that can be equipped and their properties
 const EQUIPPABLE_ITEMS: Dictionary = {
@@ -44,8 +46,29 @@ const EQUIPPABLE_ITEMS: Dictionary = {
 		"slot": 6,
 		"has_light": false,
 		"placeable": true
+	},
+	"fishing_rod": {
+		"name": "Fishing Rod",
+		"slot": 7,
+		"has_light": false,
+		"tool_type": "fishing"
+	},
+	"crafting_bench_kit": {
+		"name": "Crafting Bench Kit",
+		"slot": 8,
+		"has_light": false,
+		"placeable": true
 	}
 }
+
+# Tool durability settings
+const TOOL_MAX_DURABILITY: Dictionary = {
+	"stone_axe": 150,
+	"fishing_rod": 50
+}
+
+# Current durability for each tool (item_type -> current durability)
+var tool_durability: Dictionary = {}
 
 # Currently equipped item (empty string = nothing)
 var equipped_item: String = ""
@@ -101,6 +124,10 @@ func _input(event: InputEvent) -> void:
 		_try_equip_slot(5)
 	elif event.physical_keycode == KEY_6:
 		_try_equip_slot(6)
+	elif event.physical_keycode == KEY_7:
+		_try_equip_slot(7)
+	elif event.physical_keycode == KEY_8:
+		_try_equip_slot(8)
 	elif event.physical_keycode == KEY_Q:
 		unequip()
 
@@ -176,9 +203,13 @@ func use_equipped() -> bool:
 	if item_data.get("placeable", false):
 		return _place_item()
 
-	# Handle tool usage (chopping with axe, etc.)
+	# Handle tool usage
 	if item_data.has("tool_type"):
-		return _use_tool()
+		var tool_type: String = item_data.get("tool_type", "")
+		if tool_type == "fishing":
+			return _use_fishing_rod()
+		else:
+			return _use_tool()
 
 	return false
 
@@ -208,6 +239,37 @@ func _use_tool() -> bool:
 	if target.has_method("receive_chop"):
 		_play_swing_animation()
 		var success: bool = target.receive_chop(player)
+		if success:
+			item_used.emit(equipped_item)
+			# Use durability on successful chop
+			use_durability(1)
+		return success
+
+	return false
+
+
+func _use_fishing_rod() -> bool:
+	if not player:
+		return false
+
+	# Get the interaction ray from player's camera
+	var camera: Camera3D = player.get_node_or_null("Camera3D")
+	if not camera:
+		return false
+
+	var interaction_ray: RayCast3D = camera.get_node_or_null("InteractionRay")
+	if not interaction_ray or not interaction_ray.is_colliding():
+		print("[Equipment] Look at a fishing spot to fish")
+		return false
+
+	var target: Node = interaction_ray.get_collider()
+	if not target or not target.is_in_group("fishing_spot"):
+		print("[Equipment] That's not a fishing spot")
+		return false
+
+	# Try to fish
+	if target.has_method("interact"):
+		var success: bool = target.interact(player)
 		if success:
 			item_used.emit(equipped_item)
 		return success
@@ -380,3 +442,83 @@ func _create_legacy_campfire(pos: Vector3) -> Node3D:
 	campfire.add_child(fire_mesh)
 
 	return campfire
+
+
+## Initialize durability for a new tool (called when crafted or acquired).
+func init_tool_durability(item_type: String) -> void:
+	if TOOL_MAX_DURABILITY.has(item_type):
+		tool_durability[item_type] = TOOL_MAX_DURABILITY[item_type]
+		print("[Equipment] Initialized %s durability: %d" % [item_type, tool_durability[item_type]])
+
+
+## Use durability on the currently equipped tool. Returns true if tool still usable.
+func use_durability(amount: int = 1) -> bool:
+	if equipped_item == "":
+		return false
+
+	if not TOOL_MAX_DURABILITY.has(equipped_item):
+		return true  # Non-durability item, always usable
+
+	# Initialize if not tracked yet
+	if not tool_durability.has(equipped_item):
+		tool_durability[equipped_item] = TOOL_MAX_DURABILITY[equipped_item]
+
+	# Reduce durability
+	tool_durability[equipped_item] -= amount
+	var current: int = tool_durability[equipped_item]
+	var max_dur: int = TOOL_MAX_DURABILITY[equipped_item]
+
+	durability_changed.emit(equipped_item, current, max_dur)
+	print("[Equipment] %s durability: %d/%d" % [equipped_item, current, max_dur])
+
+	# Check if broken
+	if current <= 0:
+		_break_tool()
+		return false
+
+	return true
+
+
+## Break the currently equipped tool.
+func _break_tool() -> void:
+	var broken_item: String = equipped_item
+
+	# Remove from inventory
+	if inventory:
+		inventory.remove_item(broken_item, 1)
+
+	# Remove durability tracking
+	tool_durability.erase(broken_item)
+
+	# Unequip
+	unequip()
+
+	# Emit signal
+	tool_broken.emit(broken_item)
+	print("[Equipment] %s broke!" % broken_item)
+
+
+## Get current durability of equipped tool (returns -1 if no durability system).
+func get_equipped_durability() -> int:
+	if equipped_item == "" or not TOOL_MAX_DURABILITY.has(equipped_item):
+		return -1
+	if not tool_durability.has(equipped_item):
+		return TOOL_MAX_DURABILITY[equipped_item]
+	return tool_durability[equipped_item]
+
+
+## Get max durability of equipped tool (returns -1 if no durability system).
+func get_equipped_max_durability() -> int:
+	if equipped_item == "" or not TOOL_MAX_DURABILITY.has(equipped_item):
+		return -1
+	return TOOL_MAX_DURABILITY[equipped_item]
+
+
+## Get all tool durability data for saving.
+func get_durability_data() -> Dictionary:
+	return tool_durability.duplicate()
+
+
+## Load tool durability data from save.
+func load_durability_data(data: Dictionary) -> void:
+	tool_durability = data.duplicate()

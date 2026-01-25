@@ -72,6 +72,27 @@ func _load_recipes() -> void:
 			"output_type": "storage_box",
 			"output_amount": 1,
 			"description": "A wooden box to store extra items."
+		},
+		"fishing_rod": {
+			"name": "Fishing Rod",
+			"inputs": {"branch": 3, "rope": 1},
+			"output_type": "fishing_rod",
+			"output_amount": 1,
+			"description": "A simple rod for catching fish."
+		},
+		"healing_salve": {
+			"name": "Healing Salve",
+			"inputs": {"herb": 3},
+			"output_type": "healing_salve",
+			"output_amount": 1,
+			"description": "Instantly restores health when used."
+		},
+		"crafting_bench_kit": {
+			"name": "Crafting Bench Kit",
+			"inputs": {"wood": 6, "branch": 4},
+			"output_type": "crafting_bench_kit",
+			"output_amount": 1,
+			"description": "Materials to build a crafting workbench."
 		}
 	}
 

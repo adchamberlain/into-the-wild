@@ -28,11 +28,17 @@ const STRUCTURES: Dictionary = {
 		"has_inventory": true,
 		"inventory_slots": 20,
 		"category": "storage"
+	},
+	"crafting_bench": {
+		"name": "Crafting Bench",
+		"scene": "res://scenes/campsite/structures/crafting_bench.tscn",
+		"item_required": "crafting_bench_kit",
+		"category": "utility"
 	}
 }
 
 # Items that can be placed as structures
-const PLACEABLE_ITEMS: Array[String] = ["campfire_kit", "shelter_kit", "storage_box"]
+const PLACEABLE_ITEMS: Array[String] = ["campfire_kit", "shelter_kit", "storage_box", "crafting_bench_kit"]
 
 
 ## Get structure data by structure type.

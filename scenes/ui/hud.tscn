@@ -30,6 +30,20 @@ corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_durability_bg"]
+bg_color = Color(0.2, 0.2, 0.25, 0.8)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_durability_fill"]
+bg_color = Color(0.4, 0.7, 0.9, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1_hud")
 
@@ -214,6 +228,17 @@ theme_override_constants/shadow_offset_y = 2
 theme_override_font_sizes/font_size = 32
 text = "Equipped: None"
 horizontal_alignment = 2
+
+[node name="DurabilityBar" type="ProgressBar" parent="EquippedContainer"]
+visible = false
+custom_minimum_size = Vector2(200, 20)
+layout_mode = 2
+size_flags_horizontal = 8
+theme_override_styles/background = SubResource("StyleBoxFlat_durability_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_durability_fill")
+max_value = 150.0
+value = 150.0
+show_percentage = false
 
 [node name="EquipHintLabel" type="Label" parent="EquippedContainer"]
 layout_mode = 2

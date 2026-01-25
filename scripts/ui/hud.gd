@@ -28,6 +28,7 @@ extends CanvasLayer
 
 # Equipment
 @onready var equipped_label: Label = $EquippedContainer/EquippedLabel
+@onready var durability_bar: ProgressBar = $EquippedContainer/DurabilityBar
 
 # Notification
 @onready var notification_label: Label = $NotificationLabel
@@ -93,6 +94,8 @@ func _ready() -> void:
 			if equipment:
 				equipment.item_equipped.connect(_on_item_equipped)
 				equipment.item_unequipped.connect(_on_item_unequipped)
+				equipment.durability_changed.connect(_on_durability_changed)
+				equipment.tool_broken.connect(_on_tool_broken)
 
 	# Connect to campsite manager
 	if campsite_manager_path:
@@ -202,10 +205,44 @@ func _update_equipped_display() -> void:
 
 		# Add hint for placeable items
 		var equipped_type: String = equipment.get_equipped()
-		if equipped_type in ["campfire_kit", "shelter_kit", "storage_box"]:
+		if equipped_type in ["campfire_kit", "shelter_kit", "storage_box", "crafting_bench_kit"]:
 			equipped_label.text += " [R to place]"
+		elif equipped_type == "fishing_rod":
+			equipped_label.text += " [R to fish]"
+
+		# Update durability bar
+		_update_durability_bar()
 	else:
 		equipped_label.text = "Equipped: None"
+		# Hide durability bar when nothing equipped
+		if durability_bar:
+			durability_bar.visible = false
+
+
+func _update_durability_bar() -> void:
+	if not durability_bar or not equipment:
+		return
+
+	var current: int = equipment.get_equipped_durability()
+	var max_dur: int = equipment.get_equipped_max_durability()
+
+	if current < 0 or max_dur < 0:
+		# No durability for this item
+		durability_bar.visible = false
+	else:
+		durability_bar.visible = true
+		durability_bar.max_value = max_dur
+		durability_bar.value = current
+
+
+func _on_durability_changed(item_type: String, current: int, max_durability: int) -> void:
+	_update_durability_bar()
+
+
+func _on_tool_broken(item_type: String) -> void:
+	var display_name: String = item_type.capitalize().replace("_", " ")
+	show_notification("%s broke!" % display_name, Color(1.0, 0.4, 0.4))
+	_update_equipped_display()
 
 
 func _on_inventory_changed() -> void:
