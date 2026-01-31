@@ -1482,6 +1482,119 @@ scenes/main.tscn                      # Removed hardcoded fishing spots
 
 ---
 
+## Session 11 - Dynamic Chunk-Based Terrain System (2026-01-31)
+
+### What Was Built
+
+**Infinite World Generation** - Minecraft-style dynamic chunk loading/unloading as player explores
+
+#### New Files Created
+
+```
+scripts/world/terrain_chunk.gd     # Individual chunk: terrain mesh, collision, trees, decorations
+scripts/world/chunk_manager.gd     # Manages chunk loading/unloading around player
+```
+
+#### Files Modified
+
+```
+scenes/world/world.tscn            # Switched from terrain_generator.gd to chunk_manager.gd
+```
+
+#### Features Implemented
+
+1. **TerrainChunk Class** (`scripts/world/terrain_chunk.gd`)
+   - Self-contained chunk that generates:
+     - Blocky terrain mesh with grass tops and dirt sides
+     - Grass "sod" edges on cliff faces
+     - HeightMapShape3D collision
+     - Trees (small oak 60%, big oak 30%, birch 10%)
+     - Ground decorations (grass tufts, red/yellow flowers)
+   - Deterministic generation using chunk coordinates as seed
+   - Consistent results regardless of load order
+   - Clean `unload()` method for memory management
+
+2. **ChunkManager Class** (`scripts/world/chunk_manager.gd`)
+   - Tracks player position and determines which chunks to load
+   - Configurable render distance (default: 3 chunks in each direction)
+   - Chunk queue system for progressive loading:
+     - Unloads distant chunks first (frees memory)
+     - Loads nearest chunks first (player-centric)
+     - Rate-limited to prevent frame drops (1 chunk/frame default)
+   - Maintains shared resources:
+     - Single terrain material for all chunks
+     - Noise generators (terrain + forest density)
+     - Tree scene references
+   - Spawns fishing pond when its chunk loads
+
+3. **Seamless Chunk Borders**
+   - Side faces use `get_height_at()` which works for any world coordinate
+   - Neighbor heights queried across chunk boundaries
+   - No visible seams between chunks
+   - Consistent height generation via shared noise
+
+4. **Per-Chunk Resource Generation**
+   - Trees use deterministic RNG seeded by chunk coordinates
+   - Same chunk always generates same trees
+   - Forest density noise creates natural clustering
+   - Decorations distributed proportionally to chunk area
+   - Respects exclusion zones (campsite, pond)
+
+5. **World Scene Update** (`scenes/world/world.tscn`)
+   - Replaced `terrain_generator.gd` with `chunk_manager.gd`
+   - Configurable exports for chunk size, render distance, terrain parameters
+
+#### Chunk System Architecture
+
+```
+ChunkManager (Node3D)
+├── Manages loaded_chunks: Dictionary[Vector2i, TerrainChunk]
+├── Monitors player position in _process()
+├── Queues chunks_to_load and chunks_to_unload
+└── Spawns fishing spot when pond chunk loads
+
+TerrainChunk (Node3D)
+├── terrain_mesh (MeshInstance3D) - Blocky terrain
+├── terrain_collision (StaticBody3D) - HeightMapShape3D
+├── trees_container (Node3D) - Procedural trees
+└── decorations_container (Node3D) - Grass, flowers
+```
+
+#### Configuration
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| chunk_size_cells | 16 | Cells per chunk side (16x16 = 256 cells) |
+| render_distance | 3 | Chunks loaded in each direction |
+| chunks_per_frame | 1 | Rate limiting for smooth loading |
+| cell_size | 3.0 | World units per cell |
+
+#### Chunk Size Calculation
+
+- Chunk world size: `chunk_size_cells × cell_size = 16 × 3 = 48 units`
+- With render_distance 3: loads 7×7 = 49 chunks (336×336 units visible)
+- Total initial terrain: ~112,896 square units
+
+#### Memory Management
+
+- Chunks beyond render_distance are unloaded
+- Each chunk cleans up:
+  - Terrain mesh and material
+  - Collision shape
+  - All spawned trees
+  - All decorations
+- Dictionary tracking prevents double-loading
+
+#### Preserved Features
+
+- Flat campsite area at origin (6 unit radius)
+- Natural pond with depression at (15, 12)
+- Original terrain colors (Minecraft forest green/dirt brown)
+- Tree type distribution and clustering
+- Ground decoration noise-based placement
+
+---
+
 ## Next Session: Phase 8 - Polish & Content (Continued)
 
 ### Completed Features
