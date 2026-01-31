@@ -80,25 +80,22 @@ func _create_pond_mesh() -> void:
 		if existing:
 			existing.queue_free()
 
-	# Water depth (how deep the water volume extends below surface)
-	# Must match terrain pond floor depth (-2.5) plus surface height
-	var water_depth: float = 3.0
-
-	# Create water volume as a simple box that fills the terrain depression
+	# Create water as a thin surface plane (not a box) to avoid side walls
+	# clipping through terrain at pond edges
 	water_mesh = MeshInstance3D.new()
 	water_mesh.name = "WaterMesh"
 
-	var box_mesh := BoxMesh.new()
-	box_mesh.size = Vector3(pond_width, water_depth, pond_depth)
-	water_mesh.mesh = box_mesh
+	var plane_mesh := PlaneMesh.new()
+	plane_mesh.size = Vector2(pond_width, pond_depth)
+	water_mesh.mesh = plane_mesh
 
-	# Position so water surface is at pond_height, volume extends down
-	water_mesh.position = Vector3(0, pond_height - water_depth / 2.0, 0)
+	# Position at water surface level
+	water_mesh.position = Vector3(0, pond_height, 0)
 
-	# Semi-transparent water material
+	# Semi-transparent water material (render both sides)
 	var mat := StandardMaterial3D.new()
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.albedo_color = Color(0.2, 0.4, 0.55, 0.6)
+	mat.albedo_color = Color(0.2, 0.5, 0.65, 0.7)
 	mat.roughness = 0.1
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	water_mesh.material_override = mat
