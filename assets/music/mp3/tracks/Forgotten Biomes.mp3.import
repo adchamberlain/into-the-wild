@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://b4xq0sji3roa1"
+path="res://.godot/imported/Forgotten Biomes.mp3-48a7d28038359f9091bac0ada67974a9.mp3str"
+
+[deps]
+
+source_file="res://assets/music/mp3/tracks/Forgotten Biomes.mp3"
+dest_files=["res://.godot/imported/Forgotten Biomes.mp3-48a7d28038359f9091bac0ada67974a9.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

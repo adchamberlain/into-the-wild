@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://dle1ff3w001ww"
+path="res://.godot/imported/Whispering Woods.mp3-7c87106f046e2548e12268947b14c8f6.mp3str"
+
+[deps]
+
+source_file="res://assets/music/mp3/tracks/Whispering Woods.mp3"
+dest_files=["res://.godot/imported/Whispering Woods.mp3-7c87106f046e2548e12268947b14c8f6.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

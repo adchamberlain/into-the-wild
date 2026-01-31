@@ -9,6 +9,7 @@ signal config_changed()
 @export var player_path: NodePath
 @export var save_load_path: NodePath
 @export var resource_manager_path: NodePath
+@export var music_manager_path: NodePath
 
 var time_manager: Node
 var weather_manager: Node
@@ -16,6 +17,7 @@ var player: Node
 var player_stats: Node
 var save_load: Node
 var resource_manager: Node
+var music_manager: Node
 
 # Config state (defaults)
 var hunger_enabled: bool = false
@@ -25,6 +27,8 @@ var weather_enabled: bool = true
 var unlimited_fire_enabled: bool = false
 var tree_respawn_days: float = 1.0
 var day_length_minutes: float = 20.0
+var music_enabled: bool = true
+var music_volume: float = 50.0  # 0-100
 
 # UI References
 @onready var panel: PanelContainer = $Panel
@@ -40,6 +44,9 @@ var day_length_minutes: float = 20.0
 @onready var save_button: Button = $Panel/VBoxContainer/SaveLoadContainer/SaveButton
 @onready var load_button: Button = $Panel/VBoxContainer/SaveLoadContainer/LoadButton
 @onready var save_status_label: Label = $Panel/VBoxContainer/SaveStatusLabel
+@onready var music_toggle: CheckButton = $Panel/VBoxContainer/MusicToggle
+@onready var music_volume_slider: HSlider = $Panel/VBoxContainer/MusicVolumeContainer/MusicVolumeSlider
+@onready var music_volume_label: Label = $Panel/VBoxContainer/MusicVolumeContainer/MusicVolumeValue
 
 var is_visible: bool = false
 
@@ -58,6 +65,8 @@ func _ready() -> void:
 		save_load = get_node_or_null(save_load_path)
 	if resource_manager_path:
 		resource_manager = get_node_or_null(resource_manager_path)
+	if music_manager_path:
+		music_manager = get_node_or_null(music_manager_path)
 
 	# Initialize UI state
 	_init_ui()
@@ -87,6 +96,14 @@ func _init_ui() -> void:
 	tree_respawn_slider.value = tree_respawn_days
 	tree_respawn_label.text = "%.0f day%s" % [tree_respawn_days, "s" if tree_respawn_days != 1.0 else ""]
 
+	# Set music controls
+	if music_toggle:
+		music_toggle.button_pressed = music_enabled
+	if music_volume_slider:
+		music_volume_slider.value = music_volume
+	if music_volume_label:
+		music_volume_label.text = "%.0f%%" % music_volume
+
 	# Connect signals
 	hunger_toggle.toggled.connect(_on_hunger_toggled)
 	health_toggle.toggled.connect(_on_health_toggled)
@@ -95,6 +112,12 @@ func _init_ui() -> void:
 	unlimited_fire_toggle.toggled.connect(_on_unlimited_fire_toggled)
 	day_length_slider.value_changed.connect(_on_day_length_changed)
 	tree_respawn_slider.value_changed.connect(_on_tree_respawn_changed)
+
+	# Connect music signals
+	if music_toggle:
+		music_toggle.toggled.connect(_on_music_toggled)
+	if music_volume_slider:
+		music_volume_slider.value_changed.connect(_on_music_volume_changed)
 
 	# Connect save/load buttons
 	if save_button:
@@ -182,6 +205,22 @@ func _on_tree_respawn_changed(value: float) -> void:
 	tree_respawn_label.text = "%.0f day%s" % [value, "s" if value != 1.0 else ""]
 	_apply_config()
 	print("[ConfigMenu] Tree respawn time: %.0f days" % value)
+
+
+func _on_music_toggled(pressed: bool) -> void:
+	music_enabled = pressed
+	if music_manager:
+		music_manager.set_music_enabled(pressed)
+	print("[ConfigMenu] Music: %s" % ("ON" if pressed else "OFF"))
+
+
+func _on_music_volume_changed(value: float) -> void:
+	music_volume = value
+	if music_volume_label:
+		music_volume_label.text = "%.0f%%" % value
+	if music_manager:
+		music_manager.set_volume(value / 100.0)
+	print("[ConfigMenu] Music volume: %.0f%%" % value)
 
 
 func _apply_config() -> void:

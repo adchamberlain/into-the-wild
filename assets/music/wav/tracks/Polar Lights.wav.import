@@ -1,0 +1,24 @@
+[remap]
+
+importer="wav"
+type="AudioStreamWAV"
+uid="uid://c33b11qlxry7l"
+path="res://.godot/imported/Polar Lights.wav-7c3b38939202fa63b8ea51b7796e1800.sample"
+
+[deps]
+
+source_file="res://assets/music/wav/tracks/Polar Lights.wav"
+dest_files=["res://.godot/imported/Polar Lights.wav-7c3b38939202fa63b8ea51b7796e1800.sample"]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=2

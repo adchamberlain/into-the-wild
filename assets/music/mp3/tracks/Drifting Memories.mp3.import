@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://dwbgjbrn8k2h1"
+path="res://.godot/imported/Drifting Memories.mp3-8b00eb4c55ee66a1b25aab8847e82d7a.mp3str"
+
+[deps]
+
+source_file="res://assets/music/mp3/tracks/Drifting Memories.mp3"
+dest_files=["res://.godot/imported/Drifting Memories.mp3-8b00eb4c55ee66a1b25aab8847e82d7a.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

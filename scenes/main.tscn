@@ -19,6 +19,7 @@
 [ext_resource type="PackedScene" uid="uid://mushroom001" path="res://scenes/resources/mushroom.tscn" id="17_mushroom"]
 [ext_resource type="PackedScene" uid="uid://herb001" path="res://scenes/resources/herb.tscn" id="18_herb"]
 [ext_resource type="PackedScene" uid="uid://fishing_spot001" path="res://scenes/resources/fishing_spot.tscn" id="19_fishing"]
+[ext_resource type="Script" path="res://scripts/core/music_manager.gd" id="20_music"]
 
 [sub_resource type="Environment" id="Environment_1"]
 background_mode = 1
@@ -44,22 +45,20 @@ size = Vector3(0.6, 0.2, 0.2)
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_branch"]
 albedo_color = Color(0.55, 0.35, 0.2, 1)
 
-[sub_resource type="SphereShape3D" id="SphereShape3D_rock"]
-radius = 0.25
+[sub_resource type="BoxShape3D" id="BoxShape3D_rock"]
+size = Vector3(0.4, 0.35, 0.4)
 
-[sub_resource type="SphereMesh" id="SphereMesh_rock"]
-radius = 0.25
-height = 0.5
+[sub_resource type="BoxMesh" id="BoxMesh_rock"]
+size = Vector3(0.4, 0.35, 0.4)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rock"]
 albedo_color = Color(0.5, 0.5, 0.5, 1)
 
-[sub_resource type="SphereShape3D" id="SphereShape3D_berry"]
-radius = 0.35
+[sub_resource type="BoxShape3D" id="BoxShape3D_berry"]
+size = Vector3(0.25, 0.3, 0.25)
 
-[sub_resource type="SphereMesh" id="SphereMesh_berry"]
-radius = 0.35
-height = 0.7
+[sub_resource type="BoxMesh" id="BoxMesh_berry"]
+size = Vector3(0.25, 0.3, 0.25)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_berry"]
 albedo_color = Color(0.7, 0.15, 0.2, 1)
@@ -90,6 +89,9 @@ directional_shadow_max_distance = 100.0
 
 [node name="Player" parent="." instance=ExtResource("2_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 0)
+
+[node name="WeatherParticles" parent="Player/Camera3D"]
+weather_manager_path = NodePath("../../../WeatherManager")
 
 [node name="Markers" type="Node3D" parent="."]
 
@@ -553,10 +555,10 @@ resource_amount = 1
 interaction_text = "Pick up"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Rock1"]
-shape = SubResource("SphereShape3D_rock")
+shape = SubResource("BoxShape3D_rock")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Rock1"]
-mesh = SubResource("SphereMesh_rock")
+mesh = SubResource("BoxMesh_rock")
 material_override = SubResource("StandardMaterial3D_rock")
 
 [node name="Rock2" type="StaticBody3D" parent="Resources"]
@@ -567,10 +569,10 @@ resource_amount = 1
 interaction_text = "Pick up"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Rock2"]
-shape = SubResource("SphereShape3D_rock")
+shape = SubResource("BoxShape3D_rock")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Rock2"]
-mesh = SubResource("SphereMesh_rock")
+mesh = SubResource("BoxMesh_rock")
 material_override = SubResource("StandardMaterial3D_rock")
 
 [node name="Rock3" type="StaticBody3D" parent="Resources"]
@@ -581,10 +583,10 @@ resource_amount = 1
 interaction_text = "Pick up"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Rock3"]
-shape = SubResource("SphereShape3D_rock")
+shape = SubResource("BoxShape3D_rock")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Rock3"]
-mesh = SubResource("SphereMesh_rock")
+mesh = SubResource("BoxMesh_rock")
 material_override = SubResource("StandardMaterial3D_rock")
 
 [node name="Rock4" type="StaticBody3D" parent="Resources"]
@@ -595,10 +597,10 @@ resource_amount = 1
 interaction_text = "Pick up"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Rock4"]
-shape = SubResource("SphereShape3D_rock")
+shape = SubResource("BoxShape3D_rock")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Rock4"]
-mesh = SubResource("SphereMesh_rock")
+mesh = SubResource("BoxMesh_rock")
 material_override = SubResource("StandardMaterial3D_rock")
 
 [node name="Rock5" type="StaticBody3D" parent="Resources"]
@@ -609,10 +611,10 @@ resource_amount = 1
 interaction_text = "Pick up"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Rock5"]
-shape = SubResource("SphereShape3D_rock")
+shape = SubResource("BoxShape3D_rock")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Rock5"]
-mesh = SubResource("SphereMesh_rock")
+mesh = SubResource("BoxMesh_rock")
 material_override = SubResource("StandardMaterial3D_rock")
 
 [node name="Berry1" type="StaticBody3D" parent="Resources"]
@@ -623,10 +625,10 @@ resource_amount = 3
 interaction_text = "Pick"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Berry1"]
-shape = SubResource("SphereShape3D_berry")
+shape = SubResource("BoxShape3D_berry")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Berry1"]
-mesh = SubResource("SphereMesh_berry")
+mesh = SubResource("BoxMesh_berry")
 material_override = SubResource("StandardMaterial3D_berry")
 
 [node name="Berry2" type="StaticBody3D" parent="Resources"]
@@ -637,10 +639,10 @@ resource_amount = 3
 interaction_text = "Pick"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Berry2"]
-shape = SubResource("SphereShape3D_berry")
+shape = SubResource("BoxShape3D_berry")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Berry2"]
-mesh = SubResource("SphereMesh_berry")
+mesh = SubResource("BoxMesh_berry")
 material_override = SubResource("StandardMaterial3D_berry")
 
 [node name="Berry3" type="StaticBody3D" parent="Resources"]
@@ -651,10 +653,10 @@ resource_amount = 3
 interaction_text = "Pick"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Resources/Berry3"]
-shape = SubResource("SphereShape3D_berry")
+shape = SubResource("BoxShape3D_berry")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Resources/Berry3"]
-mesh = SubResource("SphereMesh_berry")
+mesh = SubResource("BoxMesh_berry")
 material_override = SubResource("StandardMaterial3D_berry")
 
 [node name="Tree1" parent="Resources" instance=ExtResource("8_tree")]
@@ -776,6 +778,7 @@ weather_manager_path = NodePath("../WeatherManager")
 player_path = NodePath("../Player")
 save_load_path = NodePath("../SaveLoad")
 resource_manager_path = NodePath("../ResourceManager")
+music_manager_path = NodePath("../MusicManager")
 
 [node name="EquipmentMenu" parent="." instance=ExtResource("12_equip")]
 player_path = NodePath("../Player")
@@ -785,3 +788,6 @@ player_path = NodePath("../Player")
 
 [node name="FireMenu" parent="." instance=ExtResource("16_fire_menu")]
 player_path = NodePath("../Player")
+
+[node name="MusicManager" type="Node" parent="."]
+script = ExtResource("20_music")

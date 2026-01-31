@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://4h3id4n6wri8"
+path="res://.godot/imported/Cuddle Clouds.mp3-46fe24492ea6572fe67feffa7c77e406.mp3str"
+
+[deps]
+
+source_file="res://assets/music/mp3/tracks/Cuddle Clouds.mp3"
+dest_files=["res://.godot/imported/Cuddle Clouds.mp3-46fe24492ea6572fe67feffa7c77e406.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

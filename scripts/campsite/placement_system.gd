@@ -373,27 +373,23 @@ func _create_fire_pit() -> StaticBody3D:
 	collision.position.y = 0.2
 	fire_pit.add_child(collision)
 
-	# Rock ring
+	# Rock ring (blocky)
 	var rocks: MeshInstance3D = MeshInstance3D.new()
-	var cylinder: CylinderMesh = CylinderMesh.new()
-	cylinder.top_radius = 0.6
-	cylinder.bottom_radius = 0.7
-	cylinder.height = 0.3
-	rocks.mesh = cylinder
+	var rocks_box: BoxMesh = BoxMesh.new()
+	rocks_box.size = Vector3(1.2, 0.3, 1.2)
+	rocks.mesh = rocks_box
 	rocks.position.y = 0.15
 	var rock_mat: StandardMaterial3D = StandardMaterial3D.new()
 	rock_mat.albedo_color = Color(0.4, 0.4, 0.4)
 	rocks.material_override = rock_mat
 	fire_pit.add_child(rocks)
 
-	# Fire mesh
+	# Fire mesh (blocky)
 	var fire_mesh: MeshInstance3D = MeshInstance3D.new()
 	fire_mesh.name = "FireMesh"
-	var cone: CylinderMesh = CylinderMesh.new()
-	cone.top_radius = 0.0
-	cone.bottom_radius = 0.3
-	cone.height = 0.8
-	fire_mesh.mesh = cone
+	var fire_box: BoxMesh = BoxMesh.new()
+	fire_box.size = Vector3(0.5, 0.7, 0.5)
+	fire_mesh.mesh = fire_box
 	fire_mesh.position.y = 0.5
 	var fire_mat: StandardMaterial3D = StandardMaterial3D.new()
 	fire_mat.albedo_color = Color(1.0, 0.5, 0.1)
@@ -459,11 +455,9 @@ func _create_basic_shelter() -> StaticBody3D:
 	frame_front.material_override = wood_mat
 	shelter.add_child(frame_front)
 
-	# Back support poles (vertical, supporting the high end)
-	var pole_mesh: CylinderMesh = CylinderMesh.new()
-	pole_mesh.top_radius = 0.05
-	pole_mesh.bottom_radius = 0.05
-	pole_mesh.height = 1.5
+	# Back support poles (vertical, supporting the high end) - blocky
+	var pole_mesh: BoxMesh = BoxMesh.new()
+	pole_mesh.size = Vector3(0.1, 1.5, 0.1)
 
 	var pole_left: MeshInstance3D = MeshInstance3D.new()
 	pole_left.mesh = pole_mesh
@@ -477,13 +471,13 @@ func _create_basic_shelter() -> StaticBody3D:
 	pole_right.material_override = wood_mat
 	shelter.add_child(pole_right)
 
-	# Protection area
+	# Protection area (box shape)
 	var area: Area3D = Area3D.new()
 	area.name = "ProtectionArea"
 	var area_collision: CollisionShape3D = CollisionShape3D.new()
-	var sphere_shape: SphereShape3D = SphereShape3D.new()
-	sphere_shape.radius = 2.0
-	area_collision.shape = sphere_shape
+	var box_area: BoxShape3D = BoxShape3D.new()
+	box_area.size = Vector3(4.0, 3.0, 4.0)
+	area_collision.shape = box_area
 	area_collision.position.y = 1.0
 	area.add_child(area_collision)
 	shelter.add_child(area)

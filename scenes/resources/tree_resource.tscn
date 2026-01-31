@@ -2,27 +2,23 @@
 
 [ext_resource type="Script" path="res://scripts/resources/resource_node.gd" id="1_resource"]
 
-[sub_resource type="CylinderShape3D" id="CylinderShape3D_trunk"]
-height = 3.0
-radius = 0.4
+[sub_resource type="BoxShape3D" id="BoxShape3D_trunk"]
+size = Vector3(0.8, 3.0, 0.8)
 
-[sub_resource type="CylinderMesh" id="CylinderMesh_trunk"]
-top_radius = 0.3
-bottom_radius = 0.5
-height = 3.0
+[sub_resource type="BoxMesh" id="BoxMesh_trunk"]
+size = Vector3(0.7, 3.0, 0.7)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_trunk"]
-albedo_color = Color(0.4, 0.25, 0.15, 1)
+albedo_color = Color(0.55, 0.4, 0.3, 1)
 
-[sub_resource type="SphereMesh" id="SphereMesh_foliage"]
-radius = 1.5
-height = 2.5
+[sub_resource type="BoxMesh" id="BoxMesh_foliage"]
+size = Vector3(2.5, 2.0, 2.5)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_foliage"]
-albedo_color = Color(0.2, 0.5, 0.2, 1)
+albedo_color = Color(0.25, 0.55, 0.25, 1)
 
-[sub_resource type="SphereShape3D" id="SphereShape3D_foliage"]
-radius = 1.5
+[sub_resource type="BoxShape3D" id="BoxShape3D_foliage"]
+size = Vector3(2.5, 2.0, 2.5)
 
 [node name="TreeResource" type="StaticBody3D"]
 script = ExtResource("1_resource")
@@ -36,18 +32,18 @@ chops_required = 3
 
 [node name="TrunkCollision" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
-shape = SubResource("CylinderShape3D_trunk")
+shape = SubResource("BoxShape3D_trunk")
 
 [node name="TrunkMesh" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
-mesh = SubResource("CylinderMesh_trunk")
+mesh = SubResource("BoxMesh_trunk")
 material_override = SubResource("StandardMaterial3D_trunk")
 
 [node name="FoliageMesh" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.0, 0)
-mesh = SubResource("SphereMesh_foliage")
+mesh = SubResource("BoxMesh_foliage")
 material_override = SubResource("StandardMaterial3D_foliage")
 
 [node name="FoliageCollision" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.0, 0)
-shape = SubResource("SphereShape3D_foliage")
+shape = SubResource("BoxShape3D_foliage")

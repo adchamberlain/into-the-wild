@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://b5gfufmksm7pt"
+path="res://.godot/imported/Wanderer's Tale.mp3-5d08dd3e4e9268d799640120123af247.mp3str"
+
+[deps]
+
+source_file="res://assets/music/mp3/tracks/Wanderer's Tale.mp3"
+dest_files=["res://.godot/imported/Wanderer's Tale.mp3-5d08dd3e4e9268d799640120123af247.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

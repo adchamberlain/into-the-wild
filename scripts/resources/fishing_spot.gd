@@ -1,6 +1,7 @@
 extends StaticBody3D
 class_name FishingSpot
 ## A fishing spot where players can catch fish with a fishing rod.
+## Features organic pond shape and visible swimming fish.
 
 signal fish_caught(fish_type: String, amount: int)
 signal spot_depleted()
@@ -9,11 +10,17 @@ signal spot_respawned()
 # Fishing properties
 @export var fish_type: String = "fish"
 @export var respawn_time_hours: float = 6.0
+@export var fish_count: int = 3  # Number of visible fish
+
+# Pond shape properties
+@export var pond_width: float = 4.0
+@export var pond_depth: float = 3.0
+@export var pond_height: float = 0.15
 
 # Fishing timing
-@export var min_wait_time: float = 3.0  # Minimum seconds to wait for bite
-@export var max_wait_time: float = 8.0  # Maximum seconds to wait for bite
-@export var catch_window: float = 2.0   # Seconds to press R after bite
+@export var min_wait_time: float = 3.0
+@export var max_wait_time: float = 8.0
+@export var catch_window: float = 2.0
 
 # State
 var is_depleted: bool = false
@@ -27,46 +34,301 @@ var catch_window_timer: float = 0.0
 var depleted_hour: int = 0
 var depleted_minute: int = 0
 
+# Visual elements
+var water_mesh: MeshInstance3D
+var fish_nodes: Array[Node3D] = []
+var fish_targets: Array[Vector3] = []  # Swimming targets
+var caught_fish_mesh: MeshInstance3D  # Fish being caught
+
 
 func _ready() -> void:
 	add_to_group("interactable")
 	add_to_group("fishing_spot")
 
+	# Create organic pond shape
+	_create_pond_mesh()
+
+	# Create swimming fish
+	_create_swimming_fish()
+
 
 func _process(delta: float) -> void:
+	# Animate swimming fish
+	_update_fish_swimming(delta)
+
 	if not is_fishing:
 		return
 
 	if waiting_for_catch:
-		# Count down catch window
 		catch_window_timer -= delta
 		if catch_window_timer <= 0:
-			# Missed the catch
 			_fail_catch()
 	else:
-		# Count down to fish bite
 		catch_timer -= delta
 		if catch_timer <= 0:
-			# Fish is biting!
 			_fish_bite()
+
+
+func _create_pond_mesh() -> void:
+	# Remove existing mesh if any
+	var existing: Node = get_node_or_null("WaterMesh")
+	if existing:
+		existing.queue_free()
+	var existing_edge: Node = get_node_or_null("EdgeMesh")
+	if existing_edge:
+		existing_edge.queue_free()
+	var existing_col: Node = get_node_or_null("CollisionShape3D")
+	if existing_col:
+		existing_col.queue_free()
+
+	# Create organic pond using ArrayMesh with irregular polygon
+	water_mesh = MeshInstance3D.new()
+	water_mesh.name = "WaterMesh"
+
+	var surface_tool := SurfaceTool.new()
+	surface_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+
+	# Create organic shape using perturbed ellipse points
+	var points: Array[Vector2] = []
+	var num_points: int = 12
+	for i in range(num_points):
+		var angle: float = (float(i) / num_points) * TAU
+		# Base ellipse with perturbation for organic shape
+		var noise_offset: float = sin(angle * 3) * 0.15 + cos(angle * 5) * 0.1
+		var radius_x: float = (pond_width / 2.0) * (1.0 + noise_offset)
+		var radius_z: float = (pond_depth / 2.0) * (1.0 + noise_offset * 0.8)
+		points.append(Vector2(cos(angle) * radius_x, sin(angle) * radius_z))
+
+	# Create water surface (top face) using triangle fan
+	var center := Vector3(0, pond_height, 0)
+	for i in range(num_points):
+		var next_i: int = (i + 1) % num_points
+		var p1 := Vector3(points[i].x, pond_height, points[i].y)
+		var p2 := Vector3(points[next_i].x, pond_height, points[next_i].y)
+
+		surface_tool.set_normal(Vector3.UP)
+		surface_tool.add_vertex(center)
+		surface_tool.add_vertex(p1)
+		surface_tool.add_vertex(p2)
+
+	# Create sides (depth of water)
+	var bottom_y: float = -0.05
+	for i in range(num_points):
+		var next_i: int = (i + 1) % num_points
+		var top1 := Vector3(points[i].x, pond_height, points[i].y)
+		var top2 := Vector3(points[next_i].x, pond_height, points[next_i].y)
+		var bot1 := Vector3(points[i].x * 0.9, bottom_y, points[i].y * 0.9)
+		var bot2 := Vector3(points[next_i].x * 0.9, bottom_y, points[next_i].y * 0.9)
+
+		# Side quad as two triangles
+		var normal: Vector3 = (top1 - bot1).cross(top2 - top1).normalized()
+		surface_tool.set_normal(normal)
+		surface_tool.add_vertex(top1)
+		surface_tool.add_vertex(bot1)
+		surface_tool.add_vertex(top2)
+
+		surface_tool.add_vertex(top2)
+		surface_tool.add_vertex(bot1)
+		surface_tool.add_vertex(bot2)
+
+	# Bottom face
+	var bottom_center := Vector3(0, bottom_y, 0)
+	for i in range(num_points):
+		var next_i: int = (i + 1) % num_points
+		var p1 := Vector3(points[i].x * 0.9, bottom_y, points[i].y * 0.9)
+		var p2 := Vector3(points[next_i].x * 0.9, bottom_y, points[next_i].y * 0.9)
+
+		surface_tool.set_normal(Vector3.DOWN)
+		surface_tool.add_vertex(bottom_center)
+		surface_tool.add_vertex(p2)
+		surface_tool.add_vertex(p1)
+
+	var mesh := surface_tool.commit()
+	water_mesh.mesh = mesh
+
+	# Water material
+	var mat := StandardMaterial3D.new()
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.albedo_color = Color(0.15, 0.35, 0.45, 0.75)
+	mat.roughness = 0.05
+	mat.metallic = 0.2
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	water_mesh.material_override = mat
+
+	add_child(water_mesh)
+
+	# Create muddy edge/shore
+	var edge_mesh := MeshInstance3D.new()
+	edge_mesh.name = "EdgeMesh"
+
+	var edge_tool := SurfaceTool.new()
+	edge_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+
+	# Shore ring around the water
+	for i in range(num_points):
+		var next_i: int = (i + 1) % num_points
+		var inner1 := Vector3(points[i].x, 0.02, points[i].y)
+		var inner2 := Vector3(points[next_i].x, 0.02, points[next_i].y)
+		var outer1 := Vector3(points[i].x * 1.15, 0.0, points[i].y * 1.15)
+		var outer2 := Vector3(points[next_i].x * 1.15, 0.0, points[next_i].y * 1.15)
+
+		edge_tool.set_normal(Vector3.UP)
+		edge_tool.add_vertex(inner1)
+		edge_tool.add_vertex(outer1)
+		edge_tool.add_vertex(inner2)
+
+		edge_tool.add_vertex(inner2)
+		edge_tool.add_vertex(outer1)
+		edge_tool.add_vertex(outer2)
+
+	edge_mesh.mesh = edge_tool.commit()
+
+	var edge_mat := StandardMaterial3D.new()
+	edge_mat.albedo_color = Color(0.35, 0.3, 0.2)  # Muddy brown
+	edge_mesh.material_override = edge_mat
+
+	add_child(edge_mesh)
+
+	# Create collision shape (simple box approximation)
+	var col_shape := CollisionShape3D.new()
+	col_shape.name = "CollisionShape3D"
+	var box := BoxShape3D.new()
+	box.size = Vector3(pond_width, pond_height + 0.1, pond_depth)
+	col_shape.shape = box
+	col_shape.position = Vector3(0, pond_height / 2, 0)
+	add_child(col_shape)
+
+	# Add some rocks around the edge
+	_add_shore_rocks(points)
+
+
+func _add_shore_rocks(points: Array[Vector2]) -> void:
+	var rock_positions: Array[int] = [0, 3, 7, 10]  # Which edge points get rocks
+
+	for idx in rock_positions:
+		if idx >= points.size():
+			continue
+
+		var rock := MeshInstance3D.new()
+		rock.name = "Rock%d" % idx
+
+		var rock_size: float = randf_range(0.2, 0.4)
+		var rock_mesh := BoxMesh.new()
+		rock_mesh.size = Vector3(rock_size, rock_size * 0.7, rock_size)
+		rock.mesh = rock_mesh
+
+		var rock_mat := StandardMaterial3D.new()
+		rock_mat.albedo_color = Color(0.4, 0.38, 0.35)
+		rock.material_override = rock_mat
+
+		# Position on shore edge
+		var pos := Vector3(points[idx].x * 1.1, rock_size * 0.25, points[idx].y * 1.1)
+		rock.position = pos
+		rock.rotation.y = randf() * TAU  # Random Y rotation for variety
+
+		add_child(rock)
+
+
+func _create_swimming_fish() -> void:
+	fish_nodes.clear()
+	fish_targets.clear()
+
+	for i in range(fish_count):
+		var fish := _create_fish_mesh()
+		fish.name = "Fish%d" % i
+
+		# Random starting position in pond
+		var start_pos := _get_random_pond_position()
+		start_pos.y = pond_height - 0.08  # Just below water surface
+		fish.position = start_pos
+		fish.rotation.y = randf() * TAU
+
+		add_child(fish)
+		fish_nodes.append(fish)
+		fish_targets.append(_get_random_pond_position())
+
+
+func _create_fish_mesh() -> Node3D:
+	var fish_root := Node3D.new()
+
+	# Fish body (blocky box)
+	var body := MeshInstance3D.new()
+	body.name = "Body"
+	var body_mesh := BoxMesh.new()
+	body_mesh.size = Vector3(0.2, 0.08, 0.06)  # Long, flat, thin
+	body.mesh = body_mesh
+
+	var fish_mat := StandardMaterial3D.new()
+	fish_mat.albedo_color = Color(0.6, 0.55, 0.4)  # Brownish fish color
+	body.material_override = fish_mat
+
+	fish_root.add_child(body)
+
+	# Tail fin (small box)
+	var tail := MeshInstance3D.new()
+	tail.name = "Tail"
+	var tail_mesh := BoxMesh.new()
+	tail_mesh.size = Vector3(0.04, 0.1, 0.02)
+	tail.mesh = tail_mesh
+	tail.position = Vector3(-0.12, 0, 0)
+	tail.material_override = fish_mat
+
+	fish_root.add_child(tail)
+
+	return fish_root
+
+
+func _get_random_pond_position() -> Vector3:
+	# Get random position within the pond bounds
+	var angle: float = randf() * TAU
+	var dist: float = randf() * 0.7  # Stay away from edges
+	var x: float = cos(angle) * (pond_width / 2.0 - 0.3) * dist
+	var z: float = sin(angle) * (pond_depth / 2.0 - 0.3) * dist
+	return Vector3(x, pond_height - 0.08, z)
+
+
+func _update_fish_swimming(delta: float) -> void:
+	if is_depleted:
+		return
+
+	for i in range(fish_nodes.size()):
+		var fish: Node3D = fish_nodes[i]
+		var target: Vector3 = fish_targets[i]
+
+		# Move towards target
+		var direction: Vector3 = (target - fish.position)
+		direction.y = 0  # Keep fish at same depth
+		var distance: float = direction.length()
+
+		if distance < 0.2:
+			# Reached target, pick new one
+			fish_targets[i] = _get_random_pond_position()
+		else:
+			# Swim towards target
+			direction = direction.normalized()
+			fish.position += direction * delta * 0.3  # Slow swimming
+
+			# Face movement direction
+			fish.rotation.y = atan2(direction.x, direction.z)
+
+		# Subtle bobbing
+		var bob: float = sin(Time.get_ticks_msec() * 0.003 + i * 2.0) * 0.005
+		fish.position.y = pond_height - 0.08 + bob
 
 
 func interact(player: Node) -> bool:
 	if is_depleted:
 		return false
 
-	# Check if player has fishing rod equipped
 	var equipment: Node = _get_player_equipment(player)
 	if not equipment or not equipment.has_tool_equipped("fishing"):
 		print("[FishingSpot] Need a fishing rod equipped!")
 		return false
 
 	if not is_fishing:
-		# Start fishing
 		_start_fishing(player)
 		return true
 	elif waiting_for_catch:
-		# Try to catch the fish
 		_attempt_catch()
 		return true
 
@@ -77,10 +339,10 @@ func get_interaction_text() -> String:
 	if is_depleted:
 		return "Depleted"
 	if waiting_for_catch:
-		return "[R] Catch!"
+		return "[E] Reel In!"
 	if is_fishing:
-		return "Fishing..."
-	return "[R] Cast Line"
+		return "Waiting for bite..."
+	return "[E] Cast Line"
 
 
 func _start_fishing(player: Node) -> void:
@@ -88,25 +350,36 @@ func _start_fishing(player: Node) -> void:
 	waiting_for_catch = false
 	current_player = player
 	catch_timer = randf_range(min_wait_time, max_wait_time)
+
+	# Tell player's equipment to show casting animation
+	var equipment: Node = _get_player_equipment(player)
+	if equipment and equipment.has_method("show_fishing_cast"):
+		equipment.show_fishing_cast()
+
 	print("[FishingSpot] Line cast... waiting for a bite")
 
 
 func _fish_bite() -> void:
 	waiting_for_catch = true
 	catch_window_timer = catch_window
-	print("[FishingSpot] A fish is biting! Press R quickly!")
-	_show_notification("Fish on the line!", Color(0.4, 0.8, 1.0))
+
+	# Make one fish swim excitedly near the line
+	if fish_nodes.size() > 0:
+		var biting_fish: Node3D = fish_nodes[0]
+		var line_pos := Vector3(0, pond_height - 0.1, -0.5)  # Near where line would be
+		fish_targets[0] = line_pos
+
+	print("[FishingSpot] A fish is biting! Press E quickly!")
+	_show_notification("Fish on the line! Press E!", Color(0.4, 0.8, 1.0))
 
 
 func _attempt_catch() -> void:
 	if not waiting_for_catch:
 		return
 
-	# Success! Caught a fish
 	is_fishing = false
 	waiting_for_catch = false
 
-	# Add fish to player inventory
 	if current_player:
 		var inventory: Node = _get_player_inventory(current_player)
 		if inventory:
@@ -114,12 +387,14 @@ func _attempt_catch() -> void:
 			print("[FishingSpot] Caught a %s!" % fish_type)
 			_show_notification("Caught a fish!", Color(0.4, 1.0, 0.4))
 
-		# Use durability on the fishing rod
+		# Show catch animation on equipment
 		var equipment: Node = _get_player_equipment(current_player)
-		if equipment and equipment.has_method("use_durability"):
-			equipment.use_durability(1)
+		if equipment:
+			if equipment.has_method("show_fish_caught"):
+				equipment.show_fish_caught()
+			if equipment.has_method("use_durability"):
+				equipment.use_durability(1)
 
-	# Deplete the spot
 	_deplete()
 	fish_caught.emit(fish_type, 1)
 
@@ -127,6 +402,13 @@ func _attempt_catch() -> void:
 func _fail_catch() -> void:
 	is_fishing = false
 	waiting_for_catch = false
+
+	# Hide the fishing line so player must cast again
+	if current_player:
+		var equipment: Node = _get_player_equipment(current_player)
+		if equipment and equipment.has_method("hide_fishing_line"):
+			equipment.hide_fishing_line()
+
 	print("[FishingSpot] The fish got away...")
 	_show_notification("The fish got away!", Color(1.0, 0.6, 0.4))
 
@@ -135,18 +417,20 @@ func _deplete() -> void:
 	is_depleted = true
 	spot_depleted.emit()
 
-	# Track depletion time
 	var time_manager: Node = _find_time_manager()
 	if time_manager:
 		depleted_hour = time_manager.current_hour
 		depleted_minute = time_manager.current_minute
 
-	# Visual feedback - darken the water
-	var mesh: MeshInstance3D = get_node_or_null("WaterMesh")
-	if mesh and mesh.material_override:
-		var mat: StandardMaterial3D = mesh.material_override as StandardMaterial3D
+	# Darken the water
+	if water_mesh and water_mesh.material_override:
+		var mat: StandardMaterial3D = water_mesh.material_override as StandardMaterial3D
 		if mat:
-			mat.albedo_color = Color(0.2, 0.3, 0.35, 0.7)
+			mat.albedo_color = Color(0.2, 0.25, 0.3, 0.7)
+
+	# Hide fish
+	for fish in fish_nodes:
+		fish.visible = false
 
 	print("[FishingSpot] Fishing spot depleted, will respawn later")
 
@@ -158,11 +442,15 @@ func respawn() -> void:
 	current_player = null
 
 	# Restore water color
-	var mesh: MeshInstance3D = get_node_or_null("WaterMesh")
-	if mesh and mesh.material_override:
-		var mat: StandardMaterial3D = mesh.material_override as StandardMaterial3D
+	if water_mesh and water_mesh.material_override:
+		var mat: StandardMaterial3D = water_mesh.material_override as StandardMaterial3D
 		if mat:
-			mat.albedo_color = Color(0.2, 0.4, 0.5, 0.7)
+			mat.albedo_color = Color(0.15, 0.35, 0.45, 0.75)
+
+	# Show fish again
+	for fish in fish_nodes:
+		fish.visible = true
+		fish.position = _get_random_pond_position()
 
 	spot_respawned.emit()
 	print("[FishingSpot] Fishing spot respawned")

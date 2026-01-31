@@ -873,7 +873,444 @@ scenes/main.tscn                        # Added 10 mushrooms, 8 herbs, 3 fishing
 
 ---
 
-## Next Session: Phase 8 - Polish & Content
+## Session 8 - Weather Particle Effects (2026-01-31)
+
+### What Was Built
+
+**Weather Particle Effects System** - Visual particles for rain, storm, snow, and dust/fog
+
+#### New Files Created
+
+```
+scripts/world/weather_particles.gd    # Controller for weather particles
+scenes/effects/weather_particles.tscn # Scene wrapper (programmatic setup)
+```
+
+#### Files Modified
+
+```
+scenes/player/player.tscn    # Added WeatherParticles as child of Camera3D
+scenes/main.tscn             # Added weather_manager_path to WeatherParticles
+DEV_LOG.md                   # This documentation
+```
+
+#### Features Implemented
+
+1. **Weather Particles Controller** (`scripts/world/weather_particles.gd`)
+   - Connects to `weather_changed` signal from WeatherManager
+   - Creates and configures GPUParticles3D nodes programmatically
+   - Smooth tween transitions (2 seconds) between weather states
+   - Camera-relative positioning (attached to Camera3D)
+
+2. **Rain Particles**
+   - 600 particles falling at 15-20 m/s
+   - Elongated quad mesh (0.05 x 0.3 units)
+   - Semi-transparent blue-white color
+   - 1.5 second lifetime
+   - Emission box: 15x0.5x15 units above camera
+
+3. **Storm Particles**
+   - 1200 particles (2x rain density)
+   - Faster velocity: 20-30 m/s
+   - Wind offset in direction vector (angled fall)
+   - Darker blue-grey color
+   - 1.2 second lifetime
+
+4. **Snow Particles** (Cold Snap)
+   - 400 particles with slow fall (2-4 m/s)
+   - Turbulence enabled for drifting effect
+   - Square white snowflakes (0.15 x 0.15 units)
+   - 4 second lifetime for long drifts
+
+5. **Dust/Haze Particles** (Fog/Heat Wave)
+   - 150 large particles (1x1 units)
+   - Very slow drift (0.5-1.5 m/s)
+   - Low opacity (0.1-0.15 alpha)
+   - Grey for Fog, yellow-tinted for Heat Wave
+   - 6 second lifetime
+
+#### Weather-to-Particle Mapping
+
+| Weather | Particles | Description |
+|---------|-----------|-------------|
+| Clear | None | All particles fade out |
+| Rain | RainParticles | 600 falling droplets |
+| Storm | StormParticles | 1200 heavy rain with wind |
+| Fog | DustParticles | Grey floating particles |
+| Heat Wave | DustParticles | Yellow-tinted dust |
+| Cold Snap | SnowParticles | Drifting snowflakes |
+
+#### Technical Details
+
+- Uses GPUParticles3D for performance (GPU-accelerated)
+- All particle systems created programmatically in `_ready()`
+- Particles attached to Camera3D for camera-relative effect
+- Smooth 2-second tween transitions using `amount_ratio`
+- ParticleProcessMaterial used for physics configuration
+- Billboard mode for particles to always face camera
+
+#### Testing
+
+Use WeatherManager debug method to force weather changes:
+```gdscript
+weather_manager.set_weather_debug("rain")   # Test rain particles
+weather_manager.set_weather_debug("storm")  # Test storm particles
+weather_manager.set_weather_debug("cold")   # Test snow particles
+weather_manager.set_weather_debug("fog")    # Test dust/fog particles
+weather_manager.set_weather_debug("heat")   # Test heat wave dust
+weather_manager.set_weather_debug("clear")  # Fade out all particles
+```
+
+---
+
+## Session 8b - Night Sky (Stars and Moon) (2026-01-31)
+
+### What Was Built
+
+**Night Sky System** - Stars and moon visible during nighttime hours
+
+#### Files Modified
+
+```
+scripts/world/environment_manager.gd   # Added stars and moon systems
+DEV_LOG.md                             # This documentation
+```
+
+#### Features Implemented
+
+1. **Star Field** (GPUParticles3D)
+   - 800 star particles in a large sphere (300 unit radius)
+   - Stars appear at dusk (~6 PM) and fade at dawn (~7 AM)
+   - Billboard quads always face camera
+   - Varying sizes (0.5x to 1.5x scale)
+   - Unshaded white material for bright appearance
+   - Follows camera position for infinite sky illusion
+
+2. **Moon**
+   - Sphere mesh (3 unit radius by default)
+   - Pale yellow-white color with emission glow
+   - Moves across night sky:
+     - Rises in east at dusk
+     - Overhead at midnight
+     - Sets in west at dawn
+   - Fades in/out with stars
+
+3. **Moon Light**
+   - Subtle directional light from moon direction
+   - Blue-tinted light color (0.7, 0.75, 0.9)
+   - Low intensity (0.15 max) for ambient night illumination
+   - Only active during night hours
+
+4. **Weather Integration**
+   - Stars and moon visibility reduced by weather:
+     - Storm: 0% visibility (completely obscured)
+     - Rain: 30% visibility
+     - Fog: 20% visibility
+     - Cold Snap: 90% visibility (clear cold nights)
+     - Clear: 100% visibility
+
+#### Configuration Options
+
+New export variables in EnvironmentManager:
+- `star_count: int = 800` - Number of star particles
+- `moon_size: float = 3.0` - Moon sphere radius
+- `moon_distance: float = 200.0` - Distance from camera to moon
+
+#### Time-based Behavior
+
+| Time | Stars | Moon |
+|------|-------|------|
+| 6 AM - 7 AM | Fading out | Fading/setting |
+| 7 AM - 6 PM | Hidden | Hidden |
+| 6 PM - 8 PM | Fading in | Rising |
+| 8 PM - 6 AM | Full brightness | Visible, moving |
+
+#### Technical Details
+
+- Stars use `one_shot = true` with long lifetime for static positions
+- Night sky container follows camera position (not rotation)
+- Moon position calculated using trigonometry for arc path
+- All materials use `SHADING_MODE_UNSHADED` for consistent brightness
+- Stars use `no_depth_test = true` to render behind all objects
+
+---
+
+## Session 8c - Fishing Visual Improvements (2026-01-31)
+
+### What Was Built
+
+**Enhanced Fishing Experience** - Organic ponds, visible swimming fish, fishing rod model
+
+#### Files Modified
+
+```
+scripts/resources/fishing_spot.gd    # Complete rewrite with organic ponds and fish
+scenes/resources/fishing_spot.tscn   # Simplified (mesh now created programmatically)
+scripts/player/equipment.gd          # Added fishing rod model and animations
+DEV_LOG.md                           # This documentation
+```
+
+#### Features Implemented
+
+1. **Organic Pond Shape**
+   - Replaced cylindrical pond with irregular organic polygon
+   - 12-point perturbed ellipse for natural shoreline
+   - Muddy brown shore ring around water edge
+   - Decorative rocks placed around pond edge
+   - Pond sits flat with the landscape (minimal height)
+
+2. **Swimming Fish**
+   - 3 visible fish per pond by default
+   - Fish swim around randomly within pond bounds
+   - Subtle bobbing animation for realism
+   - Fish head towards movement direction
+   - When bite occurs, one fish swims toward the line
+   - Fish hidden when pond is depleted, shown on respawn
+
+3. **First-Person Fishing Rod**
+   - Visible rod model when fishing rod equipped (slot 7)
+   - Brown wooden handle with lighter wood rod
+   - Positioned in lower-right of view
+   - Casting animation when line is cast
+   - Fishing line appears during fishing
+
+4. **Caught Fish Animation**
+   - Fish model appears at end of line when caught
+   - Animated reeling in with spinning fish
+   - Rod lifts up during catch
+   - Visual feedback for successful catch
+
+#### Pond Configuration
+
+New export variables in FishingSpot:
+- `fish_count: int = 3` - Number of visible fish
+- `pond_width: float = 4.0` - Pond size X
+- `pond_depth: float = 3.0` - Pond size Z
+- `pond_height: float = 0.15` - Water surface height
+
+#### Fish Behavior
+
+- Fish swim at 0.3 units/second
+- Random target positions within pond bounds
+- Pick new target when within 0.2 units of current target
+- Subtle vertical bobbing (±0.005 units)
+- Face direction of movement
+
+---
+
+## Session 8d - Blocky Minecraft-Style Aesthetic (2026-01-31)
+
+### What Was Built
+
+**Complete Visual Overhaul** - Converted all rounded meshes to blocky box-based meshes for a Minecraft-like aesthetic
+
+#### Files Modified
+
+**Scene Files:**
+```
+scenes/resources/tree_resource.tscn    # Trunk: CylinderMesh → BoxMesh, Foliage: SphereMesh → BoxMesh
+scenes/resources/mushroom.tscn         # Cap & stem: CylinderMesh → BoxMesh
+scenes/resources/herb.tscn             # Leaves & stem: CylinderMesh → BoxMesh
+scenes/player/player.tscn              # Player body: CapsuleMesh → BoxMesh
+scenes/campsite/structures/fire_pit.tscn    # Rocks & fire: CylinderMesh → BoxMesh
+scenes/campsite/structures/basic_shelter.tscn # Poles: CylinderMesh → BoxMesh
+scenes/main.tscn                       # Rocks & berries: SphereMesh → BoxMesh
+```
+
+**Script Files:**
+```
+scripts/resources/fishing_spot.gd      # Shore rocks & fish: SphereMesh/PrismMesh → BoxMesh
+scripts/player/equipment.gd            # Fishing rod, caught fish, legacy campfire → BoxMesh
+scripts/world/environment_manager.gd   # Moon: SphereMesh → BoxMesh
+scripts/campsite/placement_system.gd   # Programmatic fire pit & shelter → BoxMesh
+```
+
+#### Mesh Conversions
+
+| Object | Before | After |
+|--------|--------|-------|
+| Tree trunk | CylinderMesh | BoxMesh (0.7 x 3.0 x 0.7) |
+| Tree foliage | SphereMesh | BoxMesh (2.5 x 2.0 x 2.5) |
+| Mushroom cap | CylinderMesh | BoxMesh (0.35 x 0.1 x 0.35) |
+| Mushroom stem | CylinderMesh | BoxMesh (0.1 x 0.15 x 0.1) |
+| Herb leaves | CylinderMesh | BoxMesh (0.25 x 0.15 x 0.25) |
+| Herb stem | CylinderMesh | BoxMesh (0.06 x 0.1 x 0.06) |
+| Player body | CapsuleMesh | BoxMesh (0.6 x 1.8 x 0.6) |
+| Fire pit rocks | CylinderMesh | BoxMesh (1.2 x 0.3 x 1.2) |
+| Fire flames | CylinderMesh (cone) | BoxMesh (0.5 x 0.7 x 0.5) |
+| Shelter poles | CylinderMesh | BoxMesh (0.1 x 1.6 x 0.1) |
+| Rocks (resource) | SphereMesh | BoxMesh (0.4 x 0.35 x 0.4) |
+| Berries | SphereMesh | BoxMesh (0.25 x 0.3 x 0.25) |
+| Shore rocks | SphereMesh | BoxMesh (variable size) |
+| Swimming fish | SphereMesh body + PrismMesh tail | BoxMesh body + BoxMesh tail |
+| Caught fish | SphereMesh + PrismMesh | BoxMesh + BoxMesh |
+| Fishing rod | CylinderMesh (4 parts) | BoxMesh (4 parts) |
+| Fishing line | CylinderMesh | BoxMesh (thin) |
+| Moon | SphereMesh | BoxMesh (flat square) |
+
+#### Visual Style Notes
+
+- All objects now use BoxMesh with simple dimensions
+- Colors remain the same (solid, no textures)
+- Gives a cohesive Minecraft/voxel-like appearance
+- Flat shading inherent to box geometry provides hard edges
+
+---
+
+## Session 8e - Background Music (2026-01-31)
+
+### What Was Built
+
+**Ambient Background Music System** - Minecraft-style music plays during gameplay
+
+#### New Files Created
+
+```
+scripts/core/music_manager.gd    # Music playback with shuffle and crossfade
+ATTRIBUTIONS.md                  # Third-party asset credits
+```
+
+#### Files Modified
+
+```
+scenes/main.tscn                 # Added MusicManager node
+scenes/ui/config_menu.tscn       # Added music toggle and volume controls
+scripts/ui/config_menu.gd        # Added music settings handlers
+DEV_LOG.md                       # This documentation
+```
+
+#### Features Implemented
+
+1. **Music Manager** (`scripts/core/music_manager.gd`)
+   - Loads 12 ambient music tracks from assets/music/mp3/tracks/
+   - Shuffled playback order (no repeats until all played)
+   - Crossfade transitions (3 seconds) between tracks
+   - Pause between tracks (5 seconds) like Minecraft
+   - Volume control via config menu
+   - Enable/disable toggle
+
+2. **Config Menu Controls**
+   - Music toggle (on/off)
+   - Volume slider (0-100%)
+   - Settings applied immediately
+
+3. **Attribution**
+   - Created ATTRIBUTIONS.md with music credits
+   - Source: Minecraft-style Music Pack by Valdis Story
+   - Reddit: https://www.reddit.com/r/godot/comments/1gllruv/
+
+#### Music Tracks (12 total)
+
+- Cuddle Clouds
+- Drifting Memories
+- Evening Harmony
+- Floating Dream
+- Forgotten Biomes
+- Gentle Breeze
+- Golden Gleam
+- Polar Lights
+- Strange Worlds
+- Sunlight Through Leaves
+- Wanderer's Tale
+- Whispering Woods
+
+#### Technical Details
+
+- Uses two AudioStreamPlayer nodes for crossfading
+- Default volume: -10 dB (quieter for ambient background)
+- MP3 format used (smaller file size than WAV)
+- Fisher-Yates shuffle for random track order
+
+---
+
+## Session 9 - Terrain, Forest, and Tool Visuals (2026-01-31)
+
+### What Was Built
+
+**Blocky Terrain, Procedural Forest, and First-Person Tool Models**
+
+#### Files Modified
+
+```
+scripts/world/terrain_generator.gd      # Blocky Minecraft-style terrain with forest spawning
+scripts/world/environment_manager.gd    # Improved lighting for better contrast
+scripts/player/equipment.gd             # Stone axe model, fishing line fix
+scripts/resources/fishing_spot.gd       # Improved fishing flow with auto-uncast
+scenes/resources/tree_resource.tscn     # Brightened tree colors
+```
+
+#### Features Implemented
+
+1. **Blocky Minecraft-Style Terrain** (`terrain_generator.gd`)
+   - Replaced smooth terrain with stepped blocky terrain
+   - Cell-based generation (3x3 unit cells)
+   - Height quantization (0.5 unit steps) creates distinct terraces
+   - Flat shading with explicit normals for hard edges
+   - Vertical cliff faces where height differences occur
+   - Flat campsite area preserved in center
+
+2. **Procedural Forest Generation** (`terrain_generator.gd`)
+   - Noise-based density creates natural clustering
+   - Thick patches where noise is high, sparse/clearings where low
+   - ~80-120 trees spawned around campsite
+   - Trees placed at correct terrain height
+   - Random rotation and scale (0.7x to 1.3x) for variety
+   - Minimum distance from campsite (14 units)
+   - Trees added to Resources container for ResourceManager tracking
+
+3. **First-Person Stone Axe Model** (`equipment.gd`)
+   - Visible blocky axe when stone_axe equipped (slot 2)
+   - Wooden handle, stone head, blade edge, rope binding
+   - Positioned in lower-right view
+   - Swing animation with wind-up and chop motion:
+     - Wind up: raises back and right
+     - Chop: swings down and forward with blade leading
+   - Blade correctly oriented to hit target
+
+4. **Fishing Line Fix** (`equipment.gd`)
+   - Line now properly hangs from rod tip down into water
+   - Uses pivot node at rod tip with global rotation override
+   - Line follows rod tip position but always points straight down
+
+5. **Improved Fishing Flow** (`fishing_spot.gd`)
+   - Updated interaction text: "[E] Cast Line" → "Waiting for bite..." → "[E] Reel In!"
+   - Notification now includes instruction: "Fish on the line! Press E!"
+   - Line automatically uncasts when fish gets away
+   - Added `hide_fishing_line()` method for clean retraction
+
+6. **Lighting and Contrast Improvements** (`environment_manager.gd`, `terrain_generator.gd`, `tree_resource.tscn`)
+   - Increased ambient light energy (0.8 → 1.0)
+   - Increased SSIL indirect lighting (0.5 → 0.7)
+   - Disabled SSAO for softer shadows
+   - Brightened tree trunk color (0.4, 0.25, 0.15) → (0.55, 0.4, 0.3)
+   - Brightened tree foliage (0.2, 0.5, 0.2) → (0.25, 0.55, 0.25)
+   - Brightened terrain color (0.35, 0.55, 0.25) → (0.45, 0.62, 0.35)
+
+#### Terrain Configuration
+
+| Setting | Value | Description |
+|---------|-------|-------------|
+| cell_size | 3.0 | Size of each terrain block |
+| height_scale | 6.0 | Maximum terrain height |
+| height_step | 0.5 | Height quantization step |
+| noise_scale | 0.02 | Terrain noise frequency |
+
+#### Forest Configuration
+
+| Setting | Value | Description |
+|---------|-------|-------------|
+| tree_density | 0.15 | Base spawn probability |
+| tree_min_distance | 14.0 | Min distance from center |
+| tree_max_distance | 48.0 | Max distance from center |
+| tree_grid_size | 3.0 | Placement grid cell size |
+
+#### Controls (Updated)
+- **2** - Equip stone axe (now visible in hand)
+- **E/R** - Swing axe to chop (animated chop motion)
+
+---
+
+## Next Session: Phase 8 - Polish & Content (Continued)
 
 ### Completed Features
 - ✅ Tool durability system with HUD display
@@ -882,14 +1319,21 @@ scenes/main.tscn                        # Added 10 mushrooms, 8 herbs, 3 fishing
 - ✅ Crafting bench placeable structure
 - ✅ Healing salve instant heal item
 - ✅ New recipes (fishing rod, healing salve, crafting bench)
+- ✅ Weather particle effects (rain, storm, snow, dust)
+- ✅ Night sky with stars and moon
+- ✅ Improved fishing ponds with organic shape
+- ✅ Visible swimming fish in ponds
+- ✅ First-person fishing rod model
+- ✅ Caught fish animation
+- ✅ Blocky Minecraft-style aesthetic (all meshes)
+- ✅ Background music system with 12 tracks
 
 ### Planned Tasks
-1. Weather particle effects (rain, snow)
-2. Sound effects and ambient audio
-3. Additional structures (cooking grate, water collector)
-4. Level 3 campsite content
-5. Game balancing and polish
-6. Visual improvements (resource indicators, better meshes)
+1. Sound effects (footsteps, interactions, ambient)
+2. Additional structures (cooking grate, water collector)
+3. Level 3 campsite content
+4. Game balancing and polish
+5. Pixelated textures (optional enhancement)
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

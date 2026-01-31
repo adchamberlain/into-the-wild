@@ -1,22 +1,18 @@
-[gd_scene load_steps=5 format=3 uid="uid://herb001"]
+[gd_scene load_steps=6 format=3 uid="uid://herb001"]
 
 [ext_resource type="Script" path="res://scripts/resources/resource_node.gd" id="1_resource"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_herb"]
 size = Vector3(0.3, 0.25, 0.3)
 
-[sub_resource type="CylinderMesh" id="CylinderMesh_leaves"]
-top_radius = 0.0
-bottom_radius = 0.15
-height = 0.25
+[sub_resource type="BoxMesh" id="BoxMesh_leaves"]
+size = Vector3(0.25, 0.15, 0.25)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_leaves"]
 albedo_color = Color(0.3, 0.6, 0.25, 1)
 
-[sub_resource type="CylinderMesh" id="CylinderMesh_stem"]
-top_radius = 0.02
-bottom_radius = 0.03
-height = 0.1
+[sub_resource type="BoxMesh" id="BoxMesh_stem"]
+size = Vector3(0.06, 0.1, 0.06)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_stem"]
 albedo_color = Color(0.4, 0.5, 0.3, 1)
@@ -33,10 +29,10 @@ shape = SubResource("BoxShape3D_herb")
 
 [node name="LeavesMesh" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.175, 0)
-mesh = SubResource("CylinderMesh_leaves")
+mesh = SubResource("BoxMesh_leaves")
 material_override = SubResource("StandardMaterial3D_leaves")
 
 [node name="StemMesh" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
-mesh = SubResource("CylinderMesh_stem")
+mesh = SubResource("BoxMesh_stem")
 material_override = SubResource("StandardMaterial3D_stem")

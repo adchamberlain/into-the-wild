@@ -1,29 +1,28 @@
-[gd_scene load_steps=8 format=3 uid="uid://player001"]
+[gd_scene load_steps=9 format=3 uid="uid://player001"]
 
 [ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/player/inventory.gd" id="2_inventory"]
 [ext_resource type="Script" path="res://scripts/player/player_stats.gd" id="3_stats"]
 [ext_resource type="Script" path="res://scripts/player/equipment.gd" id="4_equipment"]
 [ext_resource type="Script" path="res://scripts/campsite/placement_system.gd" id="5_placement"]
+[ext_resource type="Script" path="res://scripts/world/weather_particles.gd" id="6_weather_particles"]
 
-[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
-radius = 0.4
-height = 1.8
+[sub_resource type="BoxShape3D" id="BoxShape3D_1"]
+size = Vector3(0.6, 1.8, 0.6)
 
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_1"]
-radius = 0.4
-height = 1.8
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+size = Vector3(0.6, 1.8, 0.6)
 
 [node name="Player" type="CharacterBody3D"]
 script = ExtResource("1_player")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
-shape = SubResource("CapsuleShape3D_1")
+shape = SubResource("BoxShape3D_1")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
-mesh = SubResource("CapsuleMesh_1")
+mesh = SubResource("BoxMesh_1")
 
 [node name="Camera3D" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
@@ -33,6 +32,9 @@ fov = 75.0
 [node name="InteractionRay" type="RayCast3D" parent="Camera3D"]
 target_position = Vector3(0, 0, -3)
 collision_mask = 1
+
+[node name="WeatherParticles" type="Node3D" parent="Camera3D"]
+script = ExtResource("6_weather_particles")
 
 [node name="Inventory" type="Node" parent="."]
 script = ExtResource("2_inventory")

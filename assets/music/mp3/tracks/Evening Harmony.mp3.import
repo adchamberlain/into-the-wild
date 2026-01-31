@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://26ky3rnb7vw5"
+path="res://.godot/imported/Evening Harmony.mp3-41f79bdc47129b15fe76cd7fbe3057ff.mp3str"
+
+[deps]
+
+source_file="res://assets/music/mp3/tracks/Evening Harmony.mp3"
+dest_files=["res://.godot/imported/Evening Harmony.mp3-41f79bdc47129b15fe76cd7fbe3057ff.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4
