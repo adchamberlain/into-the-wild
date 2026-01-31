@@ -10,6 +10,7 @@ signal config_changed()
 @export var save_load_path: NodePath
 @export var resource_manager_path: NodePath
 @export var music_manager_path: NodePath
+@export var hud_path: NodePath
 
 var time_manager: Node
 var weather_manager: Node
@@ -18,6 +19,7 @@ var player_stats: Node
 var save_load: Node
 var resource_manager: Node
 var music_manager: Node
+var hud: Node
 
 # Config state (defaults)
 var hunger_enabled: bool = false
@@ -25,6 +27,7 @@ var health_drain_enabled: bool = false
 var weather_damage_enabled: bool = false
 var weather_enabled: bool = true
 var unlimited_fire_enabled: bool = false
+var show_coordinates_enabled: bool = true
 var tree_respawn_days: float = 1.0
 var day_length_minutes: float = 20.0
 var music_enabled: bool = true
@@ -37,6 +40,7 @@ var music_volume: float = 50.0  # 0-100
 @onready var weather_damage_toggle: CheckButton = $Panel/VBoxContainer/WeatherDamageToggle
 @onready var weather_toggle: CheckButton = $Panel/VBoxContainer/WeatherToggle
 @onready var unlimited_fire_toggle: CheckButton = $Panel/VBoxContainer/UnlimitedFireToggle
+@onready var show_coordinates_toggle: CheckButton = $Panel/VBoxContainer/ShowCoordinatesToggle
 @onready var day_length_slider: HSlider = $Panel/VBoxContainer/DayLengthContainer/DayLengthSlider
 @onready var day_length_label: Label = $Panel/VBoxContainer/DayLengthContainer/DayLengthValue
 @onready var tree_respawn_slider: HSlider = $Panel/VBoxContainer/TreeRespawnContainer/TreeRespawnSlider
@@ -67,6 +71,8 @@ func _ready() -> void:
 		resource_manager = get_node_or_null(resource_manager_path)
 	if music_manager_path:
 		music_manager = get_node_or_null(music_manager_path)
+	if hud_path:
+		hud = get_node_or_null(hud_path)
 
 	# Initialize UI state
 	_init_ui()
@@ -83,6 +89,8 @@ func _init_ui() -> void:
 	weather_damage_toggle.button_pressed = weather_damage_enabled
 	weather_toggle.button_pressed = weather_enabled
 	unlimited_fire_toggle.button_pressed = unlimited_fire_enabled
+	if show_coordinates_toggle:
+		show_coordinates_toggle.button_pressed = show_coordinates_enabled
 
 	# Set day length slider
 	if time_manager and "day_length_minutes" in time_manager:
@@ -110,6 +118,8 @@ func _init_ui() -> void:
 	weather_damage_toggle.toggled.connect(_on_weather_damage_toggled)
 	weather_toggle.toggled.connect(_on_weather_toggled)
 	unlimited_fire_toggle.toggled.connect(_on_unlimited_fire_toggled)
+	if show_coordinates_toggle:
+		show_coordinates_toggle.toggled.connect(_on_show_coordinates_toggled)
 	day_length_slider.value_changed.connect(_on_day_length_changed)
 	tree_respawn_slider.value_changed.connect(_on_tree_respawn_changed)
 
@@ -193,6 +203,12 @@ func _on_unlimited_fire_toggled(pressed: bool) -> void:
 	print("[ConfigMenu] Unlimited fire burn time: %s" % ("ON" if pressed else "OFF"))
 
 
+func _on_show_coordinates_toggled(pressed: bool) -> void:
+	show_coordinates_enabled = pressed
+	_apply_config()
+	print("[ConfigMenu] Show coordinates: %s" % ("ON" if pressed else "OFF"))
+
+
 func _on_day_length_changed(value: float) -> void:
 	day_length_minutes = value
 	day_length_label.text = "%.0f min" % value
@@ -256,6 +272,10 @@ func _apply_config() -> void:
 	if resource_manager and "tree_respawn_time_hours" in resource_manager:
 		resource_manager.tree_respawn_time_hours = tree_respawn_days * 24.0
 
+	# Apply show coordinates setting
+	if hud and "show_coordinates" in hud:
+		hud.show_coordinates = show_coordinates_enabled
+
 	config_changed.emit()
 
 
@@ -267,6 +287,7 @@ func get_config() -> Dictionary:
 		"weather_damage_enabled": weather_damage_enabled,
 		"weather_enabled": weather_enabled,
 		"unlimited_fire_enabled": unlimited_fire_enabled,
+		"show_coordinates_enabled": show_coordinates_enabled,
 		"tree_respawn_days": tree_respawn_days,
 		"day_length_minutes": day_length_minutes
 	}

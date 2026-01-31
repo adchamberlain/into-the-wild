@@ -59,6 +59,12 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 28
 text = "Unlimited Fire Burn Time"
 
+[node name="ShowCoordinatesToggle" type="CheckButton" parent="Panel/VBoxContainer"]
+layout_mode = 2
+button_pressed = true
+theme_override_font_sizes/font_size = 28
+text = "Show Coordinates"
+
 [node name="TreeRespawnContainer" type="VBoxContainer" parent="Panel/VBoxContainer"]
 layout_mode = 2
 
