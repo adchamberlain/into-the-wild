@@ -22,6 +22,7 @@ script = ExtResource("1_resource")
 resource_type = "mushroom"
 resource_amount = 1
 interaction_text = "Pick"
+adjust_to_terrain = false
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.125, 0)

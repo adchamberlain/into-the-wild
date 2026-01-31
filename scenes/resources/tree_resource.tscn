@@ -41,6 +41,7 @@ secondary_resource_type = "branch"
 secondary_resource_amount = 3
 required_tool = "axe"
 chops_required = 3
+adjust_to_terrain = false
 
 [node name="TrunkCollision" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.0, 0)

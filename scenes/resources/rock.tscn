@@ -1,0 +1,26 @@
+[gd_scene load_steps=5 format=3 uid="uid://rock001"]
+
+[ext_resource type="Script" path="res://scripts/resources/resource_node.gd" id="1_resource"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_rock"]
+size = Vector3(0.4, 0.35, 0.4)
+
+[sub_resource type="BoxMesh" id="BoxMesh_rock"]
+size = Vector3(0.4, 0.35, 0.4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rock"]
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+
+[node name="Rock" type="StaticBody3D"]
+script = ExtResource("1_resource")
+resource_type = "river_rock"
+resource_amount = 1
+interaction_text = "Pick up"
+adjust_to_terrain = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_rock")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_rock")
+material_override = SubResource("StandardMaterial3D_rock")

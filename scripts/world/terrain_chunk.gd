@@ -11,9 +11,11 @@ var terrain_mesh: MeshInstance3D
 var terrain_collision: StaticBody3D
 var decorations_container: Node3D
 var trees_container: Node3D
+var resources_container: Node3D
 
 # Track what we've spawned for cleanup
 var spawned_trees: Array[Node3D] = []
+var spawned_resources: Array[Node3D] = []
 var is_generated: bool = false
 
 
@@ -29,6 +31,7 @@ func generate() -> void:
 	_generate_terrain_mesh()
 	_generate_collision()
 	_spawn_chunk_trees()
+	_spawn_chunk_resources()
 	_spawn_chunk_decorations()
 
 	is_generated = true
@@ -85,9 +88,9 @@ func _add_top_face(st: SurfaceTool, x: float, z: float, size: float, height: flo
 
 	var grass_color: Color = chunk_manager.grass_color
 	var cell_grass: Color = Color(
-		clamp(grass_color.r + variation, 0.15, 0.45),
-		clamp(grass_color.g + variation * 0.5, 0.35, 0.6),
-		clamp(grass_color.b + variation * 0.3, 0.12, 0.35)
+		clamp(grass_color.r + variation, 0.20, 0.38),
+		clamp(grass_color.g + variation * 0.5, 0.45, 0.62),
+		clamp(grass_color.b + variation * 0.3, 0.08, 0.22)
 	)
 
 	# Triangle 1
@@ -167,14 +170,14 @@ func _add_side_quad(st: SurfaceTool, v0: Vector3, v1: Vector3, v2: Vector3, v3: 
 	# Color variation based on position
 	var variation: float = sin(v0.x * 12.9898 + v0.z * 78.233 + v0.y * 37.719) * 0.06
 	var cell_grass: Color = Color(
-		clamp(grass_color.r + variation, 0.2, 0.4),
-		clamp(grass_color.g + variation * 0.5, 0.4, 0.6),
-		clamp(grass_color.b + variation * 0.3, 0.15, 0.3)
+		clamp(grass_color.r + variation, 0.20, 0.38),
+		clamp(grass_color.g + variation * 0.5, 0.45, 0.62),
+		clamp(grass_color.b + variation * 0.3, 0.08, 0.22)
 	)
 	var cell_dirt: Color = Color(
-		clamp(dirt_color.r + variation, 0.35, 0.65),
-		clamp(dirt_color.g + variation * 0.8, 0.22, 0.48),
-		clamp(dirt_color.b + variation * 0.5, 0.12, 0.32)
+		clamp(dirt_color.r + variation, 0.32, 0.50),
+		clamp(dirt_color.g + variation * 0.8, 0.18, 0.32),
+		clamp(dirt_color.b + variation * 0.5, 0.06, 0.18)
 	)
 
 	if total_height > grass_thickness:
@@ -266,11 +269,17 @@ func _generate_collision() -> void:
 	var chunk_world_x: float = chunk_coord.x * chunk_world_size
 	var chunk_world_z: float = chunk_coord.y * chunk_world_size
 
+	# Get pond info for creating hole in collision
+	var pond_center: Vector2 = chunk_manager.pond_center
+	var pond_radius: float = chunk_manager.pond_radius
+
 	for z in range(map_depth):
 		for x in range(map_width):
 			var world_x: float = chunk_world_x + x
 			var world_z: float = chunk_world_z + z
+
 			var height: float = chunk_manager.get_height_at(world_x, world_z)
+
 			height_data[z * map_width + x] = height
 
 	heightmap.map_width = map_width
@@ -374,6 +383,119 @@ func _spawn_chunk_trees() -> void:
 
 			z += tree_grid_size
 		x += tree_grid_size
+
+
+func _spawn_chunk_resources() -> void:
+	resources_container = Node3D.new()
+	resources_container.name = "Resources"
+	add_child(resources_container)
+
+	var cell_size: float = chunk_manager.cell_size
+	var chunk_size_cells: int = chunk_manager.chunk_size_cells
+	var chunk_world_size: float = chunk_size_cells * cell_size
+
+	var chunk_world_x: float = chunk_coord.x * chunk_world_size
+	var chunk_world_z: float = chunk_coord.y * chunk_world_size
+
+	# Use deterministic random based on chunk coordinates (different seed than trees)
+	var chunk_seed: int = chunk_coord.x * 31337 ^ chunk_coord.y * 65537
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = chunk_seed
+
+	# Resource noise for clustering
+	var resource_noise: FastNoiseLite = FastNoiseLite.new()
+	resource_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	resource_noise.seed = chunk_manager.noise_seed + 2000
+	resource_noise.frequency = 0.1
+
+	var resource_grid_size: float = 4.0  # Larger grid for resources
+
+	var x: float = 0.0
+	while x < chunk_world_size:
+		var z: float = 0.0
+		while z < chunk_world_size:
+			var world_x: float = chunk_world_x + x
+			var world_z: float = chunk_world_z + z
+
+			# Get noise value for clustering
+			var noise_value: float = (resource_noise.get_noise_2d(world_x, world_z) + 1.0) * 0.5
+
+			# Add jitter to position FIRST
+			var jitter_x: float = rng.randf_range(-resource_grid_size * 0.4, resource_grid_size * 0.4)
+			var jitter_z: float = rng.randf_range(-resource_grid_size * 0.4, resource_grid_size * 0.4)
+			var res_x: float = world_x + jitter_x
+			var res_z: float = world_z + jitter_z
+
+			# Skip if in pond area (check AFTER jitter is applied)
+			var pond_center: Vector2 = chunk_manager.pond_center
+			var pond_radius: float = chunk_manager.pond_radius
+			var dist_to_pond: float = Vector2(res_x - pond_center.x, res_z - pond_center.y).length()
+			if dist_to_pond < pond_radius + 2.0:
+				z += resource_grid_size
+				continue
+
+			var res_y: float = chunk_manager.get_height_at(res_x, res_z)
+
+			# Skip if in water (negative height = pond)
+			if res_y < 0:
+				z += resource_grid_size
+				continue
+
+			# Distance from campsite affects spawn rates
+			var dist_from_camp: float = Vector2(res_x, res_z).length()
+
+			# Try spawning different resource types
+			var resource_roll: float = rng.randf()
+
+			# Branches - more common near trees (use forest noise)
+			var forest_value: float = (chunk_manager.forest_noise.get_noise_2d(res_x, res_z) + 1.0) * 0.5
+			var branch_chance: float = chunk_manager.branch_density * (0.5 + forest_value)
+			if resource_roll < branch_chance and chunk_manager.branch_scene:
+				_spawn_resource(chunk_manager.branch_scene, res_x, res_y, res_z, rng)
+				z += resource_grid_size
+				continue
+
+			# Rocks - more common away from campsite
+			resource_roll = rng.randf()
+			var rock_chance: float = chunk_manager.rock_density
+			if dist_from_camp > 10.0:
+				rock_chance *= 1.5
+			if resource_roll < rock_chance and chunk_manager.rock_scene:
+				_spawn_resource(chunk_manager.rock_scene, res_x, res_y, res_z, rng)
+				z += resource_grid_size
+				continue
+
+			# Berry bushes - clustered in clearings (inverse of forest)
+			resource_roll = rng.randf()
+			var berry_chance: float = chunk_manager.berry_density * (1.5 - forest_value)
+			if resource_roll < berry_chance and chunk_manager.berry_bush_scene:
+				_spawn_resource(chunk_manager.berry_bush_scene, res_x, res_y, res_z, rng)
+				z += resource_grid_size
+				continue
+
+			# Mushrooms - more common in forests
+			resource_roll = rng.randf()
+			var mushroom_chance: float = chunk_manager.mushroom_density * (0.5 + forest_value)
+			if resource_roll < mushroom_chance and chunk_manager.mushroom_scene:
+				_spawn_resource(chunk_manager.mushroom_scene, res_x, res_y, res_z, rng)
+				z += resource_grid_size
+				continue
+
+			# Herbs - scattered everywhere
+			resource_roll = rng.randf()
+			if resource_roll < chunk_manager.herb_density and chunk_manager.herb_scene:
+				_spawn_resource(chunk_manager.herb_scene, res_x, res_y, res_z, rng)
+
+			z += resource_grid_size
+		x += resource_grid_size
+
+
+func _spawn_resource(scene: PackedScene, x: float, y: float, z: float, rng: RandomNumberGenerator) -> void:
+	var resource: Node3D = scene.instantiate()
+	resource.position = Vector3(x, y, z)
+	resource.rotation.y = rng.randf() * TAU
+	resources_container.add_child(resource)
+	spawned_resources.append(resource)
 
 
 func _spawn_chunk_decorations() -> void:
@@ -558,6 +680,11 @@ func unload() -> void:
 			tree.queue_free()
 	spawned_trees.clear()
 
+	for resource in spawned_resources:
+		if is_instance_valid(resource):
+			resource.queue_free()
+	spawned_resources.clear()
+
 	if terrain_mesh:
 		terrain_mesh.queue_free()
 	if terrain_collision:
@@ -566,5 +693,7 @@ func unload() -> void:
 		decorations_container.queue_free()
 	if trees_container:
 		trees_container.queue_free()
+	if resources_container:
+		resources_container.queue_free()
 
 	queue_free()

@@ -16,6 +16,9 @@ var recipe_buttons: Dictionary = {}
 
 
 func _ready() -> void:
+	# Add to group for crafting bench to find us
+	add_to_group("crafting_ui")
+
 	# Start closed
 	panel.visible = false
 	is_open = false
@@ -43,6 +46,11 @@ func _input(event: InputEvent) -> void:
 
 
 func _toggle_crafting() -> void:
+	toggle_crafting_menu()
+
+
+## Public method to toggle crafting menu (called by crafting bench interaction).
+func toggle_crafting_menu() -> void:
 	is_open = not is_open
 	panel.visible = is_open
 

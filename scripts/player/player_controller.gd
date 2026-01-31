@@ -32,6 +32,13 @@ var is_sprinting: bool = false
 var current_interaction_target: Node = null
 var is_resting: bool = false
 var resting_in_structure: Node = null  # The shelter we're resting in
+var is_in_water: bool = false
+
+# Swimming settings
+var swim_sink_speed: float = 3.0  # How fast player sinks in water
+var swim_rise_speed: float = 2.5  # How fast player rises when pressing space
+var swim_move_speed: float = 2.5  # Movement speed while swimming
+var water_surface_y: float = 0.2  # Y position of water surface (can't swim above this)
 
 # Food values (hunger restored per item)
 const FOOD_VALUES: Dictionary = {
@@ -114,6 +121,19 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector3.ZERO
 		return
 
+	# Handle swimming vs normal movement
+	if is_in_water:
+		_process_swimming(delta)
+	else:
+		_process_normal_movement(delta)
+
+	move_and_slide()
+
+	# Update interaction target
+	_update_interaction_target()
+
+
+func _process_normal_movement(delta: float) -> void:
 	# Apply gravity
 	if not is_on_floor():
 		velocity.y -= gravity * delta
@@ -151,10 +171,49 @@ func _physics_process(delta: float) -> void:
 		velocity.x = move_toward(velocity.x, 0, current_speed)
 		velocity.z = move_toward(velocity.z, 0, current_speed)
 
-	move_and_slide()
 
-	# Update interaction target
-	_update_interaction_target()
+func _process_swimming(delta: float) -> void:
+	# Swimming: player sinks slowly, pressing space makes them rise
+	# Must repeatedly press space to stay afloat
+
+	# Apply sinking (like gravity but slower)
+	velocity.y -= swim_sink_speed * delta
+
+	# Handle swim up (space bar - check if held, not just pressed)
+	var swim_up_held: bool = Input.is_key_pressed(KEY_SPACE)
+	if swim_up_held:
+		velocity.y = swim_rise_speed  # Push upward when holding space
+
+	# Clamp vertical velocity to prevent too fast sinking/rising
+	velocity.y = clamp(velocity.y, -swim_sink_speed * 2, swim_rise_speed)
+
+	# Prevent swimming above water surface
+	if global_position.y > water_surface_y and velocity.y > 0:
+		velocity.y = 0
+		global_position.y = water_surface_y
+
+	# Slower horizontal movement while swimming
+	var input_dir: Vector2 = Vector2.ZERO
+	if Input.is_physical_key_pressed(KEY_W):
+		input_dir.y -= 1
+	if Input.is_physical_key_pressed(KEY_S):
+		input_dir.y += 1
+	if Input.is_physical_key_pressed(KEY_A):
+		input_dir.x -= 1
+	if Input.is_physical_key_pressed(KEY_D):
+		input_dir.x += 1
+	input_dir = input_dir.normalized()
+
+	var direction: Vector3 = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
+
+	# Apply slower movement in water
+	if direction:
+		velocity.x = direction.x * swim_move_speed
+		velocity.z = direction.z * swim_move_speed
+	else:
+		# Decelerate smoothly (faster in water - more drag)
+		velocity.x = move_toward(velocity.x, 0, swim_move_speed * 2)
+		velocity.z = move_toward(velocity.z, 0, swim_move_speed * 2)
 
 
 func _update_interaction_target() -> void:
@@ -211,6 +270,45 @@ func set_resting(resting: bool, structure: Node = null) -> void:
 		# Clear interaction target while resting
 		current_interaction_target = null
 		interaction_cleared.emit()
+
+
+## Set whether player is in water (swimming).
+func set_in_water(in_water: bool) -> void:
+	var was_in_water: bool = is_in_water
+	is_in_water = in_water
+
+	# Update underwater visual effect
+	if is_in_water and not was_in_water:
+		_show_underwater_effect()
+	elif not is_in_water and was_in_water:
+		_hide_underwater_effect()
+
+
+func _show_underwater_effect() -> void:
+	# Create underwater overlay if it doesn't exist
+	if not has_node("UnderwaterOverlay"):
+		var overlay := ColorRect.new()
+		overlay.name = "UnderwaterOverlay"
+		overlay.color = Color(0.1, 0.3, 0.5, 0.4)  # Blue tint
+		overlay.anchors_preset = Control.PRESET_FULL_RECT
+		overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+		# Add to a CanvasLayer so it renders on top
+		var canvas := CanvasLayer.new()
+		canvas.name = "UnderwaterCanvas"
+		canvas.layer = 10  # Above most UI
+		canvas.add_child(overlay)
+		add_child(canvas)
+	else:
+		var canvas: Node = get_node("UnderwaterCanvas")
+		if canvas:
+			canvas.visible = true
+
+
+func _hide_underwater_effect() -> void:
+	var canvas: Node = get_node_or_null("UnderwaterCanvas")
+	if canvas:
+		canvas.visible = false
 
 
 func _try_use_equipped() -> void:

@@ -20,11 +20,13 @@ class_name ChunkManager
 # Pond settings
 var pond_center: Vector2 = Vector2(15.0, 12.0)
 var pond_radius: float = 8.0
-var pond_depth: float = 1.5
+var pond_depth: float = 3.0  # Deeper pond for swimming
 
 # Colors
-var grass_color: Color = Color(0.30, 0.50, 0.22)
-var dirt_color: Color = Color(0.52, 0.36, 0.22)
+# Vibrant lawn green - distinct from herb (0.3, 0.6, 0.25) and berry bush (0.2, 0.45, 0.15)
+var grass_color: Color = Color(0.28, 0.52, 0.15)
+# Rich dark soil brown
+var dirt_color: Color = Color(0.40, 0.26, 0.14)
 
 # Noise generators
 var noise: FastNoiseLite
@@ -35,6 +37,20 @@ var noise_seed: int
 var tree_scene: PackedScene
 var big_tree_scene: PackedScene
 var birch_tree_scene: PackedScene
+
+# Resource scenes
+var branch_scene: PackedScene
+var rock_scene: PackedScene
+var berry_bush_scene: PackedScene
+var mushroom_scene: PackedScene
+var herb_scene: PackedScene
+
+# Resource spawning settings
+@export var branch_density: float = 0.08  # Branches per grid cell chance
+@export var rock_density: float = 0.03
+@export var berry_density: float = 0.02
+@export var mushroom_density: float = 0.025
+@export var herb_density: float = 0.02
 
 # Fishing spot
 var fishing_spot_scene: PackedScene
@@ -119,6 +135,13 @@ func _load_scenes() -> void:
 	birch_tree_scene = load("res://scenes/resources/birch_tree_resource.tscn")
 	fishing_spot_scene = load("res://scenes/resources/fishing_spot.tscn")
 
+	# Load resource scenes
+	branch_scene = load("res://scenes/resources/branch.tscn")
+	rock_scene = load("res://scenes/resources/rock.tscn")
+	berry_bush_scene = load("res://scenes/resources/berry_bush.tscn")
+	mushroom_scene = load("res://scenes/resources/mushroom.tscn")
+	herb_scene = load("res://scenes/resources/herb.tscn")
+
 	if not tree_scene:
 		push_warning("[ChunkManager] Failed to load tree scene")
 
@@ -128,28 +151,33 @@ func get_terrain_material() -> StandardMaterial3D:
 
 
 func get_height_at(x: float, z: float) -> float:
-	# Flatten area around spawn point (campsite)
-	var distance_from_center: float = Vector2(x, z).length()
+	# Snap to cell center FIRST for consistent height across each cell
+	# This ensures objects spawn at the same height as the terrain mesh
+	var snapped_x: float = (floor(x / cell_size) + 0.5) * cell_size
+	var snapped_z: float = (floor(z / cell_size) + 0.5) * cell_size
+
+	# Use snapped coordinates for all distance calculations
 	var flatten_radius: float = 6.0
 	var flatten_falloff: float = 8.0
+
+	# Flatten area around spawn point (campsite)
+	var distance_from_center: float = Vector2(snapped_x, snapped_z).length()
 
 	if distance_from_center < flatten_radius:
 		return 0.0
 
-	# Pond depression
-	var distance_from_pond: float = Vector2(x - pond_center.x, z - pond_center.y).length()
+	# Pond depression - create a low terrain area that water will fill
+	# Using low positive heights (terrain provides the floor, water fills the basin)
+	var distance_from_pond: float = Vector2(snapped_x - pond_center.x, snapped_z - pond_center.y).length()
 	if distance_from_pond < pond_radius:
 		var pond_factor: float = distance_from_pond / pond_radius
-		if pond_factor < 0.6:
-			return -pond_depth
+		# Pond floor at Y=0, edges ramp up to normal terrain
+		if pond_factor < 0.7:
+			return 0.0  # Flat pond floor
 		else:
-			var edge_factor: float = (pond_factor - 0.6) / 0.4
-			return -pond_depth + (pond_depth * edge_factor)
-
-	# Snap to cell center for consistent height across each cell
-	# This ensures objects spawn at the same height as the terrain mesh
-	var snapped_x: float = (floor(x / cell_size) + 0.5) * cell_size
-	var snapped_z: float = (floor(z / cell_size) + 0.5) * cell_size
+			# Gradual slope from pond floor to terrain edge
+			var edge_factor: float = (pond_factor - 0.7) / 0.3
+			return height_step * edge_factor  # Ramp from 0 to height_step
 
 	# Base terrain height from noise (sampled at cell center)
 	var raw_height: float = noise.get_noise_2d(snapped_x, snapped_z)
@@ -159,7 +187,7 @@ func get_height_at(x: float, z: float) -> float:
 	height = floor(height / height_step) * height_step
 	height = max(height_step, height)
 
-	# Gradual transition from campsite
+	# Gradual transition from campsite (uses snapped distance)
 	if distance_from_center < flatten_radius + flatten_falloff:
 		var t: float = (distance_from_center - flatten_radius) / flatten_falloff
 		t = clamp(t, 0.0, 1.0)
@@ -266,7 +294,9 @@ func _spawn_fishing_spot() -> void:
 	var fishing_spot: Node3D = fishing_spot_scene.instantiate()
 	fishing_spot.name = "Pond"
 
-	var pond_y: float = -pond_depth + 0.1
+	# Position water to fill the terrain depression
+	# Terrain pond floor is at Y=0, water surface should be slightly above
+	var pond_y: float = 0.0
 	fishing_spot.position = Vector3(pond_center.x, pond_y, pond_center.y)
 
 	if "pond_width" in fishing_spot:

@@ -1699,6 +1699,335 @@ This ensures that any position within a cell returns the same height as the terr
 
 ---
 
+## Session 14 - Berry Bush Visual Improvement (2026-01-31)
+
+### What Was Built
+
+**Berry Bush Visual Overhaul** - Berries now appear as green bushes with red berry dots
+
+#### New Files Created
+
+```
+scripts/resources/berry_bush.gd      # Specialized berry behavior (berries disappear, bush stays)
+scenes/resources/berry_bush.tscn     # Green bush with 7 red berry spheres
+```
+
+#### Files Modified
+
+```
+scenes/main.tscn                     # Berry nodes now use berry_bush.tscn scene
+```
+
+#### Features Implemented
+
+1. **Berry Bush Scene** (`scenes/resources/berry_bush.tscn`)
+   - Green spherical bush mesh (squashed sphere shape)
+   - 7 small red berry spheres scattered on the bush surface
+   - Berries positioned at varied angles for natural look
+   - Collision shape for interaction
+
+2. **Berry Bush Script** (`scripts/resources/berry_bush.gd`)
+   - Extends ResourceNode with custom harvest behavior
+   - When harvested:
+     - Berries shrink and fade (animation)
+     - Bush mesh remains visible
+     - Resource becomes non-interactable
+   - Respawn restores berries visibility
+
+3. **Visual Design**
+   - Bush: Dark green (0.2, 0.45, 0.15) with spherical shape
+   - Berries: Bright red (0.8, 0.15, 0.15) small spheres
+   - Berry size: 0.04 radius for small dot appearance
+   - 7 berries distributed across bush surface
+
+#### Berry Bush Behavior
+
+| State | Bush | Berries | Interaction |
+|-------|------|---------|-------------|
+| Unharvested | Visible | Visible (7 red dots) | "Pick Berry" prompt |
+| Harvesting | Visible | Shrinking animation | N/A |
+| Depleted | Visible (green bush) | Hidden | No interaction |
+| Respawned | Visible | Visible again | "Pick Berry" prompt |
+
+#### Technical Details
+
+- Berry bush uses SphereShape3D for collision (matches organic shape)
+- Berries contained in "Berries" Node3D for group animation
+- Tween animation shrinks berries to zero scale
+- Collision disabled when depleted (removed from interactable group)
+- `respawn()` override restores berries visibility and scale
+
+---
+
+## Session 15 - Resource Terrain Height Fix (2026-01-31)
+
+### What Was Built
+
+**Bug Fix: Resources spawning inside terrain** - Resources now auto-adjust Y position to sit on terrain surface
+
+#### Files Modified
+
+```
+scripts/resources/resource_node.gd    # Added terrain height adjustment in _ready()
+```
+
+#### Issue Description
+
+Resources like rocks and branches were sometimes spawning partially buried inside terrain blocks. The resources had hardcoded Y positions that didn't account for the dynamic chunk-based terrain.
+
+#### Fix Applied
+
+Added automatic terrain height adjustment to ResourceNode:
+
+1. **New Export Variables**
+   - `adjust_to_terrain: bool = true` - Enable/disable auto-positioning
+   - `height_offset: float = 0.1` - Manual height offset (half object height)
+
+2. **Auto-Detection System**
+   - On `_ready()`, waits one frame for ChunkManager to initialize
+   - Queries `ChunkManager.get_height_at()` for terrain height at resource's X,Z position
+   - Auto-detects mesh height from MeshInstance3D child node
+   - Falls back to resource_type-based defaults if no mesh found
+
+3. **Height Offset Calculation**
+   - Automatically reads mesh AABB to get actual height
+   - Positions object center at `terrain_height + (mesh_height / 2)`
+   - Ensures object's base sits exactly on terrain surface
+
+#### Resource Height Offsets
+
+| Resource | Mesh Height | Auto Offset |
+|----------|-------------|-------------|
+| Branch | 0.2 | 0.1 |
+| Rock | 0.35 | 0.175 |
+| Berry Bush | ~0.5 | ~0.25 |
+
+#### Technical Details
+
+- Uses recursive search to find ChunkManager in scene tree
+- Works with both static scene resources and dynamically spawned ones
+- Trees already spawned by chunk system have correct positioning
+- `adjust_to_terrain` can be disabled for resources with manual positioning
+
+---
+
+## Session 16 - Tree Floating Fix (2026-01-31)
+
+### What Was Built
+
+**Bug Fix: Trees floating above terrain** - Fixed height calculation to use consistent snapped coordinates
+
+#### Files Modified
+
+```
+scripts/world/chunk_manager.gd    # Fixed get_height_at() to snap coordinates first
+```
+
+#### Issue Description
+
+Trees were sometimes floating above terrain blocks instead of being flush with the surface. This was visible throughout the forest where tree trunks hovered above the terrain.
+
+#### Root Cause
+
+In `get_height_at()`, coordinates were snapped to cell centers for noise sampling, but the campsite transition zone distance was calculated using the EXACT position. This meant:
+
+- Terrain mesh at cell center (4.5, 7.5): distance 8.75, transition t=0.25
+- Tree at (3.1, 6.1) snaps to same cell (4.5, 7.5) for noise, but: distance 6.84, transition t=0.0
+
+The different `t` values caused different height multipliers for objects in the same terrain cell.
+
+#### Fix Applied
+
+Moved coordinate snapping to the BEGINNING of `get_height_at()`, so all calculations (distance from campsite, distance from pond, noise lookup, transition multiplier) use the same snapped cell-center coordinates:
+
+```gdscript
+func get_height_at(x: float, z: float) -> float:
+    # Snap to cell center FIRST for consistent height across each cell
+    var snapped_x: float = (floor(x / cell_size) + 0.5) * cell_size
+    var snapped_z: float = (floor(z / cell_size) + 0.5) * cell_size
+
+    # Use snapped coordinates for ALL distance calculations
+    var distance_from_center: float = Vector2(snapped_x, snapped_z).length()
+    # ... rest uses snapped_x, snapped_z throughout
+```
+
+Now any position within a cell returns exactly the same height as the terrain mesh.
+
+---
+
+## Session 17 - Terrain Color Improvements (2026-01-31)
+
+### What Was Built
+
+**Terrain Color Update** - More natural grass green and darker dirt brown
+
+#### Files Modified
+
+```
+scripts/world/chunk_manager.gd    # Updated base grass and dirt colors
+scripts/world/terrain_chunk.gd    # Updated color variation clamp ranges
+```
+
+#### Color Changes
+
+| Element | Old Color | New Color | Description |
+|---------|-----------|-----------|-------------|
+| Grass | (0.30, 0.50, 0.22) | (0.28, 0.52, 0.15) | Vibrant lawn green |
+| Dirt | (0.52, 0.36, 0.22) | (0.40, 0.26, 0.14) | Rich dark soil brown |
+
+#### Clamp Range Updates
+
+Top face grass:
+- R: 0.20-0.38 (was 0.15-0.45)
+- G: 0.45-0.62 (was 0.35-0.60)
+- B: 0.08-0.22 (was 0.12-0.35)
+
+Side face dirt:
+- R: 0.32-0.50 (was 0.35-0.65)
+- G: 0.18-0.32 (was 0.22-0.48)
+- B: 0.06-0.18 (was 0.12-0.32)
+
+#### Color Distinction from Resources
+
+Terrain colors are distinct from:
+- Herb leaves: (0.3, 0.6, 0.25) - brighter, more saturated green
+- Berry bush: (0.2, 0.45, 0.15) - darker forest green
+
+---
+
+## Session 18 - Tree Floating Fix Part 2 (2026-01-31)
+
+### What Was Built
+
+**Bug Fix: Trees still floating** - Disabled terrain adjustment for trees that are already positioned by chunk system
+
+#### Files Modified
+
+```
+scenes/resources/tree_resource.tscn      # Added adjust_to_terrain = false
+scenes/resources/big_tree_resource.tscn  # Added adjust_to_terrain = false
+scenes/resources/birch_tree_resource.tscn # Added adjust_to_terrain = false
+```
+
+#### Issue Description
+
+Trees were still floating above terrain despite the earlier fix to `get_height_at()`.
+
+#### Root Cause
+
+When I added terrain adjustment to `resource_node.gd`, it affected ALL resources including trees. Trees are:
+1. First positioned correctly by the chunk spawner using `get_height_at()`
+2. Then repositioned AGAIN by `ResourceNode._ready()` terrain adjustment
+
+This double-positioning caused trees to end up at incorrect heights.
+
+#### Fix Applied
+
+Set `adjust_to_terrain = false` in all three tree scene files. Trees spawned by the chunk system are already positioned at the correct terrain height and don't need additional adjustment.
+
+Resources that DO need terrain adjustment (branches, rocks, berries in main.tscn with hardcoded positions) still have the default `adjust_to_terrain = true`.
+
+---
+
+## Session 19 - Random Resource Spawning (2026-01-31)
+
+### What Was Built
+
+**Procedural Resource Distribution** - Resources now spawn randomly throughout the terrain instead of only in the campsite area
+
+#### New Files Created
+
+```
+scenes/resources/branch.tscn    # Branch resource scene (uses resource_node.gd)
+scenes/resources/rock.tscn      # Rock resource scene (uses resource_node.gd)
+```
+
+#### Files Modified
+
+```
+scripts/world/chunk_manager.gd  # Added resource scene loading and density settings
+scripts/world/terrain_chunk.gd  # Added _spawn_chunk_resources() with noise-based distribution
+scenes/main.tscn                # Removed all hardcoded resources (Resources node now empty)
+scenes/resources/berry_bush.tscn # Set adjust_to_terrain = false
+scenes/resources/herb.tscn      # Set adjust_to_terrain = false
+```
+
+#### Features Implemented
+
+1. **Resource Scene Files**
+   - `branch.tscn`: Branch resource with BoxMesh (0.6 x 0.2 x 0.2), brown color
+   - `rock.tscn`: Rock resource with BoxMesh (0.4 x 0.35 x 0.4), grey color
+   - Both use existing `resource_node.gd` script
+   - `adjust_to_terrain = false` (chunk system handles positioning)
+
+2. **Chunk Manager Resource Loading** (`chunk_manager.gd`)
+   - Loads 5 resource scenes: branch, rock, berry_bush, mushroom, herb
+   - Configurable density settings:
+     - `branch_density: float = 0.08`
+     - `rock_density: float = 0.03`
+     - `berry_density: float = 0.02`
+     - `mushroom_density: float = 0.025`
+     - `herb_density: float = 0.02`
+
+3. **Per-Chunk Resource Spawning** (`terrain_chunk.gd`)
+   - Resources spawned in `_spawn_chunk_resources()` during chunk generation
+   - Noise-based clustering for natural distribution:
+     - **Branches**: More common near trees (forest noise > 0.3)
+     - **Rocks**: More common away from campsite (distance > 15)
+     - **Berry Bushes**: More common in clearings (forest noise < -0.2)
+     - **Mushrooms**: More common in forests (forest noise > 0.2)
+     - **Herbs**: Scattered everywhere (no bias)
+   - Grid-based spawning with density checks per cell
+   - Random rotation for variety
+   - Deterministic RNG seeded by chunk coordinates
+
+4. **Removed Hardcoded Resources**
+   - Deleted 30 branches from main.tscn
+   - Deleted 5 rocks from main.tscn
+   - Deleted 3 berry bushes from main.tscn
+   - Deleted 10 mushrooms from main.tscn
+   - Deleted 8 herbs from main.tscn
+   - Resources node now empty (populated dynamically)
+
+#### Resource Spawning Logic
+
+```gdscript
+func _spawn_chunk_resources() -> void:
+    # Use chunk-seeded RNG for deterministic spawning
+    var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+    rng.seed = hash(Vector2(chunk_coord.x * 1000, chunk_coord.y))
+
+    # Grid-based spawning
+    for cell_x in range(chunk_manager.chunk_size_cells):
+        for cell_z in range(chunk_manager.chunk_size_cells):
+            var world_x: float = chunk_world_origin.x + cell_x * cell_size + cell_size / 2.0
+            var world_z: float = chunk_world_origin.y + cell_z * cell_size + cell_size / 2.0
+
+            # Check density and environmental factors per resource type
+            # Spawn with noise-based clustering
+```
+
+#### Resource Distribution Summary
+
+| Resource | Base Density | Preferred Location |
+|----------|--------------|-------------------|
+| Branch | 8% | Near trees (forested areas) |
+| Rock | 3% | Away from campsite |
+| Berry Bush | 2% | Clearings (low forest noise) |
+| Mushroom | 2.5% | Forested areas |
+| Herb | 2% | Everywhere (no bias) |
+
+#### Technical Details
+
+- Resources spawned per chunk, cleaned up when chunk unloads
+- `spawned_resources: Array[Node3D]` tracks chunk resources for cleanup
+- Resources container created per chunk: `chunk/Resources`
+- Positions at terrain height using `chunk_manager.get_height_at()`
+- Avoids campsite center (distance < 8 units)
+- Avoids pond area (distance from pond center < pond radius + 2)
+
+---
+
 ## Next Session: Phase 8 - Polish & Content (Continued)
 
 ### Completed Features

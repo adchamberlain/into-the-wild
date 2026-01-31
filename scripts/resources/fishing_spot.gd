@@ -45,6 +45,10 @@ func _ready() -> void:
 	add_to_group("interactable")
 	add_to_group("fishing_spot")
 
+	# Put on layer 2 only - raycast detects this, but player (layer 1 mask) won't collide
+	collision_layer = 2
+	collision_mask = 0
+
 	# Create organic pond shape
 	_create_pond_mesh()
 
@@ -70,136 +74,86 @@ func _process(delta: float) -> void:
 
 
 func _create_pond_mesh() -> void:
-	# Remove existing mesh if any
-	var existing: Node = get_node_or_null("WaterMesh")
-	if existing:
-		existing.queue_free()
-	var existing_edge: Node = get_node_or_null("EdgeMesh")
-	if existing_edge:
-		existing_edge.queue_free()
-	var existing_col: Node = get_node_or_null("CollisionShape3D")
-	if existing_col:
-		existing_col.queue_free()
+	# Remove existing elements
+	for child_name in ["WaterMesh", "CollisionShape3D"]:
+		var existing: Node = get_node_or_null(child_name)
+		if existing:
+			existing.queue_free()
 
-	# Create organic pond using ArrayMesh with irregular polygon
+	# Water depth (how deep the water volume extends below surface)
+	var water_depth: float = 1.5
+
+	# Create water volume as a simple box that fills the terrain depression
 	water_mesh = MeshInstance3D.new()
 	water_mesh.name = "WaterMesh"
 
-	var surface_tool := SurfaceTool.new()
-	surface_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var box_mesh := BoxMesh.new()
+	box_mesh.size = Vector3(pond_width, water_depth, pond_depth)
+	water_mesh.mesh = box_mesh
 
-	# Create organic shape using perturbed ellipse points
-	var points: Array[Vector2] = []
-	var num_points: int = 12
-	for i in range(num_points):
-		var angle: float = (float(i) / num_points) * TAU
-		# Base ellipse with perturbation for organic shape
-		var noise_offset: float = sin(angle * 3) * 0.15 + cos(angle * 5) * 0.1
-		var radius_x: float = (pond_width / 2.0) * (1.0 + noise_offset)
-		var radius_z: float = (pond_depth / 2.0) * (1.0 + noise_offset * 0.8)
-		points.append(Vector2(cos(angle) * radius_x, sin(angle) * radius_z))
+	# Position so water surface is at pond_height, volume extends down
+	water_mesh.position = Vector3(0, pond_height - water_depth / 2.0, 0)
 
-	# Create water surface (top face) using triangle fan
-	var center := Vector3(0, pond_height, 0)
-	for i in range(num_points):
-		var next_i: int = (i + 1) % num_points
-		var p1 := Vector3(points[i].x, pond_height, points[i].y)
-		var p2 := Vector3(points[next_i].x, pond_height, points[next_i].y)
-
-		surface_tool.set_normal(Vector3.UP)
-		surface_tool.add_vertex(center)
-		surface_tool.add_vertex(p1)
-		surface_tool.add_vertex(p2)
-
-	# Create sides (depth of water)
-	var bottom_y: float = -0.05
-	for i in range(num_points):
-		var next_i: int = (i + 1) % num_points
-		var top1 := Vector3(points[i].x, pond_height, points[i].y)
-		var top2 := Vector3(points[next_i].x, pond_height, points[next_i].y)
-		var bot1 := Vector3(points[i].x * 0.9, bottom_y, points[i].y * 0.9)
-		var bot2 := Vector3(points[next_i].x * 0.9, bottom_y, points[next_i].y * 0.9)
-
-		# Side quad as two triangles
-		var normal: Vector3 = (top1 - bot1).cross(top2 - top1).normalized()
-		surface_tool.set_normal(normal)
-		surface_tool.add_vertex(top1)
-		surface_tool.add_vertex(bot1)
-		surface_tool.add_vertex(top2)
-
-		surface_tool.add_vertex(top2)
-		surface_tool.add_vertex(bot1)
-		surface_tool.add_vertex(bot2)
-
-	# Bottom face
-	var bottom_center := Vector3(0, bottom_y, 0)
-	for i in range(num_points):
-		var next_i: int = (i + 1) % num_points
-		var p1 := Vector3(points[i].x * 0.9, bottom_y, points[i].y * 0.9)
-		var p2 := Vector3(points[next_i].x * 0.9, bottom_y, points[next_i].y * 0.9)
-
-		surface_tool.set_normal(Vector3.DOWN)
-		surface_tool.add_vertex(bottom_center)
-		surface_tool.add_vertex(p2)
-		surface_tool.add_vertex(p1)
-
-	var mesh := surface_tool.commit()
-	water_mesh.mesh = mesh
-
-	# Water material
+	# Semi-transparent water material
 	var mat := StandardMaterial3D.new()
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.albedo_color = Color(0.15, 0.35, 0.45, 0.75)
-	mat.roughness = 0.05
-	mat.metallic = 0.2
+	mat.albedo_color = Color(0.2, 0.4, 0.55, 0.6)
+	mat.roughness = 0.1
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	water_mesh.material_override = mat
 
 	add_child(water_mesh)
 
-	# Create muddy edge/shore
-	var edge_mesh := MeshInstance3D.new()
-	edge_mesh.name = "EdgeMesh"
+	# Create water area for swimming detection
+	_create_water_area()
 
-	var edge_tool := SurfaceTool.new()
-	edge_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
-
-	# Shore ring around the water
-	for i in range(num_points):
-		var next_i: int = (i + 1) % num_points
-		var inner1 := Vector3(points[i].x, 0.02, points[i].y)
-		var inner2 := Vector3(points[next_i].x, 0.02, points[next_i].y)
-		var outer1 := Vector3(points[i].x * 1.15, 0.0, points[i].y * 1.15)
-		var outer2 := Vector3(points[next_i].x * 1.15, 0.0, points[next_i].y * 1.15)
-
-		edge_tool.set_normal(Vector3.UP)
-		edge_tool.add_vertex(inner1)
-		edge_tool.add_vertex(outer1)
-		edge_tool.add_vertex(inner2)
-
-		edge_tool.add_vertex(inner2)
-		edge_tool.add_vertex(outer1)
-		edge_tool.add_vertex(outer2)
-
-	edge_mesh.mesh = edge_tool.commit()
-
-	var edge_mat := StandardMaterial3D.new()
-	edge_mat.albedo_color = Color(0.35, 0.3, 0.2)  # Muddy brown
-	edge_mesh.material_override = edge_mat
-
-	add_child(edge_mesh)
-
-	# Create collision shape (simple box approximation)
+	# Small collision shape for raycast interaction (at pond edge, not blocking)
 	var col_shape := CollisionShape3D.new()
 	col_shape.name = "CollisionShape3D"
 	var box := BoxShape3D.new()
-	box.size = Vector3(pond_width, pond_height + 0.1, pond_depth)
+	box.size = Vector3(1.5, 1.0, 1.5)
 	col_shape.shape = box
-	col_shape.position = Vector3(0, pond_height / 2, 0)
+	col_shape.position = Vector3(pond_width / 2 + 1.0, 0.5, 0)
 	add_child(col_shape)
 
-	# Add some rocks around the edge
-	_add_shore_rocks(points)
+
+func _create_water_area() -> void:
+	# Water area for swimming detection - matches the water visual volume
+	var water_depth: float = 1.5
+
+	var water_area := Area3D.new()
+	water_area.name = "WaterArea"
+
+	var area_shape := CollisionShape3D.new()
+	var area_box := BoxShape3D.new()
+	# Match the water volume size, slightly larger to catch player entering
+	area_box.size = Vector3(pond_width + 1.0, water_depth + 1.0, pond_depth + 1.0)
+	area_shape.shape = area_box
+	# Position to match water volume (surface at pond_height, extends down)
+	area_shape.position = Vector3(0, pond_height - water_depth / 2.0, 0)
+	water_area.add_child(area_shape)
+
+	# Connect signals for swimming detection
+	water_area.body_entered.connect(_on_water_body_entered)
+	water_area.body_exited.connect(_on_water_body_exited)
+
+	add_child(water_area)
+
+	# No pond floor needed - terrain provides the floor!
+
+
+func _on_water_body_entered(body: Node3D) -> void:
+	if body.is_in_group("player"):
+		if body.has_method("set_in_water"):
+			body.set_in_water(true)
+		print("[FishingSpot] Player entered water")
+
+
+func _on_water_body_exited(body: Node3D) -> void:
+	if body.is_in_group("player"):
+		if body.has_method("set_in_water"):
+			body.set_in_water(false)
+		print("[FishingSpot] Player exited water")
 
 
 func _add_shore_rocks(points: Array[Vector2]) -> void:

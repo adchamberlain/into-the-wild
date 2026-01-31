@@ -14,6 +14,8 @@ size = Vector3(0.6, 1.8, 0.6)
 size = Vector3(0.6, 1.8, 0.6)
 
 [node name="Player" type="CharacterBody3D"]
+collision_layer = 1
+collision_mask = 1
 script = ExtResource("1_player")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
@@ -31,7 +33,7 @@ fov = 75.0
 
 [node name="InteractionRay" type="RayCast3D" parent="Camera3D"]
 target_position = Vector3(0, 0, -3)
-collision_mask = 1
+collision_mask = 3
 
 [node name="WeatherParticles" type="Node3D" parent="Camera3D"]
 script = ExtResource("6_weather_particles")

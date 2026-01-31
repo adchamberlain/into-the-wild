@@ -22,6 +22,10 @@ signal depleted()
 @export var gather_scale_punch: float = 0.8
 @export var gather_animation_duration: float = 0.2
 
+# Terrain positioning
+@export var adjust_to_terrain: bool = true  # Whether to auto-adjust Y to terrain height
+@export var height_offset: float = 0.1  # Half the object height (object sits on terrain)
+
 # State
 var is_depleted: bool = false
 var is_animating: bool = false
@@ -41,6 +45,70 @@ func _ready() -> void:
 	# Add to interactable group so raycast can find us
 	add_to_group("interactable")
 	add_to_group("resource_node")
+
+	# Adjust position to terrain height if enabled
+	if adjust_to_terrain:
+		# Wait a frame for ChunkManager to initialize
+		await get_tree().process_frame
+		_adjust_to_terrain_height()
+
+
+## Adjust Y position to sit on top of terrain.
+func _adjust_to_terrain_height() -> void:
+	# Find ChunkManager in scene
+	var chunk_manager: ChunkManager = _find_chunk_manager()
+	if not chunk_manager:
+		return
+
+	# Get terrain height at this position
+	var terrain_height: float = chunk_manager.get_height_at(global_position.x, global_position.z)
+
+	# Auto-detect height offset from mesh if not explicitly set
+	var offset: float = height_offset
+	if offset <= 0.1:  # Default value, try to auto-detect
+		offset = _get_mesh_height_offset()
+
+	# Position the object so its base sits on the terrain
+	global_position.y = terrain_height + offset
+
+
+## Get half the mesh height for positioning (object center above terrain).
+func _get_mesh_height_offset() -> float:
+	# Look for MeshInstance3D child to get actual size
+	for child in get_children():
+		if child is MeshInstance3D:
+			var mesh: Mesh = child.mesh
+			if mesh:
+				var aabb: AABB = mesh.get_aabb()
+				# Return half the height (mesh is centered, so half above terrain)
+				return aabb.size.y / 2.0
+
+	# Fallback based on resource type
+	match resource_type:
+		"river_rock":
+			return 0.175  # Rock height 0.35 / 2
+		"branch":
+			return 0.1    # Branch height 0.2 / 2
+		"berry":
+			return 0.25   # Bush sits a bit higher
+		_:
+			return height_offset
+
+
+func _find_chunk_manager() -> ChunkManager:
+	# Search for ChunkManager in the scene tree
+	var root: Node = get_tree().root
+	return _find_chunk_manager_recursive(root)
+
+
+func _find_chunk_manager_recursive(node: Node) -> ChunkManager:
+	if node is ChunkManager:
+		return node
+	for child in node.get_children():
+		var result: ChunkManager = _find_chunk_manager_recursive(child)
+		if result:
+			return result
+	return null
 
 
 ## Called when player interacts with this node. Returns true if gathering succeeded.
