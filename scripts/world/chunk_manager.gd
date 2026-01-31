@@ -146,8 +146,13 @@ func get_height_at(x: float, z: float) -> float:
 			var edge_factor: float = (pond_factor - 0.6) / 0.4
 			return -pond_depth + (pond_depth * edge_factor)
 
-	# Base terrain height from noise
-	var raw_height: float = noise.get_noise_2d(x, z)
+	# Snap to cell center for consistent height across each cell
+	# This ensures objects spawn at the same height as the terrain mesh
+	var snapped_x: float = (floor(x / cell_size) + 0.5) * cell_size
+	var snapped_z: float = (floor(z / cell_size) + 0.5) * cell_size
+
+	# Base terrain height from noise (sampled at cell center)
+	var raw_height: float = noise.get_noise_2d(snapped_x, snapped_z)
 	var height: float = (raw_height + 1.0) * 0.5 * height_scale
 
 	# Quantize to blocky steps
