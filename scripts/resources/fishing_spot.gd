@@ -105,13 +105,14 @@ func _create_pond_mesh() -> void:
 	# Create water area for swimming detection
 	_create_water_area()
 
-	# Small collision shape for raycast interaction (at pond edge, not blocking)
+	# Collision shape for raycast interaction - covers entire water surface
+	# Player can fish from any edge of the pond
 	var col_shape := CollisionShape3D.new()
 	col_shape.name = "CollisionShape3D"
 	var box := BoxShape3D.new()
-	box.size = Vector3(1.5, 1.0, 1.5)
+	box.size = Vector3(pond_width, 1.0, pond_depth)
 	col_shape.shape = box
-	col_shape.position = Vector3(pond_width / 2 + 1.0, 0.5, 0)
+	col_shape.position = Vector3(0, pond_height, 0)
 	add_child(col_shape)
 
 
