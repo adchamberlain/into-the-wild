@@ -81,7 +81,8 @@ func _create_pond_mesh() -> void:
 			existing.queue_free()
 
 	# Water depth (how deep the water volume extends below surface)
-	var water_depth: float = 1.5
+	# Must match terrain pond floor depth (-2.5) plus surface height
+	var water_depth: float = 3.0
 
 	# Create water volume as a simple box that fills the terrain depression
 	water_mesh = MeshInstance3D.new()
@@ -119,7 +120,7 @@ func _create_pond_mesh() -> void:
 
 func _create_water_area() -> void:
 	# Water area for swimming detection - matches the water visual volume
-	var water_depth: float = 1.5
+	var water_depth: float = 3.0
 
 	var water_area := Area3D.new()
 	water_area.name = "WaterArea"

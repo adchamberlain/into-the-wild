@@ -38,7 +38,7 @@ var is_in_water: bool = false
 var swim_sink_speed: float = 3.0  # How fast player sinks in water
 var swim_rise_speed: float = 2.5  # How fast player rises when pressing space
 var swim_move_speed: float = 2.5  # Movement speed while swimming
-var water_surface_y: float = 0.2  # Y position of water surface (can't swim above this)
+var water_surface_y: float = 0.15  # Y position of water surface (matches pond_height in fishing_spot)
 
 # Food values (hunger restored per item)
 const FOOD_VALUES: Dictionary = {

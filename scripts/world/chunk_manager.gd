@@ -166,18 +166,19 @@ func get_height_at(x: float, z: float) -> float:
 	if distance_from_center < flatten_radius:
 		return 0.0
 
-	# Pond depression - create a low terrain area that water will fill
-	# Using low positive heights (terrain provides the floor, water fills the basin)
+	# Pond depression - create a deep area for swimming
+	# Terrain floor is below water surface so player can sink
 	var distance_from_pond: float = Vector2(snapped_x - pond_center.x, snapped_z - pond_center.y).length()
 	if distance_from_pond < pond_radius:
 		var pond_factor: float = distance_from_pond / pond_radius
-		# Pond floor at Y=0, edges ramp up to normal terrain
+		var pond_floor_y: float = -2.5  # Deep enough for swimming
+		# Pond floor is deep, edges ramp up to normal terrain
 		if pond_factor < 0.7:
-			return 0.0  # Flat pond floor
+			return pond_floor_y  # Flat pond floor (deep)
 		else:
 			# Gradual slope from pond floor to terrain edge
 			var edge_factor: float = (pond_factor - 0.7) / 0.3
-			return height_step * edge_factor  # Ramp from 0 to height_step
+			return pond_floor_y + (height_step - pond_floor_y) * edge_factor
 
 	# Base terrain height from noise (sampled at cell center)
 	var raw_height: float = noise.get_noise_2d(snapped_x, snapped_z)
