@@ -1310,6 +1310,116 @@ scenes/resources/tree_resource.tscn     # Brightened tree colors
 
 ---
 
+## Session 10 - Minecraft Forest Biome Visual Overhaul (2026-01-31)
+
+### What Was Built
+
+**Complete Forest Biome Aesthetic Update** - Minecraft-style terrain, varied tree types, and ground decorations
+
+#### New Files Created
+
+```
+scenes/resources/big_tree_resource.tscn     # Large oak tree (2x trunk, larger canopy)
+scenes/resources/birch_tree_resource.tscn   # Birch tree (white trunk, lighter leaves)
+```
+
+#### Files Modified
+
+```
+scripts/world/terrain_generator.gd      # Vertex colors, tree type system, ground decorations
+scenes/resources/tree_resource.tscn     # Updated to small oak style with layered canopy
+```
+
+#### Features Implemented
+
+1. **Terrain Dual-Color System** (`terrain_generator.gd`)
+   - Top faces now use bright grass green `Color(0.48, 0.75, 0.35)`
+   - Side/cliff faces use brown dirt `Color(0.55, 0.35, 0.2)`
+   - Implemented via vertex colors with `vertex_color_use_as_albedo`
+   - Creates classic Minecraft grass-block look
+
+2. **Small Oak Tree** (`tree_resource.tscn`)
+   - Layered canopy for rounded sphere shape:
+     - Main layer: 3.5 x 2.0 x 3.5
+     - Middle layer: 2.8 x 1.5 x 2.8
+     - Top layer: 1.8 x 1.2 x 1.8
+     - Bottom layer: 2.5 x 1.0 x 2.5
+     - Cross layer: 4.0 x 1.5 x 2.5
+   - Taller trunk (4.0 units)
+   - Dark oak bark color: `Color(0.45, 0.3, 0.15)`
+   - Bright leaf color: `Color(0.2, 0.6, 0.2)`
+   - Drops 3 wood + 3 branches
+
+3. **Big Oak Tree** (`big_tree_resource.tscn`)
+   - 2x2 trunk (1.5 x 5.0 x 1.5)
+   - Larger layered canopy (5.5 main, up to 3.0 top)
+   - Drops 5 wood + 5 branches
+   - Requires 5 chops to harvest
+
+4. **Birch Tree** (`birch_tree_resource.tscn`)
+   - White trunk color: `Color(0.9, 0.85, 0.8)`
+   - Lighter green leaves: `Color(0.35, 0.7, 0.3)`
+   - Narrower trunk (0.55 x 5.0 x 0.55)
+   - Drops 3 birch_wood + 2 branches
+   - Medium-sized layered canopy
+
+5. **Mixed Tree Type Spawning** (`terrain_generator.gd`)
+   - 60% small oak trees
+   - 30% big oak trees
+   - 10% birch trees
+   - Different scale variations per type:
+     - Small oak: 0.7x to 1.2x (most variety)
+     - Big oak: 0.9x to 1.1x (less variation)
+     - Birch: 0.8x to 1.1x (uniform)
+
+6. **Increased Forest Density**
+   - Tree density increased from 0.15 to 0.25
+   - Grid size reduced from 3.0 to 2.5 (tighter packing)
+   - Max distance increased from 48 to 60 (larger forest)
+   - Creates denser Minecraft-style forest
+
+7. **Ground Decorations** (`terrain_generator.gd`)
+   - **Tall Grass**: 250 grass tufts scattered on terrain
+     - Crossed quad design (X-shape)
+     - 0.25-0.4 unit height
+     - Slightly darker green than terrain
+   - **Red Flowers**: 35 poppies/tulips
+     - Blocky stem + head design
+     - Bright red `Color(0.85, 0.15, 0.15)`
+   - **Yellow Flowers**: 35 dandelions
+     - Same design, yellow `Color(0.95, 0.85, 0.15)`
+   - Noise-based clustering for natural distribution
+   - Avoids campsite center (8 unit minimum distance)
+
+#### Tree Type Comparison
+
+| Type | Trunk Size | Canopy Size | Wood Drop | Chops | Color |
+|------|------------|-------------|-----------|-------|-------|
+| Small Oak | 0.7 x 4.0 x 0.7 | 3.5 main | 3 wood | 3 | Dark brown + green |
+| Big Oak | 1.5 x 5.0 x 1.5 | 5.5 main | 5 wood | 5 | Dark brown + green |
+| Birch | 0.55 x 5.0 x 0.55 | 3.0 main | 3 birch_wood | 3 | White + light green |
+
+#### Color Palette Update
+
+| Element | Old Color | New Color |
+|---------|-----------|-----------|
+| Grass (top) | (0.45, 0.62, 0.35) | (0.48, 0.75, 0.35) |
+| Dirt (sides) | N/A | (0.55, 0.35, 0.2) |
+| Oak trunk | (0.55, 0.4, 0.3) | (0.45, 0.3, 0.15) |
+| Oak leaves | (0.25, 0.55, 0.25) | (0.2, 0.6, 0.2) |
+| Birch trunk | N/A | (0.9, 0.85, 0.8) |
+| Birch leaves | N/A | (0.35, 0.7, 0.3) |
+
+#### Technical Details
+
+- Ground decorations use SurfaceTool for procedural mesh generation
+- Grass tufts are crossed quads (no collision, visual only)
+- Flowers use BoxMesh for blocky Minecraft look
+- All decorations inherit terrain height
+- Tree type logging shows spawn counts for debugging
+
+---
+
 ## Next Session: Phase 8 - Polish & Content (Continued)
 
 ### Completed Features

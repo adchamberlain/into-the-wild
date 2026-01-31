@@ -1,12 +1,12 @@
-[gd_scene load_steps=12 format=3 uid="uid://tree001"]
+[gd_scene load_steps=12 format=3 uid="uid://bigtree001"]
 
 [ext_resource type="Script" path="res://scripts/resources/resource_node.gd" id="1_resource"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_trunk"]
-size = Vector3(0.8, 4.0, 0.8)
+size = Vector3(1.6, 5.0, 1.6)
 
 [sub_resource type="BoxMesh" id="BoxMesh_trunk"]
-size = Vector3(0.7, 4.0, 0.7)
+size = Vector3(1.5, 5.0, 1.5)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_trunk"]
 albedo_color = Color(0.45, 0.3, 0.15, 1)
@@ -15,67 +15,67 @@ albedo_color = Color(0.45, 0.3, 0.15, 1)
 albedo_color = Color(0.2, 0.6, 0.2, 1)
 
 [sub_resource type="BoxMesh" id="BoxMesh_foliage_main"]
-size = Vector3(3.5, 2.0, 3.5)
+size = Vector3(5.5, 2.5, 5.5)
 
 [sub_resource type="BoxMesh" id="BoxMesh_foliage_mid"]
-size = Vector3(2.8, 1.5, 2.8)
+size = Vector3(4.5, 2.0, 4.5)
 
 [sub_resource type="BoxMesh" id="BoxMesh_foliage_top"]
-size = Vector3(1.8, 1.2, 1.8)
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_foliage"]
-size = Vector3(3.5, 3.5, 3.5)
+size = Vector3(3.0, 1.5, 3.0)
 
 [sub_resource type="BoxMesh" id="BoxMesh_foliage_bottom"]
-size = Vector3(2.5, 1.0, 2.5)
+size = Vector3(4.0, 1.5, 4.0)
 
 [sub_resource type="BoxMesh" id="BoxMesh_foliage_cross1"]
-size = Vector3(4.0, 1.5, 2.5)
+size = Vector3(6.0, 2.0, 4.0)
 
-[node name="TreeResource" type="StaticBody3D"]
+[sub_resource type="BoxShape3D" id="BoxShape3D_foliage"]
+size = Vector3(5.5, 5.0, 5.5)
+
+[node name="BigTreeResource" type="StaticBody3D"]
 script = ExtResource("1_resource")
 resource_type = "wood"
-resource_amount = 3
+resource_amount = 5
 interaction_text = "Chop"
 secondary_resource_type = "branch"
-secondary_resource_amount = 3
+secondary_resource_amount = 5
 required_tool = "axe"
-chops_required = 3
+chops_required = 5
 
 [node name="TrunkCollision" type="CollisionShape3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
 shape = SubResource("BoxShape3D_trunk")
 
 [node name="TrunkMesh" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
 mesh = SubResource("BoxMesh_trunk")
 material_override = SubResource("StandardMaterial3D_trunk")
 
 [node name="FoliageMain" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.5, 0)
 mesh = SubResource("BoxMesh_foliage_main")
 material_override = SubResource("StandardMaterial3D_foliage")
 
 [node name="FoliageMid" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.25, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8.0, 0)
 mesh = SubResource("BoxMesh_foliage_mid")
 material_override = SubResource("StandardMaterial3D_foliage")
 
 [node name="FoliageTop" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7.1, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 9.25, 0)
 mesh = SubResource("BoxMesh_foliage_top")
 material_override = SubResource("StandardMaterial3D_foliage")
 
 [node name="FoliageBottom" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.25, 0)
 mesh = SubResource("BoxMesh_foliage_bottom")
 material_override = SubResource("StandardMaterial3D_foliage")
 
 [node name="FoliageCross1" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.5, 0)
 mesh = SubResource("BoxMesh_foliage_cross1")
 material_override = SubResource("StandardMaterial3D_foliage")
 
 [node name="FoliageCollision" type="CollisionShape3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7.0, 0)
 shape = SubResource("BoxShape3D_foliage")

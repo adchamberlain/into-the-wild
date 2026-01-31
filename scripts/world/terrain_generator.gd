@@ -8,10 +8,14 @@ extends Node3D
 @export var noise_scale: float = 0.02  # Broader noise for rolling hills
 
 # Tree spawning settings
-@export var tree_density: float = 0.15  # Base probability of tree per cell
+@export var tree_density: float = 0.25  # Base probability of tree per cell (increased for denser forest)
 @export var tree_min_distance: float = 14.0  # Minimum distance from campsite center
-@export var tree_max_distance: float = 48.0  # Maximum distance for tree spawning
-@export var tree_grid_size: float = 3.0  # Grid cell size for placement
+@export var tree_max_distance: float = 60.0  # Maximum distance for tree spawning
+@export var tree_grid_size: float = 2.5  # Grid cell size for placement
+
+# Minecraft-style colors
+var grass_color: Color = Color(0.48, 0.75, 0.35)  # Bright grass green (top faces)
+var dirt_color: Color = Color(0.55, 0.35, 0.2)    # Brown dirt (side faces)
 
 var noise: FastNoiseLite
 var terrain_mesh: MeshInstance3D
@@ -20,8 +24,10 @@ var terrain_collision: StaticBody3D
 # Cache heights for collision
 var height_cache: Dictionary = {}
 
-# Tree scene
-var tree_scene: PackedScene
+# Tree scenes (multiple types)
+var tree_scene: PackedScene  # Small oak
+var big_tree_scene: PackedScene  # Big oak
+var birch_tree_scene: PackedScene  # Birch
 var spawned_trees: Array[Node3D] = []
 var forest_noise: FastNoiseLite  # Separate noise for forest density
 
@@ -32,6 +38,8 @@ func _ready() -> void:
 	_load_tree_scene()
 	# Defer tree spawning to ensure Resources node exists
 	call_deferred("_spawn_forest")
+	# Spawn ground decorations (grass, flowers)
+	call_deferred("_spawn_ground_decorations")
 
 
 func _setup_noise() -> void:
@@ -90,19 +98,25 @@ func _add_top_face(st: SurfaceTool, x: float, z: float, size: float, height: flo
 
 	var normal := Vector3.UP
 
-	# Triangle 1
+	# Triangle 1 - grass color for top faces
+	st.set_color(grass_color)
 	st.set_normal(normal)
 	st.add_vertex(v0)
+	st.set_color(grass_color)
 	st.set_normal(normal)
 	st.add_vertex(v2)
+	st.set_color(grass_color)
 	st.set_normal(normal)
 	st.add_vertex(v1)
 
 	# Triangle 2
+	st.set_color(grass_color)
 	st.set_normal(normal)
 	st.add_vertex(v0)
+	st.set_color(grass_color)
 	st.set_normal(normal)
 	st.add_vertex(v3)
+	st.set_color(grass_color)
 	st.set_normal(normal)
 	st.add_vertex(v2)
 
@@ -149,19 +163,25 @@ func _add_side_faces(st: SurfaceTool, cx: int, cz: int, x: float, z: float, size
 
 
 func _add_side_quad(st: SurfaceTool, v0: Vector3, v1: Vector3, v2: Vector3, v3: Vector3, normal: Vector3) -> void:
-	# Triangle 1
+	# Triangle 1 - dirt color for side faces
+	st.set_color(dirt_color)
 	st.set_normal(normal)
 	st.add_vertex(v0)
+	st.set_color(dirt_color)
 	st.set_normal(normal)
 	st.add_vertex(v1)
+	st.set_color(dirt_color)
 	st.set_normal(normal)
 	st.add_vertex(v2)
 
 	# Triangle 2
+	st.set_color(dirt_color)
 	st.set_normal(normal)
 	st.add_vertex(v0)
+	st.set_color(dirt_color)
 	st.set_normal(normal)
 	st.add_vertex(v2)
+	st.set_color(dirt_color)
 	st.set_normal(normal)
 	st.add_vertex(v3)
 
@@ -201,7 +221,8 @@ func _get_blocky_height(x: float, z: float) -> float:
 
 func _create_terrain_material() -> StandardMaterial3D:
 	var material: StandardMaterial3D = StandardMaterial3D.new()
-	material.albedo_color = Color(0.45, 0.62, 0.35)  # Brighter grass green
+	material.vertex_color_use_as_albedo = true  # Use vertex colors for grass/dirt
+	material.albedo_color = Color.WHITE  # Neutral base color
 	material.roughness = 0.9
 	material.metallic = 0.0
 	# Disable backface culling
@@ -247,9 +268,18 @@ func get_height_at(x: float, z: float) -> float:
 
 
 func _load_tree_scene() -> void:
+	# Load all tree type scenes
 	tree_scene = load("res://scenes/resources/tree_resource.tscn")
 	if not tree_scene:
-		push_warning("[TerrainGenerator] Failed to load tree scene")
+		push_warning("[TerrainGenerator] Failed to load small oak tree scene")
+
+	big_tree_scene = load("res://scenes/resources/big_tree_resource.tscn")
+	if not big_tree_scene:
+		push_warning("[TerrainGenerator] Failed to load big oak tree scene")
+
+	birch_tree_scene = load("res://scenes/resources/birch_tree_resource.tscn")
+	if not birch_tree_scene:
+		push_warning("[TerrainGenerator] Failed to load birch tree scene")
 
 	# Setup forest density noise (different from terrain noise)
 	forest_noise = FastNoiseLite.new()
@@ -271,6 +301,7 @@ func _spawn_forest() -> void:
 		get_parent().add_child(resources_container)
 
 	var tree_index: int = 0
+	var tree_counts: Dictionary = {"small_oak": 0, "big_oak": 0, "birch": 0}
 
 	# Iterate over a grid covering the forest area
 	var grid_start: float = -tree_max_distance
@@ -310,23 +341,206 @@ func _spawn_forest() -> void:
 					# Get terrain height
 					var tree_y: float = _get_blocky_height(tree_x, tree_z)
 
-					# Spawn tree
-					var tree: Node3D = tree_scene.instantiate()
+					# Choose tree type: 60% small oak, 30% big oak, 10% birch
+					var tree: Node3D
+					var tree_type_roll: float = randf()
+					var tree_type: String
+
+					if tree_type_roll < 0.60:
+						tree = tree_scene.instantiate()
+						tree_type = "small_oak"
+					elif tree_type_roll < 0.90 and big_tree_scene:
+						tree = big_tree_scene.instantiate()
+						tree_type = "big_oak"
+					elif birch_tree_scene:
+						tree = birch_tree_scene.instantiate()
+						tree_type = "birch"
+					else:
+						tree = tree_scene.instantiate()
+						tree_type = "small_oak"
+
 					tree.name = "Tree_Gen_%d" % tree_index
 					tree.position = Vector3(tree_x, tree_y, tree_z)
 
 					# Random Y rotation
 					tree.rotation.y = randf() * TAU
 
-					# Scale variation (0.7 to 1.3) - more variety
-					var scale_factor: float = randf_range(0.7, 1.3)
+					# Scale variation based on tree type
+					var scale_factor: float
+					if tree_type == "big_oak":
+						scale_factor = randf_range(0.9, 1.1)  # Big oaks have less variation
+					elif tree_type == "birch":
+						scale_factor = randf_range(0.8, 1.1)  # Birches are more uniform
+					else:
+						scale_factor = randf_range(0.7, 1.2)  # Small oaks have more variety
 					tree.scale = Vector3(scale_factor, scale_factor, scale_factor)
 
 					resources_container.add_child(tree)
 					spawned_trees.append(tree)
+					tree_counts[tree_type] += 1
 					tree_index += 1
 
 			z += tree_grid_size
 		x += tree_grid_size
 
-	print("[TerrainGenerator] Spawned %d trees with natural clustering" % spawned_trees.size())
+	print("[TerrainGenerator] Spawned %d trees (small oak: %d, big oak: %d, birch: %d)" % [
+		spawned_trees.size(),
+		tree_counts["small_oak"],
+		tree_counts["big_oak"],
+		tree_counts["birch"]
+	])
+
+
+func _spawn_ground_decorations() -> void:
+	# Spawn grass tufts and flowers on the terrain surface
+	var decorations_container: Node3D = Node3D.new()
+	decorations_container.name = "GroundDecorations"
+	add_child(decorations_container)
+
+	var grass_count: int = 0
+	var red_flower_count: int = 0
+	var yellow_flower_count: int = 0
+
+	# Target counts
+	var target_grass: int = 250
+	var target_red_flowers: int = 35
+	var target_yellow_flowers: int = 35
+
+	# Spawn decorations in a radius around the campsite
+	var decoration_radius: float = 55.0
+	var min_distance: float = 8.0  # Avoid campsite center
+
+	# Use noise for natural clustering
+	var decoration_noise: FastNoiseLite = FastNoiseLite.new()
+	decoration_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	decoration_noise.seed = randi()
+	decoration_noise.frequency = 0.15
+
+	# Spawn grass tufts
+	while grass_count < target_grass:
+		var x: float = randf_range(-decoration_radius, decoration_radius)
+		var z: float = randf_range(-decoration_radius, decoration_radius)
+		var distance: float = Vector2(x, z).length()
+
+		if distance >= min_distance and distance <= decoration_radius:
+			# Use noise to create natural clustering
+			var noise_value: float = (decoration_noise.get_noise_2d(x, z) + 1.0) * 0.5
+			if noise_value > 0.3:  # Only spawn in certain noise regions
+				var y: float = _get_blocky_height(x, z)
+				_create_grass_tuft(decorations_container, Vector3(x, y + 0.01, z))
+				grass_count += 1
+
+	# Spawn red flowers (poppies/tulips)
+	while red_flower_count < target_red_flowers:
+		var x: float = randf_range(-decoration_radius, decoration_radius)
+		var z: float = randf_range(-decoration_radius, decoration_radius)
+		var distance: float = Vector2(x, z).length()
+
+		if distance >= min_distance and distance <= decoration_radius:
+			var noise_value: float = (decoration_noise.get_noise_2d(x * 1.5, z * 1.5) + 1.0) * 0.5
+			if noise_value > 0.5:  # Flowers are more sparse
+				var y: float = _get_blocky_height(x, z)
+				_create_flower(decorations_container, Vector3(x, y + 0.01, z), Color(0.85, 0.15, 0.15))  # Red
+				red_flower_count += 1
+
+	# Spawn yellow flowers (dandelions)
+	while yellow_flower_count < target_yellow_flowers:
+		var x: float = randf_range(-decoration_radius, decoration_radius)
+		var z: float = randf_range(-decoration_radius, decoration_radius)
+		var distance: float = Vector2(x, z).length()
+
+		if distance >= min_distance and distance <= decoration_radius:
+			var noise_value: float = (decoration_noise.get_noise_2d(x * 1.3 + 100.0, z * 1.3 + 100.0) + 1.0) * 0.5
+			if noise_value > 0.5:
+				var y: float = _get_blocky_height(x, z)
+				_create_flower(decorations_container, Vector3(x, y + 0.01, z), Color(0.95, 0.85, 0.15))  # Yellow
+				yellow_flower_count += 1
+
+	print("[TerrainGenerator] Spawned ground decorations: %d grass, %d red flowers, %d yellow flowers" % [
+		grass_count, red_flower_count, yellow_flower_count
+	])
+
+
+func _create_grass_tuft(parent: Node3D, pos: Vector3) -> void:
+	# Create a simple grass tuft using crossed quads (X-shape)
+	var grass: MeshInstance3D = MeshInstance3D.new()
+
+	var st: SurfaceTool = SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+
+	# Grass properties
+	var height: float = randf_range(0.25, 0.4)
+	var width: float = 0.15
+	var grass_green: Color = Color(0.3, 0.65, 0.25)  # Slightly darker than terrain grass
+
+	# Create two crossed quads for the grass tuft
+	# First quad (along X axis)
+	_add_grass_quad(st, Vector3(-width, 0, 0), Vector3(width, 0, 0),
+					Vector3(width, height, 0), Vector3(-width, height, 0), grass_green)
+
+	# Second quad (along Z axis)
+	_add_grass_quad(st, Vector3(0, 0, -width), Vector3(0, 0, width),
+					Vector3(0, height, width), Vector3(0, height, -width), grass_green)
+
+	var mesh: ArrayMesh = st.commit()
+	grass.mesh = mesh
+
+	# Create material
+	var mat: StandardMaterial3D = StandardMaterial3D.new()
+	mat.vertex_color_use_as_albedo = true
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED  # Simple flat look
+	grass.material_override = mat
+
+	grass.position = pos
+	grass.rotation.y = randf() * TAU  # Random rotation
+	parent.add_child(grass)
+
+
+func _add_grass_quad(st: SurfaceTool, v0: Vector3, v1: Vector3, v2: Vector3, v3: Vector3, color: Color) -> void:
+	# Add a quad with vertex colors
+	st.set_color(color)
+	st.set_normal(Vector3.UP)
+
+	# Triangle 1
+	st.add_vertex(v0)
+	st.add_vertex(v1)
+	st.add_vertex(v2)
+
+	# Triangle 2
+	st.add_vertex(v0)
+	st.add_vertex(v2)
+	st.add_vertex(v3)
+
+
+func _create_flower(parent: Node3D, pos: Vector3, petal_color: Color) -> void:
+	# Create a simple blocky flower
+	var flower: Node3D = Node3D.new()
+
+	# Stem (thin green box)
+	var stem: MeshInstance3D = MeshInstance3D.new()
+	var stem_mesh: BoxMesh = BoxMesh.new()
+	stem_mesh.size = Vector3(0.05, 0.3, 0.05)
+	stem.mesh = stem_mesh
+
+	var stem_mat: StandardMaterial3D = StandardMaterial3D.new()
+	stem_mat.albedo_color = Color(0.2, 0.5, 0.15)  # Dark green stem
+	stem.material_override = stem_mat
+	stem.position.y = 0.15
+	flower.add_child(stem)
+
+	# Flower head (small colored box)
+	var head: MeshInstance3D = MeshInstance3D.new()
+	var head_mesh: BoxMesh = BoxMesh.new()
+	head_mesh.size = Vector3(0.15, 0.12, 0.15)
+	head.mesh = head_mesh
+
+	var head_mat: StandardMaterial3D = StandardMaterial3D.new()
+	head_mat.albedo_color = petal_color
+	head.material_override = head_mat
+	head.position.y = 0.35
+	flower.add_child(head)
+
+	flower.position = pos
+	flower.rotation.y = randf() * TAU
+	parent.add_child(flower)
