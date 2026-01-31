@@ -4,7 +4,7 @@ extends Node3D
 @export var terrain_size: int = 100
 @export var cell_size: float = 3.0  # Larger cells for gentler terrain
 @export var height_scale: float = 6.0  # Lower hills
-@export var height_step: float = 0.5  # Smaller steps for smoother transitions
+@export var height_step: float = 1.0  # Larger steps for visible Minecraft-style terraces
 @export var noise_scale: float = 0.02  # Broader noise for rolling hills
 
 # Tree spawning settings
@@ -13,9 +13,15 @@ extends Node3D
 @export var tree_max_distance: float = 60.0  # Maximum distance for tree spawning
 @export var tree_grid_size: float = 2.5  # Grid cell size for placement
 
-# Minecraft-style colors
-var grass_color: Color = Color(0.48, 0.75, 0.35)  # Bright grass green (top faces)
-var dirt_color: Color = Color(0.55, 0.35, 0.2)    # Brown dirt (side faces)
+# Pond settings - natural depression in terrain with fishing spot
+var pond_center: Vector2 = Vector2(15.0, 12.0)  # Just outside campsite
+var pond_radius: float = 8.0  # Size of the pond depression
+var pond_depth: float = 1.5  # How deep the depression is
+var fishing_spot_scene: PackedScene
+
+# Minecraft-style colors (matched to actual Minecraft forest biome)
+var grass_color: Color = Color(0.30, 0.50, 0.22)  # Forest green like Minecraft (not mint!)
+var dirt_color: Color = Color(0.52, 0.36, 0.22)   # Rich brown dirt like Minecraft
 
 var noise: FastNoiseLite
 var terrain_mesh: MeshInstance3D
@@ -36,10 +42,11 @@ func _ready() -> void:
 	_setup_noise()
 	_generate_blocky_terrain()
 	_load_tree_scene()
-	# Defer tree spawning to ensure Resources node exists
+	_load_fishing_spot_scene()
+	# Defer spawning to ensure Resources node exists
 	call_deferred("_spawn_forest")
-	# Spawn ground decorations (grass, flowers)
 	call_deferred("_spawn_ground_decorations")
+	call_deferred("_spawn_pond")
 
 
 func _setup_noise() -> void:
@@ -71,8 +78,8 @@ func _generate_blocky_terrain() -> void:
 			# Cache for collision
 			height_cache[Vector2i(cx, cz)] = height
 
-			# Create top face of this cell (flat quad)
-			_add_top_face(surface_tool, world_x, world_z, cell_size, height)
+			# Create top face of this cell (flat quad) with color variation
+			_add_top_face(surface_tool, world_x, world_z, cell_size, height, cx, cz)
 
 			# Create side faces where there's a height difference with neighbors
 			_add_side_faces(surface_tool, cx, cz, world_x, world_z, cell_size, height, cells_per_side)
@@ -89,7 +96,7 @@ func _generate_blocky_terrain() -> void:
 	_create_collision(mesh)
 
 
-func _add_top_face(st: SurfaceTool, x: float, z: float, size: float, height: float) -> void:
+func _add_top_face(st: SurfaceTool, x: float, z: float, size: float, height: float, cx: int, cz: int) -> void:
 	# Four corners of the top face
 	var v0 := Vector3(x, height, z)
 	var v1 := Vector3(x + size, height, z)
@@ -98,25 +105,34 @@ func _add_top_face(st: SurfaceTool, x: float, z: float, size: float, height: flo
 
 	var normal := Vector3.UP
 
+	# Add subtle color variation per cell (like Minecraft's pixel texture)
+	# Use cell coordinates to create consistent pseudo-random variation
+	var variation: float = sin(cx * 12.9898 + cz * 78.233) * 0.08  # -0.08 to +0.08
+	var cell_grass: Color = Color(
+		clamp(grass_color.r + variation, 0.15, 0.45),
+		clamp(grass_color.g + variation * 0.5, 0.35, 0.6),
+		clamp(grass_color.b + variation * 0.3, 0.12, 0.35)
+	)
+
 	# Triangle 1 - grass color for top faces
-	st.set_color(grass_color)
+	st.set_color(cell_grass)
 	st.set_normal(normal)
 	st.add_vertex(v0)
-	st.set_color(grass_color)
+	st.set_color(cell_grass)
 	st.set_normal(normal)
 	st.add_vertex(v2)
-	st.set_color(grass_color)
+	st.set_color(cell_grass)
 	st.set_normal(normal)
 	st.add_vertex(v1)
 
 	# Triangle 2
-	st.set_color(grass_color)
+	st.set_color(cell_grass)
 	st.set_normal(normal)
 	st.add_vertex(v0)
-	st.set_color(grass_color)
+	st.set_color(cell_grass)
 	st.set_normal(normal)
 	st.add_vertex(v3)
-	st.set_color(grass_color)
+	st.set_color(cell_grass)
 	st.set_normal(normal)
 	st.add_vertex(v2)
 
@@ -163,38 +179,117 @@ func _add_side_faces(st: SurfaceTool, cx: int, cz: int, x: float, z: float, size
 
 
 func _add_side_quad(st: SurfaceTool, v0: Vector3, v1: Vector3, v2: Vector3, v3: Vector3, normal: Vector3) -> void:
-	# Triangle 1 - dirt color for side faces
-	st.set_color(dirt_color)
-	st.set_normal(normal)
-	st.add_vertex(v0)
-	st.set_color(dirt_color)
-	st.set_normal(normal)
-	st.add_vertex(v1)
-	st.set_color(dirt_color)
-	st.set_normal(normal)
-	st.add_vertex(v2)
+	# v0 and v1 are at top (height), v2 and v3 are at bottom (neighbor_height)
+	# Add a grass "sod" strip at the top, then dirt below - like Minecraft
+	var grass_thickness: float = 0.25  # Thickness of grass layer on side
+	var total_height: float = v0.y - v2.y
 
-	# Triangle 2
-	st.set_color(dirt_color)
-	st.set_normal(normal)
-	st.add_vertex(v0)
-	st.set_color(dirt_color)
-	st.set_normal(normal)
-	st.add_vertex(v2)
-	st.set_color(dirt_color)
-	st.set_normal(normal)
-	st.add_vertex(v3)
+	# Add subtle color variation based on position
+	var variation: float = sin(v0.x * 12.9898 + v0.z * 78.233 + v0.y * 37.719) * 0.06
+	var cell_grass: Color = Color(
+		clamp(grass_color.r + variation, 0.2, 0.4),
+		clamp(grass_color.g + variation * 0.5, 0.4, 0.6),
+		clamp(grass_color.b + variation * 0.3, 0.15, 0.3)
+	)
+	var cell_dirt: Color = Color(
+		clamp(dirt_color.r + variation, 0.35, 0.65),
+		clamp(dirt_color.g + variation * 0.8, 0.22, 0.48),
+		clamp(dirt_color.b + variation * 0.5, 0.12, 0.32)
+	)
+
+	# If the side is tall enough, split into grass strip + dirt
+	if total_height > grass_thickness:
+		# Calculate grass strip bottom vertices
+		var grass_bottom_y: float = v0.y - grass_thickness
+		var g2 := Vector3(v1.x, grass_bottom_y, v1.z)  # Bottom-right of grass strip
+		var g3 := Vector3(v0.x, grass_bottom_y, v0.z)  # Bottom-left of grass strip
+
+		# Draw grass strip at top (green sod layer)
+		st.set_color(cell_grass)
+		st.set_normal(normal)
+		st.add_vertex(v0)
+		st.set_color(cell_grass)
+		st.set_normal(normal)
+		st.add_vertex(v1)
+		st.set_color(cell_grass)
+		st.set_normal(normal)
+		st.add_vertex(g2)
+
+		st.set_color(cell_grass)
+		st.set_normal(normal)
+		st.add_vertex(v0)
+		st.set_color(cell_grass)
+		st.set_normal(normal)
+		st.add_vertex(g2)
+		st.set_color(cell_grass)
+		st.set_normal(normal)
+		st.add_vertex(g3)
+
+		# Draw dirt section below the grass strip
+		st.set_color(cell_dirt)
+		st.set_normal(normal)
+		st.add_vertex(g3)
+		st.set_color(cell_dirt)
+		st.set_normal(normal)
+		st.add_vertex(g2)
+		st.set_color(cell_dirt)
+		st.set_normal(normal)
+		st.add_vertex(v2)
+
+		st.set_color(cell_dirt)
+		st.set_normal(normal)
+		st.add_vertex(g3)
+		st.set_color(cell_dirt)
+		st.set_normal(normal)
+		st.add_vertex(v2)
+		st.set_color(cell_dirt)
+		st.set_normal(normal)
+		st.add_vertex(v3)
+	else:
+		# Side is shorter than grass thickness - just draw all grass
+		st.set_color(cell_grass)
+		st.set_normal(normal)
+		st.add_vertex(v0)
+		st.set_color(cell_grass)
+		st.set_normal(normal)
+		st.add_vertex(v1)
+		st.set_color(cell_grass)
+		st.set_normal(normal)
+		st.add_vertex(v2)
+
+		st.set_color(cell_grass)
+		st.set_normal(normal)
+		st.add_vertex(v0)
+		st.set_color(cell_grass)
+		st.set_normal(normal)
+		st.add_vertex(v2)
+		st.set_color(cell_grass)
+		st.set_normal(normal)
+		st.add_vertex(v3)
 
 
 func _get_blocky_height(x: float, z: float) -> float:
-	# Flatten area around spawn point (campsite)
+	# Flatten area around spawn point (campsite) - smaller for more terrain variety
 	var distance_from_center: float = Vector2(x, z).length()
-	var flatten_radius: float = 12.0
-	var flatten_falloff: float = 10.0
+	var flatten_radius: float = 6.0  # Reduced from 12 for more terrain near camp
+	var flatten_falloff: float = 8.0
 
 	if distance_from_center < flatten_radius:
 		# Completely flat at y=0 in the campsite area
 		return 0.0
+
+	# Check if in pond area - create a natural depression
+	var distance_from_pond: float = Vector2(x - pond_center.x, z - pond_center.y).length()
+	if distance_from_pond < pond_radius:
+		# Create bowl-shaped depression for the pond
+		var pond_factor: float = distance_from_pond / pond_radius
+		# Inner area is flat at the bottom, edges slope up
+		if pond_factor < 0.6:
+			return -pond_depth  # Flat bottom of pond
+		else:
+			# Smooth transition from pond bottom to surrounding terrain
+			var edge_factor: float = (pond_factor - 0.6) / 0.4
+			return -pond_depth + (pond_depth * edge_factor)
 
 	# Base terrain height from noise
 	var raw_height: float = noise.get_noise_2d(x, z)
@@ -223,7 +318,9 @@ func _create_terrain_material() -> StandardMaterial3D:
 	var material: StandardMaterial3D = StandardMaterial3D.new()
 	material.vertex_color_use_as_albedo = true  # Use vertex colors for grass/dirt
 	material.albedo_color = Color.WHITE  # Neutral base color
-	material.roughness = 0.9
+	# Use per-vertex shading for flat blocky look (not per-pixel)
+	material.diffuse_mode = BaseMaterial3D.DIFFUSE_LAMBERT
+	material.roughness = 1.0  # Fully rough for flat matte look
 	material.metallic = 0.0
 	# Disable backface culling
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
@@ -338,6 +435,12 @@ func _spawn_forest() -> void:
 					var tree_x: float = x + jitter_x
 					var tree_z: float = z + jitter_z
 
+					# Skip if in pond area
+					var dist_to_pond: float = Vector2(tree_x - pond_center.x, tree_z - pond_center.y).length()
+					if dist_to_pond < pond_radius + 2.0:  # Add margin around pond
+						z += tree_grid_size
+						continue
+
 					# Get terrain height
 					var tree_y: float = _get_blocky_height(tree_x, tree_z)
 
@@ -422,6 +525,11 @@ func _spawn_ground_decorations() -> void:
 		var z: float = randf_range(-decoration_radius, decoration_radius)
 		var distance: float = Vector2(x, z).length()
 
+		# Skip if in pond area
+		var dist_to_pond: float = Vector2(x - pond_center.x, z - pond_center.y).length()
+		if dist_to_pond < pond_radius + 1.0:
+			continue
+
 		if distance >= min_distance and distance <= decoration_radius:
 			# Use noise to create natural clustering
 			var noise_value: float = (decoration_noise.get_noise_2d(x, z) + 1.0) * 0.5
@@ -436,6 +544,11 @@ func _spawn_ground_decorations() -> void:
 		var z: float = randf_range(-decoration_radius, decoration_radius)
 		var distance: float = Vector2(x, z).length()
 
+		# Skip if in pond area
+		var dist_to_pond: float = Vector2(x - pond_center.x, z - pond_center.y).length()
+		if dist_to_pond < pond_radius + 1.0:
+			continue
+
 		if distance >= min_distance and distance <= decoration_radius:
 			var noise_value: float = (decoration_noise.get_noise_2d(x * 1.5, z * 1.5) + 1.0) * 0.5
 			if noise_value > 0.5:  # Flowers are more sparse
@@ -448,6 +561,11 @@ func _spawn_ground_decorations() -> void:
 		var x: float = randf_range(-decoration_radius, decoration_radius)
 		var z: float = randf_range(-decoration_radius, decoration_radius)
 		var distance: float = Vector2(x, z).length()
+
+		# Skip if in pond area
+		var dist_to_pond: float = Vector2(x - pond_center.x, z - pond_center.y).length()
+		if dist_to_pond < pond_radius + 1.0:
+			continue
 
 		if distance >= min_distance and distance <= decoration_radius:
 			var noise_value: float = (decoration_noise.get_noise_2d(x * 1.3 + 100.0, z * 1.3 + 100.0) + 1.0) * 0.5
@@ -544,3 +662,38 @@ func _create_flower(parent: Node3D, pos: Vector3, petal_color: Color) -> void:
 	flower.position = pos
 	flower.rotation.y = randf() * TAU
 	parent.add_child(flower)
+
+
+func _load_fishing_spot_scene() -> void:
+	fishing_spot_scene = load("res://scenes/resources/fishing_spot.tscn")
+	if not fishing_spot_scene:
+		push_warning("[TerrainGenerator] Failed to load fishing spot scene")
+
+
+func _spawn_pond() -> void:
+	if not fishing_spot_scene:
+		return
+
+	# Find or create Resources container
+	var resources_container: Node3D = get_parent().get_node_or_null("Resources")
+	if not resources_container:
+		resources_container = Node3D.new()
+		resources_container.name = "Resources"
+		get_parent().add_child(resources_container)
+
+	# Create fishing spot at pond center
+	var fishing_spot: Node3D = fishing_spot_scene.instantiate()
+	fishing_spot.name = "Pond"
+
+	# Position at pond center, at the bottom of the depression
+	var pond_y: float = -pond_depth + 0.1  # Slightly above the bottom
+	fishing_spot.position = Vector3(pond_center.x, pond_y, pond_center.y)
+
+	# Configure larger pond size
+	if fishing_spot.has_method("set") or "pond_width" in fishing_spot:
+		fishing_spot.pond_width = 10.0  # Larger pond
+		fishing_spot.pond_depth = 8.0   # Depth dimension (z)
+		fishing_spot.fish_count = 5     # More fish in bigger pond
+
+	resources_container.add_child(fishing_spot)
+	print("[TerrainGenerator] Spawned fishing pond at (%.1f, %.1f)" % [pond_center.x, pond_center.y])

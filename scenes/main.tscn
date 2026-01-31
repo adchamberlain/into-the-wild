@@ -725,15 +725,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 6)
 [node name="Herb8" parent="Resources" instance=ExtResource("18_herb")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, 0)
 
-[node name="FishingSpot1" parent="Resources" instance=ExtResource("19_fishing")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, -6)
-
-[node name="FishingSpot2" parent="Resources" instance=ExtResource("19_fishing")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 7)
-
-[node name="FishingSpot3" parent="Resources" instance=ExtResource("19_fishing")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 0, -5)
-
 [node name="Structures" type="Node3D" parent="."]
 
 [node name="CampsiteManager" type="Node" parent="."]

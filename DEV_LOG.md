@@ -1420,6 +1420,68 @@ scenes/resources/tree_resource.tscn     # Updated to small oak style with layere
 
 ---
 
+## Session 10b - Terrain Polish & Natural Pond (2026-01-31)
+
+### What Was Built
+
+**Minecraft-accurate terrain colors, grass sod edges, and natural pond integration**
+
+#### Files Modified
+
+```
+scripts/world/terrain_generator.gd    # Grass sod edges, color refinement, pond depression
+scenes/main.tscn                      # Removed hardcoded fishing spots
+```
+
+#### Features Implemented
+
+1. **Grass "Sod" Edges on Cliff Faces**
+   - Side faces now show green grass strip at top (0.25 units thick)
+   - Brown dirt below the grass strip
+   - Creates authentic Minecraft grass block appearance
+   - Short step-downs show all grass (no dirt visible)
+
+2. **Minecraft-Accurate Colors**
+   - Grass: `Color(0.30, 0.50, 0.22)` - true forest green
+   - Dirt: `Color(0.52, 0.36, 0.22)` - rich brown
+   - Added per-cell color variation for texture-like appearance
+   - Removed washed-out pale colors
+
+3. **Natural Pond with Terrain Depression**
+   - Single large pond (10x8 units) instead of 3 small ones
+   - Bowl-shaped terrain depression at pond location
+   - Pond position: (15, 12) - just outside campsite
+   - Depression radius: 8 units, depth: 1.5 units
+   - Flat bottom with sloping edges like natural water collection
+   - 5 fish in larger pond
+
+4. **Spawn Exclusion Zones**
+   - Trees avoid pond area with 2-unit margin
+   - Ground decorations (grass, flowers) avoid pond area
+   - Prevents objects spawning in/over water
+
+5. **Terrain Configuration Updates**
+   - Height step increased to 1.0 for more visible terraces
+   - Campsite flatten radius reduced to 6.0 for more terrain variety
+   - Smaller flat area shows terrain earlier around spawn
+
+#### Color Comparison
+
+| Element | Before | After |
+|---------|--------|-------|
+| Grass top | Pale mint green | Forest green (0.30, 0.50, 0.22) |
+| Dirt sides | Light tan/beige | Rich brown (0.52, 0.36, 0.22) |
+| Side edges | All dirt | Green sod strip + dirt below |
+
+#### Technical Details
+
+- Side quads split into two parts when taller than grass_thickness
+- Per-cell color variation uses sin() for pseudo-random consistency
+- Pond spawned by terrain generator (not hardcoded in scene)
+- Terrain height returns negative values in pond depression
+
+---
+
 ## Next Session: Phase 8 - Polish & Content (Continued)
 
 ### Completed Features
