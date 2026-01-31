@@ -1595,6 +1595,53 @@ TerrainChunk (Node3D)
 
 ---
 
+## Session 12 - Coordinates Display (2026-01-31)
+
+### What Was Built
+
+**Player Coordinates HUD Display** - Shows player position on screen with configurable toggle
+
+#### Files Modified
+
+```
+scenes/ui/hud.tscn              # Added CoordinatesLabel node
+scripts/ui/hud.gd               # Added coordinates display logic and show_coordinates property
+scenes/ui/config_menu.tscn      # Added ShowCoordinatesToggle checkbox
+scripts/ui/config_menu.gd       # Added show_coordinates config option and HUD reference
+scenes/main.tscn                # Added hud_path to ConfigMenu
+```
+
+#### Features Implemented
+
+1. **Coordinates Display** (`hud.gd` + `hud.tscn`)
+   - Shows player X, Y, Z position in top-left area (below stats)
+   - Format: "X: 0.0  Y: 0.0  Z: 0.0" with one decimal place
+   - Semi-transparent grey text with shadow for readability
+   - Updates every frame in `_process()`
+   - Respects `show_coordinates` property for visibility
+
+2. **Config Menu Toggle** (`config_menu.gd` + `config_menu.tscn`)
+   - New toggle: "Show Coordinates" in config menu (Tab)
+   - Default: On (enabled by default for debugging)
+   - Applies setting to HUD via `hud_path` reference
+   - Saved in config dictionary for potential future persistence
+
+#### Config Menu Options (Updated)
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| Show Coordinates | Display player X/Y/Z position on HUD | On |
+| ... (other existing options) | | |
+
+#### Technical Details
+
+- Coordinates update in `_process()` for real-time tracking
+- HUD referenced by ConfigMenu via `@export var hud_path: NodePath`
+- Visibility controlled by `show_coordinates: bool` property on HUD
+- Position displayed with one decimal precision (%.1f format)
+
+---
+
 ## Next Session: Phase 8 - Polish & Content (Continued)
 
 ### Completed Features

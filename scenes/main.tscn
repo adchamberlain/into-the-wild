@@ -770,6 +770,7 @@ player_path = NodePath("../Player")
 save_load_path = NodePath("../SaveLoad")
 resource_manager_path = NodePath("../ResourceManager")
 music_manager_path = NodePath("../MusicManager")
+hud_path = NodePath("../HUD")
 
 [node name="EquipmentMenu" parent="." instance=ExtResource("12_equip")]
 player_path = NodePath("../Player")

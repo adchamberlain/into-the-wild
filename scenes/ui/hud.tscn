@@ -265,6 +265,19 @@ theme_override_font_sizes/font_size = 36
 text = "Game Saved!"
 horizontal_alignment = 1
 
+[node name="CoordinatesLabel" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 30.0
+offset_top = 160.0
+offset_right = 380.0
+offset_bottom = 200.0
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 0.8)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.5)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+theme_override_font_sizes/font_size = 24
+text = "X: 0  Y: 0  Z: 0"
+
 [node name="FadeOverlay" type="ColorRect" parent="."]
 visible = false
 anchors_preset = 15

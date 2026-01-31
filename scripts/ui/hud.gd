@@ -36,6 +36,12 @@ extends CanvasLayer
 # Screen fade overlay
 @onready var fade_overlay: ColorRect = $FadeOverlay
 
+# Coordinates display
+@onready var coordinates_label: Label = $CoordinatesLabel
+
+# Config for coordinates visibility
+var show_coordinates: bool = true
+
 var time_manager: Node
 var player: Node
 var inventory: Node
@@ -309,7 +315,21 @@ func _update_campsite_level_display() -> void:
 		campsite_level_label.text = "Camp Lvl 1"
 
 
+func _update_coordinates_display() -> void:
+	if not coordinates_label:
+		return
+
+	coordinates_label.visible = show_coordinates
+
+	if show_coordinates and player:
+		var pos: Vector3 = player.global_position
+		coordinates_label.text = "X: %.1f  Y: %.1f  Z: %.1f" % [pos.x, pos.y, pos.z]
+
+
 func _process(delta: float) -> void:
+	# Update coordinates display
+	_update_coordinates_display()
+
 	# Update protection status continuously
 	_update_protection_display()
 
