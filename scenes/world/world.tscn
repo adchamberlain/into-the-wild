@@ -1,12 +1,17 @@
 [gd_scene load_steps=2 format=3 uid="uid://world001"]
 
-[ext_resource type="Script" path="res://scripts/world/terrain_generator.gd" id="1_terrain"]
+[ext_resource type="Script" path="res://scripts/world/chunk_manager.gd" id="1_chunk_manager"]
 
 [node name="World" type="Node3D"]
 
 [node name="Terrain" type="Node3D" parent="."]
-script = ExtResource("1_terrain")
-terrain_size = 100
-terrain_resolution = 2
-height_scale = 8.0
-noise_scale = 0.05
+script = ExtResource("1_chunk_manager")
+chunk_size_cells = 16
+render_distance = 3
+cell_size = 3.0
+height_scale = 6.0
+height_step = 1.0
+noise_scale = 0.02
+tree_density = 0.25
+tree_min_distance = 14.0
+tree_grid_size = 2.5
