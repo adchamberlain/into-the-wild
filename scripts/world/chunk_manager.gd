@@ -301,8 +301,11 @@ func _spawn_fishing_spot() -> void:
 	fishing_spot.position = Vector3(pond_center.x, pond_y, pond_center.y)
 
 	if "pond_width" in fishing_spot:
-		fishing_spot.pond_width = 10.0
-		fishing_spot.pond_depth = 8.0
+		# Water should fill the terrain depression edge-to-edge
+		# Terrain reaches water level at about 93% of pond_radius
+		var water_diameter: float = pond_radius * 2.0 * 0.95
+		fishing_spot.pond_width = water_diameter
+		fishing_spot.pond_depth = water_diameter
 		fishing_spot.fish_count = 5
 
 	add_child(fishing_spot)
