@@ -182,10 +182,11 @@ func _process_swimming(delta: float) -> void:
 	# Handle swim up (space bar - check if held, not just pressed)
 	var swim_up_held: bool = Input.is_key_pressed(KEY_SPACE)
 	var at_surface: bool = global_position.y >= water_surface_y - 0.3
+	var at_edge: bool = is_on_wall()  # Touching terrain wall at pond edge
 
 	if swim_up_held:
-		if at_surface:
-			# At water surface - allow jumping out of water
+		if at_surface and at_edge:
+			# At water surface AND at edge - allow jumping out of water
 			velocity.y = jump_velocity * 0.8  # Slightly weaker than normal jump
 		else:
 			velocity.y = swim_rise_speed  # Push upward when holding space
