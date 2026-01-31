@@ -1642,6 +1642,63 @@ scenes/main.tscn                # Added hud_path to ConfigMenu
 
 ---
 
+## Session 13 - Tree Spawn Position Fix (2026-01-31)
+
+### What Was Built
+
+**Bug Fix: Trees spawning inside terrain blocks** - Fixed height calculation to match terrain mesh
+
+#### Files Modified
+
+```
+scripts/world/terrain_generator.gd    # Fixed _get_blocky_height() noise sampling
+scripts/world/chunk_manager.gd        # Fixed get_height_at() noise sampling
+```
+
+#### Issue Description
+
+Trees (and other objects) were sometimes spawning partially buried inside terrain blocks. The trunk would appear to be stuck in the ground rather than sitting on top of it.
+
+#### Root Cause
+
+The terrain mesh is built by sampling height at the **center** of each cell:
+```gdscript
+var center_x: float = world_x + cell_size / 2.0
+var center_z: float = world_z + cell_size / 2.0
+var height: float = _get_blocky_height(center_x, center_z)
+```
+
+But when spawning trees, `_get_blocky_height(tree_x, tree_z)` sampled at the **exact tree position**. Since the noise values vary slightly within a cell and get `floor()`'d to quantized heights, two points in the same cell could produce different heights:
+
+- Terrain at cell center (10.5, 6.0) → noise 0.34 → floor(2.01) = **2.0**
+- Tree at (10.2, 5.7) → noise 0.32 → floor(1.92) = **1.0**
+
+This caused trees to spawn at Y=1.0 while the terrain surface was at Y=2.0, burying the tree trunk.
+
+#### Fix Applied
+
+Modified both `_get_blocky_height()` (terrain_generator.gd) and `get_height_at()` (chunk_manager.gd) to snap coordinates to cell centers before sampling noise:
+
+```gdscript
+# Snap to cell center for consistent height across each cell
+# This ensures objects spawn at the same height as the terrain mesh
+var snapped_x: float = (floor(x / cell_size) + 0.5) * cell_size
+var snapped_z: float = (floor(z / cell_size) + 0.5) * cell_size
+
+# Base terrain height from noise (sampled at cell center)
+var raw_height: float = noise.get_noise_2d(snapped_x, snapped_z)
+```
+
+This ensures that any position within a cell returns the same height as the terrain mesh at that cell, so objects always sit properly on the terrain surface.
+
+#### Technical Details
+
+- The snap formula `(floor(x / cell_size) + 0.5) * cell_size` works for both positive and negative coordinates
+- Distance-based checks (campsite, pond) still use exact coordinates for accurate boundary detection
+- Only the noise sampling is snapped, preserving special area behavior
+
+---
+
 ## Next Session: Phase 8 - Polish & Content (Continued)
 
 ### Completed Features
