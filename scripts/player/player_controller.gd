@@ -181,16 +181,18 @@ func _process_swimming(delta: float) -> void:
 
 	# Handle swim up (space bar - check if held, not just pressed)
 	var swim_up_held: bool = Input.is_key_pressed(KEY_SPACE)
+	var at_surface: bool = global_position.y >= water_surface_y - 0.3
+
 	if swim_up_held:
-		velocity.y = swim_rise_speed  # Push upward when holding space
+		if at_surface:
+			# At water surface - allow jumping out of water
+			velocity.y = jump_velocity * 0.8  # Slightly weaker than normal jump
+		else:
+			velocity.y = swim_rise_speed  # Push upward when holding space
 
-	# Clamp vertical velocity to prevent too fast sinking/rising
-	velocity.y = clamp(velocity.y, -swim_sink_speed * 2, swim_rise_speed)
-
-	# Prevent swimming above water surface
-	if global_position.y > water_surface_y and velocity.y > 0:
-		velocity.y = 0
-		global_position.y = water_surface_y
+	# Clamp vertical velocity to prevent too fast sinking (but allow jump out)
+	if velocity.y < -swim_sink_speed * 2:
+		velocity.y = -swim_sink_speed * 2
 
 	# Slower horizontal movement while swimming
 	var input_dir: Vector2 = Vector2.ZERO
