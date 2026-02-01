@@ -1,7 +1,6 @@
 extends Node
-class_name InputManager
 ## Singleton that tracks input device (keyboard/mouse vs controller) and provides button prompt helpers.
-## Add this as an AutoLoad in Project Settings.
+## Registered as AutoLoad "InputManager" in Project Settings.
 
 signal input_device_changed(is_controller: bool)
 
