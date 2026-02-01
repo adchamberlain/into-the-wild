@@ -252,6 +252,23 @@ UI shows "(Requires Bench)" when not at bench.
 
 ---
 
+## Session 28 - UI Bug Fixes (2026-01-31)
+
+**Fishing Prompt Fix**: "Cast Line" prompt only shows when fishing rod is equipped. Previously showed with any tool (e.g., axe) near water.
+
+**Interaction Text Fix**: Removed duplicate `[E]` prefix from fishing spot - HUD already adds it. Fixed "[E] [E] Cast Line" display bug.
+
+**Empty Prompt Handling**: HUD now hides interaction prompt when text is empty (e.g., near water without fishing rod).
+
+**Notification Styling**: Updated notification panel to match project UI standards:
+- Background: `Color(0.1, 0.1, 0.12, 0.8)`
+- Corner radius: 10px
+- Content margins: 16-20px
+
+**Files**: `fishing_spot.gd`, `hud.gd`, `hud.tscn`
+
+---
+
 ## Next Session
 
 ### Planned Tasks
