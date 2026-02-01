@@ -2028,6 +2028,99 @@ func _spawn_chunk_resources() -> void:
 
 ---
 
+## Session 20 - Swimming Mechanics & Water System (2026-01-31)
+
+### What Was Built
+
+**Swimming System** - Player can swim in the pond with proper water physics and visuals
+
+#### Files Modified
+
+```
+scripts/player/player_controller.gd    # Swimming mechanics, underwater effect
+scripts/resources/fishing_spot.gd      # Water plane rendering, Area3D detection
+scripts/world/chunk_manager.gd         # Terrain pond depression, water sizing
+scripts/world/terrain_chunk.gd         # Resource spawning with pond avoidance
+scripts/ui/crafting_ui.gd              # Fixed crafting bench interaction
+scenes/player/player.tscn              # Updated collision layer/mask
+```
+
+#### Features Implemented
+
+1. **Swimming Mechanics** (`player_controller.gd`)
+   - Player sinks slowly in water (`swim_sink_speed = 3.0`)
+   - Pressing spacebar makes player rise (`swim_rise_speed = 2.5`)
+   - Slower horizontal movement while swimming (`swim_move_speed = 2.5`)
+   - Jump out of water when at surface AND touching terrain edge
+   - Water surface cap prevents swimming into air (except when jumping out)
+
+2. **Underwater Visual Effect** (`player_controller.gd`)
+   - Blue tint overlay when player enters water
+   - CanvasLayer with ColorRect at layer 10 (above most UI)
+   - Color: semi-transparent blue `(0.1, 0.3, 0.5, 0.4)`
+   - Automatically shows/hides based on `is_in_water` state
+
+3. **Water Rendering** (`fishing_spot.gd`)
+   - Changed from 3D box mesh to flat plane surface
+   - Eliminates visible walls clipping through terrain at edges
+   - Semi-transparent blue material with both sides rendered
+   - Water plane sized to fill terrain depression edge-to-edge
+
+4. **Terrain Pond Depression** (`chunk_manager.gd`)
+   - Pond floor at Y=-2.5 (deep enough for swimming)
+   - Circular depression with radius 8 units
+   - Gradual slope from floor to terrain edge (factor 0.7 to 1.0)
+   - Water fills the depression like a natural bowl
+
+5. **Water Detection** (`fishing_spot.gd`)
+   - Area3D covers full water volume (3.0 units deep)
+   - Detects player entering/exiting water via body_entered/body_exited signals
+   - Calls `player.set_in_water(true/false)` to toggle swimming mode
+
+6. **Resource Pond Avoidance** (`terrain_chunk.gd`)
+   - Resources check distance from pond AFTER jitter is applied
+   - Prevents branches, rocks, mushrooms from spawning in water
+   - Buffer zone of 2 units around pond edge
+
+7. **Crafting Bench Fix** (`crafting_ui.gd`)
+   - Added `toggle_crafting_menu()` public method
+   - Added CraftingUI to "crafting_ui" group for bench to find it
+   - Crafting bench E key interaction now works properly
+
+8. **Fishing Interaction Fix** (`fishing_spot.gd`)
+   - Collision shape covers entire water surface
+   - Player can fish from any edge of the pond
+   - Interaction raycast detects water from all angles
+
+#### Swimming Controls
+
+| Action | Key | Effect |
+|--------|-----|--------|
+| Sink | Automatic | Player slowly sinks in water |
+| Swim Up | Space (hold) | Rise toward surface |
+| Jump Out | Space (at edge) | Jump onto terrain |
+| Move | WASD | Slower movement in water |
+
+#### Swimming Configuration
+
+| Setting | Value | Description |
+|---------|-------|-------------|
+| swim_sink_speed | 3.0 | How fast player sinks |
+| swim_rise_speed | 2.5 | How fast player rises with space |
+| swim_move_speed | 2.5 | Horizontal movement speed |
+| water_surface_y | 0.15 | Y position of water surface |
+| pond_floor_y | -2.5 | Y position of pond bottom |
+
+#### Technical Details
+
+- Swimming detected via Area3D overlap, not collision
+- Player collision layer 1, mask 1 (doesn't collide with water layer 2)
+- Interaction raycast mask 3 (detects both layer 1 and 2)
+- Terrain provides floor collision at pond bottom
+- Jump-out requires `is_on_wall()` to prevent mid-pond jumping
+
+---
+
 ## Next Session: Phase 8 - Polish & Content (Continued)
 
 ### Completed Features
