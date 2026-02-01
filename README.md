@@ -171,6 +171,17 @@ Weather features GPU-accelerated particle effects for rain, snow, and dust.
 
 See `DEV_LOG.md` for development history and `into-the-wild-game-spec.md` for the full game specification.
 
+## Credits
+
+**Created by:** Andrew Chamberlain, Ph.D.
+**Website:** [andrewchamberlain.com](https://andrewchamberlain.com)
+
+### Music
+
+Minecraft-style Music Pack by Valdis Story (u/ThatOneRandomDev)
+- License: Free to use (open source)
+- See `ATTRIBUTIONS.md` for full track listing
+
 ## License
 
 This project is for personal/educational use.
