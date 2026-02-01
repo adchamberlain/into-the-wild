@@ -391,7 +391,12 @@ UI shows "(Requires Bench)" when not at bench.
 - Added action-based input handling for `use_equipped` (R2) to confirm placement
 - Added `unequip` (Circle) to cancel placement
 
-**Files Modified**: `scripts/core/save_load.gd`, `scripts/ui/config_menu.gd`, `scripts/ui/hud.gd`, `scripts/campsite/placement_system.gd`
+**Controller Unequip Fix**: Fixed Circle button not unequipping items:
+- `pause_menu.gd` was intercepting `ui_cancel` (Circle) even when not paused
+- This consumed the input before Equipment could handle the `unequip` action
+- Fixed by only responding to `ui_cancel` when pause menu is already open
+
+**Files Modified**: `scripts/core/save_load.gd`, `scripts/ui/config_menu.gd`, `scripts/ui/hud.gd`, `scripts/campsite/placement_system.gd`, `scripts/ui/pause_menu.gd`
 
 ---
 

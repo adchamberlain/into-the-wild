@@ -31,13 +31,22 @@ func _ready() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	# Handle pause toggle (Escape key or Options button)
-	if event.is_action_pressed("pause") or event.is_action_pressed("ui_cancel"):
+	# Handle pause action (Escape key or Options button) - can pause/unpause anytime
+	if event.is_action_pressed("pause"):
 		if showing_credits:
-			# Go back to pause menu from credits
 			_on_back_pressed()
 		else:
 			toggle_pause()
+		get_viewport().set_input_as_handled()
+		return
+
+	# Handle ui_cancel (Circle button) - only when already paused, to avoid
+	# conflicting with "unequip" action which also uses Circle
+	if event.is_action_pressed("ui_cancel") and is_paused:
+		if showing_credits:
+			_on_back_pressed()
+		else:
+			resume_game()
 		get_viewport().set_input_as_handled()
 
 
