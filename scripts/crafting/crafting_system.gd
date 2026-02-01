@@ -120,7 +120,8 @@ func _load_recipes() -> void:
 			"output_type": "garden_plot_kit",
 			"output_amount": 1,
 			"description": "Materials to build an herb garden.",
-			"requires_bench": true
+			"requires_bench": true,
+			"min_camp_level": 2
 		},
 		"canvas_tent_kit": {
 			"name": "Canvas Tent Kit",

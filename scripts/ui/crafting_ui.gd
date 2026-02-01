@@ -5,12 +5,14 @@ extends CanvasLayer
 const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 
 @export var player_path: NodePath
+@export var campsite_manager_path: NodePath
 
 @onready var panel: PanelContainer = $Panel
 @onready var recipe_list: VBoxContainer = $Panel/MarginContainer/VBoxContainer/ScrollContainer/RecipeList
 @onready var title_label: Label = $Panel/MarginContainer/VBoxContainer/TitleLabel
 
 var player: Node
+var campsite_manager: Node
 var crafting_system: CraftingSystem
 var is_open: bool = false
 
@@ -43,6 +45,12 @@ func _ready() -> void:
 			crafting_system.set_inventory(inventory)
 			# Update UI when inventory changes
 			inventory.inventory_changed.connect(_on_inventory_changed)
+
+	# Get campsite manager reference
+	if campsite_manager_path:
+		campsite_manager = get_node_or_null(campsite_manager_path)
+	if not campsite_manager and player:
+		campsite_manager = player.get_parent().get_node_or_null("CampsiteManager")
 
 
 func _input(event: InputEvent) -> void:
@@ -93,7 +101,12 @@ func _refresh_recipe_list() -> void:
 	if not crafting_system:
 		return
 
-	var recipes: Array[Dictionary] = crafting_system.get_all_recipes_status(at_bench)
+	# Get current campsite level
+	var camp_level: int = 1
+	if campsite_manager and campsite_manager.has_method("get_level"):
+		camp_level = campsite_manager.get_level()
+
+	var recipes: Array[Dictionary] = crafting_system.get_all_recipes_status(at_bench, camp_level)
 
 	for recipe: Dictionary in recipes:
 		var recipe_id: String = recipe.get("id", "")
@@ -169,7 +182,12 @@ func _refresh_recipe_list() -> void:
 
 
 func _on_craft_pressed(recipe_id: String) -> void:
-	if crafting_system and crafting_system.craft(recipe_id, at_bench):
+	# Get current campsite level
+	var camp_level: int = 1
+	if campsite_manager and campsite_manager.has_method("get_level"):
+		camp_level = campsite_manager.get_level()
+
+	if crafting_system and crafting_system.craft(recipe_id, at_bench, camp_level):
 		_refresh_recipe_list()
 
 

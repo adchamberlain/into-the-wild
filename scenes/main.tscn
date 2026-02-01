@@ -159,6 +159,7 @@ save_load_path = NodePath("../SaveLoad")
 
 [node name="CraftingUI" parent="." instance=ExtResource("7_crafting")]
 player_path = NodePath("../Player")
+campsite_manager_path = NodePath("../CampsiteManager")
 
 [node name="ConfigMenu" parent="." instance=ExtResource("11_config")]
 time_manager_path = NodePath("../TimeManager")
