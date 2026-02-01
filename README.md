@@ -159,14 +159,79 @@ Weather features GPU-accelerated particle effects for rain, snow, and dust.
 
 ## Requirements
 
-- Godot 4.5+
-- macOS, Windows, or Linux
+- **Godot 4.5+** (free and open source game engine)
+- **Operating System:** Windows 10/11, macOS 10.15+, or Linux
+- **Graphics:** OpenGL 3.3 / Vulkan compatible GPU
+- **Controller (optional):** PlayStation DualSense/DualShock or Xbox controller
 
-## Running the Game
+## Installation
 
-1. Clone this repository
-2. Open the project in Godot 4.5
-3. Run the main scene (`scenes/main.tscn`)
+### Step 1: Install Godot Engine
+
+#### Windows
+1. Go to [godotengine.org/download](https://godotengine.org/download/windows/)
+2. Download **Godot 4.5** (Standard version)
+3. Extract the ZIP file to a folder (e.g., `C:\Godot`)
+4. Run `Godot_v4.5-stable_win64.exe` (no installation required)
+
+#### macOS
+1. Go to [godotengine.org/download](https://godotengine.org/download/macos/)
+2. Download **Godot 4.5** (Standard version)
+3. Open the DMG and drag Godot to your Applications folder
+4. First launch: Right-click → Open (to bypass Gatekeeper)
+
+#### Linux
+1. Go to [godotengine.org/download](https://godotengine.org/download/linux/)
+2. Download **Godot 4.5** (Standard version)
+3. Extract and run the executable, or install via your package manager
+
+### Step 2: Download the Game
+
+#### Option A: Clone with Git
+```bash
+git clone https://github.com/adchamberlain/into-the-wild.git
+```
+
+#### Option B: Download ZIP
+1. Click the green **Code** button on GitHub
+2. Select **Download ZIP**
+3. Extract to a folder of your choice
+
+### Step 3: Run the Game
+
+1. Open Godot Engine
+2. Click **Import** and navigate to the game folder
+3. Select the `project.godot` file and click **Open**
+4. Once the project loads, press **F5** or click the **Play** button (▶) in the top-right
+
+## Controller Setup
+
+### PlayStation Controller (DualSense / DualShock 4)
+- **Windows:** Connect via USB or Bluetooth (native support in Windows 10/11)
+- **macOS:** Connect via USB or Bluetooth (System Preferences → Bluetooth)
+- **Linux:** Connect via USB or Bluetooth (most distros support it natively)
+
+### Xbox Controller
+- **Windows:** Connect via USB, Bluetooth, or Xbox Wireless Adapter
+- **macOS:** Connect via USB or Bluetooth
+- **Linux:** Connect via USB (xpad driver) or Bluetooth
+
+The game auto-detects your input device and switches button prompts accordingly.
+
+## Troubleshooting
+
+### Game won't start
+- Ensure you have Godot 4.5 or newer (not 3.x)
+- Try running with `--verbose` flag for error messages
+
+### Controller not detected
+- Reconnect the controller
+- On macOS, ensure Bluetooth permissions are granted
+- Try a wired USB connection
+
+### Poor performance
+- Close other applications
+- In Godot: Project → Project Settings → Rendering → Adjust quality settings
 
 ## Development
 
