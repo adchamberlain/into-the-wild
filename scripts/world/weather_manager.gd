@@ -56,6 +56,10 @@ const DAMAGE_CHECK_INTERVAL: float = 0.5
 # Fire extinguish tracking
 var fire_storm_timers: Dictionary = {}  # fire_pit -> time_exposed
 
+# Performance: throttle storm fire checks
+const STORM_FIRE_CHECK_INTERVAL: float = 0.5  # Check twice per second, not every frame
+var storm_fire_check_timer: float = 0.0
+
 
 func _ready() -> void:
 	# Get node references
@@ -94,9 +98,12 @@ func _process(delta: float) -> void:
 		damage_check_timer = 0.0
 		_apply_weather_effects(DAMAGE_CHECK_INTERVAL)
 
-	# Handle storm fire extinguishing
+	# Handle storm fire extinguishing (throttled for performance)
 	if current_weather == Weather.STORM:
-		_update_storm_fire_effects(delta)
+		storm_fire_check_timer += delta
+		if storm_fire_check_timer >= STORM_FIRE_CHECK_INTERVAL:
+			_update_storm_fire_effects(storm_fire_check_timer)
+			storm_fire_check_timer = 0.0
 
 
 func _apply_weather_effects(delta: float) -> void:

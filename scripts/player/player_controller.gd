@@ -34,6 +34,10 @@ var is_resting: bool = false
 var resting_in_structure: Node = null  # The shelter we're resting in
 var is_in_water: bool = false
 
+# Performance: throttle raycast checks
+const INTERACTION_CHECK_INTERVAL: float = 0.1  # Check 10x/sec instead of 60x/sec
+var interaction_check_timer: float = 0.0
+
 # Fall-through protection (debug only - world floor provides actual protection)
 var fall_warning_y: float = -50.0  # Log warning if player falls this low
 
@@ -125,8 +129,11 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 
-	# Update interaction target
-	_update_interaction_target()
+	# Throttle interaction raycast checks for performance
+	interaction_check_timer += delta
+	if interaction_check_timer >= INTERACTION_CHECK_INTERVAL:
+		interaction_check_timer = 0.0
+		_update_interaction_target()
 
 	# Fall-through protection: track safe position and recover if fallen
 	_update_fall_protection(delta)
@@ -328,7 +335,6 @@ func _try_eat() -> void:
 			if inventory.has_item(heal_type):
 				inventory.remove_item(heal_type, 1)
 				stats.heal(HEALING_ITEMS[heal_type])
-				print("[Player] Used 1 %s, +%.0f health" % [heal_type, HEALING_ITEMS[heal_type]])
 				return
 
 	# Try to eat any available food, prioritizing items with most hunger restore
@@ -345,11 +351,6 @@ func _try_eat() -> void:
 		if stats.hunger < stats.max_hunger:
 			inventory.remove_item(best_food, 1)
 			stats.eat(best_value)
-			print("[Player] Ate 1 %s" % best_food)
-		else:
-			print("[Player] Already full, can't eat")
-	else:
-		print("[Player] No food in inventory")
 
 
 func _notification(what: int) -> void:

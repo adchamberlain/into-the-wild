@@ -32,7 +32,7 @@ const MOON_PHASES: Array[String] = [
 ]
 
 # Sky settings
-@export var star_count: int = 800
+@export var star_count: int = 200  # Reduced from 800 for performance
 @export var moon_size: float = 8.0
 @export var moon_distance: float = 300.0
 @export var sun_size: float = 12.0
@@ -70,6 +70,9 @@ var sun_intensities: Dictionary = {
 var time_manager: Node
 var sun_light: DirectionalLight3D
 var sky_material: ProceduralSkyMaterial
+
+# Cached camera reference for performance
+var cached_camera: Camera3D = null
 
 # Weather overlay
 var current_weather: String = "Clear"
@@ -137,11 +140,10 @@ func _setup_environment() -> void:
 	environment.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	environment.tonemap_mode = Environment.TONE_MAPPER_ACES
 	environment.tonemap_white = 6.0
-	environment.ssao_enabled = false  # Disable SSAO for softer look
-	environment.ssil_enabled = true
-	environment.ssil_intensity = 0.7  # More indirect lighting
-	environment.glow_enabled = true
-	environment.glow_intensity = 0.25
+	# Disable expensive post-processing effects for better performance
+	environment.ssao_enabled = false
+	environment.ssil_enabled = false  # SSIL is very GPU-intensive
+	environment.glow_enabled = false  # Glow adds GPU overhead
 
 
 func _setup_night_sky() -> void:
@@ -575,9 +577,12 @@ func _update_night_sky() -> void:
 
 func _process(_delta: float) -> void:
 	# Make sky elements follow camera position (but not rotation)
-	var camera: Camera3D = get_viewport().get_camera_3d()
-	if camera:
-		var cam_pos: Vector3 = camera.global_position
+	# Use cached camera reference for performance (avoid get_viewport().get_camera_3d() every frame)
+	if not is_instance_valid(cached_camera):
+		cached_camera = get_viewport().get_camera_3d()
+
+	if cached_camera:
+		var cam_pos: Vector3 = cached_camera.global_position
 		if stars_container:
 			stars_container.global_position = cam_pos
 		if sun_container:

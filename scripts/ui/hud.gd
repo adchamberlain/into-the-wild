@@ -77,6 +77,10 @@ var last_player_health: float = 100.0
 # Cache of item labels for quick updates
 var item_labels: Dictionary = {}
 
+# Performance: throttle expensive updates
+const HUD_UPDATE_INTERVAL: float = 0.1  # Update coordinates/protection every 100ms
+var hud_update_timer: float = 0.0
+
 
 func _ready() -> void:
 	# Connect to time manager
@@ -345,11 +349,12 @@ func _update_coordinates_display() -> void:
 
 
 func _process(delta: float) -> void:
-	# Update coordinates display
-	_update_coordinates_display()
-
-	# Update protection status continuously
-	_update_protection_display()
+	# Throttle expensive HUD updates (coordinates, protection status)
+	hud_update_timer += delta
+	if hud_update_timer >= HUD_UPDATE_INTERVAL:
+		hud_update_timer = 0.0
+		_update_coordinates_display()
+		_update_protection_display()
 
 	# Handle weather damage flash
 	if weather_damage_flash_timer > 0:

@@ -18,6 +18,11 @@ var current_structure_type: String = ""
 var current_item_type: String = ""
 var is_valid_placement: bool = false
 
+# Performance: throttle validation checks
+const VALIDATION_INTERVAL: float = 0.1  # Check 10x/sec instead of every frame
+var validation_timer: float = 0.0
+var last_preview_pos: Vector3 = Vector3.ZERO
+
 # Preview instance
 var preview_instance: Node3D = null
 var preview_material: StandardMaterial3D = null
@@ -46,7 +51,7 @@ func _setup_references() -> void:
 
 func _process(delta: float) -> void:
 	if is_placing and preview_instance:
-		_update_preview_position()
+		_update_preview_position(delta)
 
 
 func _input(event: InputEvent) -> void:
@@ -203,7 +208,7 @@ func _apply_preview_material(node: Node) -> void:
 
 
 ## Update preview position based on player aim.
-func _update_preview_position() -> void:
+func _update_preview_position(delta: float) -> void:
 	if not player or not camera or not preview_instance:
 		return
 
@@ -227,12 +232,17 @@ func _update_preview_position() -> void:
 	if look_dir.length_squared() > 0.001:
 		preview_instance.look_at(target_pos + look_dir, Vector3.UP)
 
-	# Validate placement
-	is_valid_placement = _validate_placement(target_pos)
+	# Throttle validation - only run expensive physics query periodically or when position changes
+	validation_timer += delta
+	var pos_changed: bool = target_pos.distance_squared_to(last_preview_pos) > 0.01
+	if validation_timer >= VALIDATION_INTERVAL or pos_changed:
+		validation_timer = 0.0
+		last_preview_pos = target_pos
+		is_valid_placement = _validate_placement(target_pos)
 
-	# Update color
-	if preview_material:
-		preview_material.albedo_color = valid_color if is_valid_placement else invalid_color
+		# Update color
+		if preview_material:
+			preview_material.albedo_color = valid_color if is_valid_placement else invalid_color
 
 
 ## Validate if the current position is valid for placement.

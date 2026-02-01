@@ -28,7 +28,6 @@ func add_item(resource_type: String, amount: int = 1) -> int:
 	item_added.emit(resource_type, amount, new_total)
 	inventory_changed.emit()
 
-	print("[Inventory] Added %d x %s (Total: %d)" % [amount, resource_type, new_total])
 	return new_total
 
 
@@ -51,7 +50,6 @@ func remove_item(resource_type: String, amount: int = 1) -> bool:
 	item_removed.emit(resource_type, amount, new_total)
 	inventory_changed.emit()
 
-	print("[Inventory] Removed %d x %s (Total: %d)" % [amount, resource_type, new_total])
 	return true
 
 

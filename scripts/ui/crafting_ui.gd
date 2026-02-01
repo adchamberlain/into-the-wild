@@ -1,6 +1,9 @@
 extends CanvasLayer
 ## UI for the crafting system. Toggle with C key.
 
+# Standard HUD font
+const HUD_FONT: Font = preload("res://resources/hud_font.tres")
+
 @export var player_path: NodePath
 
 @onready var panel: PanelContainer = $Panel
@@ -108,6 +111,7 @@ func _refresh_recipe_list() -> void:
 		else:
 			button.text = recipe_name
 		button.disabled = not can_craft_recipe
+		button.add_theme_font_override("font", HUD_FONT)
 		button.add_theme_font_size_override("font_size", 36)
 		button.pressed.connect(_on_craft_pressed.bind(recipe_id))
 		container.add_child(button)
@@ -124,6 +128,7 @@ func _refresh_recipe_list() -> void:
 
 		var ingredients_label: Label = Label.new()
 		ingredients_label.text = ingredients_text
+		ingredients_label.add_theme_font_override("font", HUD_FONT)
 		ingredients_label.add_theme_font_size_override("font_size", 28)
 		ingredients_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7, 1) if can_craft_recipe else Color(0.5, 0.4, 0.4, 1))
 		container.add_child(ingredients_label)
@@ -131,6 +136,7 @@ func _refresh_recipe_list() -> void:
 		# Description
 		var desc_label: Label = Label.new()
 		desc_label.text = "  " + description
+		desc_label.add_theme_font_override("font", HUD_FONT)
 		desc_label.add_theme_font_size_override("font_size", 26)
 		desc_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6, 1))
 		container.add_child(desc_label)

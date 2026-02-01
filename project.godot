@@ -12,6 +12,7 @@ config_version=5
 
 config/name="Into the Wild"
 run/main_scene="res://scenes/main.tscn"
+run/max_fps=60
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
 
@@ -20,6 +21,7 @@ config/icon="res://icon.svg"
 window/size/viewport_width=1920
 window/size/viewport_height=1080
 window/size/mode=2
+window/vsync/vsync_mode=1
 
 [input]
 

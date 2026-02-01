@@ -21,6 +21,10 @@ var depleted_resources: Array[Dictionary] = []  # {node, depleted_at_hour, deple
 var all_resources: Array[ResourceNode] = []
 var last_hour: int = -1  # Track for day rollover
 
+# Performance: throttle respawn checks
+const RESPAWN_CHECK_INTERVAL: float = 5.0  # Only check every 5 seconds
+var respawn_check_timer: float = 0.0
+
 
 func _ready() -> void:
 	# Get references
@@ -34,7 +38,7 @@ func _ready() -> void:
 	call_deferred("_discover_resources")
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if not time_manager:
 		return
 
@@ -47,7 +51,11 @@ func _process(_delta: float) -> void:
 	if not respawn_enabled or depleted_resources.is_empty():
 		return
 
-	_check_respawns()
+	# Throttle respawn checks - no need to check every frame
+	respawn_check_timer += delta
+	if respawn_check_timer >= RESPAWN_CHECK_INTERVAL:
+		respawn_check_timer = 0.0
+		_check_respawns()
 
 
 ## Called when a new day starts (hour rolls over from 23 to 0).

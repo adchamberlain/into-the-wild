@@ -4,7 +4,7 @@ class_name ChunkManager
 
 # Chunk configuration
 @export var chunk_size_cells: int = 16  # Cells per chunk side (16x16 = 256 cells per chunk)
-@export var render_distance: int = 3  # Chunks to load in each direction from player
+@export var render_distance: int = 2  # Chunks to load in each direction (reduced from 3 for performance)
 @export var cell_size: float = 3.0  # Size of each terrain cell
 
 # Terrain generation settings (shared with chunks)
@@ -100,8 +100,9 @@ func _process(_delta: float) -> void:
 		last_player_chunk = player_chunk
 		_update_chunks_around_player()
 
-	# Process chunk loading/unloading queue
-	_process_chunk_queues()
+	# Process chunk loading/unloading queue (skip if nothing to do)
+	if not chunks_to_load.is_empty() or not chunks_to_unload.is_empty():
+		_process_chunk_queues()
 
 
 func _setup_noise() -> void:

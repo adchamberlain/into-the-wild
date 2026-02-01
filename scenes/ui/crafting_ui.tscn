@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://crafting001"]
+[gd_scene load_steps=3 format=3 uid="uid://crafting001"]
 
 [ext_resource type="Script" path="res://scripts/ui/crafting_ui.gd" id="1_crafting"]
+[ext_resource type="Font" uid="uid://font001" path="res://resources/hud_font.tres" id="2_font"]
 
 [node name="CraftingUI" type="CanvasLayer"]
 layer = 2
@@ -32,6 +33,7 @@ layout_mode = 2
 [node name="TitleLabel" type="Label" parent="Panel/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.9, 0.7, 1)
+theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 52
 text = "Crafting"
 horizontal_alignment = 1
@@ -42,6 +44,7 @@ layout_mode = 2
 [node name="HintLabel" type="Label" parent="Panel/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
+theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 28
 text = "Press C to close"
 horizontal_alignment = 1

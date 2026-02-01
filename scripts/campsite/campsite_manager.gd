@@ -33,6 +33,10 @@ var campsite_level: int = 1
 var placed_structures: Array[Node] = []
 var structure_counts: Dictionary = {}  # structure_type -> count
 
+# Performance: cached arrays for frequently-queried structure types
+var _cached_fire_pits: Array[Node] = []
+var _cached_shelters: Array[Node] = []
+
 # Progress flags
 var has_crafted_tool: bool = false
 var has_crafted_fishing_rod: bool = false
@@ -120,6 +124,12 @@ func register_structure(structure: Node, structure_type: String) -> void:
 		structure_counts[structure_type] = 0
 	structure_counts[structure_type] += 1
 
+	# Update cached arrays for performance
+	if structure_type == "fire_pit":
+		_cached_fire_pits.append(structure)
+	if structure.has_method("is_in_protection_range"):
+		_cached_shelters.append(structure)
+
 	# Connect to destruction signal
 	if structure.has_signal("structure_destroyed"):
 		structure.structure_destroyed.connect(_on_structure_destroyed.bind(structure, structure_type))
@@ -141,6 +151,14 @@ func unregister_structure(structure: Node, structure_type: String) -> void:
 		structure_counts[structure_type] -= 1
 		if structure_counts[structure_type] <= 0:
 			structure_counts.erase(structure_type)
+
+	# Update cached arrays
+	var fire_idx: int = _cached_fire_pits.find(structure)
+	if fire_idx != -1:
+		_cached_fire_pits.remove_at(fire_idx)
+	var shelter_idx: int = _cached_shelters.find(structure)
+	if shelter_idx != -1:
+		_cached_shelters.remove_at(shelter_idx)
 
 	structure_removed.emit(structure, structure_type)
 	print("[CampsiteManager] Removed %s" % structure_type)
@@ -286,21 +304,25 @@ func get_shelters() -> Array[Node]:
 
 
 ## Check if player is near any fire (for warmth).
+## Uses cached fire pit array for performance.
 func is_near_fire(player_pos: Vector3, max_distance: float = 5.0) -> bool:
-	for structure: Node in placed_structures:
+	for structure: Node in _cached_fire_pits:
+		if not is_instance_valid(structure):
+			continue
 		if structure.has_method("is_in_warmth_range"):
 			if structure.is_in_warmth_range(player_pos):
 				return true
-		elif structure.has_method("get") and structure.get("structure_type") == "fire_pit":
-			if structure.global_position.distance_to(player_pos) <= max_distance:
-				return true
+		elif structure.global_position.distance_to(player_pos) <= max_distance:
+			return true
 	return false
 
 
 ## Check if player is in any shelter.
+## Uses cached shelter array for performance.
 func is_in_shelter(player_pos: Vector3) -> bool:
-	for structure: Node in placed_structures:
-		if structure.has_method("is_in_protection_range"):
-			if structure.is_in_protection_range(player_pos):
-				return true
+	for structure: Node in _cached_shelters:
+		if not is_instance_valid(structure):
+			continue
+		if structure.is_in_protection_range(player_pos):
+			return true
 	return false
