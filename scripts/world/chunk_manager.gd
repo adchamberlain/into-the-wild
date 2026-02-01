@@ -8,9 +8,9 @@ class_name ChunkManager
 @export var cell_size: float = 3.0  # Size of each terrain cell
 
 # Terrain generation settings (shared with chunks)
-@export var height_scale: float = 6.0
-@export var height_step: float = 1.0
-@export var noise_scale: float = 0.02
+@export var height_scale: float = 5.0  # Height variation for hills
+@export var height_step: float = 1.0   # 1 block = 1 unit
+@export var noise_scale: float = 0.018  # Moderate frequency for varied terrain
 
 # Tree spawning settings
 @export var tree_density: float = 0.25
@@ -73,6 +73,7 @@ var chunks_to_unload: Array[Vector2i] = []
 func _ready() -> void:
 	_setup_noise()
 	_setup_material()
+	_setup_world_floor()
 	_load_scenes()
 
 	# Find player node
@@ -109,7 +110,7 @@ func _setup_noise() -> void:
 	noise = FastNoiseLite.new()
 	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
 	noise.seed = noise_seed
-	noise.fractal_octaves = 2
+	noise.fractal_octaves = 1  # Single octave for smoother terrain
 	noise.frequency = noise_scale
 
 	forest_noise = FastNoiseLite.new()
@@ -127,6 +128,26 @@ func _setup_material() -> void:
 	terrain_material.roughness = 1.0
 	terrain_material.metallic = 0.0
 	terrain_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+
+
+func _setup_world_floor() -> void:
+	# Create an impenetrable floor at the bottom of the world (like bedrock)
+	# This ensures nothing can ever fall through the world
+	var world_floor := StaticBody3D.new()
+	world_floor.name = "WorldFloor"
+
+	var floor_shape := CollisionShape3D.new()
+	var floor_box := BoxShape3D.new()
+	# Very large horizontal extent, thin vertically
+	floor_box.size = Vector3(10000, 1, 10000)
+	floor_shape.shape = floor_box
+	# Position at y=-100 (deep enough for any future caves)
+	floor_shape.position = Vector3(0, -100, 0)
+
+	world_floor.add_child(floor_shape)
+	add_child(world_floor)
+
+	print("[ChunkManager] World floor created at y=-100")
 
 
 func _load_scenes() -> void:

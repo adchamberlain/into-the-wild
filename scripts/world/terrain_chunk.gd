@@ -251,45 +251,44 @@ func _add_side_quad(st: SurfaceTool, v0: Vector3, v1: Vector3, v2: Vector3, v3: 
 
 
 func _generate_collision() -> void:
+	# Use box collision for each cell to create true Minecraft-style blocky collision
+	# This prevents walking up block edges - player must jump
 	terrain_collision = StaticBody3D.new()
-
-	var collision_shape: CollisionShape3D = CollisionShape3D.new()
-	var heightmap: HeightMapShape3D = HeightMapShape3D.new()
+	terrain_collision.name = "TerrainCollision"
 
 	var cell_size: float = chunk_manager.cell_size
 	var chunk_size_cells: int = chunk_manager.chunk_size_cells
 	var chunk_world_size: float = chunk_size_cells * cell_size
 
-	# Sample at 1 unit intervals for accurate collision
-	var map_width: int = int(chunk_world_size) + 1
-	var map_depth: int = int(chunk_world_size) + 1
-	var height_data: PackedFloat32Array = PackedFloat32Array()
-	height_data.resize(map_width * map_depth)
-
 	var chunk_world_x: float = chunk_coord.x * chunk_world_size
 	var chunk_world_z: float = chunk_coord.y * chunk_world_size
 
-	# Get pond info for creating hole in collision
-	var pond_center: Vector2 = chunk_manager.pond_center
-	var pond_radius: float = chunk_manager.pond_radius
+	# Create a box collision for each terrain cell
+	for cz in range(chunk_size_cells):
+		for cx in range(chunk_size_cells):
+			var world_x: float = chunk_world_x + cx * cell_size
+			var world_z: float = chunk_world_z + cz * cell_size
+			var center_x: float = world_x + cell_size / 2.0
+			var center_z: float = world_z + cell_size / 2.0
 
-	for z in range(map_depth):
-		for x in range(map_width):
-			var world_x: float = chunk_world_x + x
-			var world_z: float = chunk_world_z + z
+			var height: float = chunk_manager.get_height_at(center_x, center_z)
 
-			var height: float = chunk_manager.get_height_at(world_x, world_z)
+			# Create box from y=height going down to y=-10 (thick enough for pond floor too)
+			# Pond floor is at -2.5, so we need boxes to extend below that
+			var box_bottom: float = -10.0
+			var box_height: float = height - box_bottom
+			if box_height <= 0:
+				continue
 
-			height_data[z * map_width + x] = height
+			var collision_shape: CollisionShape3D = CollisionShape3D.new()
+			var box: BoxShape3D = BoxShape3D.new()
+			box.size = Vector3(cell_size, box_height, cell_size)
 
-	heightmap.map_width = map_width
-	heightmap.map_depth = map_depth
-	heightmap.map_data = height_data
+			collision_shape.shape = box
+			# Position box so top surface is at terrain height
+			collision_shape.position = Vector3(center_x, height - box_height / 2.0, center_z)
 
-	collision_shape.shape = heightmap
-	# Position collision at chunk center
-	collision_shape.position = Vector3(chunk_world_x + chunk_world_size / 2.0, 0, chunk_world_z + chunk_world_size / 2.0)
-	terrain_collision.add_child(collision_shape)
+			terrain_collision.add_child(collision_shape)
 
 	add_child(terrain_collision)
 
@@ -492,7 +491,27 @@ func _spawn_chunk_resources() -> void:
 
 func _spawn_resource(scene: PackedScene, x: float, y: float, z: float, rng: RandomNumberGenerator) -> void:
 	var resource: Node3D = scene.instantiate()
-	resource.position = Vector3(x, y, z)
+
+	# Sample terrain heights at multiple points around the resource to handle cell boundaries
+	# Resource could extend up to 0.5 units in any direction, so check those points
+	var sample_offsets: Array[Vector2] = [
+		Vector2(0.0, 0.0),    # Center
+		Vector2(0.5, 0.0),    # East
+		Vector2(-0.5, 0.0),   # West
+		Vector2(0.0, 0.5),    # South
+		Vector2(0.0, -0.5),   # North
+	]
+
+	var max_height: float = y
+	for offset in sample_offsets:
+		var sample_height: float = chunk_manager.get_height_at(x + offset.x, z + offset.y)
+		if sample_height > max_height:
+			max_height = sample_height
+
+	# Add small offset so resource sits on TOP of terrain, not half-buried
+	var height_offset: float = 0.1  # Half the resource height (0.2)
+
+	resource.position = Vector3(x, max_height + height_offset, z)
 	resource.rotation.y = rng.randf() * TAU
 	resources_container.add_child(resource)
 	spawned_resources.append(resource)

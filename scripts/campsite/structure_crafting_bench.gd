@@ -14,10 +14,10 @@ func interact(player: Node) -> bool:
 	if not is_active:
 		return false
 
-	# Open crafting UI
+	# Open crafting UI with bench context (enables advanced recipes)
 	var crafting_ui: Node = _find_crafting_ui()
 	if crafting_ui and crafting_ui.has_method("toggle_crafting_menu"):
-		crafting_ui.toggle_crafting_menu()
+		crafting_ui.toggle_crafting_menu(true)  # true = at bench
 		return true
 	elif crafting_ui and crafting_ui.has_method("show"):
 		crafting_ui.show()

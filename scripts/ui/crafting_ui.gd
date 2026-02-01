@@ -11,6 +11,9 @@ var player: Node
 var crafting_system: CraftingSystem
 var is_open: bool = false
 
+# Track whether crafting menu was opened from a bench
+var at_bench: bool = false
+
 # Track recipe buttons for updates
 var recipe_buttons: Dictionary = {}
 
@@ -46,19 +49,28 @@ func _input(event: InputEvent) -> void:
 
 
 func _toggle_crafting() -> void:
-	toggle_crafting_menu()
+	# C key always opens without bench context
+	toggle_crafting_menu(false)
 
 
-## Public method to toggle crafting menu (called by crafting bench interaction).
-func toggle_crafting_menu() -> void:
+## Public method to toggle crafting menu.
+## from_bench: true if opened from crafting bench interaction.
+func toggle_crafting_menu(from_bench: bool = false) -> void:
 	is_open = not is_open
 	panel.visible = is_open
 
 	if is_open:
+		at_bench = from_bench
+		# Update title based on context
+		if at_bench:
+			title_label.text = "Crafting Bench"
+		else:
+			title_label.text = "Crafting"
 		# Show cursor for clicking
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 		_refresh_recipe_list()
 	else:
+		at_bench = false
 		# Re-capture mouse for gameplay
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
@@ -72,23 +84,30 @@ func _refresh_recipe_list() -> void:
 	if not crafting_system:
 		return
 
-	var recipes: Array[Dictionary] = crafting_system.get_all_recipes_status()
+	var recipes: Array[Dictionary] = crafting_system.get_all_recipes_status(at_bench)
 
 	for recipe: Dictionary in recipes:
 		var recipe_id: String = recipe.get("id", "")
 		var recipe_name: String = recipe.get("name", "Unknown")
-		var can_craft: bool = recipe.get("can_craft", false)
+		var can_craft_recipe: bool = recipe.get("can_craft", false)
 		var inputs: Dictionary = recipe.get("inputs", {})
 		var description: String = recipe.get("description", "")
+		var requires_bench: bool = recipe.get("requires_bench", false)
+
+		# Check if recipe is blocked due to bench requirement
+		var blocked_by_bench: bool = requires_bench and not at_bench
 
 		# Create recipe container
 		var container: VBoxContainer = VBoxContainer.new()
 		container.add_theme_constant_override("separation", 4)
 
-		# Recipe button
+		# Recipe button - show bench requirement in name if not at bench
 		var button: Button = Button.new()
-		button.text = recipe_name
-		button.disabled = not can_craft
+		if blocked_by_bench:
+			button.text = recipe_name + " (Requires Bench)"
+		else:
+			button.text = recipe_name
+		button.disabled = not can_craft_recipe
 		button.add_theme_font_size_override("font_size", 36)
 		button.pressed.connect(_on_craft_pressed.bind(recipe_id))
 		container.add_child(button)
@@ -106,7 +125,7 @@ func _refresh_recipe_list() -> void:
 		var ingredients_label: Label = Label.new()
 		ingredients_label.text = ingredients_text
 		ingredients_label.add_theme_font_size_override("font_size", 28)
-		ingredients_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7, 1) if can_craft else Color(0.5, 0.4, 0.4, 1))
+		ingredients_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7, 1) if can_craft_recipe else Color(0.5, 0.4, 0.4, 1))
 		container.add_child(ingredients_label)
 
 		# Description
@@ -125,7 +144,7 @@ func _refresh_recipe_list() -> void:
 
 
 func _on_craft_pressed(recipe_id: String) -> void:
-	if crafting_system and crafting_system.craft(recipe_id):
+	if crafting_system and crafting_system.craft(recipe_id, at_bench):
 		_refresh_recipe_list()
 
 

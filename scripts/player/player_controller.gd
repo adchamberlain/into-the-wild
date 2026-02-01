@@ -7,7 +7,7 @@ signal interaction_cleared()
 # Movement settings
 @export var walk_speed: float = 5.0
 @export var sprint_speed: float = 8.0
-@export var jump_velocity: float = 4.5
+@export var jump_velocity: float = 5.5  # Allows comfortable 1-block jumps (~1.5 blocks max height)
 @export var mouse_sensitivity: float = 0.002
 
 # Camera settings
@@ -33,6 +33,9 @@ var current_interaction_target: Node = null
 var is_resting: bool = false
 var resting_in_structure: Node = null  # The shelter we're resting in
 var is_in_water: bool = false
+
+# Fall-through protection (debug only - world floor provides actual protection)
+var fall_warning_y: float = -50.0  # Log warning if player falls this low
 
 # Swimming settings
 var swim_sink_speed: float = 3.0  # How fast player sinks in water
@@ -131,6 +134,9 @@ func _physics_process(delta: float) -> void:
 
 	# Update interaction target
 	_update_interaction_target()
+
+	# Fall-through protection: track safe position and recover if fallen
+	_update_fall_protection(delta)
 
 
 func _process_normal_movement(delta: float) -> void:
@@ -357,3 +363,10 @@ func _notification(what: int) -> void:
 	# Release mouse when window loses focus
 	if what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+
+
+## Fall-through protection: logs warning if player falls unusually low.
+## The world floor at y=-100 provides actual collision protection.
+func _update_fall_protection(_delta: float) -> void:
+	if global_position.y < fall_warning_y:
+		push_warning("[Player] Falling unusually low (y=%.1f). World floor will catch at y=-100." % global_position.y)

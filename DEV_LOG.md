@@ -2121,6 +2121,178 @@ scenes/player/player.tscn              # Updated collision layer/mask
 
 ---
 
+## Session 23 - Blocky Terrain Collision & World Floor (2026-01-31)
+
+### What Was Built
+
+**Minecraft-Style Movement & Fall Protection** - Player must jump to climb blocks, impenetrable world floor prevents falling through terrain
+
+#### Files Modified
+
+```
+scripts/world/terrain_chunk.gd      # Replaced HeightMapShape3D with box collision per cell
+scripts/world/chunk_manager.gd      # Adjusted terrain parameters, added world floor
+scripts/player/player_controller.gd # Increased jump velocity, added fall warning
+```
+
+#### Changes
+
+1. **Box Collision for Terrain** (`terrain_chunk.gd`)
+   - Replaced HeightMapShape3D (which interpolates heights creating walkable slopes)
+   - Each terrain cell now has its own BoxShape3D collision
+   - Creates true vertical walls that cannot be walked up
+   - Player must jump to climb any block edge
+   - Boxes extend from terrain surface down to y=-10
+
+2. **World Floor / Bedrock** (`chunk_manager.gd`)
+   - Added impenetrable collision plane at y=-100
+   - Size: 10,000 x 1 x 10,000 units (covers entire playable area)
+   - Ensures player can never fall through the world
+   - Allows future caves to exist anywhere above y=-100
+
+3. **Terrain Parameters** (`chunk_manager.gd`)
+   - height_scale: 5.0 (varied terrain with hills)
+   - height_step: 1.0 (1 block = 1 unit)
+   - noise_scale: 0.018 (moderate frequency)
+   - Single noise octave for smoother but still varied terrain
+   - Occasional 2+ block cliffs add interesting features
+
+4. **Jump Height** (`player_controller.gd`)
+   - jump_velocity: 4.5 → 5.5
+   - Allows comfortable 1-block jumps (~1.5 blocks max height)
+   - With gravity 9.8: h = v²/(2g) = 5.5²/19.6 ≈ 1.54 blocks
+
+5. **Fall Warning** (`player_controller.gd`)
+   - Debug warning logged if player falls below y=-50
+   - World floor at y=-100 provides actual protection
+
+#### Movement Behavior
+
+- Player cannot walk up any block edge (must jump)
+- 1-block steps are jumpable
+- 2+ block cliffs require finding alternate routes
+- Terrain still has varied hills and flat areas
+- Impossible to fall through the world
+
+---
+
+## Session 22 - Resource Clipping Fix (2026-01-31)
+
+### What Was Built
+
+**Bug Fix: Resources clipping into adjacent terrain blocks** - Resources now sit on top of the highest nearby terrain
+
+#### Files Modified
+
+```
+scripts/world/terrain_chunk.gd    # Updated _spawn_resource() to sample multiple heights
+```
+
+#### Issue Description
+
+Resources (branches, rocks, etc.) were sometimes spawning partially inside terrain blocks. This happened when a resource was positioned near a cell boundary and the adjacent cell had higher terrain - the resource would be placed at the lower cell's height but extend into the higher cell's terrain.
+
+#### Fix Applied
+
+Modified `_spawn_resource()` to sample terrain heights at 5 points around the resource position (center + 0.5 units in each cardinal direction) and use the maximum height:
+
+```gdscript
+var sample_offsets: Array[Vector2] = [
+    Vector2(0.0, 0.0),    # Center
+    Vector2(0.5, 0.0),    # East
+    Vector2(-0.5, 0.0),   # West
+    Vector2(0.0, 0.5),    # South
+    Vector2(0.0, -0.5),   # North
+]
+
+var max_height: float = y
+for offset in sample_offsets:
+    var sample_height: float = chunk_manager.get_height_at(x + offset.x, z + offset.y)
+    if sample_height > max_height:
+        max_height = sample_height
+```
+
+Also added a small height offset (0.1 units) so resources sit on top of the terrain surface rather than being half-buried.
+
+---
+
+## Session 21 - Tiered Crafting System (2026-01-31)
+
+### What Was Built
+
+**Tiered Crafting System** - Basic recipes can be crafted anywhere (C key), advanced recipes require the crafting bench
+
+#### Files Modified
+
+```
+scripts/crafting/crafting_system.gd       # Added requires_bench property to recipes, updated can_craft()
+scripts/ui/crafting_ui.gd                 # Added at_bench context tracking, bench requirement UI
+scripts/campsite/structure_crafting_bench.gd  # Passes true to toggle_crafting_menu() for bench context
+```
+
+#### Features Implemented
+
+1. **Recipe Tiers** (`crafting_system.gd`)
+   - Added `requires_bench: bool` property to all recipes
+   - **Basic (Hand-Craftable):**
+     - Stone Axe - Crude survival tool
+     - Torch - Simple fire starter
+     - Campfire Kit - Essential survival
+     - Rope - Simple plant weaving
+     - Crafting Bench Kit - Bootstrap item
+   - **Advanced (Requires Bench):**
+     - Shelter Kit - Complex construction
+     - Storage Box - Woodworking precision
+     - Fishing Rod - Requires precision work
+     - Healing Salve - Proper preparation needed
+     - Berry Pouch - Container making skills
+
+2. **Bench Context Tracking** (`crafting_ui.gd`)
+   - Added `at_bench: bool` variable to track crafting context
+   - `toggle_crafting_menu(from_bench: bool = false)` accepts bench context
+   - C key opens with `at_bench = false`
+   - Bench interaction opens with `at_bench = true`
+   - Title changes to "Crafting Bench" when at bench
+
+3. **UI Display Updates** (`crafting_ui.gd`)
+   - Shows all discovered recipes regardless of context
+   - For bench-required recipes when NOT at bench:
+     - Disables the craft button
+     - Appends "(Requires Bench)" to recipe name
+   - When at bench, all recipes craftable (if materials available)
+
+4. **Updated can_craft() Logic** (`crafting_system.gd`)
+   - Added `at_bench: bool = false` parameter
+   - Returns `false` if recipe requires bench and `at_bench` is false
+   - `craft()` also accepts `at_bench` parameter for validation
+
+5. **Bench Interaction** (`structure_crafting_bench.gd`)
+   - Now passes `true` to `toggle_crafting_menu(true)` when opening
+
+#### Recipe Tier Summary
+
+| Recipe | Requires Bench | Rationale |
+|--------|---------------|-----------|
+| Stone Axe | No | Crude tool, basic survival |
+| Torch | No | Simple fire starter |
+| Campfire Kit | No | Essential survival |
+| Rope | No | Simple weaving |
+| Crafting Bench Kit | No | Bootstrap (must be hand-craftable) |
+| Shelter Kit | Yes | Complex construction |
+| Storage Box | Yes | Woodworking precision |
+| Fishing Rod | Yes | Precision work |
+| Healing Salve | Yes | Proper preparation |
+| Berry Pouch | Yes | Container making |
+
+#### Verification Steps
+
+1. Press C to open crafting - advanced recipes show "(Requires Bench)" and are disabled
+2. Place and interact with crafting bench (E key) - all recipes craftable if materials available
+3. Basic recipes work from C key (torch, rope, stone_axe, campfire_kit, crafting_bench_kit)
+4. Advanced recipes only work when at bench
+
+---
+
 ## Next Session: Phase 8 - Polish & Content (Continued)
 
 ### Completed Features

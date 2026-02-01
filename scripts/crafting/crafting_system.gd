@@ -23,76 +23,88 @@ func _load_recipes() -> void:
 	# Define recipes in code for simplicity
 	# Format: recipe_id -> {name, inputs: {resource: amount}, output_type, output_amount, description}
 
+	# Basic recipes (hand-craftable with C key)
+	# Advanced recipes require crafting bench (requires_bench: true)
 	recipes = {
 		"stone_axe": {
 			"name": "Stone Axe",
 			"inputs": {"river_rock": 2, "branch": 1},
 			"output_type": "stone_axe",
 			"output_amount": 1,
-			"description": "A crude axe for chopping wood."
+			"description": "A crude axe for chopping wood.",
+			"requires_bench": false
 		},
 		"torch": {
 			"name": "Torch",
 			"inputs": {"branch": 2},
 			"output_type": "torch",
 			"output_amount": 1,
-			"description": "Provides light in dark areas."
+			"description": "Provides light in dark areas.",
+			"requires_bench": false
 		},
 		"campfire_kit": {
 			"name": "Campfire Kit",
 			"inputs": {"branch": 4, "river_rock": 3},
 			"output_type": "campfire_kit",
 			"output_amount": 1,
-			"description": "Materials to build a campfire."
+			"description": "Materials to build a campfire.",
+			"requires_bench": false
 		},
 		"rope": {
 			"name": "Plant Rope",
 			"inputs": {"branch": 3},
 			"output_type": "rope",
 			"output_amount": 1,
-			"description": "Useful for building and crafting."
-		},
-		"berry_pouch": {
-			"name": "Berry Pouch",
-			"inputs": {"berry": 5},
-			"output_type": "berry_pouch",
-			"output_amount": 1,
-			"description": "Concentrated berries. Restores more hunger."
-		},
-		"shelter_kit": {
-			"name": "Shelter Kit",
-			"inputs": {"branch": 6, "rope": 2},
-			"output_type": "shelter_kit",
-			"output_amount": 1,
-			"description": "Materials to build a basic lean-to shelter."
-		},
-		"storage_box": {
-			"name": "Storage Box",
-			"inputs": {"wood": 4, "rope": 1},
-			"output_type": "storage_box",
-			"output_amount": 1,
-			"description": "A wooden box to store extra items."
-		},
-		"fishing_rod": {
-			"name": "Fishing Rod",
-			"inputs": {"branch": 3, "rope": 1},
-			"output_type": "fishing_rod",
-			"output_amount": 1,
-			"description": "A simple rod for catching fish."
-		},
-		"healing_salve": {
-			"name": "Healing Salve",
-			"inputs": {"herb": 3},
-			"output_type": "healing_salve",
-			"output_amount": 1,
-			"description": "Instantly restores health when used."
+			"description": "Useful for building and crafting.",
+			"requires_bench": false
 		},
 		"crafting_bench_kit": {
 			"name": "Crafting Bench Kit",
 			"inputs": {"wood": 6, "branch": 4},
 			"output_type": "crafting_bench_kit",
 			"output_amount": 1,
-			"description": "Materials to build a crafting workbench."
+			"description": "Materials to build a crafting workbench.",
+			"requires_bench": false
+		},
+		"berry_pouch": {
+			"name": "Berry Pouch",
+			"inputs": {"berry": 5},
+			"output_type": "berry_pouch",
+			"output_amount": 1,
+			"description": "Concentrated berries. Restores more hunger.",
+			"requires_bench": true
+		},
+		"shelter_kit": {
+			"name": "Shelter Kit",
+			"inputs": {"branch": 6, "rope": 2},
+			"output_type": "shelter_kit",
+			"output_amount": 1,
+			"description": "Materials to build a basic lean-to shelter.",
+			"requires_bench": true
+		},
+		"storage_box": {
+			"name": "Storage Box",
+			"inputs": {"wood": 4, "rope": 1},
+			"output_type": "storage_box",
+			"output_amount": 1,
+			"description": "A wooden box to store extra items.",
+			"requires_bench": true
+		},
+		"fishing_rod": {
+			"name": "Fishing Rod",
+			"inputs": {"branch": 3, "rope": 1},
+			"output_type": "fishing_rod",
+			"output_amount": 1,
+			"description": "A simple rod for catching fish.",
+			"requires_bench": true
+		},
+		"healing_salve": {
+			"name": "Healing Salve",
+			"inputs": {"herb": 3},
+			"output_type": "healing_salve",
+			"output_amount": 1,
+			"description": "Instantly restores health when used.",
+			"requires_bench": true
 		}
 	}
 
@@ -116,8 +128,8 @@ func get_recipe(recipe_id: String) -> Dictionary:
 	return recipes.get(recipe_id, {})
 
 
-## Check if player can craft a recipe (has all required materials).
-func can_craft(recipe_id: String) -> bool:
+## Check if player can craft a recipe (has all required materials and bench if needed).
+func can_craft(recipe_id: String, at_bench: bool = false) -> bool:
 	if not inventory:
 		return false
 
@@ -125,6 +137,12 @@ func can_craft(recipe_id: String) -> bool:
 		return false
 
 	var recipe: Dictionary = recipes[recipe_id]
+
+	# Check if bench is required but player is not at bench
+	var requires_bench: bool = recipe.get("requires_bench", false)
+	if requires_bench and not at_bench:
+		return false
+
 	var inputs: Dictionary = recipe.get("inputs", {})
 
 	for resource_type: String in inputs:
@@ -135,9 +153,16 @@ func can_craft(recipe_id: String) -> bool:
 	return true
 
 
+## Check if a recipe requires a crafting bench.
+func requires_bench(recipe_id: String) -> bool:
+	if not recipes.has(recipe_id):
+		return false
+	return recipes[recipe_id].get("requires_bench", false)
+
+
 ## Attempt to craft a recipe. Returns true if successful.
-func craft(recipe_id: String) -> bool:
-	if not can_craft(recipe_id):
+func craft(recipe_id: String, at_bench: bool = false) -> bool:
+	if not can_craft(recipe_id, at_bench):
 		return false
 
 	var recipe: Dictionary = recipes[recipe_id]
@@ -173,13 +198,13 @@ func is_discovered(recipe_id: String) -> bool:
 
 
 ## Get a list of all recipes with their craftability status.
-func get_all_recipes_status() -> Array[Dictionary]:
+func get_all_recipes_status(at_bench: bool = false) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 
 	for recipe_id: String in discovered_recipes:
 		var recipe: Dictionary = recipes[recipe_id].duplicate()
 		recipe["id"] = recipe_id
-		recipe["can_craft"] = can_craft(recipe_id)
+		recipe["can_craft"] = can_craft(recipe_id, at_bench)
 		result.append(recipe)
 
 	return result
