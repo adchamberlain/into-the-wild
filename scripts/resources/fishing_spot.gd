@@ -326,7 +326,7 @@ func _fish_bite() -> void:
 
 	# Make one fish swim excitedly near the line
 	if fish_nodes.size() > 0:
-		var biting_fish: Node3D = fish_nodes[0]
+		var _biting_fish: Node3D = fish_nodes[0]
 		var line_pos := Vector3(0, pond_height - 0.1, -0.5)  # Near where line would be
 		fish_targets[0] = line_pos
 

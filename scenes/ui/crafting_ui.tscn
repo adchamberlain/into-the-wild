@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://crafting001"]
 
 [ext_resource type="Script" path="res://scripts/ui/crafting_ui.gd" id="1_crafting"]
-[ext_resource type="Font" uid="uid://font001" path="res://resources/hud_font.tres" id="2_font"]
+[ext_resource type="Font" uid="uid://hud_mono_font" path="res://resources/hud_font.tres" id="2_font"]
 
 [node name="CraftingUI" type="CanvasLayer"]
 layer = 2

@@ -78,6 +78,11 @@ func _build_slot_list() -> void:
 
 
 func _update_display() -> void:
+	if inventory:
+		print("[EquipmentMenu] Inventory contents: ", inventory.get_all_items())
+	else:
+		print("[EquipmentMenu] WARNING: No inventory reference!")
+
 	# Check if using controller for different display format
 	var using_controller: bool = false
 	var input_mgr: Node = get_node_or_null("/root/InputManager")
