@@ -42,8 +42,21 @@ const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 # Coordinates display
 @onready var coordinates_label: Label = $StatsPanel/StatsContainer/CoordinatesLabel
 
+# Celebration UI
+@onready var celebration_overlay: ColorRect = $CelebrationOverlay
+@onready var celebration_panel: PanelContainer = $CelebrationPanel
+@onready var celebration_title: Label = $CelebrationPanel/CelebrationVBox/CelebrationTitle
+@onready var celebration_level_name: Label = $CelebrationPanel/CelebrationVBox/CelebrationLevelName
+@onready var celebration_description: Label = $CelebrationPanel/CelebrationVBox/CelebrationDescription
+@onready var celebration_unlocks: Label = $CelebrationPanel/CelebrationVBox/CelebrationUnlocks
+@onready var celebration_prompt: Label = $CelebrationPanel/CelebrationVBox/CelebrationPrompt
+
 # Config for coordinates visibility
 var show_coordinates: bool = true
+
+# Celebration state
+var is_celebrating: bool = false
+var celebration_tween: Tween = null
 
 var time_manager: Node
 var player: Node
@@ -214,7 +227,7 @@ func _update_equipped_display() -> void:
 
 		# Add hint for placeable items
 		var equipped_type: String = equipment.get_equipped()
-		if equipped_type in ["campfire_kit", "shelter_kit", "storage_box", "crafting_bench_kit"]:
+		if StructureData.is_placeable_item(equipped_type):
 			equipped_label.text += " [R to place]"
 		elif equipped_type == "fishing_rod":
 			equipped_label.text += " [R to fish]"
@@ -305,6 +318,7 @@ func _update_inventory_display() -> void:
 
 func _on_campsite_level_changed(new_level: int) -> void:
 	_update_campsite_level_display()
+	_show_level_celebration(new_level)
 
 
 func _update_campsite_level_display() -> void:
@@ -446,6 +460,91 @@ func _update_resting_prompt() -> void:
 		# Just stopped resting - hide prompt (will be updated by normal interaction system)
 		interaction_prompt.visible = false
 		is_player_resting = false
+
+
+## Show level-up celebration UI.
+func _show_level_celebration(level: int) -> void:
+	if not celebration_overlay or not celebration_panel:
+		print("[HUD] Celebration UI not found")
+		return
+
+	# Get level info from campsite manager
+	var level_info: Dictionary = {}
+	if campsite_manager and campsite_manager.has_method("get_level_info"):
+		level_info = campsite_manager.get_level_info(level)
+
+	var level_name: String = level_info.get("name", "Level %d" % level)
+	var description: String = level_info.get("description", "")
+	var unlocks: Array = level_info.get("unlocks", [])
+
+	# Set celebration text
+	if celebration_title:
+		celebration_title.text = "CAMP LEVEL UP!"
+	if celebration_level_name:
+		celebration_level_name.text = "Level %d: %s" % [level, level_name]
+	if celebration_description:
+		celebration_description.text = description
+	if celebration_unlocks:
+		if unlocks.size() > 0:
+			var unlocks_text: String = "New structures unlocked:\n"
+			for unlock: String in unlocks:
+				unlocks_text += "  - %s\n" % unlock
+			celebration_unlocks.text = unlocks_text.strip_edges()
+			celebration_unlocks.visible = true
+		else:
+			celebration_unlocks.visible = false
+	if celebration_prompt:
+		celebration_prompt.text = "[Press any key to continue]"
+
+	# Show celebration UI with animation
+	is_celebrating = true
+	celebration_overlay.visible = true
+	celebration_panel.visible = true
+	celebration_overlay.color = Color(0, 0, 0, 0)
+	celebration_panel.modulate.a = 0.0
+
+	# Animate in
+	if celebration_tween:
+		celebration_tween.kill()
+	celebration_tween = create_tween()
+	celebration_tween.set_parallel(true)
+	celebration_tween.tween_property(celebration_overlay, "color:a", 0.6, 0.4)
+	celebration_tween.tween_property(celebration_panel, "modulate:a", 1.0, 0.6)
+
+	# Auto-dismiss after 8 seconds if no key pressed
+	celebration_tween.set_parallel(false)
+	celebration_tween.tween_interval(8.0)
+	celebration_tween.tween_callback(_hide_celebration)
+
+	print("[HUD] Showing celebration for level %d" % level)
+
+
+## Hide level-up celebration UI.
+func _hide_celebration() -> void:
+	if not is_celebrating:
+		return
+
+	is_celebrating = false
+
+	if celebration_tween:
+		celebration_tween.kill()
+
+	# Animate out
+	celebration_tween = create_tween()
+	celebration_tween.set_parallel(true)
+	celebration_tween.tween_property(celebration_overlay, "color:a", 0.0, 0.3)
+	celebration_tween.tween_property(celebration_panel, "modulate:a", 0.0, 0.3)
+	celebration_tween.set_parallel(false)
+	celebration_tween.tween_callback(func():
+		celebration_overlay.visible = false
+		celebration_panel.visible = false
+	)
+
+
+func _input(event: InputEvent) -> void:
+	# Dismiss celebration on any key press
+	if is_celebrating and event is InputEventKey and event.pressed:
+		_hide_celebration()
 
 
 ## Fade the screen to black and back. Calls callback after fade out completes.

@@ -355,3 +355,80 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 color = Color(0, 0, 0, 0)
+
+[node name="CelebrationOverlay" type="ColorRect" parent="."]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0)
+
+[node name="CelebrationPanel" type="PanelContainer" parent="."]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -220.0
+offset_right = 300.0
+offset_bottom = 220.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel_bg")
+
+[node name="CelebrationVBox" type="VBoxContainer" parent="CelebrationPanel"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="CelebrationTitle" type="Label" parent="CelebrationPanel/CelebrationVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 64
+text = "CAMP LEVEL UP!"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="CelebrationPanel/CelebrationVBox"]
+layout_mode = 2
+
+[node name="CelebrationLevelName" type="Label" parent="CelebrationPanel/CelebrationVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 1, 0.6, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 48
+text = "Level 2: Functional Camp"
+horizontal_alignment = 1
+
+[node name="CelebrationDescription" type="Label" parent="CelebrationPanel/CelebrationVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 36
+text = "Ready for a longer stay"
+horizontal_alignment = 1
+
+[node name="HSeparator2" type="HSeparator" parent="CelebrationPanel/CelebrationVBox"]
+layout_mode = 2
+
+[node name="CelebrationUnlocks" type="Label" parent="CelebrationPanel/CelebrationVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.9, 1, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 32
+text = "New structures unlocked:
+  - Canvas Tent
+  - Herb Garden Plot"
+horizontal_alignment = 1
+
+[node name="CelebrationPrompt" type="Label" parent="CelebrationPanel/CelebrationVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 28
+text = "[Press any key to continue]"
+horizontal_alignment = 1

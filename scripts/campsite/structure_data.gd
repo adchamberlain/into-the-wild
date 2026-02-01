@@ -34,11 +34,50 @@ const STRUCTURES: Dictionary = {
 		"scene": "res://scenes/campsite/structures/crafting_bench.tscn",
 		"item_required": "crafting_bench_kit",
 		"category": "utility"
+	},
+	"drying_rack": {
+		"name": "Drying Rack",
+		"scene": "res://scenes/campsite/structures/drying_rack.tscn",
+		"item_required": "drying_rack_kit",
+		"category": "food"
+	},
+	"herb_garden": {
+		"name": "Herb Garden",
+		"scene": "res://scenes/campsite/structures/herb_garden.tscn",
+		"item_required": "garden_plot_kit",
+		"category": "food"
+	},
+	"canvas_tent": {
+		"name": "Canvas Tent",
+		"scene": "res://scenes/campsite/structures/canvas_tent.tscn",
+		"item_required": "canvas_tent_kit",
+		"provides_protection": true,
+		"protection_radius": 4.0,
+		"category": "shelter",
+		"min_camp_level": 2
+	},
+	"cabin": {
+		"name": "Log Cabin",
+		"scene": "res://scenes/campsite/structures/cabin.tscn",
+		"item_required": "cabin_kit",
+		"provides_protection": true,
+		"protection_radius": 8.0,
+		"category": "shelter",
+		"min_camp_level": 3
 	}
 }
 
 # Items that can be placed as structures
-const PLACEABLE_ITEMS: Array[String] = ["campfire_kit", "shelter_kit", "storage_box", "crafting_bench_kit"]
+const PLACEABLE_ITEMS: Array[String] = [
+	"campfire_kit",
+	"shelter_kit",
+	"storage_box",
+	"crafting_bench_kit",
+	"drying_rack_kit",
+	"garden_plot_kit",
+	"canvas_tent_kit",
+	"cabin_kit"
+]
 
 
 ## Get structure data by structure type.

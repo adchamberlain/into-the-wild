@@ -1,0 +1,143 @@
+extends StructureBase
+class_name CabinKitchen
+## Kitchen inside the cabin - advanced cooking station.
+
+signal food_cooked(recipe_name: String)
+
+# Kitchen cooking recipes (better than campfire)
+const KITCHEN_RECIPES: Dictionary = {
+	"hearty_stew": {
+		"name": "Hearty Stew",
+		"inputs": {"fish": 2, "herb": 1, "mushroom": 1},
+		"hunger_restore": 100.0,
+		"health_restore": 20.0
+	},
+	"preserved_meal": {
+		"name": "Preserved Meal",
+		"inputs": {"dried_fish": 2, "dried_berries": 1},
+		"hunger_restore": 80.0,
+		"health_restore": 0.0
+	},
+	"herb_tea": {
+		"name": "Herb Tea",
+		"inputs": {"herb": 2},
+		"hunger_restore": 10.0,
+		"health_restore": 30.0
+	},
+	"fish_dinner": {
+		"name": "Cooked Fish",
+		"inputs": {"fish": 1},
+		"hunger_restore": 40.0,
+		"health_restore": 0.0
+	},
+	"mushroom_soup": {
+		"name": "Mushroom Soup",
+		"inputs": {"mushroom": 2, "herb": 1},
+		"hunger_restore": 50.0,
+		"health_restore": 10.0
+	}
+}
+
+
+func _ready() -> void:
+	super._ready()
+	structure_type = "cabin_kitchen"
+	structure_name = "Kitchen"
+	interaction_text = "Cook"
+	# Kitchen is part of cabin, not a separate structure to track
+	remove_from_group("structure")
+
+
+func interact(player: Node) -> bool:
+	if not is_active:
+		return false
+
+	var player_inventory: Node = null
+	if player.has_method("get_inventory"):
+		player_inventory = player.get_inventory()
+
+	if not player_inventory:
+		return false
+
+	var player_stats: Node = null
+	if player.has_node("PlayerStats"):
+		player_stats = player.get_node("PlayerStats")
+
+	# Try to cook the best recipe we can make
+	var best_recipe: String = _find_best_recipe(player_inventory)
+
+	if best_recipe.is_empty():
+		print("[Kitchen] No ingredients for cooking. Need fish, herbs, or mushrooms.")
+		return true
+
+	# Cook the recipe
+	var recipe: Dictionary = KITCHEN_RECIPES[best_recipe]
+	var inputs: Dictionary = recipe.get("inputs", {})
+
+	# Consume ingredients
+	for item: String in inputs:
+		player_inventory.remove_item(item, inputs[item])
+
+	# Apply effects
+	var hunger_restore: float = recipe.get("hunger_restore", 0.0)
+	var health_restore: float = recipe.get("health_restore", 0.0)
+
+	if player_stats:
+		if health_restore > 0 and player_stats.has_method("heal"):
+			player_stats.heal(health_restore)
+		if hunger_restore > 0 and "hunger" in player_stats and "max_hunger" in player_stats:
+			player_stats.hunger = min(player_stats.hunger + hunger_restore, player_stats.max_hunger)
+			player_stats.hunger_changed.emit(player_stats.hunger, player_stats.max_hunger)
+
+	food_cooked.emit(recipe.get("name", best_recipe))
+	print("[Kitchen] Cooked %s! (+%.0f hunger, +%.0f health)" % [recipe.get("name"), hunger_restore, health_restore])
+
+	return true
+
+
+func _find_best_recipe(inventory: Node) -> String:
+	# Find the best recipe we can make (prioritize by hunger restore)
+	var best_recipe: String = ""
+	var best_hunger: float = 0.0
+
+	for recipe_id: String in KITCHEN_RECIPES:
+		var recipe: Dictionary = KITCHEN_RECIPES[recipe_id]
+		var inputs: Dictionary = recipe.get("inputs", {})
+		var can_make: bool = true
+
+		for item: String in inputs:
+			if not inventory.has_item(item, inputs[item]):
+				can_make = false
+				break
+
+		if can_make:
+			var hunger: float = recipe.get("hunger_restore", 0.0)
+			if hunger > best_hunger:
+				best_hunger = hunger
+				best_recipe = recipe_id
+
+	return best_recipe
+
+
+func get_interaction_text() -> String:
+	return "Cook at Kitchen"
+
+
+## Get available recipes as a list.
+func get_available_recipes(inventory: Node) -> Array[String]:
+	var available: Array[String] = []
+
+	for recipe_id: String in KITCHEN_RECIPES:
+		var recipe: Dictionary = KITCHEN_RECIPES[recipe_id]
+		var inputs: Dictionary = recipe.get("inputs", {})
+		var can_make: bool = true
+
+		for item: String in inputs:
+			if not inventory.has_item(item, inputs[item]):
+				can_make = false
+				break
+
+		if can_make:
+			available.append(recipe_id)
+
+	return available

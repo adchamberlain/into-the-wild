@@ -2374,6 +2374,105 @@ HUD
 
 ---
 
+## Session 25 - Campsite Progression Overhaul (2026-02-01)
+
+### What Was Built
+
+**Complete Campsite Level Progression System** - Redesigned levels with meaningful requirements, new structures, and celebration UI
+
+#### New Files Created
+
+```
+scripts/campsite/structure_drying_rack.gd     # Food preservation structure
+scripts/campsite/structure_garden.gd          # Herb garden with passive production
+scripts/campsite/structure_canvas_tent.gd     # Upgraded shelter (Level 2)
+scripts/campsite/structure_cabin.gd           # Log cabin with walkable interior (Level 3)
+scripts/campsite/cabin_bed.gd                 # Cabin interior - full rest/heal
+scripts/campsite/cabin_kitchen.gd             # Cabin interior - advanced cooking
+```
+
+#### Files Modified
+
+```
+scripts/campsite/campsite_manager.gd          # New level requirements, day tracking
+scripts/campsite/structure_data.gd            # Added all new structures
+scripts/campsite/placement_system.gd          # Programmatic creation of new structures
+scripts/crafting/crafting_system.gd           # New recipes, camp level gating
+scripts/ui/hud.gd                             # Celebration UI, dynamic placeable hints
+scenes/ui/hud.tscn                            # Celebration overlay and panel
+```
+
+#### Features Implemented
+
+1. **Revised Campsite Levels**
+
+| Level | Name | Requirements |
+|-------|------|--------------|
+| 1 | Survival Camp | None (starting) |
+| 2 | Functional Camp | Fire pit + Shelter + Crafting bench + Drying rack + Fishing rod crafted |
+| 3 | Wilderness Basecamp | Canvas tent + Storage + Herb garden + 6 structures + 3 days at Level 2 |
+
+2. **New Structures - Level 2**
+   - **Drying Rack**: Preserves food (fish → dried_fish, berries → dried_berries, etc.)
+   - **Herb Garden**: Produces 1 herb every 4 game hours, can be tended for bonus
+   - **Canvas Tent**: A-frame tent with better protection (50% weather reduction)
+
+3. **New Structure - Level 3: Log Cabin**
+   - 6x3x5 meter walkable interior with doorway
+   - **Cabin Bed**: Full health + full hunger restore when sleeping
+   - **Cabin Kitchen**: Advanced cooking with 5 recipes (hearty stew, preserved meal, herb tea, fish dinner, mushroom soup)
+   - Peaked roof, log walls with collision
+   - Protection area covers entire interior
+
+4. **Celebration UI System**
+   - Semi-transparent dark overlay when leveling up
+   - Animated panel with gold "CAMP LEVEL UP!" title
+   - Shows level name, description, and unlocked structures
+   - Auto-dismisses after 8 seconds or on any key press
+   - Smooth fade in/out animations
+
+5. **New Crafting Recipes**
+   - Drying Rack Kit: 6 branch + 2 rope (requires bench)
+   - Garden Plot Kit: 4 wood + 2 herb (requires bench)
+   - Canvas Tent Kit: 8 branch + 4 rope + 4 wood (requires bench, Level 2)
+   - Cabin Kit: 30 wood + 20 branch + 10 river_rock + 6 rope (requires bench, Level 3)
+
+6. **Camp Level Gating**
+   - Recipes can now require minimum camp level
+   - Canvas tent requires Level 2, Cabin requires Level 3
+   - `can_craft()` and `craft()` accept campsite_level parameter
+
+7. **Day Tracking for Level 3**
+   - CampsiteManager tracks days spent at Level 2
+   - Connects to TimeManager's day_changed signal
+   - Must survive 3 days at Level 2 to unlock Level 3
+
+#### Cabin Kitchen Recipes
+
+| Recipe | Ingredients | Hunger | Health |
+|--------|-------------|--------|--------|
+| Hearty Stew | 2 fish + 1 herb + 1 mushroom | 100 | 20 |
+| Preserved Meal | 2 dried_fish + 1 dried_berries | 80 | 0 |
+| Herb Tea | 2 herb | 10 | 30 |
+| Fish Dinner | 1 fish | 40 | 0 |
+| Mushroom Soup | 2 mushroom + 1 herb | 50 | 10 |
+
+#### Structure Visual Designs (Blocky Minecraft Style)
+
+**Drying Rack**: Two vertical posts with 3 horizontal bars, hanging food strips
+**Herb Garden**: Wooden border box with dirt fill and green plant blocks
+**Canvas Tent**: A-frame with two angled canvas panels, ridge pole, back wall
+**Log Cabin**: Full 4-wall structure with peaked roof, open doorway, interior furniture
+
+#### Technical Notes
+
+- Cabin interior uses seamless collision - player walks in through doorway
+- Bed and Kitchen are child nodes of Cabin, not separate tracked structures
+- Protection areas use Area3D for player detection
+- All new structures created programmatically (no .tscn files needed)
+
+---
+
 ## Next Session: Phase 8 - Polish & Content (Continued)
 
 ### Completed Features
@@ -2391,13 +2490,16 @@ HUD
 - ✅ Caught fish animation
 - ✅ Blocky Minecraft-style aesthetic (all meshes)
 - ✅ Background music system with 12 tracks
+- ✅ Campsite progression overhaul (3 meaningful levels)
+- ✅ Level-up celebration UI
+- ✅ Drying rack, herb garden, canvas tent structures
+- ✅ Log cabin with walkable interior, bed, and kitchen
 
 ### Planned Tasks
 1. Sound effects (footsteps, interactions, ambient)
-2. Additional structures (cooking grate, water collector)
-3. Level 3 campsite content
-4. Game balancing and polish
-5. Pixelated textures (optional enhancement)
+2. Game balancing and polish
+3. Pixelated textures (optional enhancement)
+4. Save/load for new progression flags
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.
