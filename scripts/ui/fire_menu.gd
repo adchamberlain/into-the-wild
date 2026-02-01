@@ -28,6 +28,10 @@ const COOKING_RECIPES: Dictionary = {
 
 var is_open: bool = false
 
+# Controller navigation
+var focused_button_index: int = 0
+var button_list: Array[Button] = []
+
 
 func _ready() -> void:
 	add_to_group("fire_menu")
@@ -57,10 +61,37 @@ func _ready() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if is_open and event is InputEventKey and event.pressed and not event.echo:
+	if not is_open:
+		return
+
+	# Close with Escape, E, or controller cancel button
+	if event is InputEventKey and event.pressed and not event.echo:
 		if event.physical_keycode == KEY_ESCAPE or event.physical_keycode == KEY_E:
 			close_menu()
 			get_viewport().set_input_as_handled()
+			return
+
+	# Controller/keyboard cancel
+	if event.is_action_pressed("ui_cancel"):
+		close_menu()
+		get_viewport().set_input_as_handled()
+		return
+
+	# D-pad navigation
+	if event.is_action_pressed("ui_down"):
+		_navigate_buttons(1)
+		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed("ui_up"):
+		_navigate_buttons(-1)
+		get_viewport().set_input_as_handled()
+		return
+
+	# Accept button to activate focused button
+	if event.is_action_pressed("ui_accept"):
+		_activate_focused_button()
+		get_viewport().set_input_as_handled()
+		return
 
 
 ## Open the fire menu for a specific fire pit.
@@ -71,7 +102,14 @@ func open_menu(fire: Node) -> void:
 
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 
+	# Set up button list for controller navigation
+	button_list = [warm_up_button, cook_button, add_fuel_button, close_button]
+	focused_button_index = 0
+
 	_refresh_menu()
+
+	# Focus first button for controller navigation
+	call_deferred("_focus_first_button")
 
 
 ## Close the fire menu.
@@ -221,3 +259,34 @@ func _find_hud() -> Node:
 	if root.has_node("Main/HUD"):
 		return root.get_node("Main/HUD")
 	return null
+
+
+## Focus the first button when menu opens.
+func _focus_first_button() -> void:
+	if button_list.size() > 0:
+		focused_button_index = 0
+		button_list[0].grab_focus()
+
+
+## Navigate through buttons with D-pad.
+func _navigate_buttons(direction: int) -> void:
+	if button_list.is_empty():
+		return
+
+	focused_button_index = (focused_button_index + direction) % button_list.size()
+	if focused_button_index < 0:
+		focused_button_index = button_list.size() - 1
+
+	var button: Button = button_list[focused_button_index]
+	button.grab_focus()
+
+
+## Activate the currently focused button.
+func _activate_focused_button() -> void:
+	if button_list.is_empty():
+		return
+
+	if focused_button_index >= 0 and focused_button_index < button_list.size():
+		var button: Button = button_list[focused_button_index]
+		if not button.disabled:
+			button.pressed.emit()

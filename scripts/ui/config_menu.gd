@@ -62,6 +62,11 @@ var selecting_slot_for_load: bool = false
 var slot_panel: PanelContainer
 var slot_buttons: Array[Button] = []
 
+# Controller navigation
+var focused_control_index: int = 0
+var focusable_controls: Array[Control] = []  # All navigable controls in order
+var focused_slot_index: int = 0  # For slot panel navigation
+
 
 func _ready() -> void:
 	# Get node references
@@ -153,6 +158,9 @@ func _init_ui() -> void:
 		save_load.save_failed.connect(_on_save_failed)
 		save_load.load_failed.connect(_on_load_failed)
 
+	# Build focusable controls list for controller navigation
+	_build_focusable_controls()
+
 	# Apply initial config
 	_apply_config()
 
@@ -238,11 +246,13 @@ func _create_slot_panel() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# Keyboard shortcuts
 	if event is InputEventKey and event.pressed:
 		# Toggle menu with Tab key
 		if event.physical_keycode == KEY_TAB:
 			toggle_menu()
 			get_viewport().set_input_as_handled()
+			return
 		# Escape to close slot panel or menu
 		elif event.physical_keycode == KEY_ESCAPE:
 			if slot_panel and slot_panel.visible:
@@ -251,14 +261,86 @@ func _input(event: InputEvent) -> void:
 			elif is_visible:
 				toggle_menu()
 				get_viewport().set_input_as_handled()
+			return
 		# Quick save with K (Keep)
 		elif event.physical_keycode == KEY_K:
 			_on_save_pressed()
 			get_viewport().set_input_as_handled()
+			return
 		# Quick load with L (Load)
 		elif event.physical_keycode == KEY_L:
 			_on_load_pressed()
 			get_viewport().set_input_as_handled()
+			return
+
+	# Controller: Open config menu with L3+R3 (both stick buttons)
+	if event is InputEventJoypadButton and event.pressed:
+		if event.button_index == JOY_BUTTON_LEFT_STICK:
+			if Input.is_joy_button_pressed(event.device, JOY_BUTTON_RIGHT_STICK):
+				toggle_menu()
+				get_viewport().set_input_as_handled()
+				return
+		elif event.button_index == JOY_BUTTON_RIGHT_STICK:
+			if Input.is_joy_button_pressed(event.device, JOY_BUTTON_LEFT_STICK):
+				toggle_menu()
+				get_viewport().set_input_as_handled()
+				return
+
+	# Only handle navigation when menu is open
+	if not is_visible:
+		return
+
+	# Handle slot panel navigation separately
+	if slot_panel and slot_panel.visible:
+		if event.is_action_pressed("ui_cancel"):
+			_hide_slot_panel()
+			get_viewport().set_input_as_handled()
+			return
+		if event.is_action_pressed("ui_down"):
+			_navigate_slot_buttons(1)
+			get_viewport().set_input_as_handled()
+			return
+		if event.is_action_pressed("ui_up"):
+			_navigate_slot_buttons(-1)
+			get_viewport().set_input_as_handled()
+			return
+		if event.is_action_pressed("ui_accept"):
+			_activate_focused_slot_button()
+			get_viewport().set_input_as_handled()
+			return
+		return
+
+	# Controller cancel to close menu
+	if event.is_action_pressed("ui_cancel"):
+		toggle_menu()
+		get_viewport().set_input_as_handled()
+		return
+
+	# D-pad navigation
+	if event.is_action_pressed("ui_down"):
+		_navigate_controls(1)
+		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed("ui_up"):
+		_navigate_controls(-1)
+		get_viewport().set_input_as_handled()
+		return
+
+	# Left/right to adjust sliders or toggle checkboxes
+	if event.is_action_pressed("ui_left"):
+		_adjust_focused_control(-1)
+		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed("ui_right"):
+		_adjust_focused_control(1)
+		get_viewport().set_input_as_handled()
+		return
+
+	# Accept to toggle checkbox or press button
+	if event.is_action_pressed("ui_accept"):
+		_activate_focused_control()
+		get_viewport().set_input_as_handled()
+		return
 
 
 func toggle_menu() -> void:
@@ -276,6 +358,9 @@ func toggle_menu() -> void:
 		if slot_panel and slot_panel.visible:
 			slot_panel.visible = false
 		panel.visible = true
+		# Focus first control for controller navigation
+		focused_control_index = 0
+		_update_control_focus()
 
 	# Handle mouse capture
 	if is_visible:
@@ -477,6 +562,10 @@ func _show_slot_panel() -> void:
 		slot_panel.visible = true
 		# Always show mouse cursor when slot panel is visible
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		# Focus first slot button for controller navigation
+		focused_slot_index = 0
+		if not slot_buttons.is_empty():
+			slot_buttons[0].grab_focus()
 
 
 ## Hide the slot selection panel.
@@ -531,3 +620,123 @@ func _show_save_status(message: String, color: Color) -> void:
 		save_status_label.visible = true
 		# Hide after 3 seconds
 		get_tree().create_timer(3.0).timeout.connect(func(): save_status_label.visible = false)
+
+
+# ============================================================================
+# Controller Navigation
+# ============================================================================
+
+## Build the list of focusable controls for controller navigation.
+func _build_focusable_controls() -> void:
+	focusable_controls.clear()
+
+	# Add controls in order they appear in the menu
+	if hunger_toggle:
+		focusable_controls.append(hunger_toggle)
+	if health_toggle:
+		focusable_controls.append(health_toggle)
+	if weather_damage_toggle:
+		focusable_controls.append(weather_damage_toggle)
+	if weather_toggle:
+		focusable_controls.append(weather_toggle)
+	if unlimited_fire_toggle:
+		focusable_controls.append(unlimited_fire_toggle)
+	if show_coordinates_toggle:
+		focusable_controls.append(show_coordinates_toggle)
+	if day_length_slider:
+		focusable_controls.append(day_length_slider)
+	if tree_respawn_slider:
+		focusable_controls.append(tree_respawn_slider)
+	if music_toggle:
+		focusable_controls.append(music_toggle)
+	if music_volume_slider:
+		focusable_controls.append(music_volume_slider)
+	if save_button:
+		focusable_controls.append(save_button)
+	if load_button:
+		focusable_controls.append(load_button)
+
+
+## Navigate through controls with D-pad.
+func _navigate_controls(direction: int) -> void:
+	if focusable_controls.is_empty():
+		return
+
+	focused_control_index = (focused_control_index + direction) % focusable_controls.size()
+	if focused_control_index < 0:
+		focused_control_index = focusable_controls.size() - 1
+
+	_update_control_focus()
+
+
+## Update focus on the current control.
+func _update_control_focus() -> void:
+	if focusable_controls.is_empty():
+		return
+
+	if focused_control_index >= 0 and focused_control_index < focusable_controls.size():
+		focusable_controls[focused_control_index].grab_focus()
+
+
+## Adjust the focused control (for sliders, use left/right to change value).
+func _adjust_focused_control(direction: int) -> void:
+	if focusable_controls.is_empty():
+		return
+
+	if focused_control_index < 0 or focused_control_index >= focusable_controls.size():
+		return
+
+	var control: Control = focusable_controls[focused_control_index]
+
+	if control is HSlider:
+		var slider: HSlider = control as HSlider
+		var step: float = (slider.max_value - slider.min_value) / 10.0  # 10 steps
+		slider.value += direction * step
+	elif control is CheckButton:
+		# Toggle checkbox with left/right too
+		var check: CheckButton = control as CheckButton
+		check.button_pressed = not check.button_pressed
+
+
+## Activate the focused control (toggle checkbox or press button).
+func _activate_focused_control() -> void:
+	if focusable_controls.is_empty():
+		return
+
+	if focused_control_index < 0 or focused_control_index >= focusable_controls.size():
+		return
+
+	var control: Control = focusable_controls[focused_control_index]
+
+	if control is CheckButton:
+		var check: CheckButton = control as CheckButton
+		check.button_pressed = not check.button_pressed
+	elif control is Button:
+		var button: Button = control as Button
+		if not button.disabled:
+			button.pressed.emit()
+
+
+# Slot panel navigation
+
+## Navigate slot buttons with D-pad.
+func _navigate_slot_buttons(direction: int) -> void:
+	if slot_buttons.is_empty():
+		return
+
+	focused_slot_index = (focused_slot_index + direction) % slot_buttons.size()
+	if focused_slot_index < 0:
+		focused_slot_index = slot_buttons.size() - 1
+
+	slot_buttons[focused_slot_index].grab_focus()
+
+
+## Activate the focused slot button.
+func _activate_focused_slot_button() -> void:
+	if slot_buttons.is_empty():
+		return
+
+	if focused_slot_index >= 0 and focused_slot_index < slot_buttons.size():
+		var button: Button = slot_buttons[focused_slot_index]
+		if not button.disabled:
+			button.pressed.emit()

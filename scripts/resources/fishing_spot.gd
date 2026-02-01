@@ -330,8 +330,11 @@ func _fish_bite() -> void:
 		var line_pos := Vector3(0, pond_height - 0.1, -0.5)  # Near where line would be
 		fish_targets[0] = line_pos
 
-	print("[FishingSpot] A fish is biting! Press E quickly!")
-	_show_notification("Fish on the line! Press E!", Color(0.4, 0.8, 1.0))
+	var button_prompt: String = "E"
+	if InputManager:
+		button_prompt = InputManager.get_prompt("interact")
+	print("[FishingSpot] A fish is biting! Press %s quickly!" % button_prompt)
+	_show_notification("Fish on the line! Press %s!" % button_prompt, Color(0.4, 0.8, 1.0))
 
 
 func _attempt_catch() -> void:

@@ -8,6 +8,7 @@ const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 @export var campsite_manager_path: NodePath
 
 @onready var panel: PanelContainer = $Panel
+@onready var scroll_container: ScrollContainer = $Panel/MarginContainer/VBoxContainer/ScrollContainer
 @onready var recipe_list: VBoxContainer = $Panel/MarginContainer/VBoxContainer/ScrollContainer/RecipeList
 @onready var title_label: Label = $Panel/MarginContainer/VBoxContainer/TitleLabel
 
@@ -237,6 +238,8 @@ func _do_focus_first_recipe() -> void:
 	if not recipe_button_list.is_empty():
 		focused_recipe_index = 0
 		recipe_button_list[0].grab_focus()
+		# Reset scroll to top when opening menu
+		scroll_container.scroll_vertical = 0
 
 
 ## Navigate through recipe list with D-pad.
@@ -248,9 +251,12 @@ func _navigate_recipes(direction: int) -> void:
 	if focused_recipe_index < 0:
 		focused_recipe_index = recipe_button_list.size() - 1
 
-	# Focus the button (this also scrolls it into view)
+	# Focus the button and scroll it into view
 	var button: Button = recipe_button_list[focused_recipe_index]
 	button.grab_focus()
+	# Manually scroll to the button's parent panel since button is nested
+	var item_panel: Control = button.get_parent().get_parent()
+	scroll_container.ensure_control_visible(item_panel)
 
 
 ## Craft the currently focused recipe.

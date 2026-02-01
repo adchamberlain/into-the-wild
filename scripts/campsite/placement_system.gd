@@ -17,6 +17,7 @@ var is_placing: bool = false
 var current_structure_type: String = ""
 var current_item_type: String = ""
 var is_valid_placement: bool = false
+var ignore_first_confirm: bool = false  # Ignore the R2 press that started placement mode
 
 # Performance: throttle validation checks
 const VALIDATION_INTERVAL: float = 0.1  # Check 10x/sec instead of every frame
@@ -72,6 +73,10 @@ func _input(event: InputEvent) -> void:
 
 	# Handle action-based input (controller support)
 	if event.is_action_pressed("use_equipped"):
+		# Ignore the R2 press that started placement mode (same input event)
+		if ignore_first_confirm:
+			ignore_first_confirm = false
+			return
 		if is_valid_placement:
 			_confirm_placement()
 		else:
@@ -105,6 +110,7 @@ func start_placement(item_type: String) -> bool:
 		return false
 
 	is_placing = true
+	ignore_first_confirm = true  # Ignore the R2 press that triggered this
 	placement_started.emit(structure_type)
 	print("[PlacementSystem] Started placement mode for %s" % structure_type)
 	print("[PlacementSystem] Press R to place, Q to cancel")
@@ -118,6 +124,7 @@ func cancel_placement() -> void:
 
 	_destroy_preview()
 	is_placing = false
+	ignore_first_confirm = false
 	current_structure_type = ""
 	current_item_type = ""
 

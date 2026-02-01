@@ -19,6 +19,12 @@ var current_storage: Node = null  # The storage structure we're interacting with
 
 var is_open: bool = false
 
+# Controller navigation
+var focused_panel: int = 0  # 0 = player, 1 = storage
+var focused_item_index: int = 0
+var player_buttons: Array[Button] = []
+var storage_buttons: Array[Button] = []
+
 
 func _ready() -> void:
 	# Add to group for easy lookup
@@ -36,11 +42,47 @@ func _ready() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if not is_open:
+		return
+
 	# Close with Escape or E when open
-	if is_open and event is InputEventKey and event.pressed and not event.echo:
+	if event is InputEventKey and event.pressed and not event.echo:
 		if event.physical_keycode == KEY_ESCAPE or event.physical_keycode == KEY_E:
 			close_storage()
 			get_viewport().set_input_as_handled()
+			return
+
+	# Controller cancel to close
+	if event.is_action_pressed("ui_cancel"):
+		close_storage()
+		get_viewport().set_input_as_handled()
+		return
+
+	# D-pad up/down to navigate items
+	if event.is_action_pressed("ui_down"):
+		_navigate_items(1)
+		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed("ui_up"):
+		_navigate_items(-1)
+		get_viewport().set_input_as_handled()
+		return
+
+	# D-pad left/right to switch between player and storage panels
+	if event.is_action_pressed("ui_left"):
+		_switch_panel(0)  # Player panel
+		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed("ui_right"):
+		_switch_panel(1)  # Storage panel
+		get_viewport().set_input_as_handled()
+		return
+
+	# Cross button to transfer focused item
+	if event.is_action_pressed("ui_accept"):
+		_transfer_focused_item()
+		get_viewport().set_input_as_handled()
+		return
 
 
 ## Open storage UI for a specific storage container.
@@ -51,6 +93,10 @@ func open_storage(storage: Node) -> void:
 	current_storage = storage
 	is_open = true
 	panel.visible = true
+
+	# Reset controller navigation state
+	focused_panel = 0
+	focused_item_index = 0
 
 	# Show cursor
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
@@ -64,6 +110,7 @@ func open_storage(storage: Node) -> void:
 		player_inventory.inventory_changed.connect(_refresh_lists)
 
 	_refresh_lists()
+	_update_focus_highlight()
 	print("[StorageUI] Opened storage")
 
 
@@ -100,6 +147,7 @@ func _refresh_player_list() -> void:
 	for child in player_items_list.get_children():
 		if child != player_empty_label:
 			child.queue_free()
+	player_buttons.clear()
 
 	if not player_inventory:
 		player_empty_label.visible = true
@@ -119,6 +167,7 @@ func _refresh_storage_list() -> void:
 	for child in storage_items_list.get_children():
 		if child != storage_empty_label:
 			child.queue_free()
+	storage_buttons.clear()
 
 	if not current_storage:
 		storage_empty_label.visible = true
@@ -154,7 +203,14 @@ func _create_item_button(parent: VBoxContainer, item_type: String, count: int, i
 	button.add_theme_font_size_override("font_size", 24)
 	button.tooltip_text = "Move to Storage" if is_player_item else "Take from Storage"
 	button.pressed.connect(_on_transfer_pressed.bind(item_type, is_player_item))
+	button.focus_mode = Control.FOCUS_ALL
 	container.add_child(button)
+
+	# Track button for controller navigation
+	if is_player_item:
+		player_buttons.append(button)
+	else:
+		storage_buttons.append(button)
 
 	# Transfer all button
 	var all_button: Button = Button.new()
@@ -198,3 +254,50 @@ func _on_transfer_all_pressed(item_type: String, from_player: bool) -> void:
 			if count > 0:
 				current_storage.remove_item(item_type, count)
 				player_inventory.add_item(item_type, count)
+
+
+## Navigate items with D-pad up/down.
+func _navigate_items(direction: int) -> void:
+	var current_buttons: Array[Button] = player_buttons if focused_panel == 0 else storage_buttons
+	if current_buttons.is_empty():
+		return
+
+	focused_item_index = (focused_item_index + direction) % current_buttons.size()
+	if focused_item_index < 0:
+		focused_item_index = current_buttons.size() - 1
+
+	_update_focus_highlight()
+
+
+## Switch between player and storage panels with D-pad left/right.
+func _switch_panel(panel_index: int) -> void:
+	focused_panel = panel_index
+	focused_item_index = 0
+	_update_focus_highlight()
+
+
+## Update visual focus on the current button.
+func _update_focus_highlight() -> void:
+	var current_buttons: Array[Button] = player_buttons if focused_panel == 0 else storage_buttons
+	if current_buttons.is_empty():
+		return
+
+	# Clamp index to valid range
+	if focused_item_index >= current_buttons.size():
+		focused_item_index = current_buttons.size() - 1
+	if focused_item_index < 0:
+		focused_item_index = 0
+
+	# Focus the button
+	if focused_item_index < current_buttons.size():
+		current_buttons[focused_item_index].grab_focus()
+
+
+## Transfer the focused item.
+func _transfer_focused_item() -> void:
+	var current_buttons: Array[Button] = player_buttons if focused_panel == 0 else storage_buttons
+	if current_buttons.is_empty():
+		return
+
+	if focused_item_index >= 0 and focused_item_index < current_buttons.size():
+		current_buttons[focused_item_index].pressed.emit()

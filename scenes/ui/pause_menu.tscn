@@ -75,6 +75,14 @@ theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 40
 text = "Resume"
 
+[node name="SaveButton" type="Button" parent="Panel/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
+theme_override_colors/font_hover_color = Color(0.6, 1, 0.6, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 40
+text = "Save Game"
+
 [node name="CreditsButton" type="Button" parent="Panel/VBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
