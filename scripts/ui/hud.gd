@@ -1,6 +1,9 @@
 extends CanvasLayer
 ## Heads-up display showing time, stats, interaction prompts, inventory, equipment, and other info.
 
+# Preload the HUD font
+const HUD_FONT: Font = preload("res://resources/hud_font.tres")
+
 @export var time_manager_path: NodePath
 @export var player_path: NodePath
 @export var campsite_manager_path: NodePath
@@ -8,18 +11,18 @@ extends CanvasLayer
 @export var save_load_path: NodePath
 
 # Time display
-@onready var time_label: Label = $TimeContainer/TimeLabel
-@onready var period_label: Label = $TimeContainer/PeriodLabel
-@onready var campsite_level_label: Label = $TimeContainer/CampsiteLevelLabel
-@onready var weather_label: Label = $TimeContainer/WeatherLabel
-@onready var protection_label: Label = $TimeContainer/ProtectionLabel
+@onready var time_label: Label = $TimePanel/TimeContainer/TimeLabel
+@onready var period_label: Label = $TimePanel/TimeContainer/PeriodLabel
+@onready var campsite_level_label: Label = $TimePanel/TimeContainer/CampsiteLevelLabel
+@onready var weather_label: Label = $TimePanel/TimeContainer/WeatherLabel
+@onready var protection_label: Label = $TimePanel/TimeContainer/ProtectionLabel
 
 # Interaction
 @onready var interaction_prompt: Label = $InteractionPrompt
 
 # Stats bars
-@onready var health_bar: ProgressBar = $StatsContainer/HealthContainer/HealthBar
-@onready var hunger_bar: ProgressBar = $StatsContainer/HungerContainer/HungerBar
+@onready var health_bar: ProgressBar = $StatsPanel/StatsContainer/HealthContainer/HealthBar
+@onready var hunger_bar: ProgressBar = $StatsPanel/StatsContainer/HungerContainer/HungerBar
 
 # Inventory
 @onready var inventory_panel: PanelContainer = $InventoryPanel
@@ -27,8 +30,8 @@ extends CanvasLayer
 @onready var empty_label: Label = $InventoryPanel/VBoxContainer/ItemList/EmptyLabel
 
 # Equipment
-@onready var equipped_label: Label = $EquippedContainer/EquippedLabel
-@onready var durability_bar: ProgressBar = $EquippedContainer/DurabilityBar
+@onready var equipped_label: Label = $EquippedPanel/EquippedContainer/EquippedLabel
+@onready var durability_bar: ProgressBar = $EquippedPanel/EquippedContainer/DurabilityBar
 
 # Notification
 @onready var notification_label: Label = $NotificationLabel
@@ -37,7 +40,7 @@ extends CanvasLayer
 @onready var fade_overlay: ColorRect = $FadeOverlay
 
 # Coordinates display
-@onready var coordinates_label: Label = $CoordinatesLabel
+@onready var coordinates_label: Label = $StatsPanel/StatsContainer/CoordinatesLabel
 
 # Config for coordinates visibility
 var show_coordinates: bool = true
@@ -282,7 +285,8 @@ func _update_inventory_display() -> void:
 			# Create new label
 			var label: Label = Label.new()
 			label.text = "%s: %d" % [display_name, count]
-			label.add_theme_font_size_override("font_size", 36)
+			label.add_theme_font_override("font", HUD_FONT)
+			label.add_theme_font_size_override("font_size", 40)
 			label.add_theme_color_override("font_color", Color(1, 1, 1, 1))
 			item_list.add_child(label)
 			item_labels[resource_type] = label

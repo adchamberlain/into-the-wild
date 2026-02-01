@@ -1,0 +1,7 @@
+[gd_resource type="SystemFont" format=3 uid="uid://hud_mono_font"]
+
+[resource]
+font_names = PackedStringArray("SF Mono", "SFMono-Regular", "Menlo", "Monaco", "JetBrains Mono", "Consolas", "Courier New")
+antialiasing = 1
+hinting = 1
+subpixel_positioning = 1

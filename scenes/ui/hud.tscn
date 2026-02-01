@@ -1,70 +1,120 @@
-[gd_scene load_steps=5 format=3 uid="uid://hud001"]
+[gd_scene load_steps=13 format=3 uid="uid://hud001"]
 
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
+[ext_resource type="FontFile" uid="uid://hud_mono_font" path="res://resources/hud_font.tres" id="2_font"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health_bg"]
 bg_color = Color(0.3, 0.1, 0.1, 0.8)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health_fill"]
 bg_color = Color(0.8, 0.2, 0.2, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hunger_bg"]
 bg_color = Color(0.25, 0.2, 0.1, 0.8)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hunger_fill"]
 bg_color = Color(0.85, 0.6, 0.2, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_durability_bg"]
 bg_color = Color(0.2, 0.2, 0.25, 0.8)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_durability_fill"]
 bg_color = Color(0.4, 0.7, 0.9, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel_bg"]
+bg_color = Color(0.1, 0.1, 0.12, 0.8)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+content_margin_left = 16.0
+content_margin_top = 12.0
+content_margin_right = 16.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_time_panel_bg"]
+bg_color = Color(0.1, 0.1, 0.12, 0.8)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+content_margin_left = 20.0
+content_margin_top = 14.0
+content_margin_right = 20.0
+content_margin_bottom = 14.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_equipped_panel_bg"]
+bg_color = Color(0.1, 0.1, 0.12, 0.8)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+content_margin_left = 16.0
+content_margin_top = 12.0
+content_margin_right = 16.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_inventory_panel_bg"]
+bg_color = Color(0.1, 0.1, 0.12, 0.85)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+content_margin_left = 18.0
+content_margin_top = 14.0
+content_margin_right = 18.0
+content_margin_bottom = 14.0
 
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1_hud")
 
-[node name="StatsContainer" type="VBoxContainer" parent="."]
+[node name="StatsPanel" type="PanelContainer" parent="."]
 anchors_preset = 0
-offset_left = 30.0
-offset_top = 30.0
-offset_right = 380.0
-offset_bottom = 150.0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 420.0
+offset_bottom = 180.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel_bg")
 
-[node name="HealthContainer" type="HBoxContainer" parent="StatsContainer"]
+[node name="StatsContainer" type="VBoxContainer" parent="StatsPanel"]
 layout_mode = 2
 
-[node name="HealthLabel" type="Label" parent="StatsContainer/HealthContainer"]
+[node name="HealthContainer" type="HBoxContainer" parent="StatsPanel/StatsContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.4, 0.4, 1)
-theme_override_font_sizes/font_size = 32
+
+[node name="HealthLabel" type="Label" parent="StatsPanel/StatsContainer/HealthContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.5, 0.5, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 40
 text = "HP"
 
-[node name="HealthBar" type="ProgressBar" parent="StatsContainer/HealthContainer"]
-custom_minimum_size = Vector2(280, 35)
+[node name="HealthBar" type="ProgressBar" parent="StatsPanel/StatsContainer/HealthContainer"]
+custom_minimum_size = Vector2(280, 40)
 layout_mode = 2
 theme_override_styles/background = SubResource("StyleBoxFlat_health_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_health_fill")
@@ -72,17 +122,18 @@ max_value = 100.0
 value = 100.0
 show_percentage = false
 
-[node name="HungerContainer" type="HBoxContainer" parent="StatsContainer"]
+[node name="HungerContainer" type="HBoxContainer" parent="StatsPanel/StatsContainer"]
 layout_mode = 2
 
-[node name="HungerLabel" type="Label" parent="StatsContainer/HungerContainer"]
+[node name="HungerLabel" type="Label" parent="StatsPanel/StatsContainer/HungerContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.75, 0.4, 1)
-theme_override_font_sizes/font_size = 32
+theme_override_colors/font_color = Color(1, 0.8, 0.5, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 40
 text = "FD"
 
-[node name="HungerBar" type="ProgressBar" parent="StatsContainer/HungerContainer"]
-custom_minimum_size = Vector2(280, 35)
+[node name="HungerBar" type="ProgressBar" parent="StatsPanel/StatsContainer/HungerContainer"]
+custom_minimum_size = Vector2(280, 40)
 layout_mode = 2
 theme_override_styles/background = SubResource("StyleBoxFlat_hunger_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_hunger_fill")
@@ -90,46 +141,64 @@ max_value = 100.0
 value = 100.0
 show_percentage = false
 
-[node name="TimeContainer" type="VBoxContainer" parent="."]
+[node name="CoordinatesLabel" type="Label" parent="StatsPanel/StatsContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.75, 0.75, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 32
+text = "X: 0  Y: 0  Z: 0"
+
+[node name="TimePanel" type="PanelContainer" parent="."]
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -280.0
-offset_top = 30.0
-offset_right = -30.0
-offset_bottom = 140.0
+offset_left = -380.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = 280.0
 grow_horizontal = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_time_panel_bg")
 
-[node name="TimeLabel" type="Label" parent="TimeContainer"]
+[node name="TimeContainer" type="VBoxContainer" parent="TimePanel"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 48
+
+[node name="TimeLabel" type="Label" parent="TimePanel/TimeContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 56
 text = "8:00 AM"
 horizontal_alignment = 2
 
-[node name="PeriodLabel" type="Label" parent="TimeContainer"]
+[node name="PeriodLabel" type="Label" parent="TimePanel/TimeContainer"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 32
+theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 40
 text = "Morning"
 horizontal_alignment = 2
 
-[node name="CampsiteLevelLabel" type="Label" parent="TimeContainer"]
+[node name="CampsiteLevelLabel" type="Label" parent="TimePanel/TimeContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.6, 0.9, 0.6, 1)
-theme_override_font_sizes/font_size = 28
+theme_override_colors/font_color = Color(0.6, 0.95, 0.6, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 40
 text = "Camp Lvl 1"
 horizontal_alignment = 2
 
-[node name="WeatherLabel" type="Label" parent="TimeContainer"]
+[node name="WeatherLabel" type="Label" parent="TimePanel/TimeContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.7, 0.85, 1.0, 1)
-theme_override_font_sizes/font_size = 28
+theme_override_colors/font_color = Color(0.75, 0.88, 1.0, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 40
 text = "Weather: Clear"
 horizontal_alignment = 2
 
-[node name="ProtectionLabel" type="Label" parent="TimeContainer"]
+[node name="ProtectionLabel" type="Label" parent="TimePanel/TimeContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
-theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 40
 text = "Exposed"
 horizontal_alignment = 2
 
@@ -139,17 +208,18 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -25.0
-offset_top = -25.0
-offset_right = 25.0
-offset_bottom = 25.0
+offset_left = -30.0
+offset_top = -30.0
+offset_right = 30.0
+offset_bottom = 30.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_colors/font_color = Color(1, 1, 1, 0.8)
 theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.5)
-theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 1
-theme_override_font_sizes/font_size = 32
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 40
 text = "+"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -160,17 +230,18 @@ anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -250.0
-offset_top = -120.0
-offset_right = 250.0
-offset_bottom = -60.0
+offset_left = -400.0
+offset_top = -100.0
+offset_right = 400.0
+offset_bottom = -40.0
 grow_horizontal = 2
 grow_vertical = 0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.7)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.8)
 theme_override_constants/shadow_offset_x = 3
 theme_override_constants/shadow_offset_y = 3
-theme_override_font_sizes/font_size = 48
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 44
 text = "[E] Gather Branch"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -179,19 +250,21 @@ vertical_alignment = 1
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
-offset_left = 30.0
-offset_top = -400.0
+offset_left = 20.0
+offset_top = -420.0
 offset_right = 400.0
-offset_bottom = -30.0
+offset_bottom = -20.0
 grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_inventory_panel_bg")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="InventoryPanel"]
 layout_mode = 2
 
 [node name="InventoryTitle" type="Label" parent="InventoryPanel/VBoxContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 0.8, 1)
-theme_override_font_sizes/font_size = 42
+theme_override_colors/font_color = Color(1, 1, 0.85, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 44
 text = "Inventory"
 
 [node name="Separator" type="HSeparator" parent="InventoryPanel/VBoxContainer"]
@@ -202,36 +275,39 @@ layout_mode = 2
 
 [node name="EmptyLabel" type="Label" parent="InventoryPanel/VBoxContainer/ItemList"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
-theme_override_font_sizes/font_size = 36
+theme_override_colors/font_color = Color(0.65, 0.65, 0.65, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 40
 text = "(empty)"
 
-[node name="EquippedContainer" type="VBoxContainer" parent="."]
+[node name="EquippedPanel" type="PanelContainer" parent="."]
 anchors_preset = 3
 anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -350.0
-offset_top = -120.0
-offset_right = -30.0
-offset_bottom = -30.0
+offset_left = -460.0
+offset_top = -160.0
+offset_right = -20.0
+offset_bottom = -20.0
 grow_horizontal = 0
 grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_equipped_panel_bg")
 
-[node name="EquippedLabel" type="Label" parent="EquippedContainer"]
+[node name="EquippedContainer" type="VBoxContainer" parent="EquippedPanel"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.8, 0.9, 1, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.7)
-theme_override_constants/shadow_offset_x = 2
-theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 32
+
+[node name="EquippedLabel" type="Label" parent="EquippedPanel/EquippedContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.92, 1, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 40
 text = "Equipped: None"
 horizontal_alignment = 2
 
-[node name="DurabilityBar" type="ProgressBar" parent="EquippedContainer"]
+[node name="DurabilityBar" type="ProgressBar" parent="EquippedPanel/EquippedContainer"]
 visible = false
-custom_minimum_size = Vector2(200, 20)
+custom_minimum_size = Vector2(240, 24)
 layout_mode = 2
 size_flags_horizontal = 8
 theme_override_styles/background = SubResource("StyleBoxFlat_durability_bg")
@@ -240,11 +316,12 @@ max_value = 150.0
 value = 150.0
 show_percentage = false
 
-[node name="EquipHintLabel" type="Label" parent="EquippedContainer"]
+[node name="EquipHintLabel" type="Label" parent="EquippedPanel/EquippedContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
-theme_override_font_sizes/font_size = 24
-text = "I-Equip  C-Craft  Tab-Config  K-Save  L-Load"
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 32
+text = "I-Equip C-Craft Tab-Config K-Save L-Load"
 horizontal_alignment = 2
 
 [node name="NotificationLabel" type="Label" parent="."]
@@ -252,31 +329,22 @@ visible = false
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -200.0
+offset_left = -300.0
 offset_top = 100.0
-offset_right = 200.0
-offset_bottom = 150.0
+offset_right = 300.0
+offset_bottom = 180.0
 grow_horizontal = 2
-theme_override_colors/font_color = Color(0.4, 1, 0.4, 1)
+theme_override_colors/font_color = Color(0.5, 1, 0.5, 1)
 theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.8)
-theme_override_constants/shadow_offset_x = 2
-theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 36
+theme_override_constants/shadow_offset_x = 3
+theme_override_constants/shadow_offset_y = 3
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 44
 text = "Game Saved!"
 horizontal_alignment = 1
 
 [node name="CoordinatesLabel" type="Label" parent="."]
-anchors_preset = 0
-offset_left = 30.0
-offset_top = 160.0
-offset_right = 380.0
-offset_bottom = 200.0
-theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 0.8)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.5)
-theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 1
-theme_override_font_sizes/font_size = 24
-text = "X: 0  Y: 0  Z: 0"
+visible = false
 
 [node name="FadeOverlay" type="ColorRect" parent="."]
 visible = false

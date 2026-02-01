@@ -3,6 +3,7 @@ extends Node
 
 signal time_changed(hour: int, minute: int)
 signal period_changed(period: String)
+signal day_changed(day: int)
 
 enum TimePeriod { DAWN, MORNING, AFTERNOON, EVENING, DUSK, NIGHT }
 
@@ -13,6 +14,7 @@ enum TimePeriod { DAWN, MORNING, AFTERNOON, EVENING, DUSK, NIGHT }
 # Current time state
 var current_hour: int = 8
 var current_minute: int = 0
+var current_day: int = 1  # Day counter (starts at 1)
 var current_period: TimePeriod = TimePeriod.MORNING
 
 # Internal tracking
@@ -43,6 +45,8 @@ func _advance_minute() -> void:
 
 		if current_hour >= 24:
 			current_hour = 0
+			current_day += 1
+			day_changed.emit(current_day)
 
 	time_changed.emit(current_hour, current_minute)
 	_update_period()
@@ -109,3 +113,12 @@ func get_sun_angle() -> float:
 
 func is_daytime() -> bool:
 	return current_hour >= 6 and current_hour < 20
+
+
+func get_current_day() -> int:
+	return current_day
+
+
+func set_day(day: int) -> void:
+	current_day = day
+	day_changed.emit(current_day)

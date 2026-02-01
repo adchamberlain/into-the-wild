@@ -9,13 +9,34 @@ extends WorldEnvironment
 # Night sky elements
 var stars_particles: GPUParticles3D
 var moon_mesh: MeshInstance3D
+var moon_shadow: MeshInstance3D  # Shadow overlay for moon phases
 var moon_light: DirectionalLight3D
 var stars_container: Node3D
 
-# Night sky settings
+# Sun mesh
+var sun_mesh: MeshInstance3D
+var sun_container: Node3D
+
+# Moon phase tracking
+var current_moon_phase: int = 0  # 0-7, 0 = Full Moon
+const LUNAR_CYCLE_DAYS: int = 8  # 8 phases, 1 day each
+const MOON_PHASES: Array[String] = [
+	"Full Moon",
+	"Waning Gibbous",
+	"Last Quarter",
+	"Waning Crescent",
+	"New Moon",
+	"Waxing Crescent",
+	"First Quarter",
+	"Waxing Gibbous"
+]
+
+# Sky settings
 @export var star_count: int = 800
-@export var moon_size: float = 3.0
-@export var moon_distance: float = 200.0
+@export var moon_size: float = 8.0
+@export var moon_distance: float = 300.0
+@export var sun_size: float = 12.0
+@export var sun_distance: float = 350.0
 
 # Color settings for different times
 var sky_colors: Dictionary = {
@@ -82,12 +103,15 @@ func _ready() -> void:
 	if time_manager_path:
 		time_manager = get_node(time_manager_path)
 		time_manager.time_changed.connect(_on_time_changed)
+		if time_manager.has_signal("day_changed"):
+			time_manager.day_changed.connect(_on_day_changed)
 
 	if sun_light_path:
 		sun_light = get_node(sun_light_path)
 
 	_setup_environment()
 	_setup_night_sky()
+	_update_moon_phase()  # Set initial moon phase
 
 
 func _setup_environment() -> void:
@@ -98,8 +122,9 @@ func _setup_environment() -> void:
 	sky_material.sky_horizon_color = day_color.lightened(0.2)
 	sky_material.ground_bottom_color = Color(0.2, 0.2, 0.2)
 	sky_material.ground_horizon_color = day_color.lightened(0.3)
-	sky_material.sun_angle_max = 30.0
-	sky_material.sun_curve = 0.15
+	# Disable procedural sun disc (DirectionalLight3D provides actual sun lighting)
+	sky_material.sun_angle_max = 0.0
+	sky_material.sun_curve = 0.0
 
 	var sky: Sky = Sky.new()
 	sky.sky_material = sky_material
@@ -127,7 +152,8 @@ func _setup_night_sky() -> void:
 
 	_setup_stars()
 	_setup_moon()
-	print("[EnvironmentManager] Night sky initialized")
+	_setup_sun()
+	print("[EnvironmentManager] Sky elements initialized")
 
 
 func _setup_stars() -> void:
@@ -180,24 +206,43 @@ func _setup_moon() -> void:
 	moon_mesh = MeshInstance3D.new()
 	moon_mesh.name = "Moon"
 
-	# Create blocky box mesh for moon
+	# Create blocky box mesh for moon (flat square, Minecraft-style)
 	var box := BoxMesh.new()
-	box.size = Vector3(moon_size * 2, moon_size * 2, moon_size * 0.5)  # Flat square
+	box.size = Vector3(moon_size, moon_size, moon_size * 0.15)  # Flat square
 	moon_mesh.mesh = box
 
-	# Moon material (pale yellow-white, slightly emissive)
+	# Moon material (pale yellow-white, unshaded for consistent look)
 	var moon_material := StandardMaterial3D.new()
-	moon_material.albedo_color = Color(0.95, 0.93, 0.85)
+	moon_material.albedo_color = Color(0.95, 0.95, 0.88)
 	moon_material.emission_enabled = true
-	moon_material.emission = Color(0.9, 0.88, 0.8)
-	moon_material.emission_energy_multiplier = 0.5
+	moon_material.emission = Color(0.85, 0.85, 0.75)
+	moon_material.emission_energy_multiplier = 1.0
 	moon_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	moon_mesh.material_override = moon_material
 
 	# Position moon at distance
 	moon_mesh.position = Vector3(0, moon_distance * 0.7, -moon_distance * 0.7)
+	moon_mesh.visible = false  # Start hidden, shown at night
 
 	stars_container.add_child(moon_mesh)
+
+	# Create shadow overlay for moon phases
+	moon_shadow = MeshInstance3D.new()
+	moon_shadow.name = "MoonShadow"
+
+	var shadow_box := BoxMesh.new()
+	shadow_box.size = Vector3(moon_size * 0.55, moon_size * 1.05, moon_size * 0.2)
+	moon_shadow.mesh = shadow_box
+
+	# Dark material for shadow (matches night sky)
+	var shadow_material := StandardMaterial3D.new()
+	shadow_material.albedo_color = Color(0.05, 0.05, 0.12, 1.0)
+	shadow_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	moon_shadow.material_override = shadow_material
+	moon_shadow.visible = false
+
+	# Shadow is child of moon so it moves with it
+	moon_mesh.add_child(moon_shadow)
 
 	# Add subtle moon light
 	moon_light = DirectionalLight3D.new()
@@ -208,9 +253,42 @@ func _setup_moon() -> void:
 	add_child(moon_light)
 
 
+func _setup_sun() -> void:
+	# Create container for sun (follows camera like stars)
+	sun_container = Node3D.new()
+	sun_container.name = "SunContainer"
+	add_child(sun_container)
+
+	sun_mesh = MeshInstance3D.new()
+	sun_mesh.name = "Sun"
+
+	# Create blocky box mesh for sun (flat square, Minecraft-style)
+	var box := BoxMesh.new()
+	box.size = Vector3(sun_size, sun_size, sun_size * 0.2)  # Flat square
+	sun_mesh.mesh = box
+
+	# Sun material (bright yellow-white, unshaded and emissive)
+	var sun_material := StandardMaterial3D.new()
+	sun_material.albedo_color = Color(1.0, 0.95, 0.7)
+	sun_material.emission_enabled = true
+	sun_material.emission = Color(1.0, 0.9, 0.6)
+	sun_material.emission_energy_multiplier = 2.0
+	sun_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	sun_mesh.material_override = sun_material
+
+	# Initial position (will be updated based on time)
+	sun_mesh.position = Vector3(0, sun_distance, 0)
+
+	sun_container.add_child(sun_mesh)
+
+
 func _on_time_changed(hour: int, minute: int) -> void:
 	_update_environment()
 	_update_night_sky()
+
+
+func _on_day_changed(day: int) -> void:
+	_update_moon_phase()
 
 
 func _update_environment() -> void:
@@ -263,7 +341,7 @@ func _update_environment() -> void:
 	var ambient_color: Color = from_ambient.lerp(to_ambient, blend)
 	environment.ambient_light_color = ambient_color
 
-	# Update sun
+	# Update sun light
 	if sun_light:
 		var from_sun: Color = sun_colors[from_key]
 		var to_sun: Color = sun_colors[to_key]
@@ -278,6 +356,107 @@ func _update_environment() -> void:
 		# Rotate sun based on time
 		var sun_angle: float = time_manager.get_sun_angle()
 		sun_light.rotation.x = -sun_angle + PI / 2  # Overhead at noon
+
+	# Update blocky sun mesh position
+	_update_sun_position(progress)
+
+
+func _update_sun_position(progress: float) -> void:
+	if not sun_mesh:
+		return
+
+	# Sun is visible during day (roughly 6 AM to 8 PM)
+	# progress: 0.25 = 6 AM, 0.5 = noon, 0.83 = 8 PM
+	var is_daytime: bool = progress >= 0.25 and progress < 0.83
+
+	if is_daytime:
+		sun_mesh.visible = true
+
+		# Calculate sun arc across sky
+		# Map 0.25-0.83 to 0-PI (sunrise to sunset)
+		var day_progress: float = (progress - 0.25) / 0.58  # 0 at sunrise, 1 at sunset
+		var sun_arc_angle: float = day_progress * PI  # 0 to PI
+
+		# Sun rises in east (+X), peaks overhead, sets in west (-X)
+		var sun_x: float = cos(sun_arc_angle) * sun_distance
+		var sun_y: float = sin(sun_arc_angle) * sun_distance * 0.8 + 50.0  # Arc height
+		var sun_z: float = -sun_distance * 0.3  # Slightly in front
+
+		sun_mesh.position = Vector3(sun_x, sun_y, sun_z)
+	else:
+		sun_mesh.visible = false
+
+
+func _update_celestial_facing() -> void:
+	# Make sun and moon face camera position (at origin of their containers)
+	# This creates a billboard effect while keeping the blocky aesthetic
+	if sun_mesh and sun_mesh.visible:
+		# Look at the container origin (where camera is)
+		var dir_to_camera: Vector3 = -sun_mesh.position.normalized()
+		if dir_to_camera.length() > 0.1:
+			sun_mesh.look_at(sun_mesh.position + dir_to_camera * 10.0, Vector3.UP)
+
+	if moon_mesh and moon_mesh.visible:
+		var dir_to_camera: Vector3 = -moon_mesh.position.normalized()
+		if dir_to_camera.length() > 0.1:
+			moon_mesh.look_at(moon_mesh.position + dir_to_camera * 10.0, Vector3.UP)
+
+
+func _update_moon_phase() -> void:
+	if not time_manager or not moon_shadow:
+		return
+
+	# Calculate moon phase from day (0-7, starts at full moon on day 1)
+	var day: int = time_manager.get_current_day()
+	current_moon_phase = (day - 1) % LUNAR_CYCLE_DAYS
+
+	# Update shadow position and size based on phase
+	# Shadow covers different portions of the moon for each phase
+	var shadow_visible: bool = true
+	var shadow_x: float = 0.0  # Local X offset
+	var shadow_scale_x: float = 0.55  # Width of shadow
+
+	match current_moon_phase:
+		0:  # Full Moon - no shadow
+			shadow_visible = false
+		1:  # Waning Gibbous - small shadow on right
+			shadow_x = moon_size * 0.35
+			shadow_scale_x = 0.35
+		2:  # Last Quarter - half shadow on right
+			shadow_x = moon_size * 0.27
+			shadow_scale_x = 0.55
+		3:  # Waning Crescent - large shadow on right
+			shadow_x = moon_size * 0.1
+			shadow_scale_x = 0.85
+		4:  # New Moon - full shadow
+			shadow_x = 0.0
+			shadow_scale_x = 1.1
+		5:  # Waxing Crescent - large shadow on left
+			shadow_x = -moon_size * 0.1
+			shadow_scale_x = 0.85
+		6:  # First Quarter - half shadow on left
+			shadow_x = -moon_size * 0.27
+			shadow_scale_x = 0.55
+		7:  # Waxing Gibbous - small shadow on left
+			shadow_x = -moon_size * 0.35
+			shadow_scale_x = 0.35
+
+	moon_shadow.visible = shadow_visible
+	if shadow_visible:
+		moon_shadow.position = Vector3(shadow_x, 0, -moon_size * 0.05)  # Slightly in front
+		var shadow_mesh: BoxMesh = moon_shadow.mesh as BoxMesh
+		if shadow_mesh:
+			shadow_mesh.size = Vector3(moon_size * shadow_scale_x, moon_size * 1.05, moon_size * 0.2)
+
+	print("[EnvironmentManager] Moon phase: %s (day %d)" % [MOON_PHASES[current_moon_phase], day])
+
+
+func get_moon_phase_name() -> String:
+	return MOON_PHASES[current_moon_phase]
+
+
+func get_moon_phase() -> int:
+	return current_moon_phase
 
 
 ## Set weather overlay effects.
@@ -395,8 +574,14 @@ func _update_night_sky() -> void:
 
 
 func _process(_delta: float) -> void:
-	# Make night sky follow camera position (but not rotation)
-	if stars_container:
-		var camera: Camera3D = get_viewport().get_camera_3d()
-		if camera:
-			stars_container.global_position = camera.global_position
+	# Make sky elements follow camera position (but not rotation)
+	var camera: Camera3D = get_viewport().get_camera_3d()
+	if camera:
+		var cam_pos: Vector3 = camera.global_position
+		if stars_container:
+			stars_container.global_position = cam_pos
+		if sun_container:
+			sun_container.global_position = cam_pos
+
+	# Make sun and moon face camera (billboard-style, but blocky)
+	_update_celestial_facing()

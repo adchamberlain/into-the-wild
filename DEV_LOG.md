@@ -2293,6 +2293,87 @@ scripts/campsite/structure_crafting_bench.gd  # Passes true to toggle_crafting_m
 
 ---
 
+## Session 24 - HUD Readability Improvements (2026-01-31)
+
+### What Was Built
+
+**HUD Visual Overhaul** - Improved readability with monospace font, semi-transparent backgrounds, and consistent larger font sizes
+
+#### Files Created
+
+```
+resources/hud_font.tres                  # SystemFont resource for SF Mono with fallbacks
+```
+
+#### Files Modified
+
+```
+scenes/ui/hud.tscn                       # Complete HUD restructure with panel backgrounds
+scripts/ui/hud.gd                        # Updated node paths, font preloading
+```
+
+#### Features Implemented
+
+1. **Monospace Font** (`hud_font.tres`)
+   - SystemFont using SF Mono (macOS) with fallbacks
+   - Fallback chain: SF Mono → Menlo → Monaco → JetBrains Mono → Consolas → Courier New
+   - Terminal-style aesthetic matching Homebrew appearance
+
+2. **Semi-Transparent Backgrounds** (`hud.tscn`)
+   - Added PanelContainer wrappers around all HUD sections:
+     - `StatsPanel` - top-left health/hunger/coordinates
+     - `TimePanel` - top-right time/weather/camp info
+     - `EquippedPanel` - bottom-right equipment info
+     - `InventoryPanel` - already existed, updated styling
+   - All panels use StyleBoxFlat with 75-80% opacity dark backgrounds
+   - Rounded corners (8px radius) for modern look
+   - Content margins for proper text padding
+
+3. **Standardized Font Sizes**
+   - Time display: 36px (largest, main focal point)
+   - Primary labels: 24px (consistent across all sections)
+   - Coordinates: 20px (smaller secondary info)
+   - Hint text: 18px (minimal but readable)
+   - All sizes increased from previous inconsistent values (was 24-48px range)
+
+4. **Script Updates** (`hud.gd`)
+   - Updated all `@onready` node paths for new panel hierarchy
+   - Preloaded HUD font as constant for dynamic label creation
+   - Inventory item labels now use monospace font and 24px size
+
+#### Node Hierarchy Changes
+
+Before:
+```
+HUD
+├── StatsContainer
+├── TimeContainer
+├── EquippedContainer
+└── CoordinatesLabel
+```
+
+After:
+```
+HUD
+├── StatsPanel (PanelContainer)
+│   └── StatsContainer
+│       └── CoordinatesLabel
+├── TimePanel (PanelContainer)
+│   └── TimeContainer
+├── EquippedPanel (PanelContainer)
+│   └── EquippedContainer
+└── InventoryPanel (updated styling)
+```
+
+#### Verification Steps
+
+1. Run game and verify all HUD text uses monospace font
+2. Check semi-transparent backgrounds behind all text sections
+3. Verify text is readable against any terrain/sky background
+4. Confirm font sizes are consistent (24px for most labels)
+
+---
+
 ## Next Session: Phase 8 - Polish & Content (Continued)
 
 ### Completed Features
