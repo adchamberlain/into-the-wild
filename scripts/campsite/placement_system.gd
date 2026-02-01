@@ -55,10 +55,11 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if not event is InputEventKey or not event.pressed or event.echo:
+	if not is_placing:
 		return
 
-	if is_placing:
+	# Handle keyboard input
+	if event is InputEventKey and event.pressed and not event.echo:
 		# R to confirm placement
 		if event.physical_keycode == KEY_R:
 			if is_valid_placement:
@@ -68,6 +69,15 @@ func _input(event: InputEvent) -> void:
 		# Q to cancel
 		elif event.physical_keycode == KEY_Q:
 			cancel_placement()
+
+	# Handle action-based input (controller support)
+	if event.is_action_pressed("use_equipped"):
+		if is_valid_placement:
+			_confirm_placement()
+		else:
+			print("[PlacementSystem] Cannot place here - invalid location")
+	elif event.is_action_pressed("unequip"):
+		cancel_placement()
 
 
 ## Start placement mode for a structure.

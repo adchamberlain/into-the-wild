@@ -386,7 +386,12 @@ UI shows "(Requires Bench)" when not at bench.
 - After loading, checks player inventory for Fishing Rod/Stone Axe and sets flags accordingly
 - Calls `_check_level_progression()` after load to verify/update campsite level
 
-**Files Modified**: `scripts/core/save_load.gd`, `scripts/ui/config_menu.gd`, `scripts/ui/hud.gd`
+**Controller Placement Fix**: Fixed structure placement not working with controller:
+- `placement_system.gd` only handled keyboard input (KEY_R) for confirming placement
+- Added action-based input handling for `use_equipped` (R2) to confirm placement
+- Added `unequip` (Circle) to cancel placement
+
+**Files Modified**: `scripts/core/save_load.gd`, `scripts/ui/config_menu.gd`, `scripts/ui/hud.gd`, `scripts/campsite/placement_system.gd`
 
 ---
 
