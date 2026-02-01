@@ -9,6 +9,7 @@ signal game_quit()
 @onready var panel: PanelContainer = $Panel
 @onready var resume_button: Button = $Panel/VBoxContainer/ResumeButton
 @onready var save_button: Button = $Panel/VBoxContainer/SaveButton
+@onready var load_button: Button = $Panel/VBoxContainer/LoadButton
 @onready var credits_button: Button = $Panel/VBoxContainer/CreditsButton
 @onready var quit_button: Button = $Panel/VBoxContainer/QuitButton
 @onready var credits_panel: PanelContainer = $CreditsPanel
@@ -28,6 +29,7 @@ var button_list: Array[Button] = []
 var slot_panel: PanelContainer
 var slot_buttons: Array[Button] = []
 var focused_slot_index: int = 0
+var is_saving: bool = true  # true = save mode, false = load mode
 
 
 func _ready() -> void:
@@ -50,12 +52,13 @@ func _ready() -> void:
 	# Connect button signals
 	resume_button.pressed.connect(_on_resume_pressed)
 	save_button.pressed.connect(_on_save_pressed)
+	load_button.pressed.connect(_on_load_pressed)
 	credits_button.pressed.connect(_on_credits_pressed)
 	quit_button.pressed.connect(_on_quit_pressed)
 	back_button.pressed.connect(_on_back_pressed)
 
 	# Set up button list for controller navigation
-	button_list = [resume_button, save_button, credits_button, quit_button]
+	button_list = [resume_button, save_button, load_button, credits_button, quit_button]
 
 	# Create slot selection panel
 	_create_slot_panel()
@@ -176,7 +179,17 @@ func _on_save_pressed() -> void:
 		_show_notification("Save system not found!", Color(1.0, 0.5, 0.5))
 		return
 
-	# Show slot selection panel
+	is_saving = true
+	_update_slot_panel()
+	_show_slot_panel()
+
+
+func _on_load_pressed() -> void:
+	if not save_load:
+		_show_notification("Save system not found!", Color(1.0, 0.5, 0.5))
+		return
+
+	is_saving = false
 	_update_slot_panel()
 	_show_slot_panel()
 
@@ -308,14 +321,21 @@ func _update_slot_panel() -> void:
 	if not slot_panel or not save_load:
 		return
 
+	# Update title based on mode
+	var title: Label = slot_panel.get_node_or_null("VBoxContainer/SlotTitle")
+	if title:
+		title.text = "Save to Slot" if is_saving else "Load from Slot"
+
 	var slots_info: Array[Dictionary] = save_load.get_all_slots_info()
-	for i: int in range(min(3, slot_buttons.size())):
+	for i: int in range(min(3, slot_buttons.size() - 1)):  # -1 to exclude cancel button
 		var btn: Button = slot_buttons[i]
 		var info: Dictionary = slots_info[i]
 		if info["empty"]:
 			btn.text = "Slot %d: Empty" % (i + 1)
+			btn.disabled = not is_saving  # Can't load empty slots
 		else:
 			btn.text = "Slot %d: Level %d - %s" % [i + 1, info["campsite_level"], info["formatted_time"]]
+			btn.disabled = false
 
 
 ## Show the slot selection panel.
@@ -343,14 +363,20 @@ func _hide_slot_panel() -> void:
 
 ## Handle slot button press.
 func _on_slot_button_pressed(slot: int) -> void:
-	if save_load and save_load.has_method("save_game_slot"):
-		var success: bool = save_load.save_game_slot(slot)
-		if success:
-			_show_notification("Saved to Slot %d!" % slot, Color(0.6, 1.0, 0.6))
-		else:
-			_show_notification("Save Failed!", Color(1.0, 0.5, 0.5))
-
-	_hide_slot_panel()
+	if is_saving:
+		if save_load and save_load.has_method("save_game_slot"):
+			var success: bool = save_load.save_game_slot(slot)
+			if success:
+				_show_notification("Saved to Slot %d!" % slot, Color(0.6, 1.0, 0.6))
+			else:
+				_show_notification("Save Failed!", Color(1.0, 0.5, 0.5))
+		_hide_slot_panel()
+	else:
+		if save_load and save_load.has_method("load_game_slot"):
+			# Close menu before loading (loading will reset the game state)
+			_hide_slot_panel()
+			resume_game()
+			save_load.load_game_slot(slot)
 
 
 ## Navigate slot buttons with D-pad.
