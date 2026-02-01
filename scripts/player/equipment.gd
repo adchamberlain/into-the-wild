@@ -58,6 +58,30 @@ const EQUIPPABLE_ITEMS: Dictionary = {
 		"slot": 8,
 		"has_light": false,
 		"placeable": true
+	},
+	"drying_rack_kit": {
+		"name": "Drying Rack Kit",
+		"slot": 9,
+		"has_light": false,
+		"placeable": true
+	},
+	"garden_plot_kit": {
+		"name": "Garden Plot Kit",
+		"slot": 10,
+		"has_light": false,
+		"placeable": true
+	},
+	"canvas_tent_kit": {
+		"name": "Canvas Tent Kit",
+		"slot": 11,
+		"has_light": false,
+		"placeable": true
+	},
+	"cabin_kit": {
+		"name": "Cabin Kit",
+		"slot": 12,
+		"has_light": false,
+		"placeable": true
 	}
 }
 
@@ -83,6 +107,10 @@ var torch_light: OmniLight3D = null
 
 # Stone axe visual
 var stone_axe_model: Node3D = null
+var axe_swing_tween: Tween = null  # Track swing animation to prevent conflicts
+# Position further from camera to avoid near-plane clipping (was -0.5, shadow visible but model clipped)
+const AXE_REST_POSITION: Vector3 = Vector3(0.35, -0.3, -0.7)
+const AXE_REST_ROTATION: Vector3 = Vector3(10, 0, -18)
 
 # Fishing rod visual
 var fishing_rod_model: Node3D = null
@@ -138,6 +166,14 @@ func _input(event: InputEvent) -> void:
 		_try_equip_slot(7)
 	elif event.physical_keycode == KEY_8:
 		_try_equip_slot(8)
+	elif event.physical_keycode == KEY_9:
+		_try_equip_slot(9)
+	elif event.physical_keycode == KEY_0:
+		_try_equip_slot(10)
+	elif event.physical_keycode == KEY_MINUS:
+		_try_equip_slot(11)
+	elif event.physical_keycode == KEY_EQUAL:
+		_try_equip_slot(12)
 	elif event.physical_keycode == KEY_Q:
 		unequip()
 
@@ -306,30 +342,32 @@ func _play_swing_animation() -> void:
 
 	# Animate the stone axe model if equipped
 	if stone_axe_model:
-		var original_rot: Vector3 = stone_axe_model.rotation_degrees
-		var original_pos: Vector3 = stone_axe_model.position
+		# Kill any existing swing animation to prevent conflicts when chopping rapidly
+		if axe_swing_tween and axe_swing_tween.is_valid():
+			axe_swing_tween.kill()
+			# Reset to rest position before starting new animation
+			stone_axe_model.position = AXE_REST_POSITION
+			stone_axe_model.rotation_degrees = AXE_REST_ROTATION
 
-		var tween: Tween = player.create_tween()
-		tween.set_trans(Tween.TRANS_QUAD)
-		tween.set_ease(Tween.EASE_OUT)
+		axe_swing_tween = player.create_tween()
+		axe_swing_tween.set_trans(Tween.TRANS_QUAD)
+		axe_swing_tween.set_ease(Tween.EASE_OUT)
 
 		# Wind up: raise axe up and tilt head back (away from target)
-		# Positive X rotation tilts top/head back, raise Y position, pull back Z
-		tween.tween_property(stone_axe_model, "rotation_degrees",
-			Vector3(original_rot.x + 45, original_rot.y, original_rot.z - 10), 0.1)
-		tween.parallel().tween_property(stone_axe_model, "position",
-			Vector3(original_pos.x, original_pos.y + 0.15, original_pos.z + 0.1), 0.1)
+		axe_swing_tween.tween_property(stone_axe_model, "rotation_degrees",
+			Vector3(AXE_REST_ROTATION.x + 45, AXE_REST_ROTATION.y, AXE_REST_ROTATION.z - 10), 0.1)
+		axe_swing_tween.parallel().tween_property(stone_axe_model, "position",
+			Vector3(AXE_REST_POSITION.x, AXE_REST_POSITION.y + 0.15, AXE_REST_POSITION.z + 0.1), 0.1)
 
 		# Swing down: bring head forward into target
-		# Negative X rotation brings top/head forward, lower Y, push forward Z
-		tween.tween_property(stone_axe_model, "rotation_degrees",
-			Vector3(original_rot.x - 35, original_rot.y, original_rot.z + 5), 0.08)
-		tween.parallel().tween_property(stone_axe_model, "position",
-			Vector3(original_pos.x, original_pos.y - 0.1, original_pos.z - 0.15), 0.08)
+		axe_swing_tween.tween_property(stone_axe_model, "rotation_degrees",
+			Vector3(AXE_REST_ROTATION.x - 35, AXE_REST_ROTATION.y, AXE_REST_ROTATION.z + 5), 0.08)
+		axe_swing_tween.parallel().tween_property(stone_axe_model, "position",
+			Vector3(AXE_REST_POSITION.x, AXE_REST_POSITION.y - 0.1, AXE_REST_POSITION.z - 0.15), 0.08)
 
-		# Return to rest position
-		tween.tween_property(stone_axe_model, "rotation_degrees", original_rot, 0.12)
-		tween.parallel().tween_property(stone_axe_model, "position", original_pos, 0.12)
+		# Return to rest position (always use constants to prevent drift)
+		axe_swing_tween.tween_property(stone_axe_model, "rotation_degrees", AXE_REST_ROTATION, 0.12)
+		axe_swing_tween.parallel().tween_property(stone_axe_model, "position", AXE_REST_POSITION, 0.12)
 
 		print("[Equipment] *chop*")
 	else:
@@ -465,9 +503,9 @@ func _create_stone_axe() -> void:
 
 	# Position: held in right hand, vertical with natural 18 degree clockwise tilt
 	# Lower-right of screen, handle pointing down
-	stone_axe_model.position = Vector3(0.3, -0.35, -0.5)
-	# Z rotation = clockwise tilt, small X tilt to angle head slightly toward screen
-	stone_axe_model.rotation_degrees = Vector3(10, 0, -18)
+	# Use constants to ensure consistent positioning after animations
+	stone_axe_model.position = AXE_REST_POSITION
+	stone_axe_model.rotation_degrees = AXE_REST_ROTATION
 
 	# Attach to camera
 	if player:

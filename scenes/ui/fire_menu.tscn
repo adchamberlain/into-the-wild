@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://fire_menu001"]
+[gd_scene load_steps=3 format=3 uid="uid://fire_menu001"]
 
 [ext_resource type="Script" path="res://scripts/ui/fire_menu.gd" id="1_fire_menu"]
+[ext_resource type="Font" uid="uid://hud_mono_font" path="res://resources/hud_font.tres" id="2_font"]
 
 [node name="FireMenu" type="CanvasLayer"]
 layer = 10
@@ -26,6 +27,7 @@ theme_override_constants/separation = 12
 [node name="Title" type="Label" parent="Panel/VBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.7, 0.3, 1)
+theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 32
 text = "Fire Pit"
 horizontal_alignment = 1
@@ -35,6 +37,7 @@ layout_mode = 2
 
 [node name="WarmUpButton" type="Button" parent="Panel/VBoxContainer"]
 layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 26
 text = "Warm Up (+15 Health)"
 
@@ -43,12 +46,14 @@ layout_mode = 2
 
 [node name="CookButton" type="Button" parent="Panel/VBoxContainer"]
 layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 26
 text = "Cook Food"
 
 [node name="CookLabel" type="Label" parent="Panel/VBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 20
 text = "No cookable food available"
 horizontal_alignment = 1
@@ -58,12 +63,14 @@ layout_mode = 2
 
 [node name="AddFuelButton" type="Button" parent="Panel/VBoxContainer"]
 layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 26
 text = "Add Fuel (Branch)"
 
 [node name="FuelLabel" type="Label" parent="Panel/VBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 20
 text = "Extends fire duration"
 horizontal_alignment = 1
@@ -73,5 +80,6 @@ layout_mode = 2
 
 [node name="CloseButton" type="Button" parent="Panel/VBoxContainer"]
 layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 22
 text = "Close [E]"

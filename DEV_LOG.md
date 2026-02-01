@@ -226,6 +226,32 @@ UI shows "(Requires Bench)" when not at bench.
 
 ---
 
+## Session 27 - Performance & UI Polish (2026-01-31)
+
+**Performance Optimization**:
+- VSync + 60 FPS cap in project settings
+- HUD throttling: 10 updates/sec instead of every frame
+- Raycast throttling: 10 checks/sec for interaction detection
+- Disabled SSIL and glow (major GPU drains)
+- Reduced star count: 800 → 200
+- Reduced render distance: 3 → 2 chunks (49 → 25 chunks)
+- Cached camera reference to avoid per-frame lookups
+- Throttled weather fire checks, respawn checks, placement validation
+
+**Axe Visibility Fix**: Moved axe further from camera (Z: -0.5 → -0.7) to prevent near-plane clipping. Added tween tracking to prevent animation conflicts.
+
+**UI Improvements**:
+- Interaction prompt: Added semi-transparent background panel
+- Font consistency: Applied SF Mono (hud_font.tres) to all UI elements
+  - storage_ui.tscn: Added font to 6 labels
+  - Dynamic labels in storage_ui.gd, equipment_menu.gd, crafting_ui.gd
+
+**Crafting Fix**: Advanced recipes now only appear when at crafting bench. Pressing C away from bench shows only basic recipes (Stone Axe, Torch, Campfire Kit, Rope, Crafting Bench Kit). Must interact with crafting bench to see/craft advanced items.
+
+**Files**: `project.godot`, `hud.gd`, `hud.tscn`, `player_controller.gd`, `environment_manager.gd`, `chunk_manager.gd`, `weather_manager.gd`, `resource_manager.gd`, `placement_system.gd`, `campsite_manager.gd`, `equipment.gd`, `storage_ui.tscn`, `storage_ui.gd`, `equipment_menu.gd`, `crafting_ui.gd`
+
+---
+
 ## Next Session
 
 ### Planned Tasks

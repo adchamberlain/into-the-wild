@@ -1,6 +1,9 @@
 extends CanvasLayer
 ## UI for transferring items between player inventory and storage containers.
 
+# Standard HUD font
+const HUD_FONT: Font = preload("res://resources/hud_font.tres")
+
 @export var player_path: NodePath
 
 var player: Node
@@ -139,6 +142,7 @@ func _create_item_button(parent: VBoxContainer, item_type: String, count: int, i
 	# Item label
 	var label: Label = Label.new()
 	label.text = "%s x%d" % [display_name, count]
+	label.add_theme_font_override("font", HUD_FONT)
 	label.add_theme_font_size_override("font_size", 28)
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	container.add_child(label)
@@ -146,6 +150,7 @@ func _create_item_button(parent: VBoxContainer, item_type: String, count: int, i
 	# Transfer button
 	var button: Button = Button.new()
 	button.text = ">>" if is_player_item else "<<"
+	button.add_theme_font_override("font", HUD_FONT)
 	button.add_theme_font_size_override("font_size", 24)
 	button.tooltip_text = "Move to Storage" if is_player_item else "Take from Storage"
 	button.pressed.connect(_on_transfer_pressed.bind(item_type, is_player_item))
@@ -154,6 +159,7 @@ func _create_item_button(parent: VBoxContainer, item_type: String, count: int, i
 	# Transfer all button
 	var all_button: Button = Button.new()
 	all_button.text = "All"
+	all_button.add_theme_font_override("font", HUD_FONT)
 	all_button.add_theme_font_size_override("font_size", 20)
 	all_button.tooltip_text = "Move all to Storage" if is_player_item else "Take all from Storage"
 	all_button.pressed.connect(_on_transfer_all_pressed.bind(item_type, is_player_item))

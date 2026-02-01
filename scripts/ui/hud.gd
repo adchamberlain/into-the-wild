@@ -18,7 +18,8 @@ const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 @onready var protection_label: Label = $TimePanel/TimeContainer/ProtectionLabel
 
 # Interaction
-@onready var interaction_prompt: Label = $InteractionPrompt
+@onready var interaction_prompt_panel: PanelContainer = $InteractionPromptPanel
+@onready var interaction_prompt: Label = $InteractionPromptPanel/InteractionPrompt
 
 # Stats bars
 @onready var health_bar: ProgressBar = $StatsPanel/StatsContainer/HealthContainer/HealthBar
@@ -154,8 +155,8 @@ func _ready() -> void:
 		save_load.game_loaded.connect(_on_game_loaded)
 
 	# Hide interaction prompt initially
-	if interaction_prompt:
-		interaction_prompt.visible = false
+	if interaction_prompt_panel:
+		interaction_prompt_panel.visible = false
 
 	# Hide notification label initially
 	if notification_label:
@@ -185,12 +186,13 @@ func _on_period_changed(period: String) -> void:
 func _on_interaction_target_changed(_target: Node, interaction_text: String) -> void:
 	if interaction_prompt:
 		interaction_prompt.text = "[E] " + interaction_text
-		interaction_prompt.visible = true
+	if interaction_prompt_panel:
+		interaction_prompt_panel.visible = true
 
 
 func _on_interaction_cleared() -> void:
-	if interaction_prompt:
-		interaction_prompt.visible = false
+	if interaction_prompt_panel:
+		interaction_prompt_panel.visible = false
 
 
 func _on_health_changed(new_value: float, max_value: float) -> void:
@@ -229,12 +231,14 @@ func _update_equipped_display() -> void:
 		var item_name: String = equipment.get_equipped_name()
 		equipped_label.text = "Equipped: " + item_name
 
-		# Add hint for placeable items
+		# Add usage hint based on item type
 		var equipped_type: String = equipment.get_equipped()
 		if StructureData.is_placeable_item(equipped_type):
-			equipped_label.text += " [R to place]"
+			equipped_label.text += " [R place, Q unequip]"
 		elif equipped_type == "fishing_rod":
-			equipped_label.text += " [R to fish]"
+			equipped_label.text += " [R fish, Q unequip]"
+		else:
+			equipped_label.text += " [Q to unequip]"
 
 		# Update durability bar
 		_update_durability_bar()
@@ -458,12 +462,15 @@ func _update_resting_prompt() -> void:
 
 	if player_resting and not is_player_resting:
 		# Just started resting - show get up prompt
-		interaction_prompt.text = "[E] Get Up"
-		interaction_prompt.visible = true
+		if interaction_prompt:
+			interaction_prompt.text = "[E] Get Up"
+		if interaction_prompt_panel:
+			interaction_prompt_panel.visible = true
 		is_player_resting = true
 	elif not player_resting and is_player_resting:
 		# Just stopped resting - hide prompt (will be updated by normal interaction system)
-		interaction_prompt.visible = false
+		if interaction_prompt_panel:
+			interaction_prompt_panel.visible = false
 		is_player_resting = false
 
 

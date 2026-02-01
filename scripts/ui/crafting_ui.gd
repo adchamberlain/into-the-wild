@@ -97,19 +97,17 @@ func _refresh_recipe_list() -> void:
 		var description: String = recipe.get("description", "")
 		var requires_bench: bool = recipe.get("requires_bench", false)
 
-		# Check if recipe is blocked due to bench requirement
-		var blocked_by_bench: bool = requires_bench and not at_bench
+		# Skip advanced recipes entirely when not at bench - only show basic recipes
+		if requires_bench and not at_bench:
+			continue
 
 		# Create recipe container
 		var container: VBoxContainer = VBoxContainer.new()
 		container.add_theme_constant_override("separation", 4)
 
-		# Recipe button - show bench requirement in name if not at bench
+		# Recipe button
 		var button: Button = Button.new()
-		if blocked_by_bench:
-			button.text = recipe_name + " (Requires Bench)"
-		else:
-			button.text = recipe_name
+		button.text = recipe_name
 		button.disabled = not can_craft_recipe
 		button.add_theme_font_override("font", HUD_FONT)
 		button.add_theme_font_size_override("font_size", 36)

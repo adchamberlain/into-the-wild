@@ -1,6 +1,9 @@
 extends CanvasLayer
 ## Equipment menu showing available items and their hotkeys.
 
+# Standard HUD font
+const HUD_FONT: Font = preload("res://resources/hud_font.tres")
+
 @export var player_path: NodePath
 
 var player: Node
@@ -23,6 +26,10 @@ const EQUIPMENT_SLOTS: Array = [
 	{"key": "6", "type": "storage_box", "name": "Storage Box"},
 	{"key": "7", "type": "fishing_rod", "name": "Fishing Rod"},
 	{"key": "8", "type": "crafting_bench_kit", "name": "Crafting Bench Kit"},
+	{"key": "9", "type": "drying_rack_kit", "name": "Drying Rack Kit"},
+	{"key": "0", "type": "garden_plot_kit", "name": "Garden Plot Kit"},
+	{"key": "-", "type": "canvas_tent_kit", "name": "Canvas Tent Kit"},
+	{"key": "=", "type": "cabin_kit", "name": "Cabin Kit"},
 ]
 
 # Cached labels for each slot
@@ -61,6 +68,7 @@ func _build_slot_list() -> void:
 	# Create a label for each slot
 	for slot in EQUIPMENT_SLOTS:
 		var label: Label = Label.new()
+		label.add_theme_font_override("font", HUD_FONT)
 		label.add_theme_font_size_override("font_size", 28)
 		item_list.add_child(label)
 		slot_labels[slot["type"]] = label

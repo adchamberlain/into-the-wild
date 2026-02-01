@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3 uid="uid://hud001"]
+[gd_scene load_steps=14 format=3 uid="uid://hud001"]
 
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
 [ext_resource type="FontFile" uid="uid://hud_mono_font" path="res://resources/hud_font.tres" id="2_font"]
@@ -88,6 +88,17 @@ content_margin_left = 18.0
 content_margin_top = 14.0
 content_margin_right = 18.0
 content_margin_bottom = 14.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_interaction_bg"]
+bg_color = Color(0.05, 0.05, 0.08, 0.75)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 24.0
+content_margin_top = 12.0
+content_margin_right = 24.0
+content_margin_bottom = 12.0
 
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1_hud")
@@ -224,22 +235,23 @@ text = "+"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="InteractionPrompt" type="Label" parent="."]
+[node name="InteractionPromptPanel" type="PanelContainer" parent="."]
 anchors_preset = 7
 anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -400.0
+offset_left = -250.0
 offset_top = -100.0
-offset_right = 400.0
+offset_right = 250.0
 offset_bottom = -40.0
 grow_horizontal = 2
 grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_interaction_bg")
+
+[node name="InteractionPrompt" type="Label" parent="InteractionPromptPanel"]
+layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.8)
-theme_override_constants/shadow_offset_x = 3
-theme_override_constants/shadow_offset_y = 3
 theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 44
 text = "[E] Gather Branch"
