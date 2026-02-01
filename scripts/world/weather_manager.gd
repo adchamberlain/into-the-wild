@@ -17,14 +17,21 @@ var weather_enabled: bool = true  # Can be toggled by ConfigMenu
 @export var heat_wave_hunger_multiplier: float = 2.0
 
 # Weather duration (in game hours, converted to real seconds)
-@export var min_weather_duration_hours: float = 1.0
-@export var max_weather_duration_hours: float = 3.0
+@export var min_weather_duration_hours: float = 6.0
+@export var max_weather_duration_hours: float = 18.0
 
-# Weather transition probabilities (from CLEAR)
-@export var rain_chance: float = 0.25
-@export var fog_chance: float = 0.15
-@export var heat_wave_chance: float = 0.10
-@export var cold_snap_chance: float = 0.10
+# Weather transition probabilities (daily roll at dawn)
+# Real-world inspired: clear weather dominates, bad weather is less common
+@export var rain_chance: float = 0.15
+@export var fog_chance: float = 0.08
+@export var heat_wave_chance: float = 0.05
+@export var cold_snap_chance: float = 0.05
+
+# Weather persistence - chance weather continues to next day
+@export var weather_persistence_chance: float = 0.4
+
+# Track if we've rolled for weather today
+var _rolled_today: bool = false
 
 # Fire effectiveness reduction during rain
 @export var rain_fire_effectiveness: float = 0.5
@@ -159,45 +166,81 @@ func _on_period_changed(period: String) -> void:
 	if not weather_enabled:
 		return
 
-	# Roll for weather change at period transitions
-	if current_weather == Weather.CLEAR:
-		_roll_for_weather_change(period)
-	elif current_weather == Weather.RAIN:
-		# Rain can escalate to storm
-		if randf() < 0.3:
+	# Reset daily roll flag at night (so we can roll again at next dawn)
+	if period == "Night":
+		_rolled_today = false
+		return
+
+	# Only roll for weather change once per day at dawn
+	if period == "Dawn" and not _rolled_today:
+		_rolled_today = true
+		_daily_weather_roll()
+
+	# Rain can escalate to storm during afternoon (building pressure)
+	if current_weather == Weather.RAIN and period == "Afternoon":
+		if randf() < 0.25:
 			_set_weather(Weather.STORM)
+			print("[WeatherManager] Rain escalated to storm!")
 
 
-func _roll_for_weather_change(period: String) -> void:
+func _daily_weather_roll() -> void:
+	# If we have active weather, check for persistence
+	if current_weather != Weather.CLEAR:
+		if randf() < weather_persistence_chance:
+			# Weather persists - extend duration
+			var hours: float = randf_range(min_weather_duration_hours, max_weather_duration_hours)
+			if time_manager and "day_length_minutes" in time_manager:
+				var seconds_per_hour: float = (time_manager.day_length_minutes * 60.0) / 24.0
+				weather_duration_remaining = hours * seconds_per_hour
+			else:
+				weather_duration_remaining = hours * 50.0
+			print("[WeatherManager] Weather persists: %s for another %.1f hours" % [get_weather_name(), hours])
+			return
+		else:
+			# Weather clears
+			_set_weather(Weather.CLEAR)
+			print("[WeatherManager] Weather cleared after multi-day pattern")
+			return
+
+	# Roll for new weather (from clear)
+	_roll_for_new_weather()
+
+
+func _roll_for_new_weather() -> void:
 	var roll: float = randf()
 	var cumulative: float = 0.0
 
-	# Rain
+	# Get current season hint from time_manager if available
+	var day: int = 1
+	if time_manager and time_manager.has_method("get_current_day"):
+		day = time_manager.get_current_day()
+
+	# Rain - most common bad weather
 	cumulative += rain_chance
 	if roll < cumulative:
 		_set_weather(Weather.RAIN)
 		return
 
-	# Fog (more likely at dawn/dusk)
-	var fog_modifier: float = 1.5 if period in ["Dawn", "Dusk"] else 1.0
-	cumulative += fog_chance * fog_modifier
+	# Fog - more common in early game (spring-like)
+	cumulative += fog_chance
 	if roll < cumulative:
 		_set_weather(Weather.FOG)
 		return
 
-	# Heat wave (only during day)
-	if period in ["Morning", "Afternoon"]:
-		cumulative += heat_wave_chance
-		if roll < cumulative:
-			_set_weather(Weather.HEAT_WAVE)
-			return
+	# Heat wave - rare
+	cumulative += heat_wave_chance
+	if roll < cumulative:
+		_set_weather(Weather.HEAT_WAVE)
+		return
 
-	# Cold snap (only at night/dawn)
-	if period in ["Night", "Dawn"]:
-		cumulative += cold_snap_chance
-		if roll < cumulative:
-			_set_weather(Weather.COLD_SNAP)
-			return
+	# Cold snap - rare
+	cumulative += cold_snap_chance
+	if roll < cumulative:
+		_set_weather(Weather.COLD_SNAP)
+		return
+
+	# Otherwise stays clear (most likely outcome ~67% chance)
+	print("[WeatherManager] Weather check: staying clear")
 
 
 func _set_weather(weather: Weather) -> void:
@@ -231,7 +274,15 @@ func _set_weather(weather: Weather) -> void:
 
 	# Emit signal
 	weather_changed.emit(get_weather_name())
-	print("[WeatherManager] Weather changed to: %s (duration: %.1f sec)" % [get_weather_name(), weather_duration_remaining])
+
+	# Calculate hours for logging
+	var duration_hours: float = 0.0
+	if time_manager and "day_length_minutes" in time_manager:
+		var seconds_per_hour: float = (time_manager.day_length_minutes * 60.0) / 24.0
+		duration_hours = weather_duration_remaining / seconds_per_hour
+	else:
+		duration_hours = weather_duration_remaining / 50.0
+	print("[WeatherManager] Weather changed to: %s (duration: %.1f game hours)" % [get_weather_name(), duration_hours])
 
 
 func _transition_to_clear() -> void:
