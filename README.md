@@ -17,6 +17,7 @@ A solo camping adventure game built in Godot 4.5. Survive in the wilderness by g
 - **Weather System** - Dynamic weather including rain, storms, fog, heat waves, and cold snaps
 - **Day/Night Cycle** - 20-minute real-time days with dynamic sky, stars, and moon
 - **Swimming** - Explore underwater with breath mechanics
+- **Save System** - 3 save slots with camp level and timestamp display
 
 ### Gathering & Crafting
 - **Resource Gathering** - Collect branches, rocks, berries, mushrooms, herbs, and wood
@@ -82,8 +83,8 @@ Build up your camp through three levels:
 - **C** - Crafting menu
 - **I** - Equipment menu
 - **Tab** - Config menu
-- **K** - Quick save
-- **L** - Quick load
+- **K** - Save game (3 slots)
+- **L** - Load game (3 slots)
 
 ### PlayStation DualSense Controller
 

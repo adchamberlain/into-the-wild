@@ -486,12 +486,12 @@ func show_notification(message: String, color: Color = Color.WHITE) -> void:
 		get_tree().create_timer(3.0).timeout.connect(func(): notification_panel.visible = false)
 
 
-func _on_game_saved(_filepath: String) -> void:
-	show_notification("Game Saved!", Color(0.4, 1.0, 0.4, 1))
+func _on_game_saved(_filepath: String, slot: int) -> void:
+	show_notification("Saved to Slot %d!" % slot, Color(0.4, 1.0, 0.4, 1))
 
 
-func _on_game_loaded(_filepath: String) -> void:
-	show_notification("Game Loaded!", Color(0.4, 1.0, 0.4, 1))
+func _on_game_loaded(_filepath: String, slot: int) -> void:
+	show_notification("Loaded Slot %d!" % slot, Color(0.4, 1.0, 0.4, 1))
 	# Update campsite level display (without showing celebration)
 	_update_campsite_level_display()
 

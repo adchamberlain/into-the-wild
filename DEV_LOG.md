@@ -351,14 +351,52 @@ UI shows "(Requires Bench)" when not at bench.
 
 ---
 
+## Session 31 - Multiple Save Slots (2026-02-01)
+
+**Save Slot System**: Upgraded from single save file to 3 save slots with selection UI.
+
+**Save/Load Changes** (`scripts/core/save_load.gd`):
+- Added `NUM_SLOTS: int = 3` constant
+- New methods: `save_game_slot(slot)`, `load_game_slot(slot)`, `has_save_slot(slot)`, `delete_save_slot(slot)`
+- Added `get_slot_info(slot)` returns metadata: empty status, campsite level, formatted timestamp
+- Added `get_all_slots_info()` for UI population
+- Updated signals to include slot number: `game_saved(filepath, slot)`, `game_loaded(filepath, slot)`
+- Legacy `save_game()`/`load_game()` wrappers use slot 1 for backward compatibility
+- Slot files: `save_slot_1.json`, `save_slot_2.json`, `save_slot_3.json`
+
+**Config Menu Updates** (`scripts/ui/config_menu.gd`):
+- Programmatically created slot selection panel matching existing UI style
+- Save/Load buttons now show slot selection instead of immediate action
+- Slot buttons display: "Slot 1: Empty" or "Slot 1: Level 2 Camp - Feb 1, 12:30 PM"
+- Empty slots disabled for load (greyed out)
+- Cancel button returns to main config menu
+- ESC key also closes slot panel
+- Status messages show slot number: "Saved to Slot 2!", "Loaded Slot 3!"
+
+**UI Flow**:
+- Press K or click Save → Slot selection panel appears
+- Select any slot → Game saves, notification shows slot number
+- Press L or click Load → Slot selection (empty slots disabled)
+- Select occupied slot → Game loads, notification shows slot number
+
+**Campsite Level Bug Fix**: Fixed campsite level not updating after loading:
+- Bug: `has_crafted_fishing_rod` was not saved/loaded, so Level 2 requirements failed after load
+- Now saves: `has_crafted_fishing_rod`, `days_at_level_2`, `level_2_start_day`
+- Added `_verify_crafting_flags_from_inventory()` for backward compatibility with old saves
+- After loading, checks player inventory for Fishing Rod/Stone Axe and sets flags accordingly
+- Calls `_check_level_progression()` after load to verify/update campsite level
+
+**Files Modified**: `scripts/core/save_load.gd`, `scripts/ui/config_menu.gd`, `scripts/ui/hud.gd`
+
+---
+
 ## Next Session
 
 ### Planned Tasks
 1. Sound effects (footsteps, interactions, ambient)
 2. Game balancing and polish
 3. Pixelated textures (optional)
-4. Save/load for new progression flags
-5. Optional: DualSense haptics and adaptive triggers
+4. Optional: DualSense haptics and adaptive triggers
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

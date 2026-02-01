@@ -2,14 +2,15 @@ extends Node
 class_name SaveLoad
 ## Handles saving and loading game state to/from JSON files.
 
-signal game_saved(filepath: String)
-signal game_loaded(filepath: String)
+signal game_saved(filepath: String, slot: int)
+signal game_loaded(filepath: String, slot: int)
 signal save_failed(error: String)
 signal load_failed(error: String)
 
 const SAVE_DIR: String = "user://saves/"
-const SAVE_FILE: String = "save.json"
+const SAVE_FILE: String = "save.json"  # Legacy single save file (backward compatibility)
 const SAVE_VERSION: int = 1
+const NUM_SLOTS: int = 3
 
 # Node references (set in _ready or via exported paths)
 @export var player_path: NodePath
@@ -64,11 +65,27 @@ func _ensure_save_directory() -> void:
 		dir.make_dir("saves")
 
 
-## Save the current game state.
+## Get the filename for a given slot (1-indexed).
+func _get_slot_filename(slot: int) -> String:
+	return "save_slot_%d.json" % slot
+
+
+## Save the current game state (backward compatibility wrapper for slot 1).
 func save_game() -> bool:
+	return save_game_slot(1)
+
+
+## Save the current game state to a specific slot.
+func save_game_slot(slot: int) -> bool:
+	if slot < 1 or slot > NUM_SLOTS:
+		var error: String = "Invalid slot number: %d" % slot
+		push_error(error)
+		save_failed.emit(error)
+		return false
+
 	var save_data: Dictionary = _collect_save_data()
 
-	var filepath: String = SAVE_DIR + SAVE_FILE
+	var filepath: String = SAVE_DIR + _get_slot_filename(slot)
 	var file: FileAccess = FileAccess.open(filepath, FileAccess.WRITE)
 
 	if not file:
@@ -81,17 +98,28 @@ func save_game() -> bool:
 	file.store_string(json_string)
 	file.close()
 
-	print("[SaveLoad] Game saved to %s" % filepath)
-	game_saved.emit(filepath)
+	print("[SaveLoad] Game saved to %s (slot %d)" % [filepath, slot])
+	game_saved.emit(filepath, slot)
 	return true
 
 
-## Load the game state from file.
+## Load the game state from file (backward compatibility wrapper for slot 1).
 func load_game() -> bool:
-	var filepath: String = SAVE_DIR + SAVE_FILE
+	return load_game_slot(1)
+
+
+## Load the game state from a specific slot.
+func load_game_slot(slot: int) -> bool:
+	if slot < 1 or slot > NUM_SLOTS:
+		var error: String = "Invalid slot number: %d" % slot
+		push_error(error)
+		load_failed.emit(error)
+		return false
+
+	var filepath: String = SAVE_DIR + _get_slot_filename(slot)
 
 	if not FileAccess.file_exists(filepath):
-		var error: String = "No save file found at %s" % filepath
+		var error: String = "No save file found in slot %d" % slot
 		push_warning(error)
 		load_failed.emit(error)
 		return false
@@ -124,26 +152,127 @@ func load_game() -> bool:
 
 	_apply_save_data(save_data)
 
-	print("[SaveLoad] Game loaded from %s" % filepath)
-	game_loaded.emit(filepath)
+	print("[SaveLoad] Game loaded from %s (slot %d)" % [filepath, slot])
+	game_loaded.emit(filepath, slot)
 	return true
 
 
-## Check if a save file exists.
+## Check if a save file exists (backward compatibility for slot 1).
 func has_save_file() -> bool:
-	return FileAccess.file_exists(SAVE_DIR + SAVE_FILE)
+	return has_save_slot(1)
 
 
-## Delete the save file.
+## Check if a specific slot has a save file.
+func has_save_slot(slot: int) -> bool:
+	if slot < 1 or slot > NUM_SLOTS:
+		return false
+	return FileAccess.file_exists(SAVE_DIR + _get_slot_filename(slot))
+
+
+## Delete the save file (backward compatibility for slot 1).
 func delete_save() -> bool:
-	var filepath: String = SAVE_DIR + SAVE_FILE
+	return delete_save_slot(1)
+
+
+## Delete a specific save slot.
+func delete_save_slot(slot: int) -> bool:
+	if slot < 1 or slot > NUM_SLOTS:
+		return false
+	var filename: String = _get_slot_filename(slot)
+	var filepath: String = SAVE_DIR + filename
 	if FileAccess.file_exists(filepath):
 		var dir: DirAccess = DirAccess.open(SAVE_DIR)
 		if dir:
-			dir.remove(SAVE_FILE)
-			print("[SaveLoad] Save file deleted")
+			dir.remove(filename)
+			print("[SaveLoad] Save slot %d deleted" % slot)
 			return true
 	return false
+
+
+## Get metadata about a specific save slot.
+## Returns Dictionary with: empty, timestamp, campsite_level, formatted_time
+func get_slot_info(slot: int) -> Dictionary:
+	if slot < 1 or slot > NUM_SLOTS:
+		return {"empty": true, "slot": slot}
+
+	var filepath: String = SAVE_DIR + _get_slot_filename(slot)
+
+	if not FileAccess.file_exists(filepath):
+		return {"empty": true, "slot": slot}
+
+	var file: FileAccess = FileAccess.open(filepath, FileAccess.READ)
+	if not file:
+		return {"empty": true, "slot": slot}
+
+	var json_string: String = file.get_as_text()
+	file.close()
+
+	var json: JSON = JSON.new()
+	if json.parse(json_string) != OK:
+		return {"empty": true, "slot": slot}
+
+	var save_data: Dictionary = json.data
+
+	# Extract useful metadata
+	var campsite_level: int = 1
+	if save_data.has("campsite") and save_data["campsite"].has("level"):
+		campsite_level = int(save_data["campsite"]["level"])
+
+	var timestamp: String = save_data.get("timestamp", "")
+	var formatted_time: String = _format_timestamp(timestamp)
+
+	return {
+		"empty": false,
+		"slot": slot,
+		"timestamp": timestamp,
+		"campsite_level": campsite_level,
+		"formatted_time": formatted_time
+	}
+
+
+## Get info for all save slots.
+func get_all_slots_info() -> Array[Dictionary]:
+	var slots: Array[Dictionary] = []
+	for i: int in range(1, NUM_SLOTS + 1):
+		slots.append(get_slot_info(i))
+	return slots
+
+
+## Format a timestamp string for display.
+func _format_timestamp(timestamp: String) -> String:
+	if timestamp.is_empty():
+		return "Unknown"
+
+	# Timestamp format: "YYYY-MM-DDTHH:MM:SS"
+	var parts: PackedStringArray = timestamp.split("T")
+	if parts.size() < 2:
+		return timestamp
+
+	var date_parts: PackedStringArray = parts[0].split("-")
+	var time_parts: PackedStringArray = parts[1].split(":")
+
+	if date_parts.size() < 3 or time_parts.size() < 2:
+		return timestamp
+
+	var month_names: Array[String] = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+	var month_idx: int = int(date_parts[1]) - 1
+	if month_idx < 0 or month_idx >= 12:
+		month_idx = 0
+
+	var day: int = int(date_parts[2])
+	var hour: int = int(time_parts[0])
+	var minute: int = int(time_parts[1])
+
+	var period: String = "AM"
+	var display_hour: int = hour
+	if hour >= 12:
+		period = "PM"
+		if hour > 12:
+			display_hour = hour - 12
+	elif hour == 0:
+		display_hour = 12
+
+	return "%s %d, %d:%02d %s" % [month_names[month_idx], day, display_hour, minute, period]
 
 
 ## Collect all game data into a dictionary for saving.
@@ -230,6 +359,9 @@ func _collect_campsite_data() -> Dictionary:
 	var data: Dictionary = {
 		"level": campsite_manager.campsite_level,
 		"has_crafted_tool": campsite_manager.has_crafted_tool,
+		"has_crafted_fishing_rod": campsite_manager.has_crafted_fishing_rod,
+		"days_at_level_2": campsite_manager.days_at_level_2,
+		"level_2_start_day": campsite_manager.level_2_start_day,
 		"structures": []
 	}
 
@@ -293,6 +425,45 @@ func _apply_save_data(data: Dictionary) -> void:
 	# Player last (position, stats, inventory)
 	if data.has("player") and player:
 		_apply_player_data(data["player"])
+
+	# Post-load: Verify crafting flags based on inventory (for backward compatibility)
+	_verify_crafting_flags_from_inventory()
+
+	# Re-check campsite level progression in case flags were updated
+	if campsite_manager and campsite_manager.has_method("_check_level_progression"):
+		campsite_manager._check_level_progression()
+
+
+## Verify crafting flags based on player inventory (for backward compatibility with old saves).
+func _verify_crafting_flags_from_inventory() -> void:
+	if not player or not campsite_manager:
+		return
+
+	var inventory: Node = player.get_node_or_null("Inventory")
+	if not inventory:
+		return
+
+	# If player has fishing rod in inventory, they must have crafted it
+	if not campsite_manager.has_crafted_fishing_rod:
+		if inventory.has_method("has_item") and inventory.has_item("Fishing Rod"):
+			campsite_manager.has_crafted_fishing_rod = true
+			print("[SaveLoad] Set has_crafted_fishing_rod from inventory")
+		elif inventory.has_method("get_all_items"):
+			var items: Dictionary = inventory.get_all_items()
+			if items.has("Fishing Rod") and items["Fishing Rod"] > 0:
+				campsite_manager.has_crafted_fishing_rod = true
+				print("[SaveLoad] Set has_crafted_fishing_rod from inventory")
+
+	# If player has stone axe in inventory, they must have crafted it
+	if not campsite_manager.has_crafted_tool:
+		if inventory.has_method("has_item") and inventory.has_item("Stone Axe"):
+			campsite_manager.has_crafted_tool = true
+			print("[SaveLoad] Set has_crafted_tool from inventory")
+		elif inventory.has_method("get_all_items"):
+			var items: Dictionary = inventory.get_all_items()
+			if items.has("Stone Axe") and items["Stone Axe"] > 0:
+				campsite_manager.has_crafted_tool = true
+				print("[SaveLoad] Set has_crafted_tool from inventory")
 
 
 func _apply_player_data(data: Dictionary) -> void:
@@ -383,6 +554,9 @@ func _apply_campsite_data(data: Dictionary) -> void:
 	# Set flags
 	campsite_manager.campsite_level = int(data.get("level", 1))
 	campsite_manager.has_crafted_tool = data.get("has_crafted_tool", false)
+	campsite_manager.has_crafted_fishing_rod = data.get("has_crafted_fishing_rod", false)
+	campsite_manager.days_at_level_2 = int(data.get("days_at_level_2", 0))
+	campsite_manager.level_2_start_day = int(data.get("level_2_start_day", -1))
 
 	# Clear existing structures first
 	var structures_container: Node = get_parent().get_node_or_null("Structures")

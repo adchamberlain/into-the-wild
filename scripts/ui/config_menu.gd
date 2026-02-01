@@ -54,6 +54,14 @@ var music_volume: float = 50.0  # 0-100
 
 var is_visible: bool = false
 
+# Slot selection state
+var selecting_slot_for_save: bool = false
+var selecting_slot_for_load: bool = false
+
+# Slot panel references (set in _ready)
+var slot_panel: PanelContainer
+var slot_buttons: Array[Button] = []
+
 
 func _ready() -> void:
 	# Get node references
@@ -76,6 +84,9 @@ func _ready() -> void:
 
 	# Initialize UI state
 	_init_ui()
+
+	# Create slot selection panel
+	_create_slot_panel()
 
 	# Start hidden
 	panel.visible = false
@@ -146,12 +157,100 @@ func _init_ui() -> void:
 	_apply_config()
 
 
+## Create the slot selection panel programmatically.
+func _create_slot_panel() -> void:
+	slot_panel = PanelContainer.new()
+	slot_panel.name = "SlotPanel"
+
+	# Match main panel styling
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color(0.1, 0.1, 0.12, 0.95)
+	style.corner_radius_top_left = 10
+	style.corner_radius_top_right = 10
+	style.corner_radius_bottom_left = 10
+	style.corner_radius_bottom_right = 10
+	style.content_margin_left = 20
+	style.content_margin_right = 20
+	style.content_margin_top = 20
+	style.content_margin_bottom = 20
+	slot_panel.add_theme_stylebox_override("panel", style)
+
+	# Center the panel
+	slot_panel.anchors_preset = Control.PRESET_CENTER
+	slot_panel.anchor_left = 0.5
+	slot_panel.anchor_top = 0.5
+	slot_panel.anchor_right = 0.5
+	slot_panel.anchor_bottom = 0.5
+	slot_panel.offset_left = -180
+	slot_panel.offset_top = -150
+	slot_panel.offset_right = 180
+	slot_panel.offset_bottom = 150
+	slot_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	slot_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+
+	var vbox: VBoxContainer = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 15)
+	slot_panel.add_child(vbox)
+
+	# Title label
+	var title_label: Label = Label.new()
+	title_label.name = "SlotTitle"
+	title_label.text = "Select Slot"
+	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var font: Font = load("res://resources/hud_font.tres")
+	title_label.add_theme_font_override("font", font)
+	title_label.add_theme_font_size_override("font_size", 32)
+	title_label.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
+	vbox.add_child(title_label)
+
+	# Separator
+	var sep: HSeparator = HSeparator.new()
+	vbox.add_child(sep)
+
+	# Slot buttons
+	slot_buttons.clear()
+	for i: int in range(1, 4):
+		var btn: Button = Button.new()
+		btn.name = "SlotButton%d" % i
+		btn.text = "Slot %d: Empty" % i
+		btn.add_theme_font_override("font", font)
+		btn.add_theme_font_size_override("font_size", 24)
+		btn.custom_minimum_size = Vector2(300, 50)
+		btn.pressed.connect(_on_slot_button_pressed.bind(i))
+		vbox.add_child(btn)
+		slot_buttons.append(btn)
+
+	# Another separator
+	var sep2: HSeparator = HSeparator.new()
+	vbox.add_child(sep2)
+
+	# Cancel button
+	var cancel_btn: Button = Button.new()
+	cancel_btn.name = "CancelButton"
+	cancel_btn.text = "Cancel"
+	cancel_btn.add_theme_font_override("font", font)
+	cancel_btn.add_theme_font_size_override("font_size", 24)
+	cancel_btn.pressed.connect(_on_slot_cancel_pressed)
+	vbox.add_child(cancel_btn)
+
+	add_child(slot_panel)
+	slot_panel.visible = false
+
+
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed:
 		# Toggle menu with Tab key
 		if event.physical_keycode == KEY_TAB:
 			toggle_menu()
 			get_viewport().set_input_as_handled()
+		# Escape to close slot panel or menu
+		elif event.physical_keycode == KEY_ESCAPE:
+			if slot_panel and slot_panel.visible:
+				_hide_slot_panel()
+				get_viewport().set_input_as_handled()
+			elif is_visible:
+				toggle_menu()
+				get_viewport().set_input_as_handled()
 		# Quick save with K (Keep)
 		elif event.physical_keycode == KEY_K:
 			_on_save_pressed()
@@ -164,7 +263,19 @@ func _input(event: InputEvent) -> void:
 
 func toggle_menu() -> void:
 	is_visible = not is_visible
-	panel.visible = is_visible
+
+	# If closing menu, hide both panels
+	if not is_visible:
+		panel.visible = false
+		if slot_panel:
+			slot_panel.visible = false
+		selecting_slot_for_save = false
+		selecting_slot_for_load = false
+	else:
+		# If opening and slot panel was visible, hide it and show main
+		if slot_panel and slot_panel.visible:
+			slot_panel.visible = false
+		panel.visible = true
 
 	# Handle mouse capture
 	if is_visible:
@@ -295,25 +406,114 @@ func get_config() -> Dictionary:
 
 ## Save/Load functions
 func _on_save_pressed() -> void:
-	if save_load:
-		save_load.save_game()
-	else:
+	if not save_load:
 		_show_save_status("Error: Save system not found", Color.RED)
+		return
+
+	# Show slot selection for save
+	selecting_slot_for_save = true
+	selecting_slot_for_load = false
+	_update_slot_panel_for_save()
+	_show_slot_panel()
 
 
 func _on_load_pressed() -> void:
-	if save_load:
-		save_load.load_game()
-	else:
+	if not save_load:
 		_show_save_status("Error: Save system not found", Color.RED)
+		return
+
+	# Show slot selection for load
+	selecting_slot_for_save = false
+	selecting_slot_for_load = true
+	_update_slot_panel_for_load()
+	_show_slot_panel()
 
 
-func _on_game_saved(_filepath: String) -> void:
-	_show_save_status("Game Saved!", Color.GREEN)
+## Update slot panel buttons for save operation.
+func _update_slot_panel_for_save() -> void:
+	if not slot_panel:
+		return
+
+	var title: Label = slot_panel.get_node_or_null("VBoxContainer/SlotTitle")
+	if title:
+		title.text = "Save to Slot"
+
+	var slots_info: Array[Dictionary] = save_load.get_all_slots_info()
+	for i: int in range(slot_buttons.size()):
+		var btn: Button = slot_buttons[i]
+		var info: Dictionary = slots_info[i]
+		btn.disabled = false  # Can always save to any slot
+		if info["empty"]:
+			btn.text = "Slot %d: Empty" % (i + 1)
+		else:
+			btn.text = "Slot %d: Level %d Camp - %s" % [i + 1, info["campsite_level"], info["formatted_time"]]
 
 
-func _on_game_loaded(_filepath: String) -> void:
-	_show_save_status("Game Loaded!", Color.GREEN)
+## Update slot panel buttons for load operation.
+func _update_slot_panel_for_load() -> void:
+	if not slot_panel:
+		return
+
+	var title: Label = slot_panel.get_node_or_null("VBoxContainer/SlotTitle")
+	if title:
+		title.text = "Load from Slot"
+
+	var slots_info: Array[Dictionary] = save_load.get_all_slots_info()
+	for i: int in range(slot_buttons.size()):
+		var btn: Button = slot_buttons[i]
+		var info: Dictionary = slots_info[i]
+		if info["empty"]:
+			btn.text = "Slot %d: Empty" % (i + 1)
+			btn.disabled = true  # Can't load empty slots
+		else:
+			btn.text = "Slot %d: Level %d Camp - %s" % [i + 1, info["campsite_level"], info["formatted_time"]]
+			btn.disabled = false
+
+
+## Show the slot selection panel.
+func _show_slot_panel() -> void:
+	if slot_panel:
+		panel.visible = false
+		slot_panel.visible = true
+		# Always show mouse cursor when slot panel is visible
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+
+
+## Hide the slot selection panel.
+func _hide_slot_panel() -> void:
+	if slot_panel:
+		slot_panel.visible = false
+		selecting_slot_for_save = false
+		selecting_slot_for_load = false
+		# Return to main config panel if menu is still open
+		if is_visible:
+			panel.visible = true
+		else:
+			# If config menu wasn't open, restore mouse capture
+			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+
+
+## Handle slot button press.
+func _on_slot_button_pressed(slot: int) -> void:
+	if selecting_slot_for_save:
+		save_load.save_game_slot(slot)
+	elif selecting_slot_for_load:
+		save_load.load_game_slot(slot)
+
+	_hide_slot_panel()
+
+
+## Handle cancel button press.
+func _on_slot_cancel_pressed() -> void:
+	_hide_slot_panel()
+
+
+func _on_game_saved(_filepath: String, slot: int) -> void:
+	_show_save_status("Saved to Slot %d!" % slot, Color.GREEN)
+
+
+func _on_game_loaded(_filepath: String, slot: int) -> void:
+	_show_save_status("Loaded Slot %d!" % slot, Color.GREEN)
 
 
 func _on_save_failed(error: String) -> void:
