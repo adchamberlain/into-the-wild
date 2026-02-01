@@ -48,6 +48,7 @@ var music_volume: float = 50.0  # 0-100
 @onready var save_button: Button = $Panel/VBoxContainer/SaveLoadContainer/SaveButton
 @onready var load_button: Button = $Panel/VBoxContainer/SaveLoadContainer/LoadButton
 @onready var save_status_label: Label = $Panel/VBoxContainer/SaveStatusLabel
+@onready var hint_label: Label = $Panel/VBoxContainer/HintLabel
 @onready var music_toggle: CheckButton = $Panel/VBoxContainer/MusicToggle
 @onready var music_volume_slider: HSlider = $Panel/VBoxContainer/MusicVolumeContainer/MusicVolumeSlider
 @onready var music_volume_label: Label = $Panel/VBoxContainer/MusicVolumeContainer/MusicVolumeValue
@@ -358,6 +359,8 @@ func toggle_menu() -> void:
 		if slot_panel and slot_panel.visible:
 			slot_panel.visible = false
 		panel.visible = true
+		# Update hint label based on input device
+		_update_hint_label()
 		# Focus first control for controller navigation
 		focused_control_index = 0
 		_update_control_focus()
@@ -740,3 +743,14 @@ func _activate_focused_slot_button() -> void:
 		var button: Button = slot_buttons[focused_slot_index]
 		if not button.disabled:
 			button.pressed.emit()
+
+
+## Update hint label based on input device.
+func _update_hint_label() -> void:
+	if not hint_label:
+		return
+	var input_mgr: Node = get_node_or_null("/root/InputManager")
+	if input_mgr and input_mgr.is_using_controller():
+		hint_label.text = "L3+R3 or ○ to close"
+	else:
+		hint_label.text = "Press TAB to close"

@@ -33,6 +33,7 @@ const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 # Equipment
 @onready var equipped_label: Label = $EquippedPanel/EquippedContainer/EquippedLabel
 @onready var durability_bar: ProgressBar = $EquippedPanel/EquippedContainer/DurabilityBar
+@onready var equip_hint_label: Label = $EquippedPanel/EquippedContainer/EquipHintLabel
 
 # Notification
 @onready var notification_panel: PanelContainer = $NotificationPanel
@@ -277,6 +278,24 @@ func _update_equipped_display() -> void:
 		# Hide durability bar when nothing equipped
 		if durability_bar:
 			durability_bar.visible = false
+
+	# Update control hints based on input device
+	_update_control_hints()
+
+
+## Update the control hints label based on current input device.
+func _update_control_hints() -> void:
+	if not equip_hint_label:
+		return
+
+	var using_controller: bool = input_manager and input_manager.is_using_controller()
+
+	if using_controller:
+		# Controller prompts
+		equip_hint_label.text = "Create-Equip  Touchpad-Craft  Options-Pause"
+	else:
+		# Keyboard prompts
+		equip_hint_label.text = "I-Equip C-Craft Tab-Config K-Save L-Load"
 
 
 ## Get button prompt for an action based on current input device.

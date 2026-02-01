@@ -12,6 +12,7 @@ signal game_quit()
 @onready var load_button: Button = $Panel/VBoxContainer/LoadButton
 @onready var credits_button: Button = $Panel/VBoxContainer/CreditsButton
 @onready var quit_button: Button = $Panel/VBoxContainer/QuitButton
+@onready var hint_label: Label = $Panel/VBoxContainer/HintLabel
 @onready var credits_panel: PanelContainer = $CreditsPanel
 @onready var back_button: Button = $CreditsPanel/VBoxContainer/BackButton
 
@@ -131,9 +132,22 @@ func pause_game() -> void:
 	panel.visible = true
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 
+	# Update hint label based on input device
+	_update_hint_label()
+
 	# Focus first button for controller navigation
 	focused_button_index = 0
 	resume_button.grab_focus()
+
+
+func _update_hint_label() -> void:
+	if not hint_label:
+		return
+	var input_mgr: Node = get_node_or_null("/root/InputManager")
+	if input_mgr and input_mgr.is_using_controller():
+		hint_label.text = "[○ to resume]"
+	else:
+		hint_label.text = "[ESC to resume]"
 
 
 func resume_game() -> void:

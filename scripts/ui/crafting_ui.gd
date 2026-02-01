@@ -11,6 +11,7 @@ const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 @onready var scroll_container: ScrollContainer = $Panel/MarginContainer/VBoxContainer/ScrollContainer
 @onready var recipe_list: VBoxContainer = $Panel/MarginContainer/VBoxContainer/ScrollContainer/RecipeList
 @onready var title_label: Label = $Panel/MarginContainer/VBoxContainer/TitleLabel
+@onready var hint_label: Label = $Panel/MarginContainer/VBoxContainer/HintLabel
 
 var player: Node
 var campsite_manager: Node
@@ -109,6 +110,8 @@ func toggle_crafting_menu(from_bench: bool = false) -> void:
 			title_label.text = "Crafting Bench"
 		else:
 			title_label.text = "Crafting"
+		# Update hint label based on input device
+		_update_hint_label()
 		# Show cursor for clicking
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 		_refresh_recipe_list()
@@ -269,3 +272,14 @@ func _craft_focused_recipe() -> void:
 		if not button.disabled:
 			# Emit the pressed signal to trigger crafting
 			button.pressed.emit()
+
+
+## Update hint label based on input device.
+func _update_hint_label() -> void:
+	if not hint_label:
+		return
+	var input_mgr: Node = get_node_or_null("/root/InputManager")
+	if input_mgr and input_mgr.is_using_controller():
+		hint_label.text = "Touchpad or ○ to close"
+	else:
+		hint_label.text = "Press C to close"

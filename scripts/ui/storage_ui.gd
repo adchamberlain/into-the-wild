@@ -16,6 +16,7 @@ var current_storage: Node = null  # The storage structure we're interacting with
 @onready var storage_items_list: VBoxContainer = $Panel/MarginContainer/VBoxContainer/HBoxContainer/StoragePanel/VBoxContainer/ScrollContainer/StorageItemsList
 @onready var player_empty_label: Label = $Panel/MarginContainer/VBoxContainer/HBoxContainer/PlayerPanel/VBoxContainer/ScrollContainer/PlayerItemsList/EmptyLabel
 @onready var storage_empty_label: Label = $Panel/MarginContainer/VBoxContainer/HBoxContainer/StoragePanel/VBoxContainer/ScrollContainer/StorageItemsList/EmptyLabel
+@onready var hint_label: Label = $Panel/MarginContainer/VBoxContainer/HintLabel
 
 var is_open: bool = false
 
@@ -111,6 +112,7 @@ func open_storage(storage: Node) -> void:
 
 	_refresh_lists()
 	_update_focus_highlight()
+	_update_hint_label()
 	print("[StorageUI] Opened storage")
 
 
@@ -301,3 +303,14 @@ func _transfer_focused_item() -> void:
 
 	if focused_item_index >= 0 and focused_item_index < current_buttons.size():
 		current_buttons[focused_item_index].pressed.emit()
+
+
+## Update hint label based on input device.
+func _update_hint_label() -> void:
+	if not hint_label:
+		return
+	var input_mgr: Node = get_node_or_null("/root/InputManager")
+	if input_mgr and input_mgr.is_using_controller():
+		hint_label.text = "D-pad ↑↓ items, ←→ panels, ✕ transfer. ○ to close."
+	else:
+		hint_label.text = "Click >> to move items to storage, << to take items. Press E or Escape to close."
