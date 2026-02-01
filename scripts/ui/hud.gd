@@ -35,7 +35,8 @@ const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 @onready var durability_bar: ProgressBar = $EquippedPanel/EquippedContainer/DurabilityBar
 
 # Notification
-@onready var notification_label: Label = $NotificationLabel
+@onready var notification_panel: PanelContainer = $NotificationPanel
+@onready var notification_label: Label = $NotificationPanel/NotificationLabel
 
 # Screen fade overlay
 @onready var fade_overlay: ColorRect = $FadeOverlay
@@ -158,9 +159,9 @@ func _ready() -> void:
 	if interaction_prompt_panel:
 		interaction_prompt_panel.visible = false
 
-	# Hide notification label initially
-	if notification_label:
-		notification_label.visible = false
+	# Hide notification panel initially
+	if notification_panel:
+		notification_panel.visible = false
 
 	# Initialize displays
 	_update_inventory_display()
@@ -435,12 +436,12 @@ func _reset_damage_flash() -> void:
 
 ## Show a notification message.
 func show_notification(message: String, color: Color = Color.WHITE) -> void:
-	if notification_label:
+	if notification_label and notification_panel:
 		notification_label.text = message
 		notification_label.add_theme_color_override("font_color", color)
-		notification_label.visible = true
+		notification_panel.visible = true
 		# Hide after 3 seconds
-		get_tree().create_timer(3.0).timeout.connect(func(): notification_label.visible = false)
+		get_tree().create_timer(3.0).timeout.connect(func(): notification_panel.visible = false)
 
 
 func _on_game_saved(_filepath: String) -> void:

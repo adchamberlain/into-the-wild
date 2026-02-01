@@ -40,6 +40,8 @@ This log serves as our historical record of development progress.
 - Corner radius: 10px
 - Content margins: 16-20px
 
+**Important**: Always wrap HUD text in PanelContainers with semi-transparent backgrounds for readability. Never use standalone Labels in the HUD - they become unreadable against bright backgrounds. Use StyleBoxFlat with `Color(0.05, 0.05, 0.08, 0.75)` for overlays like notifications and prompts.
+
 **Text Colors**:
 - White/Light: `Color(0.9, 0.9, 0.9, 1)` for primary text
 - Gold/Yellow: `Color(1, 0.85, 0.3, 1)` for titles/highlights

@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3 uid="uid://hud001"]
+[gd_scene load_steps=15 format=3 uid="uid://hud001"]
 
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
 [ext_resource type="FontFile" uid="uid://hud_mono_font" path="res://resources/hud_font.tres" id="2_font"]
@@ -90,6 +90,17 @@ content_margin_right = 18.0
 content_margin_bottom = 14.0
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_interaction_bg"]
+bg_color = Color(0.05, 0.05, 0.08, 0.75)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+content_margin_left = 24.0
+content_margin_top = 12.0
+content_margin_right = 24.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_notification_bg"]
 bg_color = Color(0.05, 0.05, 0.08, 0.75)
 corner_radius_top_left = 8
 corner_radius_top_right = 8
@@ -336,24 +347,26 @@ theme_override_font_sizes/font_size = 32
 text = "I-Equip C-Craft Tab-Config K-Save L-Load"
 horizontal_alignment = 2
 
-[node name="NotificationLabel" type="Label" parent="."]
+[node name="NotificationPanel" type="PanelContainer" parent="."]
 visible = false
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -300.0
+offset_left = -200.0
 offset_top = 100.0
-offset_right = 300.0
-offset_bottom = 180.0
+offset_right = 200.0
+offset_bottom = 160.0
 grow_horizontal = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_notification_bg")
+
+[node name="NotificationLabel" type="Label" parent="NotificationPanel"]
+layout_mode = 2
 theme_override_colors/font_color = Color(0.5, 1, 0.5, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.8)
-theme_override_constants/shadow_offset_x = 3
-theme_override_constants/shadow_offset_y = 3
 theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 44
 text = "Game Saved!"
 horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="CoordinatesLabel" type="Label" parent="."]
 visible = false
