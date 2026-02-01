@@ -9,6 +9,7 @@ signal interaction_cleared()
 @export var sprint_speed: float = 8.0
 @export var jump_velocity: float = 5.5  # Allows comfortable 1-block jumps (~1.5 blocks max height)
 @export var mouse_sensitivity: float = 0.002
+@export var controller_sensitivity: float = 3.0  # Sensitivity for right stick camera control
 
 # Camera settings
 @export var camera_pitch_min: float = -89.0
@@ -86,20 +87,24 @@ func _input(event: InputEvent) -> void:
 			_handle_mouse_look(event)
 		return
 
-	# Handle interaction (E key)
-	if event is InputEventKey and event.pressed and not event.echo:
-		if event.is_action("interact") or event.physical_keycode == KEY_E:
-			# If resting, E key exits rest mode
-			if is_resting and resting_in_structure:
-				resting_in_structure.interact(self)
-			else:
-				_try_interact()
-		# Handle eating (F key) - disabled while resting
-		if event.physical_keycode == KEY_F and not is_resting:
-			_try_eat()
-		# Handle using equipped item (R key) - disabled while resting
-		if event.physical_keycode == KEY_R and not is_resting:
-			_try_use_equipped()
+	# Handle interaction (E key or Square button)
+	if event.is_action_pressed("interact"):
+		# If resting, interact exits rest mode
+		if is_resting and resting_in_structure:
+			resting_in_structure.interact(self)
+		else:
+			_try_interact()
+		return
+
+	# Handle eating (F key or Triangle button) - disabled while resting
+	if event.is_action_pressed("eat") and not is_resting:
+		_try_eat()
+		return
+
+	# Handle using equipped item (R key or R2 trigger) - disabled while resting
+	if event.is_action_pressed("use_equipped") and not is_resting:
+		_try_use_equipped()
+		return
 
 
 func _handle_mouse_look(event: InputEventMouseMotion) -> void:
@@ -121,6 +126,9 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector3.ZERO
 		return
 
+	# Handle right stick camera look (controller)
+	_handle_controller_look(delta)
+
 	# Handle swimming vs normal movement
 	if is_in_water:
 		_process_swimming(delta)
@@ -139,32 +147,46 @@ func _physics_process(delta: float) -> void:
 	_update_fall_protection(delta)
 
 
+func _handle_controller_look(delta: float) -> void:
+	# Get right stick input for camera look
+	var look_x: float = Input.get_action_strength("look_right") - Input.get_action_strength("look_left")
+	var look_y: float = Input.get_action_strength("look_down") - Input.get_action_strength("look_up")
+
+	# Apply deadzone (already handled in project settings, but add slight curve)
+	if abs(look_x) < 0.1:
+		look_x = 0.0
+	if abs(look_y) < 0.1:
+		look_y = 0.0
+
+	# Apply controller sensitivity
+	if look_x != 0.0 or look_y != 0.0:
+		# Rotate player body horizontally (yaw)
+		rotate_y(-look_x * controller_sensitivity * delta)
+
+		# Rotate camera vertically (pitch) with clamping
+		camera.rotate_x(-look_y * controller_sensitivity * delta)
+		camera.rotation.x = clamp(
+			camera.rotation.x,
+			deg_to_rad(camera_pitch_min),
+			deg_to_rad(camera_pitch_max)
+		)
+
+
 func _process_normal_movement(delta: float) -> void:
 	# Apply gravity
 	if not is_on_floor():
 		velocity.y -= gravity * delta
 
-	# Handle jump (check both action and direct key)
-	var jump_pressed: bool = Input.is_action_just_pressed("jump") or Input.is_key_pressed(KEY_SPACE)
-	if jump_pressed and is_on_floor():
+	# Handle jump (works with both keyboard and controller via action)
+	if Input.is_action_just_pressed("jump") and is_on_floor():
 		velocity.y = jump_velocity
 
-	# Handle sprint
-	var sprint_held: bool = Input.is_action_pressed("sprint") or Input.is_key_pressed(KEY_SHIFT)
-	is_sprinting = sprint_held and is_on_floor()
+	# Handle sprint (works with both keyboard and controller via action)
+	is_sprinting = Input.is_action_pressed("sprint") and is_on_floor()
 	current_speed = sprint_speed if is_sprinting else walk_speed
 
-	# Get input direction (use physical key checking for Mac compatibility)
-	var input_dir: Vector2 = Vector2.ZERO
-	if Input.is_physical_key_pressed(KEY_W):
-		input_dir.y -= 1
-	if Input.is_physical_key_pressed(KEY_S):
-		input_dir.y += 1
-	if Input.is_physical_key_pressed(KEY_A):
-		input_dir.x -= 1
-	if Input.is_physical_key_pressed(KEY_D):
-		input_dir.x += 1
-	input_dir = input_dir.normalized()
+	# Get input direction from actions (supports both keyboard and controller)
+	var input_dir: Vector2 = _get_movement_input()
 
 	var direction: Vector3 = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 
@@ -178,15 +200,30 @@ func _process_normal_movement(delta: float) -> void:
 		velocity.z = move_toward(velocity.z, 0, current_speed)
 
 
+## Get movement input from both keyboard and controller.
+func _get_movement_input() -> Vector2:
+	var input_dir: Vector2 = Vector2.ZERO
+
+	# Get input from actions (works with keyboard WASD and left stick)
+	input_dir.x = Input.get_action_strength("move_right") - Input.get_action_strength("move_left")
+	input_dir.y = Input.get_action_strength("move_backward") - Input.get_action_strength("move_forward")
+
+	# Clamp for analog stick diagonal movement
+	if input_dir.length() > 1.0:
+		input_dir = input_dir.normalized()
+
+	return input_dir
+
+
 func _process_swimming(delta: float) -> void:
-	# Swimming: player sinks slowly, pressing space makes them rise
-	# Must repeatedly press space to stay afloat
+	# Swimming: player sinks slowly, pressing jump makes them rise
+	# Must repeatedly press jump to stay afloat
 
 	# Apply sinking (like gravity but slower)
 	velocity.y -= swim_sink_speed * delta
 
-	# Handle swim up (space bar - check if held, not just pressed)
-	var swim_up_held: bool = Input.is_key_pressed(KEY_SPACE)
+	# Handle swim up (jump action - works with spacebar or Cross button)
+	var swim_up_held: bool = Input.is_action_pressed("jump")
 	var at_surface: bool = global_position.y >= water_surface_y - 0.3
 	var at_edge: bool = is_on_wall()  # Touching terrain wall at pond edge
 
@@ -195,23 +232,14 @@ func _process_swimming(delta: float) -> void:
 			# At water surface AND at edge - allow jumping out of water
 			velocity.y = jump_velocity * 0.8  # Slightly weaker than normal jump
 		else:
-			velocity.y = swim_rise_speed  # Push upward when holding space
+			velocity.y = swim_rise_speed  # Push upward when holding jump
 
 	# Clamp vertical velocity to prevent too fast sinking (but allow jump out)
 	if velocity.y < -swim_sink_speed * 2:
 		velocity.y = -swim_sink_speed * 2
 
-	# Slower horizontal movement while swimming
-	var input_dir: Vector2 = Vector2.ZERO
-	if Input.is_physical_key_pressed(KEY_W):
-		input_dir.y -= 1
-	if Input.is_physical_key_pressed(KEY_S):
-		input_dir.y += 1
-	if Input.is_physical_key_pressed(KEY_A):
-		input_dir.x -= 1
-	if Input.is_physical_key_pressed(KEY_D):
-		input_dir.x += 1
-	input_dir = input_dir.normalized()
+	# Slower horizontal movement while swimming (use shared input function)
+	var input_dir: Vector2 = _get_movement_input()
 
 	var direction: Vector3 = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 

@@ -46,9 +46,15 @@ func _ready() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo:
-		if event.physical_keycode == KEY_C:
-			_toggle_crafting()
+	# Handle crafting menu toggle (C key or Touchpad button)
+	if event.is_action_pressed("open_crafting"):
+		_toggle_crafting()
+		return
+
+	# Close crafting menu with cancel action when open
+	if is_open and event.is_action_pressed("ui_cancel"):
+		toggle_crafting_menu(false)
+		get_viewport().set_input_as_handled()
 
 
 func _toggle_crafting() -> void:
