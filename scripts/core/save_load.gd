@@ -18,6 +18,7 @@ const SAVE_VERSION: int = 1
 @export var campsite_manager_path: NodePath
 @export var resource_manager_path: NodePath
 @export var crafting_system_path: NodePath
+@export var chunk_manager_path: NodePath
 
 var player: Node
 var time_manager: Node
@@ -25,6 +26,7 @@ var weather_manager: Node
 var campsite_manager: Node
 var resource_manager: Node
 var crafting_system: Node
+var chunk_manager: Node
 
 
 func _ready() -> void:
@@ -39,6 +41,8 @@ func _ready() -> void:
 		campsite_manager = get_node_or_null(campsite_manager_path)
 	if resource_manager_path:
 		resource_manager = get_node_or_null(resource_manager_path)
+	if chunk_manager_path:
+		chunk_manager = get_node_or_null(chunk_manager_path)
 
 	# CraftingSystem is created dynamically by CraftingUI, so defer lookup
 	call_deferred("_get_crafting_system")
@@ -295,7 +299,21 @@ func _apply_player_data(data: Dictionary) -> void:
 	# Position
 	if data.has("position"):
 		var pos: Dictionary = data["position"]
-		player.global_position = Vector3(pos["x"], pos["y"], pos["z"])
+		var load_x: float = pos["x"]
+		var load_z: float = pos["z"]
+
+		# Calculate correct Y position based on terrain height
+		# This prevents spawning below terrain when loading
+		var terrain_y: float = 0.0
+		if chunk_manager and chunk_manager.has_method("get_height_at"):
+			terrain_y = chunk_manager.get_height_at(load_x, load_z)
+
+		# Player height offset (spawn slightly above terrain)
+		var player_height_offset: float = 2.0
+		var final_y: float = terrain_y + player_height_offset
+
+		player.global_position = Vector3(load_x, final_y, load_z)
+		print("[SaveLoad] Player positioned at (%.1f, %.1f, %.1f) - terrain height: %.1f" % [load_x, final_y, load_z, terrain_y])
 
 	# Stats
 	var stats: Node = player.get_node_or_null("PlayerStats")

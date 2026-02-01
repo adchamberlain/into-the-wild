@@ -149,6 +149,7 @@ weather_manager_path = NodePath("../WeatherManager")
 campsite_manager_path = NodePath("../CampsiteManager")
 resource_manager_path = NodePath("../ResourceManager")
 crafting_system_path = NodePath("../CraftingUI")
+chunk_manager_path = NodePath("../World/Terrain")
 
 [node name="HUD" parent="." instance=ExtResource("5_hud")]
 time_manager_path = NodePath("../TimeManager")
