@@ -21,6 +21,7 @@
 [ext_resource type="PackedScene" uid="uid://fishing_spot001" path="res://scenes/resources/fishing_spot.tscn" id="19_fishing"]
 [ext_resource type="Script" path="res://scripts/core/music_manager.gd" id="20_music"]
 [ext_resource type="PackedScene" uid="uid://berrybush001" path="res://scenes/resources/berry_bush.tscn" id="21_berry_bush"]
+[ext_resource type="PackedScene" uid="uid://pause_menu001" path="res://scenes/ui/pause_menu.tscn" id="22_pause_menu"]
 
 [sub_resource type="Environment" id="Environment_1"]
 background_mode = 1
@@ -178,3 +179,5 @@ player_path = NodePath("../Player")
 
 [node name="MusicManager" type="Node" parent="."]
 script = ExtResource("20_music")
+
+[node name="PauseMenu" parent="." instance=ExtResource("22_pause_menu")]

@@ -82,13 +82,6 @@ func _input(event: InputEvent) -> void:
 			_handle_mouse_look(event)
 		return
 
-	# Toggle mouse capture with Escape
-	if event is InputEventKey and event.pressed and not event.echo and event.is_action("ui_cancel"):
-		if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
-			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-		else:
-			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-
 	# Handle interaction (E key)
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.is_action("interact") or event.physical_keycode == KEY_E:

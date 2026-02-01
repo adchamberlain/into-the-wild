@@ -313,21 +313,23 @@ func _play_swing_animation() -> void:
 		tween.set_trans(Tween.TRANS_QUAD)
 		tween.set_ease(Tween.EASE_OUT)
 
-		# Wind up (raise axe back and to the right)
+		# Wind up: raise axe up and tilt head back (away from target)
+		# Positive X rotation tilts top/head back, raise Y position, pull back Z
 		tween.tween_property(stone_axe_model, "rotation_degrees",
-			Vector3(original_rot.x + 30, original_rot.y + 20, original_rot.z + 25), 0.08)
+			Vector3(original_rot.x + 45, original_rot.y, original_rot.z - 10), 0.1)
 		tween.parallel().tween_property(stone_axe_model, "position",
-			Vector3(original_pos.x + 0.1, original_pos.y + 0.15, original_pos.z + 0.05), 0.08)
+			Vector3(original_pos.x, original_pos.y + 0.15, original_pos.z + 0.1), 0.1)
 
-		# Swing down (chop motion - blade leads into target)
+		# Swing down: bring head forward into target
+		# Negative X rotation brings top/head forward, lower Y, push forward Z
 		tween.tween_property(stone_axe_model, "rotation_degrees",
-			Vector3(original_rot.x - 40, original_rot.y - 15, original_rot.z - 35), 0.1)
+			Vector3(original_rot.x - 35, original_rot.y, original_rot.z + 5), 0.08)
 		tween.parallel().tween_property(stone_axe_model, "position",
-			Vector3(original_pos.x - 0.1, original_pos.y - 0.15, original_pos.z - 0.2), 0.1)
+			Vector3(original_pos.x, original_pos.y - 0.1, original_pos.z - 0.15), 0.08)
 
 		# Return to rest position
-		tween.tween_property(stone_axe_model, "rotation_degrees", original_rot, 0.15)
-		tween.parallel().tween_property(stone_axe_model, "position", original_pos, 0.15)
+		tween.tween_property(stone_axe_model, "rotation_degrees", original_rot, 0.12)
+		tween.parallel().tween_property(stone_axe_model, "position", original_pos, 0.12)
 
 		print("[Equipment] *chop*")
 	else:
@@ -418,31 +420,32 @@ func _create_stone_axe() -> void:
 
 	stone_axe_model.add_child(handle)
 
-	# Stone head - blocky wedge shape (offset to -X so blade faces forward when swinging)
+	# Stone head - blocky wedge shape
+	# Head extends in -Z direction (toward screen/target when swinging)
 	var head := MeshInstance3D.new()
 	head.name = "Head"
 	var head_mesh := BoxMesh.new()
-	head_mesh.size = Vector3(0.18, 0.12, 0.06)  # Wide, short, thin
+	head_mesh.size = Vector3(0.06, 0.12, 0.18)  # Thin, short, deep (extends in Z)
 	head.mesh = head_mesh
 
 	var head_mat := StandardMaterial3D.new()
 	head_mat.albedo_color = Color(0.5, 0.5, 0.5)  # Stone grey
 	head.material_override = head_mat
-	head.position = Vector3(-0.06, 0.22, 0)  # At top of handle, offset to LEFT
+	head.position = Vector3(0, 0.22, -0.06)  # At top of handle, offset forward
 
 	stone_axe_model.add_child(head)
 
-	# Blade edge (slightly darker to show the cutting edge)
+	# Blade edge (slightly darker to show the cutting edge) - faces forward (-Z)
 	var blade := MeshInstance3D.new()
 	blade.name = "Blade"
 	var blade_mesh := BoxMesh.new()
-	blade_mesh.size = Vector3(0.02, 0.1, 0.05)
+	blade_mesh.size = Vector3(0.05, 0.1, 0.02)
 	blade.mesh = blade_mesh
 
 	var blade_mat := StandardMaterial3D.new()
 	blade_mat.albedo_color = Color(0.4, 0.4, 0.42)  # Darker stone
 	blade.material_override = blade_mat
-	blade.position = Vector3(-0.16, 0.22, 0)  # At edge of head (LEFT side)
+	blade.position = Vector3(0, 0.22, -0.16)  # At front edge of head
 
 	stone_axe_model.add_child(blade)
 
@@ -460,10 +463,11 @@ func _create_stone_axe() -> void:
 
 	stone_axe_model.add_child(binding)
 
-	# Position: held in right hand, ready to swing
-	# Axe head should be up and to the right
-	stone_axe_model.position = Vector3(0.35, -0.3, -0.4)
-	stone_axe_model.rotation_degrees = Vector3(-20, -30, -45)  # Angled for holding
+	# Position: held in right hand, vertical with natural 18 degree clockwise tilt
+	# Lower-right of screen, handle pointing down
+	stone_axe_model.position = Vector3(0.3, -0.35, -0.5)
+	# Z rotation = clockwise tilt, small X tilt to angle head slightly toward screen
+	stone_axe_model.rotation_degrees = Vector3(10, 0, -18)
 
 	# Attach to camera
 	if player:
