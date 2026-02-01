@@ -396,7 +396,13 @@ UI shows "(Requires Bench)" when not at bench.
 - This consumed the input before Equipment could handle the `unequip` action
 - Fixed by only responding to `ui_cancel` when pause menu is already open
 
-**Files Modified**: `scripts/core/save_load.gd`, `scripts/ui/config_menu.gd`, `scripts/ui/hud.gd`, `scripts/campsite/placement_system.gd`, `scripts/ui/pause_menu.gd`
+**D-Pad Menu Navigation**: Added D-pad support for crafting and equipment menus:
+- Crafting menu: D-pad up/down to navigate recipes, Cross (X) to craft
+- Equipment menu: D-pad up/down to navigate items, Cross (X) to equip
+- Visual highlight shows currently focused item
+- First item focused when menu opens
+
+**Files Modified**: `scripts/core/save_load.gd`, `scripts/ui/config_menu.gd`, `scripts/ui/hud.gd`, `scripts/campsite/placement_system.gd`, `scripts/ui/pause_menu.gd`, `scripts/ui/crafting_ui.gd`, `scripts/ui/equipment_menu.gd`
 
 ---
 

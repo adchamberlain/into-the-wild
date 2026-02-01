@@ -22,6 +22,10 @@ var at_bench: bool = false
 # Track recipe buttons for updates
 var recipe_buttons: Dictionary = {}
 
+# Track focused recipe for controller navigation
+var focused_recipe_index: int = 0
+var recipe_button_list: Array[Button] = []  # Ordered list for navigation
+
 
 func _ready() -> void:
 	# Add to group for crafting bench to find us
@@ -59,10 +63,31 @@ func _input(event: InputEvent) -> void:
 		_toggle_crafting()
 		return
 
+	# Only handle other inputs when menu is open
+	if not is_open:
+		return
+
 	# Close crafting menu with cancel action when open
-	if is_open and event.is_action_pressed("ui_cancel"):
+	if event.is_action_pressed("ui_cancel"):
 		toggle_crafting_menu(false)
 		get_viewport().set_input_as_handled()
+		return
+
+	# D-pad navigation
+	if event.is_action_pressed("ui_down"):
+		_navigate_recipes(1)
+		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed("ui_up"):
+		_navigate_recipes(-1)
+		get_viewport().set_input_as_handled()
+		return
+
+	# Cross button (ui_accept) to craft focused recipe
+	if event.is_action_pressed("ui_accept"):
+		_craft_focused_recipe()
+		get_viewport().set_input_as_handled()
+		return
 
 
 func _toggle_crafting() -> void:
@@ -86,6 +111,8 @@ func toggle_crafting_menu(from_bench: bool = false) -> void:
 		# Show cursor for clicking
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 		_refresh_recipe_list()
+		# Focus first recipe button for controller navigation
+		_focus_first_recipe()
 	else:
 		at_bench = false
 		# Re-capture mouse for gameplay
@@ -97,6 +124,8 @@ func _refresh_recipe_list() -> void:
 	for child in recipe_list.get_children():
 		child.queue_free()
 	recipe_buttons.clear()
+	recipe_button_list.clear()
+	focused_recipe_index = 0
 
 	if not crafting_system:
 		return
@@ -145,8 +174,10 @@ func _refresh_recipe_list() -> void:
 		button.add_theme_font_override("font", HUD_FONT)
 		button.add_theme_font_size_override("font_size", 40)
 		button.pressed.connect(_on_craft_pressed.bind(recipe_id))
+		button.focus_mode = Control.FOCUS_ALL  # Allow focus for controller navigation
 		container.add_child(button)
 		recipe_buttons[recipe_id] = button
+		recipe_button_list.append(button)
 
 		# Ingredients label
 		var ingredients_text: String = "Requires: "
@@ -194,3 +225,41 @@ func _on_craft_pressed(recipe_id: String) -> void:
 func _on_inventory_changed() -> void:
 	if is_open:
 		_refresh_recipe_list()
+
+
+## Focus the first recipe button (called when menu opens).
+func _focus_first_recipe() -> void:
+	# Use call_deferred since buttons were just created
+	call_deferred("_do_focus_first_recipe")
+
+
+func _do_focus_first_recipe() -> void:
+	if not recipe_button_list.is_empty():
+		focused_recipe_index = 0
+		recipe_button_list[0].grab_focus()
+
+
+## Navigate through recipe list with D-pad.
+func _navigate_recipes(direction: int) -> void:
+	if recipe_button_list.is_empty():
+		return
+
+	focused_recipe_index = (focused_recipe_index + direction) % recipe_button_list.size()
+	if focused_recipe_index < 0:
+		focused_recipe_index = recipe_button_list.size() - 1
+
+	# Focus the button (this also scrolls it into view)
+	var button: Button = recipe_button_list[focused_recipe_index]
+	button.grab_focus()
+
+
+## Craft the currently focused recipe.
+func _craft_focused_recipe() -> void:
+	if recipe_button_list.is_empty():
+		return
+
+	if focused_recipe_index >= 0 and focused_recipe_index < recipe_button_list.size():
+		var button: Button = recipe_button_list[focused_recipe_index]
+		if not button.disabled:
+			# Emit the pressed signal to trigger crafting
+			button.pressed.emit()

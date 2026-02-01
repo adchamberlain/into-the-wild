@@ -35,6 +35,10 @@ const EQUIPMENT_SLOTS: Array = [
 # Cached labels for each slot
 var slot_labels: Dictionary = {}
 
+# Controller navigation
+var focused_slot_index: int = 0
+var slot_panels: Array[PanelContainer] = []  # For highlighting focused item
+
 
 func _ready() -> void:
 	# Get player reference
@@ -64,14 +68,27 @@ func _build_slot_list() -> void:
 	for child in item_list.get_children():
 		child.queue_free()
 	slot_labels.clear()
+	slot_panels.clear()
 
-	# Create a label for each slot
+	# Create a panel with label for each slot (panel allows highlight for controller nav)
 	for slot in EQUIPMENT_SLOTS:
+		var item_panel: PanelContainer = PanelContainer.new()
+		var style: StyleBoxFlat = StyleBoxFlat.new()
+		style.bg_color = Color(0, 0, 0, 0)  # Transparent by default
+		style.content_margin_left = 8
+		style.content_margin_right = 8
+		style.content_margin_top = 4
+		style.content_margin_bottom = 4
+		item_panel.add_theme_stylebox_override("panel", style)
+
 		var label: Label = Label.new()
 		label.add_theme_font_override("font", HUD_FONT)
 		label.add_theme_font_size_override("font_size", 28)
-		item_list.add_child(label)
+		item_panel.add_child(label)
+
+		item_list.add_child(item_panel)
 		slot_labels[slot["type"]] = label
+		slot_panels.append(item_panel)
 
 	# Update display
 	_update_display()
@@ -138,10 +155,31 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 
+	# Only handle other inputs when menu is open
+	if not is_visible:
+		return
+
 	# Close menu with cancel action when open
-	if is_visible and event.is_action_pressed("ui_cancel"):
+	if event.is_action_pressed("ui_cancel"):
 		toggle_menu()
 		get_viewport().set_input_as_handled()
+		return
+
+	# D-pad navigation
+	if event.is_action_pressed("ui_down"):
+		_navigate_slots(1)
+		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed("ui_up"):
+		_navigate_slots(-1)
+		get_viewport().set_input_as_handled()
+		return
+
+	# Cross button (ui_accept) to equip focused item
+	if event.is_action_pressed("ui_accept"):
+		_equip_focused_slot()
+		get_viewport().set_input_as_handled()
+		return
 
 
 func toggle_menu() -> void:
@@ -149,7 +187,9 @@ func toggle_menu() -> void:
 	panel.visible = is_visible
 
 	if is_visible:
+		focused_slot_index = 0
 		_update_display()
+		_update_focus_highlight()
 
 
 func _on_inventory_changed() -> void:
@@ -165,3 +205,42 @@ func _on_item_equipped(_item_type: String) -> void:
 func _on_item_unequipped(_item_type: String) -> void:
 	if is_visible:
 		_update_display()
+
+
+## Navigate through equipment slots with D-pad.
+func _navigate_slots(direction: int) -> void:
+	if slot_panels.is_empty():
+		return
+
+	focused_slot_index = (focused_slot_index + direction) % slot_panels.size()
+	if focused_slot_index < 0:
+		focused_slot_index = slot_panels.size() - 1
+
+	_update_focus_highlight()
+
+
+## Update visual highlight on focused slot.
+func _update_focus_highlight() -> void:
+	for i: int in range(slot_panels.size()):
+		var panel: PanelContainer = slot_panels[i]
+		var style: StyleBoxFlat = panel.get_theme_stylebox("panel").duplicate()
+		if i == focused_slot_index:
+			style.bg_color = Color(0.3, 0.3, 0.4, 0.8)  # Highlighted
+		else:
+			style.bg_color = Color(0, 0, 0, 0)  # Transparent
+		panel.add_theme_stylebox_override("panel", style)
+
+
+## Equip the currently focused item.
+func _equip_focused_slot() -> void:
+	if focused_slot_index < 0 or focused_slot_index >= EQUIPMENT_SLOTS.size():
+		return
+
+	var slot: Dictionary = EQUIPMENT_SLOTS[focused_slot_index]
+	var slot_type: String = slot["type"]
+
+	# Check if we have the item
+	if inventory and inventory.get_item_count(slot_type) > 0:
+		if equipment and equipment.has_method("equip"):
+			equipment.equip(slot_type)
+			_update_display()
