@@ -18,10 +18,16 @@ var save_load: Node
 
 var is_paused: bool = false
 var showing_credits: bool = false
+var showing_slots: bool = false
 
 # Controller navigation
 var focused_button_index: int = 0
 var button_list: Array[Button] = []
+
+# Slot selection panel
+var slot_panel: PanelContainer
+var slot_buttons: Array[Button] = []
+var focused_slot_index: int = 0
 
 
 func _ready() -> void:
@@ -51,6 +57,9 @@ func _ready() -> void:
 	# Set up button list for controller navigation
 	button_list = [resume_button, save_button, credits_button, quit_button]
 
+	# Create slot selection panel
+	_create_slot_panel()
+
 
 func _input(event: InputEvent) -> void:
 	# Handle pause action (Escape key or Options button) - can pause/unpause anytime
@@ -65,15 +74,33 @@ func _input(event: InputEvent) -> void:
 	# Handle ui_cancel (Circle button) - only when already paused, to avoid
 	# conflicting with "unequip" action which also uses Circle
 	if event.is_action_pressed("ui_cancel") and is_paused:
-		if showing_credits:
+		if showing_slots:
+			_hide_slot_panel()
+		elif showing_credits:
 			_on_back_pressed()
 		else:
 			resume_game()
 		get_viewport().set_input_as_handled()
 		return
 
+	# D-pad navigation for slot panel
+	if is_paused and showing_slots:
+		if event.is_action_pressed("ui_down"):
+			_navigate_slot_buttons(1)
+			get_viewport().set_input_as_handled()
+			return
+		if event.is_action_pressed("ui_up"):
+			_navigate_slot_buttons(-1)
+			get_viewport().set_input_as_handled()
+			return
+		if event.is_action_pressed("ui_accept"):
+			_activate_focused_slot_button()
+			get_viewport().set_input_as_handled()
+			return
+		return
+
 	# D-pad navigation when paused
-	if is_paused and not showing_credits:
+	if is_paused and not showing_credits and not showing_slots:
 		if event.is_action_pressed("ui_down"):
 			_navigate_buttons(1)
 			get_viewport().set_input_as_handled()
@@ -109,9 +136,12 @@ func pause_game() -> void:
 func resume_game() -> void:
 	is_paused = false
 	showing_credits = false
+	showing_slots = false
 	get_tree().paused = false
 	panel.visible = false
 	credits_panel.visible = false
+	if slot_panel:
+		slot_panel.visible = false
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	game_resumed.emit()
 
@@ -142,14 +172,13 @@ func _on_quit_pressed() -> void:
 
 
 func _on_save_pressed() -> void:
-	if save_load and save_load.has_method("save_game"):
-		var success: bool = save_load.save_game()
-		if success:
-			_show_notification("Game Saved!", Color(0.6, 1.0, 0.6))
-		else:
-			_show_notification("Save Failed!", Color(1.0, 0.5, 0.5))
-	else:
+	if not save_load:
 		_show_notification("Save system not found!", Color(1.0, 0.5, 0.5))
+		return
+
+	# Show slot selection panel
+	_update_slot_panel()
+	_show_slot_panel()
 
 
 func _show_notification(message: String, color: Color) -> void:
@@ -185,5 +214,163 @@ func _activate_focused_button() -> void:
 
 	if focused_button_index >= 0 and focused_button_index < button_list.size():
 		var button: Button = button_list[focused_button_index]
+		if not button.disabled:
+			button.pressed.emit()
+
+
+# ============================================================================
+# Slot Selection Panel
+# ============================================================================
+
+## Create the slot selection panel programmatically.
+func _create_slot_panel() -> void:
+	slot_panel = PanelContainer.new()
+	slot_panel.name = "SlotPanel"
+	slot_panel.process_mode = Node.PROCESS_MODE_ALWAYS
+
+	# Match main panel styling
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color(0.1, 0.1, 0.12, 0.95)
+	style.corner_radius_top_left = 10
+	style.corner_radius_top_right = 10
+	style.corner_radius_bottom_left = 10
+	style.corner_radius_bottom_right = 10
+	style.content_margin_left = 30
+	style.content_margin_right = 30
+	style.content_margin_top = 25
+	style.content_margin_bottom = 25
+	slot_panel.add_theme_stylebox_override("panel", style)
+
+	# Center the panel
+	slot_panel.anchors_preset = Control.PRESET_CENTER
+	slot_panel.anchor_left = 0.5
+	slot_panel.anchor_top = 0.5
+	slot_panel.anchor_right = 0.5
+	slot_panel.anchor_bottom = 0.5
+	slot_panel.offset_left = -200
+	slot_panel.offset_top = -180
+	slot_panel.offset_right = 200
+	slot_panel.offset_bottom = 180
+	slot_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	slot_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+
+	var vbox: VBoxContainer = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 15)
+	slot_panel.add_child(vbox)
+
+	# Title label
+	var title_label: Label = Label.new()
+	title_label.name = "SlotTitle"
+	title_label.text = "Save to Slot"
+	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var font: Font = load("res://resources/hud_font.tres")
+	title_label.add_theme_font_override("font", font)
+	title_label.add_theme_font_size_override("font_size", 40)
+	title_label.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
+	vbox.add_child(title_label)
+
+	# Separator
+	var sep: HSeparator = HSeparator.new()
+	vbox.add_child(sep)
+
+	# Create 3 slot buttons
+	for i: int in range(3):
+		var btn: Button = Button.new()
+		btn.name = "Slot%dButton" % (i + 1)
+		btn.text = "Slot %d: Empty" % (i + 1)
+		btn.add_theme_font_override("font", font)
+		btn.add_theme_font_size_override("font_size", 32)
+		btn.pressed.connect(_on_slot_button_pressed.bind(i + 1))
+		vbox.add_child(btn)
+		slot_buttons.append(btn)
+
+	# Spacer
+	var spacer: Control = Control.new()
+	spacer.custom_minimum_size = Vector2(0, 10)
+	vbox.add_child(spacer)
+
+	# Cancel button
+	var cancel_btn: Button = Button.new()
+	cancel_btn.name = "CancelButton"
+	cancel_btn.text = "Cancel"
+	cancel_btn.add_theme_font_override("font", font)
+	cancel_btn.add_theme_font_size_override("font_size", 28)
+	cancel_btn.pressed.connect(_hide_slot_panel)
+	vbox.add_child(cancel_btn)
+	slot_buttons.append(cancel_btn)
+
+	add_child(slot_panel)
+	slot_panel.visible = false
+
+
+## Update slot panel buttons with current save info.
+func _update_slot_panel() -> void:
+	if not slot_panel or not save_load:
+		return
+
+	var slots_info: Array[Dictionary] = save_load.get_all_slots_info()
+	for i: int in range(min(3, slot_buttons.size())):
+		var btn: Button = slot_buttons[i]
+		var info: Dictionary = slots_info[i]
+		if info["empty"]:
+			btn.text = "Slot %d: Empty" % (i + 1)
+		else:
+			btn.text = "Slot %d: Level %d - %s" % [i + 1, info["campsite_level"], info["formatted_time"]]
+
+
+## Show the slot selection panel.
+func _show_slot_panel() -> void:
+	if slot_panel:
+		showing_slots = true
+		panel.visible = false
+		slot_panel.visible = true
+		# Focus first slot button
+		focused_slot_index = 0
+		if not slot_buttons.is_empty():
+			slot_buttons[0].grab_focus()
+
+
+## Hide the slot selection panel.
+func _hide_slot_panel() -> void:
+	if slot_panel:
+		showing_slots = false
+		slot_panel.visible = false
+		panel.visible = true
+		# Restore focus to save button
+		focused_button_index = 1  # Save button index
+		save_button.grab_focus()
+
+
+## Handle slot button press.
+func _on_slot_button_pressed(slot: int) -> void:
+	if save_load and save_load.has_method("save_game_slot"):
+		var success: bool = save_load.save_game_slot(slot)
+		if success:
+			_show_notification("Saved to Slot %d!" % slot, Color(0.6, 1.0, 0.6))
+		else:
+			_show_notification("Save Failed!", Color(1.0, 0.5, 0.5))
+
+	_hide_slot_panel()
+
+
+## Navigate slot buttons with D-pad.
+func _navigate_slot_buttons(direction: int) -> void:
+	if slot_buttons.is_empty():
+		return
+
+	focused_slot_index = (focused_slot_index + direction) % slot_buttons.size()
+	if focused_slot_index < 0:
+		focused_slot_index = slot_buttons.size() - 1
+
+	slot_buttons[focused_slot_index].grab_focus()
+
+
+## Activate the focused slot button.
+func _activate_focused_slot_button() -> void:
+	if slot_buttons.is_empty():
+		return
+
+	if focused_slot_index >= 0 and focused_slot_index < slot_buttons.size():
+		var button: Button = slot_buttons[focused_slot_index]
 		if not button.disabled:
 			button.pressed.emit()

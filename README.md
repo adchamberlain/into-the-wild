@@ -174,7 +174,7 @@ See `DEV_LOG.md` for development history and `into-the-wild-game-spec.md` for th
 
 ## Credits
 
-**Created by:** Andrew Chamberlain, Ph.D.
+**Created by:** Andrew Chamberlain, Ph.D. & Lucas Ventura-Chamberlain
 **Website:** [andrewchamberlain.com](https://andrewchamberlain.com)
 
 ### Music
