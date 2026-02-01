@@ -57,18 +57,12 @@ func _ready() -> void:
 	# Get references
 	if player_path:
 		player = get_node_or_null(player_path)
-	if crafting_system_path:
-		crafting_system = get_node_or_null(crafting_system_path)
-	elif player:
-		# Try to find crafting system as sibling
-		crafting_system = get_parent().get_node_or_null("CraftingUI")
-
-	# Connect to crafting system signals
-	if crafting_system and crafting_system.has_signal("recipe_crafted"):
-		crafting_system.recipe_crafted.connect(_on_recipe_crafted)
 
 	# Connect to player's placement system
 	call_deferred("_connect_to_placement_system")
+
+	# Defer crafting system connection to ensure CraftingUI has initialized
+	call_deferred("_connect_to_crafting_system")
 
 	# Connect to time manager for day tracking
 	call_deferred("_connect_to_time_manager")
@@ -89,6 +83,30 @@ func _connect_to_placement_system() -> void:
 		if placement_system:
 			placement_system.set_campsite_manager(self)
 			print("[CampsiteManager] Connected to PlacementSystem")
+
+
+func _connect_to_crafting_system() -> void:
+	# Get CraftingUI and extract the actual CraftingSystem from it
+	var crafting_ui: Node = null
+	if crafting_system_path:
+		crafting_ui = get_node_or_null(crafting_system_path)
+	if not crafting_ui and player:
+		# Try to find crafting UI as sibling
+		crafting_ui = get_parent().get_node_or_null("CraftingUI")
+
+	# Get the actual CraftingSystem from CraftingUI
+	if crafting_ui and crafting_ui.has_method("get_crafting_system"):
+		crafting_system = crafting_ui.get_crafting_system()
+	elif crafting_ui and crafting_ui.has_signal("recipe_crafted"):
+		# Fallback in case it's already a CraftingSystem
+		crafting_system = crafting_ui
+
+	# Connect to crafting system signals
+	if crafting_system and crafting_system.has_signal("recipe_crafted"):
+		crafting_system.recipe_crafted.connect(_on_recipe_crafted)
+		print("[CampsiteManager] Connected to CraftingSystem recipe_crafted signal")
+	else:
+		print("[CampsiteManager] WARNING: Could not connect to CraftingSystem - level progression for crafted items won't work!")
 
 
 func _connect_to_time_manager() -> void:

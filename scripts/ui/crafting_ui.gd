@@ -283,3 +283,8 @@ func _update_hint_label() -> void:
 		hint_label.text = "Touchpad or ○ to close"
 	else:
 		hint_label.text = "Press C to close"
+
+
+## Get the internal CraftingSystem for signal connections.
+func get_crafting_system() -> CraftingSystem:
+	return crafting_system
