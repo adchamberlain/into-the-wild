@@ -456,6 +456,8 @@ func _on_game_saved(_filepath: String) -> void:
 
 func _on_game_loaded(_filepath: String) -> void:
 	show_notification("Game Loaded!", Color(0.4, 1.0, 0.4, 1))
+	# Update campsite level display (without showing celebration)
+	_update_campsite_level_display()
 
 
 func _update_resting_prompt() -> void:

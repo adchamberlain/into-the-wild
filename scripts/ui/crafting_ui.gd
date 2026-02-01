@@ -101,22 +101,36 @@ func _refresh_recipe_list() -> void:
 		if requires_bench and not at_bench:
 			continue
 
-		# Create recipe container
+		# Create outer panel for each recipe item with darker background
+		var item_panel: PanelContainer = PanelContainer.new()
+		var item_style: StyleBoxFlat = StyleBoxFlat.new()
+		item_style.bg_color = Color(0.08, 0.08, 0.1, 0.9)
+		item_style.corner_radius_top_left = 8
+		item_style.corner_radius_top_right = 8
+		item_style.corner_radius_bottom_left = 8
+		item_style.corner_radius_bottom_right = 8
+		item_style.content_margin_left = 12
+		item_style.content_margin_right = 12
+		item_style.content_margin_top = 10
+		item_style.content_margin_bottom = 10
+		item_panel.add_theme_stylebox_override("panel", item_style)
+
+		# Create recipe container inside the panel
 		var container: VBoxContainer = VBoxContainer.new()
-		container.add_theme_constant_override("separation", 4)
+		container.add_theme_constant_override("separation", 6)
 
 		# Recipe button
 		var button: Button = Button.new()
 		button.text = recipe_name
 		button.disabled = not can_craft_recipe
 		button.add_theme_font_override("font", HUD_FONT)
-		button.add_theme_font_size_override("font_size", 36)
+		button.add_theme_font_size_override("font_size", 40)
 		button.pressed.connect(_on_craft_pressed.bind(recipe_id))
 		container.add_child(button)
 		recipe_buttons[recipe_id] = button
 
 		# Ingredients label
-		var ingredients_text: String = "  Requires: "
+		var ingredients_text: String = "Requires: "
 		var ingredient_parts: Array[String] = []
 		for resource: String in inputs:
 			var amount: int = inputs[resource]
@@ -127,24 +141,25 @@ func _refresh_recipe_list() -> void:
 		var ingredients_label: Label = Label.new()
 		ingredients_label.text = ingredients_text
 		ingredients_label.add_theme_font_override("font", HUD_FONT)
-		ingredients_label.add_theme_font_size_override("font_size", 28)
-		ingredients_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7, 1) if can_craft_recipe else Color(0.5, 0.4, 0.4, 1))
+		ingredients_label.add_theme_font_size_override("font_size", 30)
+		ingredients_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85, 1) if can_craft_recipe else Color(0.5, 0.4, 0.4, 1))
 		container.add_child(ingredients_label)
 
 		# Description
 		var desc_label: Label = Label.new()
-		desc_label.text = "  " + description
+		desc_label.text = description
 		desc_label.add_theme_font_override("font", HUD_FONT)
-		desc_label.add_theme_font_size_override("font_size", 26)
-		desc_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6, 1))
+		desc_label.add_theme_font_size_override("font_size", 28)
+		desc_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7, 1))
 		container.add_child(desc_label)
 
-		# Spacer
-		var spacer: Control = Control.new()
-		spacer.custom_minimum_size = Vector2(0, 10)
-		container.add_child(spacer)
+		item_panel.add_child(container)
+		recipe_list.add_child(item_panel)
 
-		recipe_list.add_child(container)
+		# Spacer between items
+		var spacer: Control = Control.new()
+		spacer.custom_minimum_size = Vector2(0, 6)
+		recipe_list.add_child(spacer)
 
 
 func _on_craft_pressed(recipe_id: String) -> void:

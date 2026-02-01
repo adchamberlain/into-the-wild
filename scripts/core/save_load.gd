@@ -383,8 +383,9 @@ func _apply_campsite_data(data: Dictionary) -> void:
 		for struct_data: Dictionary in data["structures"]:
 			_recreate_structure(struct_data, structures_container)
 
-	# Emit level changed signal to update UI
-	campsite_manager.campsite_level_changed.emit(campsite_manager.campsite_level)
+	# NOTE: We intentionally do NOT emit campsite_level_changed here
+	# to avoid showing the level-up celebration when loading a saved game.
+	# The HUD will update its display when it receives game_loaded signal.
 
 
 func _recreate_structure(struct_data: Dictionary, container: Node) -> void:

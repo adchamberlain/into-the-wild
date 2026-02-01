@@ -641,7 +641,6 @@ func _create_grass_tuft(pos: Vector3, rng: RandomNumberGenerator) -> void:
 	var mat: StandardMaterial3D = StandardMaterial3D.new()
 	mat.vertex_color_use_as_albedo = true
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	grass.material_override = mat
 
 	grass.position = pos
