@@ -292,10 +292,18 @@ func get_interaction_text() -> String:
 	if is_depleted:
 		return "Depleted"
 	if waiting_for_catch:
-		return "[E] Reel In!"
+		return "Reel In!"
 	if is_fishing:
 		return "Waiting for bite..."
-	return "[E] Cast Line"
+
+	# Only show "Cast Line" if player has fishing rod equipped
+	var players: Array[Node] = get_tree().get_nodes_in_group("player")
+	if players.size() > 0:
+		var equipment: Node = _get_player_equipment(players[0])
+		if equipment and equipment.has_tool_equipped("fishing"):
+			return "Cast Line"
+
+	return ""
 
 
 func _start_fishing(player: Node) -> void:

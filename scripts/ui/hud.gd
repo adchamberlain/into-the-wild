@@ -185,6 +185,12 @@ func _on_period_changed(period: String) -> void:
 
 
 func _on_interaction_target_changed(_target: Node, interaction_text: String) -> void:
+	# Hide prompt if interaction text is empty
+	if interaction_text.is_empty():
+		if interaction_prompt_panel:
+			interaction_prompt_panel.visible = false
+		return
+
 	if interaction_prompt:
 		interaction_prompt.text = "[E] " + interaction_text
 	if interaction_prompt_panel:
