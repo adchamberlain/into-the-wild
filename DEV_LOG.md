@@ -328,6 +328,29 @@ UI shows "(Requires Bench)" when not at bench.
 
 ---
 
+## Session 30 - Credits & README Update (2026-02-01)
+
+**README Overhaul**: Comprehensive update reflecting all implemented features:
+- Infinite procedural world with chunk system
+- Full campsite progression (Levels 1-3) with 8 structures
+- DualSense controller support with PlayStation button prompts
+- Tiered crafting (basic vs advanced recipes)
+- Swimming, weather particles, ambient music
+- Added Credits section with author info
+
+**In-Game Credits Screen**: Added to pause menu:
+- Credits button between Resume and Quit
+- Dedicated credits panel showing:
+  - Game title
+  - Author: Andrew Chamberlain, Ph.D.
+  - Website: andrewchamberlain.com
+  - Music credits (Valdis Story)
+- Back button and ESC support to return to pause menu
+
+**Files Modified**: `README.md`, `scenes/ui/pause_menu.tscn`, `scripts/ui/pause_menu.gd`
+
+---
+
 ## Next Session
 
 ### Planned Tasks
