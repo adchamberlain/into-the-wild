@@ -269,6 +269,65 @@ UI shows "(Requires Bench)" when not at bench.
 
 ---
 
+## Session 29 - DualSense Controller Support (2026-02-01)
+
+**Full PlayStation DualSense controller support** enabling gamepad play alongside existing keyboard/mouse controls.
+
+**Input Mappings** (project.godot):
+- Left Stick: Movement (WASD equivalent)
+- Right Stick: Camera look (mouse look equivalent)
+- Cross (×): Jump, swim up, UI accept
+- Circle (○): Unequip, UI cancel/back
+- Square (□): Interact
+- Triangle (△): Eat food/use healing items
+- R2 Trigger: Use equipped item (place, fish, chop)
+- L3 (Left Stick Click): Sprint
+- L1/R1: Cycle through equipment slots
+- Options: Pause menu
+- Touchpad: Open crafting menu
+- Create: Open inventory/equipment menu
+- D-pad + Left Stick: UI navigation
+
+**New Input Actions**: `look_up`, `look_down`, `look_left`, `look_right`, `eat`, `use_equipped`, `unequip`, `open_crafting`, `open_inventory`, `pause`, `next_slot`, `prev_slot`, `ui_up`, `ui_down`, `ui_left`, `ui_right`, `ui_accept`
+
+**InputManager Singleton** (`scripts/systems/input_manager.gd`):
+- AutoLoad singleton for global access
+- Tracks current input device (keyboard/mouse vs controller)
+- Emits `input_device_changed` signal when switching devices
+- Provides button prompt text based on device (e.g., "E" vs "□")
+- PlayStation button symbol support (×, ○, □, △, R2, L1, etc.)
+
+**Player Controller Updates**:
+- Right stick camera control with configurable sensitivity
+- Analog movement using action strengths (supports partial stick input)
+- Unified `_get_movement_input()` function for both input methods
+- Action-based input for jump, sprint, interact, eat, use equipped
+
+**Equipment System Updates**:
+- L1/R1 cycling through available equipment slots
+- Smart cycling: Only cycles through items player actually has
+- Maintains current slot position for intuitive cycling
+
+**UI Updates**:
+- Dynamic button prompts that change based on input device
+- HUD interaction prompts show controller symbols when using gamepad
+- Equipment display shows controller hints (R2 place, ○ unequip)
+- Celebration prompts update ("Press any button" vs "Press any key")
+- Menus close with Circle button (ui_cancel)
+- Pause menu works with Options button
+
+**Files Modified**:
+- `project.godot` - Input mappings and AutoLoad registration
+- `scripts/systems/input_manager.gd` - NEW: Input device tracking singleton
+- `scripts/player/player_controller.gd` - Controller movement and camera
+- `scripts/player/equipment.gd` - L1/R1 slot cycling
+- `scripts/ui/hud.gd` - Dynamic button prompts
+- `scripts/ui/pause_menu.gd` - Controller pause toggle
+- `scripts/ui/crafting_ui.gd` - Controller menu toggle
+- `scripts/ui/equipment_menu.gd` - Controller menu toggle
+
+---
+
 ## Next Session
 
 ### Planned Tasks
@@ -276,6 +335,7 @@ UI shows "(Requires Bench)" when not at bench.
 2. Game balancing and polish
 3. Pixelated textures (optional)
 4. Save/load for new progression flags
+5. Optional: DualSense haptics and adaptive triggers
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

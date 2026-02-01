@@ -24,10 +24,10 @@ func _ready() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo:
-		if event.is_action("ui_cancel"):
-			toggle_pause()
-			get_viewport().set_input_as_handled()
+	# Handle pause toggle (Escape key or Options button)
+	if event.is_action_pressed("pause") or event.is_action_pressed("ui_cancel"):
+		toggle_pause()
+		get_viewport().set_input_as_handled()
 
 
 func toggle_pause() -> void:

@@ -78,6 +78,12 @@ func _build_slot_list() -> void:
 
 
 func _update_display() -> void:
+	# Check if using controller for different display format
+	var using_controller: bool = false
+	var input_mgr: Node = get_node_or_null("/root/InputManager")
+	if input_mgr and input_mgr.has_method("is_using_controller"):
+		using_controller = input_mgr.is_using_controller()
+
 	for slot in EQUIPMENT_SLOTS:
 		var slot_type: String = slot["type"]
 		var label: Label = slot_labels.get(slot_type)
@@ -97,8 +103,13 @@ func _update_display() -> void:
 		if equipment:
 			is_equipped = equipment.get_equipped() == slot_type
 
-		# Build display text
-		var text: String = "[%s] %s" % [key, name]
+		# Build display text - show keyboard keys or controller cycle hint
+		var text: String
+		if using_controller:
+			text = name  # No key hints for controller (use L1/R1 to cycle)
+		else:
+			text = "[%s] %s" % [key, name]
+
 		if count > 0:
 			text += " (x%d)" % count
 		else:
@@ -116,11 +127,16 @@ func _update_display() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	# Toggle menu with I key
-	if event is InputEventKey and event.pressed:
-		if event.physical_keycode == KEY_I:
-			toggle_menu()
-			get_viewport().set_input_as_handled()
+	# Toggle menu with I key or Create button
+	if event.is_action_pressed("open_inventory"):
+		toggle_menu()
+		get_viewport().set_input_as_handled()
+		return
+
+	# Close menu with cancel action when open
+	if is_visible and event.is_action_pressed("ui_cancel"):
+		toggle_menu()
+		get_viewport().set_input_as_handled()
 
 
 func toggle_menu() -> void:

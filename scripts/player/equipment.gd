@@ -145,11 +145,27 @@ func _setup_references() -> void:
 			print("[Equipment] Inventory items: ", inventory.get_all_items())
 
 
+# Track current slot for controller cycling
+var current_slot: int = 1
+
 func _input(event: InputEvent) -> void:
+	# Handle controller slot cycling (L1/R1)
+	if event.is_action_pressed("next_slot"):
+		_cycle_slot(1)
+		return
+	if event.is_action_pressed("prev_slot"):
+		_cycle_slot(-1)
+		return
+
+	# Handle unequip action (Q key or Circle button)
+	if event.is_action_pressed("unequip"):
+		unequip()
+		return
+
+	# Number keys to equip items (keyboard only)
 	if not event is InputEventKey or not event.pressed or event.echo:
 		return
 
-	# Number keys to equip items
 	if event.physical_keycode == KEY_1:
 		_try_equip_slot(1)
 	elif event.physical_keycode == KEY_2:
@@ -174,8 +190,49 @@ func _input(event: InputEvent) -> void:
 		_try_equip_slot(11)
 	elif event.physical_keycode == KEY_EQUAL:
 		_try_equip_slot(12)
-	elif event.physical_keycode == KEY_Q:
-		unequip()
+
+
+## Cycle through equipment slots (for controller L1/R1).
+func _cycle_slot(direction: int) -> void:
+	# Ensure we have inventory reference
+	if not inventory:
+		_setup_references()
+	if not inventory:
+		return
+
+	# Find available equippable items in inventory
+	var available_slots: Array[int] = []
+	for item_type: String in EQUIPPABLE_ITEMS:
+		if inventory.has_item(item_type):
+			var slot: int = EQUIPPABLE_ITEMS[item_type].get("slot", 0)
+			if slot > 0:
+				available_slots.append(slot)
+
+	if available_slots.is_empty():
+		print("[Equipment] No items to equip")
+		return
+
+	available_slots.sort()
+
+	# Find current position in available slots
+	var current_index: int = -1
+	for i: int in range(available_slots.size()):
+		if available_slots[i] == current_slot:
+			current_index = i
+			break
+
+	# Calculate next slot
+	var next_index: int
+	if current_index == -1:
+		# Current slot not in available items, start from beginning or end
+		next_index = 0 if direction > 0 else available_slots.size() - 1
+	else:
+		next_index = (current_index + direction) % available_slots.size()
+		if next_index < 0:
+			next_index = available_slots.size() - 1
+
+	current_slot = available_slots[next_index]
+	_try_equip_slot(current_slot)
 
 
 func _try_equip_slot(slot: int) -> void:

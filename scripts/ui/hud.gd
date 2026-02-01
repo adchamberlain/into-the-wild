@@ -68,6 +68,7 @@ var equipment: Node
 var campsite_manager: Node
 var weather_manager: Node
 var save_load: Node
+var input_manager: Node
 
 # Resting state tracking
 var is_player_resting: bool = false
@@ -155,6 +156,11 @@ func _ready() -> void:
 		save_load.game_saved.connect(_on_game_saved)
 		save_load.game_loaded.connect(_on_game_loaded)
 
+	# Connect to input manager for dynamic button prompts
+	input_manager = get_node_or_null("/root/InputManager")
+	if input_manager:
+		input_manager.input_device_changed.connect(_on_input_device_changed)
+
 	# Hide interaction prompt initially
 	if interaction_prompt_panel:
 		interaction_prompt_panel.visible = false
@@ -192,9 +198,23 @@ func _on_interaction_target_changed(_target: Node, interaction_text: String) -> 
 		return
 
 	if interaction_prompt:
-		interaction_prompt.text = "[E] " + interaction_text
+		interaction_prompt.text = _get_interact_prompt() + " " + interaction_text
 	if interaction_prompt_panel:
 		interaction_prompt_panel.visible = true
+
+
+## Get the interact button prompt based on current input device.
+func _get_interact_prompt() -> String:
+	if input_manager and input_manager.has_method("get_prompt"):
+		return "[%s]" % input_manager.get_prompt("interact")
+	return "[E]"
+
+
+## Called when input device changes between keyboard/mouse and controller.
+func _on_input_device_changed(_is_controller: bool) -> void:
+	# Update any visible prompts
+	_update_equipped_display()
+	_update_resting_prompt()
 
 
 func _on_interaction_cleared() -> void:
@@ -238,14 +258,17 @@ func _update_equipped_display() -> void:
 		var item_name: String = equipment.get_equipped_name()
 		equipped_label.text = "Equipped: " + item_name
 
-		# Add usage hint based on item type
+		# Add usage hint based on item type and input device
 		var equipped_type: String = equipment.get_equipped()
+		var use_key: String = _get_button_prompt("use_equipped")
+		var unequip_key: String = _get_button_prompt("unequip")
+
 		if StructureData.is_placeable_item(equipped_type):
-			equipped_label.text += " [R place, Q unequip]"
+			equipped_label.text += " [%s place, %s unequip]" % [use_key, unequip_key]
 		elif equipped_type == "fishing_rod":
-			equipped_label.text += " [R fish, Q unequip]"
+			equipped_label.text += " [%s fish, %s unequip]" % [use_key, unequip_key]
 		else:
-			equipped_label.text += " [Q to unequip]"
+			equipped_label.text += " [%s unequip]" % unequip_key
 
 		# Update durability bar
 		_update_durability_bar()
@@ -254,6 +277,19 @@ func _update_equipped_display() -> void:
 		# Hide durability bar when nothing equipped
 		if durability_bar:
 			durability_bar.visible = false
+
+
+## Get button prompt for an action based on current input device.
+func _get_button_prompt(action: String) -> String:
+	if input_manager and input_manager.has_method("get_prompt"):
+		return input_manager.get_prompt(action)
+	# Fallback to keyboard defaults
+	match action:
+		"use_equipped": return "R"
+		"unequip": return "Q"
+		"interact": return "E"
+		"eat": return "F"
+		_: return "?"
 
 
 func _update_durability_bar() -> void:
@@ -472,7 +508,7 @@ func _update_resting_prompt() -> void:
 	if player_resting and not is_player_resting:
 		# Just started resting - show get up prompt
 		if interaction_prompt:
-			interaction_prompt.text = "[E] Get Up"
+			interaction_prompt.text = "%s Get Up" % _get_interact_prompt()
 		if interaction_prompt_panel:
 			interaction_prompt_panel.visible = true
 		is_player_resting = true
@@ -515,7 +551,11 @@ func _show_level_celebration(level: int) -> void:
 		else:
 			celebration_unlocks.visible = false
 	if celebration_prompt:
-		celebration_prompt.text = "[Press any key to continue]"
+		var using_controller: bool = input_manager and input_manager.is_using_controller()
+		if using_controller:
+			celebration_prompt.text = "[Press any button to continue]"
+		else:
+			celebration_prompt.text = "[Press any key to continue]"
 
 	# Show celebration UI with animation
 	is_celebrating = true
@@ -563,9 +603,10 @@ func _hide_celebration() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	# Dismiss celebration on any key press
-	if is_celebrating and event is InputEventKey and event.pressed:
-		_hide_celebration()
+	# Dismiss celebration on any key or button press
+	if is_celebrating:
+		if (event is InputEventKey and event.pressed) or (event is InputEventJoypadButton and event.pressed):
+			_hide_celebration()
 
 
 ## Fade the screen to black and back. Calls callback after fade out completes.
