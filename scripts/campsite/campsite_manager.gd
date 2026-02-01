@@ -9,16 +9,22 @@ signal campsite_level_changed(new_level: int)
 # Campsite level requirements
 const LEVEL_REQUIREMENTS: Dictionary = {
 	1: {
-		"description": "Survival Camp",
-		"requirements": []  # Start at level 1
+		"name": "Survival Camp",
+		"description": "Basic survival - you just arrived",
+		"requirements": [],  # Start at level 1
+		"unlocks": []
 	},
 	2: {
-		"description": "Established Camp",
-		"requirements": ["has_fire_pit", "has_shelter", "has_crafted_tool"]
+		"name": "Functional Camp",
+		"description": "Ready for a longer stay",
+		"requirements": ["has_fire_pit", "has_shelter", "has_crafting_bench", "has_drying_rack", "has_crafted_fishing_rod"],
+		"unlocks": ["Canvas Tent", "Herb Garden Plot"]
 	},
 	3: {
-		"description": "Homestead",
-		"requirements": ["has_storage", "has_multiple_structures"]
+		"name": "Wilderness Basecamp",
+		"description": "A true home in the wild",
+		"requirements": ["has_canvas_tent", "has_storage", "has_garden", "has_six_structures", "survived_three_days_at_level_2"],
+		"unlocks": ["LOG CABIN - Walk-in home with bed and kitchen!"]
 	}
 }
 
@@ -29,13 +35,18 @@ var structure_counts: Dictionary = {}  # structure_type -> count
 
 # Progress flags
 var has_crafted_tool: bool = false
+var has_crafted_fishing_rod: bool = false
+var days_at_level_2: int = 0
+var level_2_start_day: int = -1
 
 # References
 @export var player_path: NodePath
 @export var crafting_system_path: NodePath
+@export var time_manager_path: NodePath
 
 var player: Node
 var crafting_system: Node
+var time_manager: Node
 
 
 func _ready() -> void:
@@ -55,6 +66,9 @@ func _ready() -> void:
 	# Connect to player's placement system
 	call_deferred("_connect_to_placement_system")
 
+	# Connect to time manager for day tracking
+	call_deferred("_connect_to_time_manager")
+
 	print("[CampsiteManager] Initialized at level %d" % campsite_level)
 
 
@@ -71,6 +85,27 @@ func _connect_to_placement_system() -> void:
 		if placement_system:
 			placement_system.set_campsite_manager(self)
 			print("[CampsiteManager] Connected to PlacementSystem")
+
+
+func _connect_to_time_manager() -> void:
+	if time_manager_path:
+		time_manager = get_node_or_null(time_manager_path)
+	if not time_manager:
+		time_manager = get_parent().get_node_or_null("TimeManager")
+
+	if time_manager and time_manager.has_signal("day_changed"):
+		time_manager.day_changed.connect(_on_day_changed)
+		print("[CampsiteManager] Connected to TimeManager")
+
+
+func _on_day_changed(new_day: int) -> void:
+	# Track days spent at level 2
+	if campsite_level == 2:
+		if level_2_start_day < 0:
+			level_2_start_day = new_day
+		days_at_level_2 = new_day - level_2_start_day
+		print("[CampsiteManager] Days at Level 2: %d" % days_at_level_2)
+		_check_level_progression()
 
 
 ## Register a newly placed structure.
@@ -119,7 +154,12 @@ func get_level() -> int:
 ## Get level description.
 func get_level_description() -> String:
 	var level_data: Dictionary = LEVEL_REQUIREMENTS.get(campsite_level, {})
-	return level_data.get("description", "Camp Level %d" % campsite_level)
+	return level_data.get("name", "Camp Level %d" % campsite_level)
+
+
+## Get full level info for celebrations.
+func get_level_info(level: int) -> Dictionary:
+	return LEVEL_REQUIREMENTS.get(level, {})
 
 
 ## Get count of a specific structure type.
@@ -164,9 +204,17 @@ func _check_level_progression() -> void:
 			break
 
 	if all_met:
+		var old_level: int = campsite_level
 		campsite_level = next_level
 		campsite_level_changed.emit(campsite_level)
 		print("[CampsiteManager] *** LEVEL UP! Now at level %d: %s ***" % [campsite_level, get_level_description()])
+
+		# Start tracking days at level 2
+		if campsite_level == 2 and old_level == 1:
+			if time_manager and "current_day" in time_manager:
+				level_2_start_day = time_manager.current_day
+				days_at_level_2 = 0
+				print("[CampsiteManager] Started tracking days at Level 2")
 
 		# Check for further level ups
 		_check_level_progression()
@@ -178,22 +226,47 @@ func _check_requirement(requirement: String) -> bool:
 		"has_fire_pit":
 			return has_structure("fire_pit")
 		"has_shelter":
-			return has_structure("basic_shelter")
+			return has_structure("basic_shelter") or has_structure("canvas_tent")
+		"has_crafting_bench":
+			return has_structure("crafting_bench")
+		"has_drying_rack":
+			return has_structure("drying_rack")
 		"has_crafted_tool":
 			return has_crafted_tool
+		"has_crafted_fishing_rod":
+			return has_crafted_fishing_rod
+		"has_canvas_tent":
+			return has_structure("canvas_tent")
 		"has_storage":
 			return has_structure("storage_container")
+		"has_garden":
+			return has_structure("herb_garden")
+		"has_six_structures":
+			return get_total_structure_count() >= 6
 		"has_multiple_structures":
 			return get_total_structure_count() >= 3
+		"survived_three_days_at_level_2":
+			return days_at_level_2 >= 3
 	return false
 
 
 ## Called when a recipe is crafted.
 func _on_recipe_crafted(recipe_id: String, _output_type: String, _output_amount: int) -> void:
+	var progression_check_needed: bool = false
+
 	# Check for tool crafting
 	if recipe_id == "stone_axe" and not has_crafted_tool:
 		has_crafted_tool = true
 		print("[CampsiteManager] Tool crafted - progression flag set")
+		progression_check_needed = true
+
+	# Check for fishing rod crafting
+	if recipe_id == "fishing_rod" and not has_crafted_fishing_rod:
+		has_crafted_fishing_rod = true
+		print("[CampsiteManager] Fishing rod crafted - progression flag set")
+		progression_check_needed = true
+
+	if progression_check_needed:
 		_check_level_progression()
 
 

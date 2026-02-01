@@ -105,6 +105,40 @@ func _load_recipes() -> void:
 			"output_amount": 1,
 			"description": "Instantly restores health when used.",
 			"requires_bench": true
+		},
+		"drying_rack_kit": {
+			"name": "Drying Rack Kit",
+			"inputs": {"branch": 6, "rope": 2},
+			"output_type": "drying_rack_kit",
+			"output_amount": 1,
+			"description": "Materials to build a food drying rack.",
+			"requires_bench": true
+		},
+		"garden_plot_kit": {
+			"name": "Garden Plot Kit",
+			"inputs": {"wood": 4, "herb": 2},
+			"output_type": "garden_plot_kit",
+			"output_amount": 1,
+			"description": "Materials to build an herb garden.",
+			"requires_bench": true
+		},
+		"canvas_tent_kit": {
+			"name": "Canvas Tent Kit",
+			"inputs": {"branch": 8, "rope": 4, "wood": 4},
+			"output_type": "canvas_tent_kit",
+			"output_amount": 1,
+			"description": "Materials for a sturdy canvas tent.",
+			"requires_bench": true,
+			"min_camp_level": 2
+		},
+		"cabin_kit": {
+			"name": "Cabin Kit",
+			"inputs": {"wood": 30, "branch": 20, "river_rock": 10, "rope": 6},
+			"output_type": "cabin_kit",
+			"output_amount": 1,
+			"description": "Everything needed to build a log cabin!",
+			"requires_bench": true,
+			"min_camp_level": 3
 		}
 	}
 
@@ -129,7 +163,7 @@ func get_recipe(recipe_id: String) -> Dictionary:
 
 
 ## Check if player can craft a recipe (has all required materials and bench if needed).
-func can_craft(recipe_id: String, at_bench: bool = false) -> bool:
+func can_craft(recipe_id: String, at_bench: bool = false, campsite_level: int = 1) -> bool:
 	if not inventory:
 		return false
 
@@ -143,6 +177,11 @@ func can_craft(recipe_id: String, at_bench: bool = false) -> bool:
 	if requires_bench and not at_bench:
 		return false
 
+	# Check camp level requirement
+	var min_level: int = recipe.get("min_camp_level", 1)
+	if campsite_level < min_level:
+		return false
+
 	var inputs: Dictionary = recipe.get("inputs", {})
 
 	for resource_type: String in inputs:
@@ -153,6 +192,13 @@ func can_craft(recipe_id: String, at_bench: bool = false) -> bool:
 	return true
 
 
+## Get the minimum camp level required for a recipe.
+func get_min_camp_level(recipe_id: String) -> int:
+	if not recipes.has(recipe_id):
+		return 1
+	return recipes[recipe_id].get("min_camp_level", 1)
+
+
 ## Check if a recipe requires a crafting bench.
 func requires_bench(recipe_id: String) -> bool:
 	if not recipes.has(recipe_id):
@@ -161,8 +207,8 @@ func requires_bench(recipe_id: String) -> bool:
 
 
 ## Attempt to craft a recipe. Returns true if successful.
-func craft(recipe_id: String, at_bench: bool = false) -> bool:
-	if not can_craft(recipe_id, at_bench):
+func craft(recipe_id: String, at_bench: bool = false, campsite_level: int = 1) -> bool:
+	if not can_craft(recipe_id, at_bench, campsite_level):
 		return false
 
 	var recipe: Dictionary = recipes[recipe_id]
@@ -198,13 +244,13 @@ func is_discovered(recipe_id: String) -> bool:
 
 
 ## Get a list of all recipes with their craftability status.
-func get_all_recipes_status(at_bench: bool = false) -> Array[Dictionary]:
+func get_all_recipes_status(at_bench: bool = false, campsite_level: int = 1) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 
 	for recipe_id: String in discovered_recipes:
 		var recipe: Dictionary = recipes[recipe_id].duplicate()
 		recipe["id"] = recipe_id
-		recipe["can_craft"] = can_craft(recipe_id, at_bench)
+		recipe["can_craft"] = can_craft(recipe_id, at_bench, campsite_level)
 		result.append(recipe)
 
 	return result
