@@ -93,6 +93,8 @@ func _ready() -> void:
 		time_manager = get_node(time_manager_path)
 		time_manager.time_changed.connect(_on_time_changed)
 		time_manager.period_changed.connect(_on_period_changed)
+		if time_manager.has_signal("day_changed"):
+			time_manager.day_changed.connect(_on_day_changed)
 		_update_time_display()
 
 	# Connect to player for interaction prompts, inventory, stats, and equipment
@@ -193,6 +195,11 @@ func _on_time_changed(_hour: int, _minute: int) -> void:
 
 func _on_period_changed(period: String) -> void:
 	period_label.text = period
+
+
+func _on_day_changed(_day: int) -> void:
+	# Update campsite level display to show new day progress
+	_update_campsite_level_display()
 
 
 func _on_interaction_target_changed(target: Node, interaction_text: String) -> void:
