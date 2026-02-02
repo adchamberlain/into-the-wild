@@ -194,10 +194,22 @@ func _complete_harvest(player: Node) -> void:
 ## Get the text to show in interaction prompt.
 func get_interaction_text() -> String:
 	var text: String = "%s %s" % [interaction_text, resource_type.capitalize()]
-	if required_tool != "" and chops_required > 1:
-		text = "[R] Chop %s (%d/%d)" % [resource_type.capitalize(), chop_progress, chops_required]
-	elif required_tool != "":
-		text += " (needs %s)" % required_tool.capitalize()
+
+	# For resources requiring a tool, check if player has it equipped
+	if required_tool != "":
+		var player: Node = get_tree().get_first_node_in_group("player")
+		var has_tool: bool = false
+		if player:
+			var equipment: Equipment = _get_player_equipment(player)
+			if equipment and equipment.has_tool_equipped(required_tool):
+				has_tool = true
+
+		if has_tool and chops_required > 1:
+			text = "Chop %s (%d/%d)" % [resource_type.capitalize(), chop_progress, chops_required]
+		elif not has_tool:
+			# Don't show prompt if player doesn't have required tool
+			return ""
+
 	return text
 
 
