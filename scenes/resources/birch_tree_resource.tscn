@@ -34,7 +34,7 @@ size = Vector3(3.0, 4.0, 3.0)
 
 [node name="BirchTreeResource" type="StaticBody3D"]
 script = ExtResource("1_resource")
-resource_type = "birch_wood"
+resource_type = "wood"
 resource_amount = 3
 interaction_text = "Chop"
 secondary_resource_type = "branch"
