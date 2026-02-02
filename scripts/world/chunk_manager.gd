@@ -405,8 +405,8 @@ func _generate_rivers() -> void:
 			river_rng.randf_range(-world_extent, world_extent)
 		)
 
-		# Must start away from camp (reduced from 40 to 30)
-		if source.length() < 30.0:
+		# Must start well away from camp/spawn area
+		if source.length() < 50.0:
 			continue
 
 		var source_region: RegionType = get_region_at(source.x, source.y)
@@ -458,6 +458,7 @@ func _generate_river_path(source: Vector2, rng: RandomNumberGenerator) -> Array[
 	var segment_length: float = 18.0
 	var max_segments: int = 10
 	var direction: Vector2 = Vector2.ZERO
+	var spawn_exclusion_radius: float = 40.0  # Keep rivers away from spawn area
 
 	for _i in range(max_segments):
 		# Sample heights in multiple directions to find downhill
@@ -473,6 +474,10 @@ func _generate_river_path(source: Vector2, rng: RandomNumberGenerator) -> Array[
 			# Prefer lower terrain with slight randomness
 			test_height += rng.randf_range(-1.0, 1.0)
 
+			# Strongly penalize directions toward spawn
+			if test_pos.length() < spawn_exclusion_radius:
+				test_height += 100.0  # Make this direction very unattractive
+
 			if test_height < lowest_height:
 				lowest_height = test_height
 				best_dir = test_dir
@@ -486,10 +491,14 @@ func _generate_river_path(source: Vector2, rng: RandomNumberGenerator) -> Array[
 
 		var next_pos: Vector2 = current + best_dir * segment_length + perp * curve_offset
 
-		# Don't get too close to water bodies
+		# Don't enter spawn exclusion zone
+		if next_pos.length() < spawn_exclusion_radius:
+			continue
+
+		# Don't get too close to water bodies (ponds/lakes)
 		var near_water: bool = false
 		for body in water_bodies:
-			if next_pos.distance_to(body["center"]) < body["radius"] + 10.0:
+			if next_pos.distance_to(body["center"]) < body["radius"] + 15.0:
 				near_water = true
 				break
 		if near_water:
