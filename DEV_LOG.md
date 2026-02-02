@@ -644,6 +644,17 @@ Rocky regions provide foundation for future cave system.
 
 ---
 
+## Session 35b - Spawn Area Always Forest (2026-02-01)
+
+**Forest Spawn Zone**: The area within 60 units of spawn (0,0) is now always FOREST region, regardless of noise values. This ensures a consistent starting experience with:
+- Moderate tree density
+- Standard terrain height variation
+- The guaranteed campsite pond at (15, 12)
+
+**Files Modified**: `scripts/world/chunk_manager.gd` - Added spawn distance check in `get_region_at()`
+
+---
+
 ## Next Session
 
 ### Planned Tasks

@@ -626,6 +626,11 @@ func get_terrain_material() -> StandardMaterial3D:
 
 func get_region_at(x: float, z: float) -> RegionType:
 	## Determines the region type at a given world position using low-frequency noise
+	## Always FOREST near spawn point for consistent starting experience
+	var spawn_distance: float = Vector2(x, z).length()
+	if spawn_distance < 60.0:
+		return RegionType.FOREST
+
 	var value: float = region_noise.get_noise_2d(x, z)
 	if value < -0.3:
 		return RegionType.MEADOW
