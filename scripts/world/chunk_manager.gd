@@ -112,7 +112,8 @@ var region_noise: FastNoiseLite  # Low-frequency noise for region determination
 var detail_noise: FastNoiseLite  # Higher-frequency detail for hills
 var hill_noise: FastNoiseLite    # Large-scale hill shapes
 var path_noise: FastNoiseLite    # Creates valleys/paths through hills for climbing
-var noise_seed: int
+var noise_seed: int = 0
+var noise_seed_set: bool = false  # True if seed was set externally (e.g., from save file)
 
 # Tree scenes
 var tree_scene: PackedScene
@@ -194,7 +195,18 @@ func _process(_delta: float) -> void:
 
 
 func _setup_noise() -> void:
-	noise_seed = randi()
+	# Check for pending world seed from GameState autoload (set during save load)
+	var game_state: Node = get_node_or_null("/root/GameState")
+	if game_state and game_state.has_pending_seed:
+		noise_seed = game_state.consume_pending_world_seed()
+		noise_seed_set = true
+
+	# Only generate a new seed if one wasn't set externally (e.g., from save file)
+	if not noise_seed_set:
+		noise_seed = randi()
+		print("[ChunkManager] Generated new world seed: %d" % noise_seed)
+	else:
+		print("[ChunkManager] Using existing world seed: %d" % noise_seed)
 
 	noise = FastNoiseLite.new()
 	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
@@ -237,6 +249,18 @@ func _setup_noise() -> void:
 	path_noise.seed = noise_seed + 4500
 	path_noise.frequency = 0.025  # Medium frequency for winding paths
 	path_noise.fractal_octaves = 2
+
+
+## Get the current world seed for saving.
+func get_world_seed() -> int:
+	return noise_seed
+
+
+## Set the world seed before terrain generation (call before _ready runs, or use set_world_seed_and_regenerate).
+func set_world_seed(seed_value: int) -> void:
+	noise_seed = seed_value
+	noise_seed_set = true
+	print("[ChunkManager] World seed set to: %d" % seed_value)
 
 
 func _generate_water_bodies() -> void:

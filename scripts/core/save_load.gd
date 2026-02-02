@@ -51,12 +51,27 @@ func _ready() -> void:
 	# Ensure save directory exists
 	_ensure_save_directory()
 
+	# Check for pending load after scene reload (world seed was changed)
+	call_deferred("_check_pending_load")
+
 
 func _get_crafting_system() -> void:
 	if crafting_system_path:
 		var crafting_ui: Node = get_node_or_null(crafting_system_path)
 		if crafting_ui and "crafting_system" in crafting_ui:
 			crafting_system = crafting_ui.crafting_system
+
+
+func _check_pending_load() -> void:
+	# Check if there's a pending save to load (after scene reload for world seed change)
+	var game_state: Node = get_node_or_null("/root/GameState")
+	if game_state:
+		var pending_slot: int = game_state.consume_pending_load_slot()
+		if pending_slot > 0:
+			print("[SaveLoad] Loading pending save from slot %d after scene reload" % pending_slot)
+			# Need to wait a frame for all nodes to be ready
+			await get_tree().process_frame
+			load_game_slot(pending_slot)
 
 
 func _ensure_save_directory() -> void:
@@ -149,6 +164,22 @@ func load_game_slot(slot: int) -> bool:
 	var version: int = save_data.get("version", 0)
 	if version != SAVE_VERSION:
 		push_warning("[SaveLoad] Save version mismatch (expected %d, got %d)" % [SAVE_VERSION, version])
+
+	# Check if world seed matches - if not, we need to reload the scene with correct seed
+	var saved_seed: int = save_data.get("world_seed", 0)
+	var current_seed: int = 0
+	if chunk_manager and chunk_manager.has_method("get_world_seed"):
+		current_seed = chunk_manager.get_world_seed()
+
+	if saved_seed != 0 and saved_seed != current_seed:
+		print("[SaveLoad] World seed mismatch (saved: %d, current: %d) - reloading scene" % [saved_seed, current_seed])
+		var game_state: Node = get_node_or_null("/root/GameState")
+		if game_state:
+			game_state.set_pending_world_seed(saved_seed)
+			game_state.set_pending_load_slot(slot)
+			# Reload the main scene - terrain will regenerate with correct seed
+			get_tree().reload_current_scene()
+			return true
 
 	_apply_save_data(save_data)
 
@@ -305,6 +336,11 @@ func _collect_save_data() -> Dictionary:
 	# Crafting data
 	if crafting_system:
 		data["crafting"] = _collect_crafting_data()
+
+	# World seed (critical for consistent terrain generation on load)
+	if chunk_manager and chunk_manager.has_method("get_world_seed"):
+		data["world_seed"] = chunk_manager.get_world_seed()
+		print("[SaveLoad] Saved world seed: %d" % data["world_seed"])
 
 	return data
 

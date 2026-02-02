@@ -11,7 +11,8 @@ const STRUCTURES: Dictionary = {
 		"provides_warmth": true,
 		"provides_light": true,
 		"warmth_radius": 5.0,
-		"category": "fire"
+		"category": "fire",
+		"footprint_radius": 0.85
 	},
 	"basic_shelter": {
 		"name": "Basic Shelter",
@@ -19,7 +20,8 @@ const STRUCTURES: Dictionary = {
 		"item_required": "shelter_kit",
 		"provides_protection": true,
 		"protection_radius": 3.0,
-		"category": "shelter"
+		"category": "shelter",
+		"footprint_radius": 1.4
 	},
 	"storage_container": {
 		"name": "Storage Box",
@@ -27,25 +29,29 @@ const STRUCTURES: Dictionary = {
 		"item_required": "storage_box",
 		"has_inventory": true,
 		"inventory_slots": 20,
-		"category": "storage"
+		"category": "storage",
+		"footprint_radius": 0.6
 	},
 	"crafting_bench": {
 		"name": "Crafting Bench",
 		"scene": "res://scenes/campsite/structures/crafting_bench.tscn",
 		"item_required": "crafting_bench_kit",
-		"category": "utility"
+		"category": "utility",
+		"footprint_radius": 0.7
 	},
 	"drying_rack": {
 		"name": "Drying Rack",
 		"scene": "res://scenes/campsite/structures/drying_rack.tscn",
 		"item_required": "drying_rack_kit",
-		"category": "food"
+		"category": "food",
+		"footprint_radius": 0.8
 	},
 	"herb_garden": {
 		"name": "Herb Garden",
 		"scene": "res://scenes/campsite/structures/herb_garden.tscn",
 		"item_required": "garden_plot_kit",
-		"category": "food"
+		"category": "food",
+		"footprint_radius": 1.25
 	},
 	"canvas_tent": {
 		"name": "Canvas Tent",
@@ -54,7 +60,8 @@ const STRUCTURES: Dictionary = {
 		"provides_protection": true,
 		"protection_radius": 4.0,
 		"category": "shelter",
-		"min_camp_level": 2
+		"min_camp_level": 2,
+		"footprint_radius": 2.0
 	},
 	"cabin": {
 		"name": "Log Cabin",
@@ -63,13 +70,15 @@ const STRUCTURES: Dictionary = {
 		"provides_protection": true,
 		"protection_radius": 8.0,
 		"category": "shelter",
-		"min_camp_level": 3
+		"min_camp_level": 3,
+		"footprint_radius": 4.0
 	},
 	"rope_ladder": {
 		"name": "Rope Ladder",
 		"scene": "res://scenes/campsite/structures/rope_ladder.tscn",
 		"item_required": "rope_ladder_kit",
-		"category": "utility"
+		"category": "utility",
+		"footprint_radius": 0.5
 	}
 }
 

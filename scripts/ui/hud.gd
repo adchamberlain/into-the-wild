@@ -70,6 +70,7 @@ var campsite_manager: Node
 var weather_manager: Node
 var save_load: Node
 var input_manager: Node
+var placement_system: Node
 
 # Resting state tracking
 var is_player_resting: bool = false
@@ -162,6 +163,9 @@ func _ready() -> void:
 	if input_manager:
 		input_manager.input_device_changed.connect(_on_input_device_changed)
 
+	# Connect to placement system for placement/move mode prompts
+	call_deferred("_connect_to_placement_system")
+
 	# Hide interaction prompt initially
 	if interaction_prompt_panel:
 		interaction_prompt_panel.visible = false
@@ -191,7 +195,7 @@ func _on_period_changed(period: String) -> void:
 	period_label.text = period
 
 
-func _on_interaction_target_changed(_target: Node, interaction_text: String) -> void:
+func _on_interaction_target_changed(target: Node, interaction_text: String) -> void:
 	# Hide prompt if interaction text is empty
 	if interaction_text.is_empty():
 		if interaction_prompt_panel:
@@ -199,7 +203,12 @@ func _on_interaction_target_changed(_target: Node, interaction_text: String) -> 
 		return
 
 	if interaction_prompt:
-		interaction_prompt.text = _get_interact_prompt() + " " + interaction_text
+		var prompt_text: String = _get_interact_prompt() + " " + interaction_text
+		# Add move hint if target is a structure
+		if target and target.is_in_group("structure"):
+			var move_key: String = _get_button_prompt("move_structure")
+			prompt_text += "  [%s] Move" % move_key
+		interaction_prompt.text = prompt_text
 	if interaction_prompt_panel:
 		interaction_prompt_panel.visible = true
 
@@ -400,7 +409,14 @@ func _update_campsite_level_display() -> void:
 	if campsite_manager:
 		var level: int = campsite_manager.get_level()
 		var description: String = campsite_manager.get_level_description()
-		campsite_level_label.text = "Camp Lvl %d: %s" % [level, description]
+		var display_text: String = "Camp Lvl %d: %s" % [level, description]
+
+		# Show day progress when at level 2
+		if level == 2 and "days_at_level_2" in campsite_manager:
+			var days: int = campsite_manager.days_at_level_2
+			display_text += " (Day %d/3)" % min(days + 1, 3)
+
+		campsite_level_label.text = display_text
 	else:
 		campsite_level_label.text = "Camp Lvl 1"
 
@@ -515,6 +531,54 @@ func _on_game_loaded(_filepath: String, slot: int) -> void:
 	show_notification("Loaded Slot %d!" % slot, Color(0.4, 1.0, 0.4, 1))
 	# Update campsite level display (without showing celebration)
 	_update_campsite_level_display()
+
+
+func _connect_to_placement_system() -> void:
+	if player:
+		placement_system = player.get_node_or_null("PlacementSystem")
+		if placement_system:
+			placement_system.placement_started.connect(_on_placement_started)
+			placement_system.placement_confirmed.connect(_on_placement_ended)
+			placement_system.placement_cancelled.connect(_on_placement_ended)
+			placement_system.structure_move_started.connect(_on_move_started)
+			placement_system.structure_move_confirmed.connect(_on_move_ended)
+			placement_system.structure_move_cancelled.connect(_on_move_ended)
+
+
+func _on_placement_started(_structure_type: String) -> void:
+	_show_placement_prompt(false)
+
+
+func _on_placement_ended(_arg1 = null, _arg2 = null) -> void:
+	_hide_placement_prompt()
+
+
+func _on_move_started(_structure: Node3D) -> void:
+	_show_placement_prompt(true)
+
+
+func _on_move_ended(_arg1 = null, _arg2 = null, _arg3 = null) -> void:
+	_hide_placement_prompt()
+
+
+func _show_placement_prompt(is_move: bool) -> void:
+	if not interaction_prompt or not interaction_prompt_panel:
+		return
+
+	var confirm_key: String = _get_button_prompt("use_equipped")
+	var cancel_key: String = _get_button_prompt("unequip")
+
+	if is_move:
+		interaction_prompt.text = "[%s] Confirm Move  [%s] Cancel" % [confirm_key, cancel_key]
+	else:
+		interaction_prompt.text = "[%s] Place  [%s] Cancel" % [confirm_key, cancel_key]
+
+	interaction_prompt_panel.visible = true
+
+
+func _hide_placement_prompt() -> void:
+	if interaction_prompt_panel:
+		interaction_prompt_panel.visible = false
 
 
 func _update_resting_prompt() -> void:

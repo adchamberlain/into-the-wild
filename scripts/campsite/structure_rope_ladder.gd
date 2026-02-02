@@ -74,7 +74,7 @@ func _process_climbing(delta: float) -> void:
 		if new_y <= ladder_bottom:
 			new_y = ladder_bottom
 			# Let normal physics take over
-			player_on_ladder = null
+			_release_player(player)
 			return
 
 		# Apply climbing position (override normal physics)
@@ -96,20 +96,27 @@ func _dismount_at_top(player: CharacterBody3D) -> void:
 	var forward: Vector3 = -global_transform.basis.z.normalized()
 	player.global_position = global_position + Vector3(0, ladder_height + 0.5, 0) + forward * 1.0
 	player.velocity = forward * 2.0  # Small push forward
+	_release_player(player)
+
+
+## Release the player from climbing state.
+func _release_player(player: Node) -> void:
 	player_on_ladder = null
+	# Re-enable player's normal physics
+	if player and player.has_method("set_climbing"):
+		player.set_climbing(false)
+	print("[RopeLadder] Player released ladder")
 
 
 func _on_climb_area_body_entered(body: Node3D) -> void:
-	if body.is_in_group("player"):
-		# Player can now grab the ladder
-		player_on_ladder = body
-		print("[RopeLadder] Player grabbed ladder")
+	# Player entering climb area doesn't auto-grab - they need to interact (L2/E)
+	# This callback is kept for potential future use (e.g., showing climb hint)
+	pass
 
 
 func _on_climb_area_body_exited(body: Node3D) -> void:
 	if body == player_on_ladder:
-		player_on_ladder = null
-		print("[RopeLadder] Player released ladder")
+		_release_player(body)
 
 
 ## Override interact to grab the ladder
@@ -119,6 +126,11 @@ func interact(player: Node) -> bool:
 
 	# Start climbing
 	player_on_ladder = player
+
+	# Disable player's normal physics while climbing
+	if player.has_method("set_climbing"):
+		player.set_climbing(true, self)
+
 	print("[RopeLadder] Player started climbing")
 	return true
 

@@ -20,6 +20,7 @@ const KEYBOARD_PROMPTS: Dictionary = {
 	"pause": "Esc",
 	"ui_accept": "Enter",
 	"ui_cancel": "Esc",
+	"move_structure": "M",
 }
 
 # Button prompt mappings for PlayStation controller (DualSense)
@@ -38,6 +39,7 @@ const CONTROLLER_PROMPTS: Dictionary = {
 	"prev_slot": "L1",
 	"ui_accept": "✕",
 	"ui_cancel": "○",
+	"move_structure": "D-Up",
 }
 
 

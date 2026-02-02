@@ -34,6 +34,8 @@ var current_interaction_target: Node = null
 var is_resting: bool = false
 var resting_in_structure: Node = null  # The shelter we're resting in
 var is_in_water: bool = false
+var is_climbing: bool = false
+var climbing_structure: Node = null  # The ladder we're climbing
 
 # Performance: throttle raycast checks
 const INTERACTION_CHECK_INTERVAL: float = 0.1  # Check 10x/sec instead of 60x/sec
@@ -115,6 +117,11 @@ func _input(event: InputEvent) -> void:
 		_try_use_equipped()
 		return
 
+	# Handle moving structures (M key or D-pad Up) - disabled while resting
+	if event.is_action_pressed("move_structure") and not is_resting:
+		_try_move_structure()
+		return
+
 
 func _handle_mouse_look(event: InputEventMouseMotion) -> void:
 	# Rotate player body horizontally (yaw)
@@ -134,8 +141,8 @@ func _physics_process(delta: float) -> void:
 	if interact_cooldown_timer > 0:
 		interact_cooldown_timer -= delta
 
-	# Skip movement processing while resting
-	if is_resting:
+	# Skip movement processing while resting or climbing
+	if is_resting or is_climbing:
 		velocity = Vector3.ZERO
 		return
 
@@ -324,6 +331,17 @@ func set_resting(resting: bool, structure: Node = null) -> void:
 		interaction_cleared.emit()
 
 
+## Set whether player is climbing a ladder.
+func set_climbing(climbing: bool, structure: Node = null) -> void:
+	is_climbing = climbing
+	climbing_structure = structure if climbing else null
+
+	if climbing:
+		# Clear interaction target while climbing
+		current_interaction_target = null
+		interaction_cleared.emit()
+
+
 ## Set whether player is in water (swimming).
 func set_in_water(in_water: bool) -> void:
 	var was_in_water: bool = is_in_water
@@ -366,6 +384,14 @@ func _hide_underwater_effect() -> void:
 func _try_use_equipped() -> void:
 	if equipment:
 		equipment.use_equipped()
+
+
+func _try_move_structure() -> void:
+	# Check if we're looking at a structure
+	if current_interaction_target and current_interaction_target.is_in_group("structure"):
+		var placement_system: Node = get_node_or_null("PlacementSystem")
+		if placement_system and placement_system.has_method("start_move"):
+			placement_system.start_move(current_interaction_target)
 
 
 func _try_eat() -> void:

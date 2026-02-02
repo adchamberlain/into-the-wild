@@ -481,17 +481,25 @@ func _create_torch_light(item_data: Dictionary) -> void:
 	if torch_light:
 		return
 
-	torch_light = OmniLight3D.new()
-	torch_light.light_color = item_data.get("light_color", Color(1.0, 0.8, 0.4))
-	torch_light.light_energy = item_data.get("light_energy", 2.0)
-	torch_light.omni_range = item_data.get("light_range", 10.0)
-	torch_light.shadow_enabled = true
+	# Ensure player reference exists
+	if not player:
+		_setup_references()
+	if not player:
+		print("[Equipment] ERROR: Cannot create torch light - no player reference")
+		return
+
+	var light: OmniLight3D = OmniLight3D.new()
+	light.light_color = item_data.get("light_color", Color(1.0, 0.8, 0.4))
+	light.light_energy = item_data.get("light_energy", 2.0)
+	light.omni_range = item_data.get("light_range", 10.0)
+	light.shadow_enabled = true
 
 	# Position slightly in front and to the side of player
-	torch_light.position = Vector3(0.5, 1.2, -0.5)
+	light.position = Vector3(0.5, 1.2, -0.5)
 
-	if player:
-		player.add_child(torch_light)
+	player.add_child(light)
+	torch_light = light
+	print("[Equipment] Torch light created")
 
 
 func _remove_torch_light() -> void:

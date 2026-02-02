@@ -5,18 +5,30 @@ class_name PlacementSystem
 signal placement_started(structure_type: String)
 signal placement_confirmed(structure_type: String, position: Vector3)
 signal placement_cancelled()
+signal structure_move_started(structure: Node3D)
+signal structure_move_confirmed(structure: Node3D, old_pos: Vector3, new_pos: Vector3)
+signal structure_move_cancelled(structure: Node3D)
 
 # Placement settings
 @export var grid_size: float = 1.0  # 1 meter grid
 @export var placement_distance: float = 3.0  # How far in front of player
 @export var valid_color: Color = Color(0.2, 1.0, 0.2, 0.5)  # Green
 @export var invalid_color: Color = Color(1.0, 0.2, 0.2, 0.5)  # Red
+@export var min_structure_spacing: float = 1.0  # Minimum gap between structures
 
 # State
 var is_placing: bool = false
 var current_structure_type: String = ""
 var current_item_type: String = ""
 var is_valid_placement: bool = false
+
+# Move mode state
+var is_moving: bool = false
+var moving_structure: Node3D = null
+var moving_structure_original_pos: Vector3 = Vector3.ZERO
+var moving_structure_original_rot: Vector3 = Vector3.ZERO
+var moving_structure_type: String = ""
+var original_materials: Dictionary = {}  # Stores original materials for transparency restoration
 
 # Cooldown to prevent R2 trigger from immediately confirming placement
 const PLACEMENT_COOLDOWN: float = 0.4  # Seconds to wait before allowing confirm
@@ -58,11 +70,39 @@ func _process(delta: float) -> void:
 	if placement_cooldown_timer > 0:
 		placement_cooldown_timer -= delta
 
-	if is_placing and preview_instance:
+	if (is_placing or is_moving) and preview_instance:
 		_update_preview_position(delta)
 
 
 func _input(event: InputEvent) -> void:
+	# Handle move mode input
+	if is_moving:
+		# Handle keyboard input for move mode
+		if event is InputEventKey and event.pressed and not event.echo:
+			if event.physical_keycode == KEY_R:
+				if is_valid_placement:
+					_confirm_move()
+				else:
+					print("[PlacementSystem] Cannot move here - invalid location")
+				return
+			elif event.physical_keycode == KEY_Q:
+				cancel_move()
+				return
+
+		# Handle action-based input for move mode (controller support)
+		if event.is_action_pressed("use_equipped"):
+			if placement_cooldown_timer > 0:
+				return
+			if is_valid_placement:
+				_confirm_move()
+			else:
+				print("[PlacementSystem] Cannot move here - invalid location")
+			return
+		elif event.is_action_pressed("unequip"):
+			cancel_move()
+			return
+		return
+
 	if not is_placing:
 		return
 
@@ -230,6 +270,30 @@ func _apply_preview_material(node: Node) -> void:
 		_apply_preview_material(child)
 
 
+## Get ground height at a position using raycast.
+func _get_ground_height(x: float, z: float) -> float:
+	if not player:
+		return 0.0
+
+	var space_state: PhysicsDirectSpaceState3D = player.get_world_3d().direct_space_state
+	if not space_state:
+		return 0.0
+
+	# Raycast from high above down to find ground
+	var ray_origin: Vector3 = Vector3(x, 50.0, z)
+	var ray_end: Vector3 = Vector3(x, -10.0, z)
+
+	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.new()
+	query.from = ray_origin
+	query.to = ray_end
+	query.collision_mask = 1  # Terrain layer
+
+	var result: Dictionary = space_state.intersect_ray(query)
+	if result:
+		return result.position.y
+	return 0.0
+
+
 ## Update preview position based on player aim.
 func _update_preview_position(delta: float) -> void:
 	if not player or not camera or not preview_instance:
@@ -245,7 +309,9 @@ func _update_preview_position(delta: float) -> void:
 	# Snap to grid
 	target_pos.x = round(target_pos.x / grid_size) * grid_size
 	target_pos.z = round(target_pos.z / grid_size) * grid_size
-	target_pos.y = 0  # Place on ground
+
+	# Get terrain height at this position using raycast
+	target_pos.y = _get_ground_height(target_pos.x, target_pos.z)
 
 	preview_instance.global_position = target_pos
 
@@ -317,6 +383,68 @@ func _validate_placement(pos: Vector3) -> bool:
 				continue
 		# This is an actual obstacle
 		return false
+
+	# Check spacing from other structures
+	var preview_footprint: float = _get_current_preview_footprint()
+	if not _check_structure_spacing(pos, preview_footprint):
+		return false
+
+	return true
+
+
+## Get footprint radius for a structure node.
+func _get_structure_footprint(structure: Node) -> float:
+	var structure_type: String = ""
+	# Try to get structure_type from the structure's exported property
+	if "structure_type" in structure:
+		structure_type = structure.structure_type
+	# Or from metadata
+	elif structure.has_meta("structure_type"):
+		structure_type = structure.get_meta("structure_type")
+
+	if not structure_type.is_empty():
+		var data: Dictionary = StructureData.get_structure(structure_type)
+		return data.get("footprint_radius", 1.0)
+	# Default fallback
+	return 1.0
+
+
+## Get footprint radius for the structure currently being placed/moved.
+func _get_current_preview_footprint() -> float:
+	var data: Dictionary = StructureData.get_structure(current_structure_type)
+	return data.get("footprint_radius", 1.0)
+
+
+## Check if position has adequate spacing from existing structures.
+func _check_structure_spacing(pos: Vector3, preview_footprint: float) -> bool:
+	if not campsite_manager:
+		return true  # Allow if no manager to check
+
+	# Get list of placed structures
+	var placed_structures: Array = []
+	if campsite_manager.has_method("get_placed_structures"):
+		placed_structures = campsite_manager.get_placed_structures()
+	elif "placed_structures" in campsite_manager:
+		placed_structures = campsite_manager.placed_structures
+
+	for structure: Node in placed_structures:
+		if not structure is Node3D:
+			continue
+		var structure_3d: Node3D = structure as Node3D
+
+		# Skip structure being moved (will be added in move mode)
+		if is_moving and structure == moving_structure:
+			continue
+
+		var structure_footprint: float = _get_structure_footprint(structure)
+		var structure_pos: Vector3 = structure_3d.global_position
+
+		# Calculate edge-to-edge distance (center distance minus both radii)
+		var center_distance: float = pos.distance_to(Vector3(structure_pos.x, pos.y, structure_pos.z))
+		var edge_distance: float = center_distance - preview_footprint - structure_footprint
+
+		if edge_distance < min_structure_spacing:
+			return false
 
 	return true
 
@@ -636,6 +764,149 @@ func _destroy_preview() -> void:
 ## Set reference to campsite manager.
 func set_campsite_manager(manager: Node) -> void:
 	campsite_manager = manager
+
+
+## Start move mode for an existing structure.
+func start_move(structure: Node3D) -> bool:
+	if is_placing:
+		cancel_placement()
+	if is_moving:
+		cancel_move()
+
+	if not structure:
+		return false
+
+	# Get structure type from exported property or metadata
+	if "structure_type" in structure and not structure.structure_type.is_empty():
+		moving_structure_type = structure.structure_type
+	elif structure.has_meta("structure_type"):
+		moving_structure_type = structure.get_meta("structure_type")
+	else:
+		print("[PlacementSystem] Structure has no structure_type")
+		return false
+
+	moving_structure = structure
+	moving_structure_original_pos = structure.global_position
+	moving_structure_original_rot = structure.rotation
+	current_structure_type = moving_structure_type
+
+	# Make original structure semi-transparent
+	_set_structure_transparency(moving_structure, 0.5)
+
+	# Create preview at current position
+	if not _create_preview():
+		_set_structure_transparency(moving_structure, 1.0)
+		return false
+
+	# Position preview at structure's current location
+	if preview_instance:
+		preview_instance.global_position = moving_structure_original_pos
+		preview_instance.rotation = moving_structure_original_rot
+
+	is_moving = true
+	placement_cooldown_timer = PLACEMENT_COOLDOWN
+	structure_move_started.emit(structure)
+	print("[PlacementSystem] Started move mode for %s" % moving_structure_type)
+	print("[PlacementSystem] Press R to confirm, Q to cancel")
+	return true
+
+
+## Set transparency on a structure's meshes.
+func _set_structure_transparency(structure: Node3D, alpha: float) -> void:
+	if alpha < 1.0:
+		# Store original materials and apply transparent versions
+		_apply_transparency_recursive(structure, alpha, true)
+	else:
+		# Restore original materials
+		_restore_materials_recursive(structure)
+		original_materials.clear()
+
+
+func _apply_transparency_recursive(node: Node, alpha: float, is_root: bool = false) -> void:
+	if node is MeshInstance3D:
+		var mesh_instance: MeshInstance3D = node as MeshInstance3D
+		var node_id: int = mesh_instance.get_instance_id()
+
+		# Store original material
+		if not original_materials.has(node_id):
+			original_materials[node_id] = mesh_instance.material_override
+
+		# Create transparent material
+		var trans_mat: StandardMaterial3D = StandardMaterial3D.new()
+		trans_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		trans_mat.albedo_color = Color(0.5, 0.5, 0.5, alpha)
+		mesh_instance.material_override = trans_mat
+
+	for child: Node in node.get_children():
+		_apply_transparency_recursive(child, alpha, false)
+
+
+func _restore_materials_recursive(node: Node) -> void:
+	if node is MeshInstance3D:
+		var mesh_instance: MeshInstance3D = node as MeshInstance3D
+		var node_id: int = mesh_instance.get_instance_id()
+
+		if original_materials.has(node_id):
+			mesh_instance.material_override = original_materials[node_id]
+
+	for child: Node in node.get_children():
+		_restore_materials_recursive(child)
+
+
+## Confirm move and relocate structure.
+func _confirm_move() -> void:
+	if not is_moving or not moving_structure or not preview_instance:
+		return
+
+	if not is_valid_placement:
+		print("[PlacementSystem] Cannot move here - invalid location")
+		return
+
+	var old_pos: Vector3 = moving_structure_original_pos
+	var new_pos: Vector3 = preview_instance.global_position
+	var new_rot: Vector3 = preview_instance.rotation
+
+	# Move structure to new position
+	moving_structure.global_position = new_pos
+	moving_structure.rotation = new_rot
+
+	# Restore transparency
+	_set_structure_transparency(moving_structure, 1.0)
+
+	# Emit signal
+	structure_move_confirmed.emit(moving_structure, old_pos, new_pos)
+	print("[PlacementSystem] Moved %s from %s to %s" % [moving_structure_type, old_pos, new_pos])
+
+	# Clean up
+	_end_move_mode()
+
+
+## Cancel move and keep structure at original position.
+func cancel_move() -> void:
+	if not is_moving:
+		return
+
+	# Restore transparency (structure stays at original position)
+	if moving_structure:
+		_set_structure_transparency(moving_structure, 1.0)
+		structure_move_cancelled.emit(moving_structure)
+
+	print("[PlacementSystem] Move cancelled")
+
+	# Clean up
+	_end_move_mode()
+
+
+## Clean up move mode state.
+func _end_move_mode() -> void:
+	_destroy_preview()
+	is_moving = false
+	moving_structure = null
+	moving_structure_original_pos = Vector3.ZERO
+	moving_structure_original_rot = Vector3.ZERO
+	moving_structure_type = ""
+	current_structure_type = ""
+	placement_cooldown_timer = 0.0
 
 
 func _create_drying_rack() -> StaticBody3D:

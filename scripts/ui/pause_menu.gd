@@ -10,6 +10,7 @@ signal game_quit()
 @onready var resume_button: Button = $Panel/VBoxContainer/ResumeButton
 @onready var save_button: Button = $Panel/VBoxContainer/SaveButton
 @onready var load_button: Button = $Panel/VBoxContainer/LoadButton
+@onready var settings_button: Button = $Panel/VBoxContainer/SettingsButton
 @onready var credits_button: Button = $Panel/VBoxContainer/CreditsButton
 @onready var quit_button: Button = $Panel/VBoxContainer/QuitButton
 @onready var hint_label: Label = $Panel/VBoxContainer/HintLabel
@@ -17,6 +18,7 @@ signal game_quit()
 @onready var back_button: Button = $CreditsPanel/VBoxContainer/BackButton
 
 var save_load: Node
+var config_menu: Node
 
 var is_paused: bool = false
 var showing_credits: bool = false
@@ -46,6 +48,11 @@ func _ready() -> void:
 		if root.has_node("Main/SaveLoad"):
 			save_load = root.get_node("Main/SaveLoad")
 
+	# Get config menu reference
+	var root: Node = get_tree().root
+	if root.has_node("Main/ConfigMenu"):
+		config_menu = root.get_node("Main/ConfigMenu")
+
 	# Start hidden
 	panel.visible = false
 	credits_panel.visible = false
@@ -54,12 +61,13 @@ func _ready() -> void:
 	resume_button.pressed.connect(_on_resume_pressed)
 	save_button.pressed.connect(_on_save_pressed)
 	load_button.pressed.connect(_on_load_pressed)
+	settings_button.pressed.connect(_on_settings_pressed)
 	credits_button.pressed.connect(_on_credits_pressed)
 	quit_button.pressed.connect(_on_quit_pressed)
 	back_button.pressed.connect(_on_back_pressed)
 
 	# Set up button list for controller navigation
-	button_list = [resume_button, save_button, load_button, credits_button, quit_button]
+	button_list = [resume_button, save_button, load_button, settings_button, credits_button, quit_button]
 
 	# Create slot selection panel
 	_create_slot_panel()
@@ -179,6 +187,17 @@ func _on_back_pressed() -> void:
 	credits_panel.visible = false
 	panel.visible = true
 	resume_button.grab_focus()
+
+
+func _on_settings_pressed() -> void:
+	if config_menu:
+		# Hide pause menu and show config menu
+		panel.visible = false
+		if config_menu.has_method("show_menu"):
+			config_menu.show_menu(true)  # true = opened from pause menu
+		elif "panel" in config_menu:
+			config_menu.panel.visible = true
+			config_menu.is_visible = true
 
 
 func _on_quit_pressed() -> void:
@@ -307,6 +326,7 @@ func _create_slot_panel() -> void:
 		btn.text = "Slot %d: Empty" % (i + 1)
 		btn.add_theme_font_override("font", font)
 		btn.add_theme_font_size_override("font_size", 32)
+		btn.focus_mode = Control.FOCUS_ALL
 		btn.pressed.connect(_on_slot_button_pressed.bind(i + 1))
 		vbox.add_child(btn)
 		slot_buttons.append(btn)
@@ -322,6 +342,7 @@ func _create_slot_panel() -> void:
 	cancel_btn.text = "Cancel"
 	cancel_btn.add_theme_font_override("font", font)
 	cancel_btn.add_theme_font_size_override("font_size", 28)
+	cancel_btn.focus_mode = Control.FOCUS_ALL
 	cancel_btn.pressed.connect(_hide_slot_panel)
 	vbox.add_child(cancel_btn)
 	slot_buttons.append(cancel_btn)
@@ -358,10 +379,9 @@ func _show_slot_panel() -> void:
 		showing_slots = true
 		panel.visible = false
 		slot_panel.visible = true
-		# Focus first slot button
+		# Focus first slot button (deferred to ensure visibility)
 		focused_slot_index = 0
-		if not slot_buttons.is_empty():
-			slot_buttons[0].grab_focus()
+		call_deferred("_focus_first_slot")
 
 
 ## Hide the slot selection panel.
@@ -391,6 +411,12 @@ func _on_slot_button_pressed(slot: int) -> void:
 			_hide_slot_panel()
 			resume_game()
 			save_load.load_game_slot(slot)
+
+
+## Focus the first slot button (called deferred).
+func _focus_first_slot() -> void:
+	if not slot_buttons.is_empty():
+		slot_buttons[0].grab_focus()
 
 
 ## Navigate slot buttons with D-pad.

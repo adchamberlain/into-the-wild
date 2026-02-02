@@ -40,6 +40,9 @@ func _ready() -> void:
 		protection_area.body_entered.connect(_on_body_entered)
 		protection_area.body_exited.connect(_on_body_exited)
 
+	# Connect to time manager to detect nightfall while resting
+	call_deferred("_connect_to_time_manager")
+
 
 func interact(player: Node) -> bool:
 	if not is_active:
@@ -109,6 +112,21 @@ func _find_time_manager() -> Node:
 	if root.has_node("Main/TimeManager"):
 		return root.get_node("Main/TimeManager")
 	return null
+
+
+func _connect_to_time_manager() -> void:
+	var time_manager: Node = _find_time_manager()
+	if time_manager and time_manager.has_signal("period_changed"):
+		time_manager.period_changed.connect(_on_period_changed)
+
+
+func _on_period_changed(period: String) -> void:
+	# If player is resting and night has arrived, trigger sleep sequence
+	if is_player_resting and resting_player:
+		var time_manager: Node = _find_time_manager()
+		if time_manager and _is_nighttime(time_manager):
+			print("[Shelter] Night has fallen while resting - sleeping until dawn...")
+			_trigger_sleep_sequence(resting_player, time_manager)
 
 
 func _find_hud() -> Node:

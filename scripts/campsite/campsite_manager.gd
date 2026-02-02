@@ -224,6 +224,11 @@ func get_total_structure_count() -> int:
 	return placed_structures.size()
 
 
+## Get all placed structures.
+func get_placed_structures() -> Array[Node]:
+	return placed_structures
+
+
 ## Check level progression and level up if requirements met.
 func _check_level_progression() -> void:
 	var next_level: int = campsite_level + 1

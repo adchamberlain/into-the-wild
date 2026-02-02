@@ -54,6 +54,7 @@ var music_volume: float = 50.0  # 0-100
 @onready var music_volume_label: Label = $Panel/VBoxContainer/MusicVolumeContainer/MusicVolumeValue
 
 var is_visible: bool = false
+var opened_from_pause_menu: bool = false
 
 # Slot selection state
 var selecting_slot_for_save: bool = false
@@ -357,6 +358,14 @@ func toggle_menu() -> void:
 			slot_panel.visible = false
 		selecting_slot_for_save = false
 		selecting_slot_for_load = false
+
+		# If opened from pause menu, return to it
+		if opened_from_pause_menu:
+			opened_from_pause_menu = false
+			var pause_menu: Node = _find_pause_menu()
+			if pause_menu and "panel" in pause_menu:
+				pause_menu.panel.visible = true
+			return  # Don't change mouse mode, pause menu handles it
 	else:
 		# If opening and slot panel was visible, hide it and show main
 		if slot_panel and slot_panel.visible:
@@ -373,6 +382,27 @@ func toggle_menu() -> void:
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	else:
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+
+
+## Show the config menu (called from pause menu).
+func show_menu(from_pause_menu: bool = false) -> void:
+	opened_from_pause_menu = from_pause_menu
+	is_visible = true
+	panel.visible = true
+	if slot_panel:
+		slot_panel.visible = false
+	selecting_slot_for_save = false
+	selecting_slot_for_load = false
+	_update_hint_label()
+	focused_control_index = 0
+	_update_control_focus()
+
+
+func _find_pause_menu() -> Node:
+	var root: Node = get_tree().root
+	if root.has_node("Main/PauseMenu"):
+		return root.get_node("Main/PauseMenu")
+	return null
 
 
 func _on_hunger_toggled(pressed: bool) -> void:
