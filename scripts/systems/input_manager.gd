@@ -25,7 +25,7 @@ const KEYBOARD_PROMPTS: Dictionary = {
 # Button prompt mappings for PlayStation controller (DualSense)
 # Using recognizable labels: Share (left button), Pad (touchpad), Menu (right button)
 const CONTROLLER_PROMPTS: Dictionary = {
-	"interact": "□",
+	"interact": "L2",
 	"jump": "✕",
 	"sprint": "L3",
 	"eat": "△",
