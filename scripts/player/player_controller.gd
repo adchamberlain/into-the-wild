@@ -39,6 +39,10 @@ var is_in_water: bool = false
 const INTERACTION_CHECK_INTERVAL: float = 0.1  # Check 10x/sec instead of 60x/sec
 var interaction_check_timer: float = 0.0
 
+# Interact cooldown (prevents analog trigger jitter on L2)
+const INTERACT_COOLDOWN: float = 0.15
+var interact_cooldown_timer: float = 0.0
+
 # Fall-through protection (debug only - world floor provides actual protection)
 var fall_warning_y: float = -50.0  # Log warning if player falls this low
 
@@ -87,8 +91,13 @@ func _input(event: InputEvent) -> void:
 			_handle_mouse_look(event)
 		return
 
-	# Handle interaction (E key or Square button)
+	# Handle interaction (E key or L2 trigger)
 	if event.is_action_pressed("interact"):
+		# Skip if cooldown active (prevents analog trigger jitter)
+		if interact_cooldown_timer > 0:
+			return
+		interact_cooldown_timer = INTERACT_COOLDOWN
+
 		# If resting, interact exits rest mode
 		if is_resting and resting_in_structure:
 			resting_in_structure.interact(self)
@@ -121,6 +130,10 @@ func _handle_mouse_look(event: InputEventMouseMotion) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	# Update interact cooldown (must tick even while resting)
+	if interact_cooldown_timer > 0:
+		interact_cooldown_timer -= delta
+
 	# Skip movement processing while resting
 	if is_resting:
 		velocity = Vector3.ZERO

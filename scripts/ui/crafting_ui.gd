@@ -225,9 +225,9 @@ func _on_craft_pressed(recipe_id: String) -> void:
 	if campsite_manager and campsite_manager.has_method("get_level"):
 		camp_level = campsite_manager.get_level()
 
-	if crafting_system and crafting_system.craft(recipe_id, at_bench, camp_level):
-		_refresh_recipe_list(true)  # Preserve focus position
-		_restore_focus()
+	# Just call craft - the inventory_changed signal will trigger _on_inventory_changed
+	# which handles refreshing the list and restoring focus
+	crafting_system.craft(recipe_id, at_bench, camp_level)
 
 
 func _on_inventory_changed() -> void:
@@ -252,7 +252,10 @@ func _do_focus_first_recipe() -> void:
 
 ## Restore focus to the previously focused recipe after refresh.
 func _restore_focus() -> void:
-	call_deferred("_do_restore_focus")
+	# Wait two frames to ensure buttons are fully created and old ones removed
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_do_restore_focus()
 
 
 func _do_restore_focus() -> void:

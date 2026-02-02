@@ -12,6 +12,8 @@ var current_storage: Node = null  # The storage structure we're interacting with
 
 # UI References
 @onready var panel: PanelContainer = $Panel
+@onready var player_scroll: ScrollContainer = $Panel/MarginContainer/VBoxContainer/HBoxContainer/PlayerPanel/VBoxContainer/ScrollContainer
+@onready var storage_scroll: ScrollContainer = $Panel/MarginContainer/VBoxContainer/HBoxContainer/StoragePanel/VBoxContainer/ScrollContainer
 @onready var player_items_list: VBoxContainer = $Panel/MarginContainer/VBoxContainer/HBoxContainer/PlayerPanel/VBoxContainer/ScrollContainer/PlayerItemsList
 @onready var storage_items_list: VBoxContainer = $Panel/MarginContainer/VBoxContainer/HBoxContainer/StoragePanel/VBoxContainer/ScrollContainer/StorageItemsList
 @onready var player_empty_label: Label = $Panel/MarginContainer/VBoxContainer/HBoxContainer/PlayerPanel/VBoxContainer/ScrollContainer/PlayerItemsList/EmptyLabel
@@ -20,11 +22,16 @@ var current_storage: Node = null  # The storage structure we're interacting with
 
 var is_open: bool = false
 
-# Controller navigation
+# Controller navigation - 2D grid: rows of [transfer_button, all_button]
 var focused_panel: int = 0  # 0 = player, 1 = storage
-var focused_item_index: int = 0
-var player_buttons: Array[Button] = []
-var storage_buttons: Array[Button] = []
+var focused_row_index: int = 0
+var focused_col_index: int = 0  # 0 = transfer button, 1 = all button
+var player_button_rows: Array = []  # Array of [Button, Button] pairs
+var storage_button_rows: Array = []
+
+# Cooldown to prevent L2 from immediately closing menu after opening
+const OPEN_COOLDOWN: float = 0.3
+var open_cooldown_timer: float = 0.0
 
 
 func _ready() -> void:
@@ -42,6 +49,11 @@ func _ready() -> void:
 	is_open = false
 
 
+func _process(delta: float) -> void:
+	if open_cooldown_timer > 0:
+		open_cooldown_timer -= delta
+
+
 func _input(event: InputEvent) -> void:
 	if not is_open:
 		return
@@ -52,6 +64,12 @@ func _input(event: InputEvent) -> void:
 			close_storage()
 			get_viewport().set_input_as_handled()
 			return
+
+	# Close with interact action (L2 on controller) - but not immediately after opening
+	if event.is_action_pressed("interact") and open_cooldown_timer <= 0:
+		close_storage()
+		get_viewport().set_input_as_handled()
+		return
 
 	# Controller cancel to close
 	if event.is_action_pressed("ui_cancel"):
@@ -69,13 +87,13 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 
-	# D-pad left/right to switch between player and storage panels
+	# D-pad left/right to navigate within row or switch panels
 	if event.is_action_pressed("ui_left"):
-		_switch_panel(0)  # Player panel
+		_navigate_horizontal(-1)
 		get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed("ui_right"):
-		_switch_panel(1)  # Storage panel
+		_navigate_horizontal(1)
 		get_viewport().set_input_as_handled()
 		return
 
@@ -95,9 +113,13 @@ func open_storage(storage: Node) -> void:
 	is_open = true
 	panel.visible = true
 
+	# Set cooldown to prevent L2 from immediately closing
+	open_cooldown_timer = OPEN_COOLDOWN
+
 	# Reset controller navigation state
 	focused_panel = 0
-	focused_item_index = 0
+	focused_row_index = 0
+	focused_col_index = 0
 
 	# Show cursor
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
@@ -149,7 +171,7 @@ func _refresh_player_list() -> void:
 	for child in player_items_list.get_children():
 		if child != player_empty_label:
 			child.queue_free()
-	player_buttons.clear()
+	player_button_rows.clear()
 
 	if not player_inventory:
 		player_empty_label.visible = true
@@ -169,7 +191,7 @@ func _refresh_storage_list() -> void:
 	for child in storage_items_list.get_children():
 		if child != storage_empty_label:
 			child.queue_free()
-	storage_buttons.clear()
+	storage_button_rows.clear()
 
 	if not current_storage:
 		storage_empty_label.visible = true
@@ -198,7 +220,7 @@ func _create_item_button(parent: VBoxContainer, item_type: String, count: int, i
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	container.add_child(label)
 
-	# Transfer button
+	# Transfer button (move one)
 	var button: Button = Button.new()
 	button.text = ">>" if is_player_item else "<<"
 	button.add_theme_font_override("font", HUD_FONT)
@@ -208,12 +230,6 @@ func _create_item_button(parent: VBoxContainer, item_type: String, count: int, i
 	button.focus_mode = Control.FOCUS_ALL
 	container.add_child(button)
 
-	# Track button for controller navigation
-	if is_player_item:
-		player_buttons.append(button)
-	else:
-		storage_buttons.append(button)
-
 	# Transfer all button
 	var all_button: Button = Button.new()
 	all_button.text = "All"
@@ -221,7 +237,15 @@ func _create_item_button(parent: VBoxContainer, item_type: String, count: int, i
 	all_button.add_theme_font_size_override("font_size", 20)
 	all_button.tooltip_text = "Move all to Storage" if is_player_item else "Take all from Storage"
 	all_button.pressed.connect(_on_transfer_all_pressed.bind(item_type, is_player_item))
+	all_button.focus_mode = Control.FOCUS_ALL
 	container.add_child(all_button)
+
+	# Track both buttons as a row for controller navigation
+	var button_row: Array[Button] = [button, all_button]
+	if is_player_item:
+		player_button_rows.append(button_row)
+	else:
+		storage_button_rows.append(button_row)
 
 	parent.add_child(container)
 
@@ -260,49 +284,88 @@ func _on_transfer_all_pressed(item_type: String, from_player: bool) -> void:
 
 ## Navigate items with D-pad up/down.
 func _navigate_items(direction: int) -> void:
-	var current_buttons: Array[Button] = player_buttons if focused_panel == 0 else storage_buttons
-	if current_buttons.is_empty():
+	var current_rows: Array = player_button_rows if focused_panel == 0 else storage_button_rows
+	if current_rows.is_empty():
 		return
 
-	focused_item_index = (focused_item_index + direction) % current_buttons.size()
-	if focused_item_index < 0:
-		focused_item_index = current_buttons.size() - 1
+	focused_row_index = (focused_row_index + direction) % current_rows.size()
+	if focused_row_index < 0:
+		focused_row_index = current_rows.size() - 1
 
 	_update_focus_highlight()
 
 
-## Switch between player and storage panels with D-pad left/right.
-func _switch_panel(panel_index: int) -> void:
-	focused_panel = panel_index
-	focused_item_index = 0
+## Navigate horizontally within a row, or switch panels at edges.
+func _navigate_horizontal(direction: int) -> void:
+	var current_rows: Array = player_button_rows if focused_panel == 0 else storage_button_rows
+
+	# Calculate new column
+	var new_col: int = focused_col_index + direction
+
+	if new_col < 0:
+		# At left edge - switch to player panel if on storage, or stay put
+		if focused_panel == 1:
+			focused_panel = 0
+			focused_col_index = 1  # Start at rightmost column of player panel
+			focused_row_index = mini(focused_row_index, player_button_rows.size() - 1)
+			if focused_row_index < 0:
+				focused_row_index = 0
+		# else: already on player panel, stay at column 0
+	elif new_col > 1:
+		# At right edge - switch to storage panel if on player, or stay put
+		if focused_panel == 0:
+			focused_panel = 1
+			focused_col_index = 0  # Start at leftmost column of storage panel
+			focused_row_index = mini(focused_row_index, storage_button_rows.size() - 1)
+			if focused_row_index < 0:
+				focused_row_index = 0
+		# else: already on storage panel, stay at column 1
+	else:
+		# Normal movement within row
+		focused_col_index = new_col
+
 	_update_focus_highlight()
 
 
 ## Update visual focus on the current button.
 func _update_focus_highlight() -> void:
-	var current_buttons: Array[Button] = player_buttons if focused_panel == 0 else storage_buttons
-	if current_buttons.is_empty():
+	var current_rows: Array = player_button_rows if focused_panel == 0 else storage_button_rows
+	if current_rows.is_empty():
 		return
 
-	# Clamp index to valid range
-	if focused_item_index >= current_buttons.size():
-		focused_item_index = current_buttons.size() - 1
-	if focused_item_index < 0:
-		focused_item_index = 0
+	# Clamp row index to valid range
+	if focused_row_index >= current_rows.size():
+		focused_row_index = current_rows.size() - 1
+	if focused_row_index < 0:
+		focused_row_index = 0
 
-	# Focus the button
-	if focused_item_index < current_buttons.size():
-		current_buttons[focused_item_index].grab_focus()
+	# Clamp column index
+	if focused_col_index < 0:
+		focused_col_index = 0
+	if focused_col_index > 1:
+		focused_col_index = 1
+
+	# Get the button at current position
+	var row: Array = current_rows[focused_row_index]
+	if focused_col_index < row.size():
+		var button: Button = row[focused_col_index]
+		button.grab_focus()
+		# Scroll the button's container into view
+		var scroll: ScrollContainer = player_scroll if focused_panel == 0 else storage_scroll
+		var item_container: Control = button.get_parent()  # The HBoxContainer holding the button
+		scroll.ensure_control_visible(item_container)
 
 
 ## Transfer the focused item.
 func _transfer_focused_item() -> void:
-	var current_buttons: Array[Button] = player_buttons if focused_panel == 0 else storage_buttons
-	if current_buttons.is_empty():
+	var current_rows: Array = player_button_rows if focused_panel == 0 else storage_button_rows
+	if current_rows.is_empty():
 		return
 
-	if focused_item_index >= 0 and focused_item_index < current_buttons.size():
-		current_buttons[focused_item_index].pressed.emit()
+	if focused_row_index >= 0 and focused_row_index < current_rows.size():
+		var row: Array = current_rows[focused_row_index]
+		if focused_col_index < row.size():
+			row[focused_col_index].pressed.emit()
 
 
 ## Update hint label based on input device.
@@ -311,6 +374,6 @@ func _update_hint_label() -> void:
 		return
 	var input_mgr: Node = get_node_or_null("/root/InputManager")
 	if input_mgr and input_mgr.is_using_controller():
-		hint_label.text = "D-pad ↑↓ items, ←→ panels, ✕ transfer. ○ to close."
+		hint_label.text = "D-pad: ↑↓ items, ←→ One/All. ✕ transfer. ○ close."
 	else:
 		hint_label.text = "Click >> to move items to storage, << to take items. Press E or Escape to close."

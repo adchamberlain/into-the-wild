@@ -82,6 +82,12 @@ const EQUIPPABLE_ITEMS: Dictionary = {
 		"slot": 12,
 		"has_light": false,
 		"placeable": true
+	},
+	"rope_ladder_kit": {
+		"name": "Rope Ladder Kit",
+		"slot": 13,
+		"has_light": false,
+		"placeable": true
 	}
 }
 

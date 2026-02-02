@@ -47,8 +47,11 @@ func interact(player: Node) -> bool:
 	if player.has_method("get_inventory"):
 		player_inventory = player.get_inventory()
 
+	var collected_count: int = 0
+
 	# Collect stored herbs
 	if stored_herbs > 0 and player_inventory:
+		collected_count = stored_herbs
 		player_inventory.add_item("herb", stored_herbs)
 		print("[Garden] Collected %d herbs" % stored_herbs)
 		stored_herbs = 0
@@ -58,14 +61,37 @@ func interact(player: Node) -> bool:
 		player_inventory.add_item("herb", TEND_BONUS)
 		can_tend = false
 		tend_cooldown = TEND_COOLDOWN_TIME
+		collected_count += TEND_BONUS
 		print("[Garden] Tended garden! +%d bonus herb" % TEND_BONUS)
+
+		if collected_count > 1:
+			_show_notification("Tended garden! +%d herbs" % collected_count, Color(0.4, 0.9, 0.4))
+		else:
+			_show_notification("Tended garden! +1 herb", Color(0.4, 0.9, 0.4))
 		return true
 	elif not can_tend:
-		var minutes_left: int = int(tend_cooldown / 60)
+		var minutes_left: int = int(tend_cooldown / 60) + 1
 		print("[Garden] Garden recently tended. Wait %d more minutes." % minutes_left)
+		if collected_count > 0:
+			_show_notification("Collected %d herbs. Garden needs rest." % collected_count, Color(0.9, 0.8, 0.4))
+		else:
+			_show_notification("Garden needs rest (%dm)" % minutes_left, Color(0.8, 0.7, 0.5))
 		return true
 
 	return true
+
+
+func _show_notification(message: String, color: Color) -> void:
+	var hud: Node = _find_hud()
+	if hud and hud.has_method("show_notification"):
+		hud.show_notification(message, color)
+
+
+func _find_hud() -> Node:
+	var root: Node = get_tree().root
+	if root.has_node("Main/HUD"):
+		return root.get_node("Main/HUD")
+	return null
 
 
 func get_interaction_text() -> String:

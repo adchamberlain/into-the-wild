@@ -787,13 +787,13 @@ func _create_canvas_tent() -> StaticBody3D:
 	var wood_mat: StandardMaterial3D = StandardMaterial3D.new()
 	wood_mat.albedo_color = Color(0.5, 0.35, 0.2)
 
-	# Don't add collision for tent walls - player walks through doorway
-	# Collision is just for the floor area
+	# Interaction collision - tall enough for raycast to hit from standing position
+	# Player can still walk through the open front doorway
 	var collision: CollisionShape3D = CollisionShape3D.new()
 	var box_shape: BoxShape3D = BoxShape3D.new()
-	box_shape.size = Vector3(3.0, 0.1, 2.5)
+	box_shape.size = Vector3(3.0, 1.8, 2.5)
 	collision.shape = box_shape
-	collision.position.y = 0.05
+	collision.position.y = 0.9
 	tent.add_child(collision)
 
 	# A-frame tent - two angled canvas panels

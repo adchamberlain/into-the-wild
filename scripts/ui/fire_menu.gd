@@ -32,6 +32,10 @@ var is_open: bool = false
 var focused_button_index: int = 0
 var button_list: Array[Button] = []
 
+# Cooldown to prevent L2 from immediately closing menu after opening
+const OPEN_COOLDOWN: float = 0.3
+var open_cooldown_timer: float = 0.0
+
 # Input manager reference for dynamic button prompts
 var input_manager: Node
 
@@ -71,16 +75,27 @@ func _ready() -> void:
 	_update_button_prompts()
 
 
+func _process(delta: float) -> void:
+	if open_cooldown_timer > 0:
+		open_cooldown_timer -= delta
+
+
 func _input(event: InputEvent) -> void:
 	if not is_open:
 		return
 
-	# Close with Escape, E, or controller cancel button
+	# Close with Escape or E key
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.physical_keycode == KEY_ESCAPE or event.physical_keycode == KEY_E:
 			close_menu()
 			get_viewport().set_input_as_handled()
 			return
+
+	# Close with interact action (L2 on controller) - but not immediately after opening
+	if event.is_action_pressed("interact") and open_cooldown_timer <= 0:
+		close_menu()
+		get_viewport().set_input_as_handled()
+		return
 
 	# Controller/keyboard cancel
 	if event.is_action_pressed("ui_cancel"):
@@ -110,6 +125,9 @@ func open_menu(fire: Node) -> void:
 	current_fire = fire
 	is_open = true
 	panel.visible = true
+
+	# Set cooldown to prevent L2 from immediately closing
+	open_cooldown_timer = OPEN_COOLDOWN
 
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 
