@@ -123,13 +123,16 @@ func toggle_crafting_menu(from_bench: bool = false) -> void:
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
-func _refresh_recipe_list() -> void:
+func _refresh_recipe_list(preserve_focus: bool = false) -> void:
+	# Save current focus index if preserving
+	var saved_focus_index: int = focused_recipe_index
+
 	# Clear existing buttons
 	for child in recipe_list.get_children():
 		child.queue_free()
 	recipe_buttons.clear()
 	recipe_button_list.clear()
-	focused_recipe_index = 0
+	focused_recipe_index = 0 if not preserve_focus else saved_focus_index
 
 	if not crafting_system:
 		return
@@ -223,12 +226,14 @@ func _on_craft_pressed(recipe_id: String) -> void:
 		camp_level = campsite_manager.get_level()
 
 	if crafting_system and crafting_system.craft(recipe_id, at_bench, camp_level):
-		_refresh_recipe_list()
+		_refresh_recipe_list(true)  # Preserve focus position
+		_restore_focus()
 
 
 func _on_inventory_changed() -> void:
 	if is_open:
-		_refresh_recipe_list()
+		_refresh_recipe_list(true)  # Preserve focus when inventory changes while menu is open
+		_restore_focus()
 
 
 ## Focus the first recipe button (called when menu opens).
@@ -243,6 +248,28 @@ func _do_focus_first_recipe() -> void:
 		recipe_button_list[0].grab_focus()
 		# Reset scroll to top when opening menu
 		scroll_container.scroll_vertical = 0
+
+
+## Restore focus to the previously focused recipe after refresh.
+func _restore_focus() -> void:
+	call_deferred("_do_restore_focus")
+
+
+func _do_restore_focus() -> void:
+	if recipe_button_list.is_empty():
+		return
+
+	# Clamp focus index to valid range (in case list got shorter)
+	if focused_recipe_index >= recipe_button_list.size():
+		focused_recipe_index = recipe_button_list.size() - 1
+	if focused_recipe_index < 0:
+		focused_recipe_index = 0
+
+	var button: Button = recipe_button_list[focused_recipe_index]
+	button.grab_focus()
+	# Scroll to keep the focused item visible
+	var item_panel: Control = button.get_parent().get_parent()
+	scroll_container.ensure_control_visible(item_panel)
 
 
 ## Navigate through recipe list with D-pad.
