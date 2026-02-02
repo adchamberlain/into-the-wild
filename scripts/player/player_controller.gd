@@ -403,29 +403,25 @@ func _is_ui_blocking_input() -> bool:
 	if get_tree().paused:
 		return true
 
-	# Check for open menus by looking for nodes in the crafting_ui group with is_open
+	# Check for open menus by looking for nodes with is_open or is_visible properties
 	for node in get_tree().get_nodes_in_group("crafting_ui"):
 		if "is_open" in node and node.is_open:
 			return true
 
-	# Check for equipment menu (uses is_visible property)
 	for node in get_tree().get_nodes_in_group("equipment_menu"):
 		if "is_visible" in node and node.is_visible:
 			return true
 
-	# Check for config menu (uses is_visible property)
 	for node in get_tree().get_nodes_in_group("config_menu"):
 		if "is_visible" in node and node.is_visible:
 			return true
 
-	# Check for storage UI
 	for node in get_tree().get_nodes_in_group("storage_ui"):
-		if node.visible:
+		if "is_open" in node and node.is_open:
 			return true
 
-	# Check for fire menu
 	for node in get_tree().get_nodes_in_group("fire_menu"):
-		if node.visible:
+		if "is_open" in node and node.is_open:
 			return true
 
 	return false
