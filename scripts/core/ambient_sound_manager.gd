@@ -138,8 +138,12 @@ func _update_water_emitters() -> void:
 			var dist_to_center: float = player_pos_2d.distance_to(center)
 			var dist_to_edge: float = dist_to_center - radius
 
-			# Player is adjacent to water edge (outside or inside the water)
-			if dist_to_edge < adjacent_range and dist_to_edge > -radius:
+			# Player is inside the water (negative distance to edge)
+			if dist_to_edge < 0:
+				# Place emitter at player position so they always hear it
+				nearby_pond_positions.append(Vector3(player_pos.x, 0.0, player_pos.z))
+			# Player is adjacent to water edge (outside but nearby)
+			elif dist_to_edge < adjacent_range:
 				# Calculate nearest point on water edge
 				var dir_to_player: Vector2 = (player_pos_2d - center)
 				if dir_to_player.length() > 0.01:
@@ -175,8 +179,12 @@ func _update_water_emitters() -> void:
 			# Distance to river edge (accounting for river width)
 			var dist_to_river_edge: float = min_dist - half_width
 
-			# Player is adjacent to river edge
-			if dist_to_river_edge < adjacent_range and dist_to_river_edge > -river_width:
+			# Player is inside the river (negative distance to edge)
+			if dist_to_river_edge < 0:
+				# Place emitter at player position so they always hear it
+				nearby_river_positions.append(Vector3(player_pos.x, 0.0, player_pos.z))
+			# Player is adjacent to river edge (outside but nearby)
+			elif dist_to_river_edge < adjacent_range:
 				# Place emitter at nearest point on river
 				nearby_river_positions.append(Vector3(nearest_point.x, 0.0, nearest_point.y))
 
