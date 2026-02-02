@@ -86,9 +86,9 @@ text = "Tree Respawn Time"
 custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 min_value = 1.0
-max_value = 7.0
+max_value = 30.0
 step = 1.0
-value = 1.0
+value = 7.0
 
 [node name="TreeRespawnValue" type="Label" parent="Panel/VBoxContainer/TreeRespawnContainer"]
 layout_mode = 2

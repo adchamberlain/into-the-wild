@@ -10,7 +10,7 @@ const FULL_HUNGER_RESTORE: bool = true
 
 # Rest position and camera angle
 @export var rest_position_offset: Vector3 = Vector3(0, 0.5, 0)  # Lying on bed
-@export var rest_camera_rotation: float = -80.0  # Looking up at ceiling (degrees)
+@export var rest_camera_rotation: float = 70.0  # Looking up at ceiling (positive pitch = look up)
 
 # State
 var is_player_sleeping: bool = false

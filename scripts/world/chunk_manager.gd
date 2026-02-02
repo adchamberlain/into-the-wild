@@ -1333,6 +1333,65 @@ func get_pending_unload_count() -> int:
 	return chunks_to_unload.size()
 
 
+## Remove trees that overlap with player structures.
+## Called after loading a saved game to clean up trees that spawned before structures were loaded.
+func remove_trees_overlapping_structures() -> void:
+	var campsite_mgr: Node = get_node_or_null("/root/Main/CampsiteManager")
+	if not campsite_mgr or not campsite_mgr.has_method("get_placed_structures"):
+		return
+
+	var structures: Array = campsite_mgr.get_placed_structures()
+	if structures.is_empty():
+		return
+
+	var removed_count: int = 0
+
+	# Iterate through all loaded chunks
+	for chunk_coord: Vector2i in loaded_chunks.keys():
+		var chunk: TerrainChunk = loaded_chunks[chunk_coord]
+		if not chunk:
+			continue
+
+		# Check each tree in this chunk
+		var trees_to_remove: Array[Node3D] = []
+		for tree: Node3D in chunk.spawned_trees:
+			if not is_instance_valid(tree):
+				continue
+
+			var tree_pos: Vector3 = tree.global_position
+			var tree_pos_2d: Vector2 = Vector2(tree_pos.x, tree_pos.z)
+
+			# Check against all structures
+			for structure: Node in structures:
+				if not is_instance_valid(structure):
+					continue
+
+				var struct_pos: Vector3 = structure.global_position
+				var struct_pos_2d: Vector2 = Vector2(struct_pos.x, struct_pos.z)
+
+				# Get structure's footprint radius
+				var footprint: float = 1.0
+				if "structure_type" in structure:
+					footprint = StructureData.get_footprint_radius(structure.structure_type)
+
+				# Tree radius for overlap check
+				var tree_radius: float = 1.5
+				var min_distance: float = footprint + tree_radius
+
+				if tree_pos_2d.distance_to(struct_pos_2d) < min_distance:
+					trees_to_remove.append(tree)
+					break  # No need to check other structures
+
+		# Remove overlapping trees
+		for tree: Node3D in trees_to_remove:
+			chunk.spawned_trees.erase(tree)
+			tree.queue_free()
+			removed_count += 1
+
+	if removed_count > 0:
+		print("[ChunkManager] Removed %d trees overlapping with structures" % removed_count)
+
+
 ## Check if a position overlaps with any player structure.
 ## Used to prevent trees from spawning on top of structures.
 func is_position_blocked_by_structure(x: float, z: float, radius: float = 1.5) -> bool:

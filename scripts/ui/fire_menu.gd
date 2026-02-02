@@ -39,6 +39,9 @@ var open_cooldown_timer: float = 0.0
 # Track if L2/interact was released since menu opened (prevents close-on-release)
 var interact_was_released: bool = false
 
+# Track if we're waiting for jump to be released before fully closing
+var waiting_for_jump_release: bool = false
+
 # Input manager reference for dynamic button prompts
 var input_manager: Node
 
@@ -81,6 +84,13 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if open_cooldown_timer > 0:
 		open_cooldown_timer -= delta
+
+	# Wait for jump action to be released before fully closing menu
+	# This prevents the player from jumping when X is used to select menu options
+	if waiting_for_jump_release:
+		if not Input.is_action_pressed("jump") and not Input.is_action_pressed("ui_accept"):
+			waiting_for_jump_release = false
+			is_open = false
 
 
 func _input(event: InputEvent) -> void:
@@ -144,6 +154,7 @@ func open_menu(fire: Node) -> void:
 	current_fire = fire
 	is_open = true
 	panel.visible = true
+	waiting_for_jump_release = false
 
 	# Set cooldown and reset release tracking to prevent L2 from immediately closing
 	open_cooldown_timer = OPEN_COOLDOWN
@@ -163,7 +174,7 @@ func open_menu(fire: Node) -> void:
 
 
 ## Close the fire menu.
-## Uses call_deferred to keep is_open true until end of frame,
+## Keeps is_open true until jump/ui_accept actions are released,
 ## preventing player from jumping when X is used for menu selection.
 func close_menu() -> void:
 	panel.visible = false
@@ -171,13 +182,12 @@ func close_menu() -> void:
 
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
-	# Defer setting is_open to false so _is_ui_blocking_input() still returns true
-	# for the remainder of this frame (prevents jump when X closes menu)
-	call_deferred("_set_closed")
-
-
-func _set_closed() -> void:
-	is_open = false
+	# Keep is_open true until jump action is released to prevent jumping
+	# when X button is used to select menu options
+	if Input.is_action_pressed("jump") or Input.is_action_pressed("ui_accept"):
+		waiting_for_jump_release = true
+	else:
+		is_open = false
 
 
 ## Refresh menu state based on inventory.

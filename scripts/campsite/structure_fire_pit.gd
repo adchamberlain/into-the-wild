@@ -146,6 +146,12 @@ func add_fuel(amount: float = -1.0) -> void:
 	if amount < 0:
 		amount = max_fuel  # Default to 1 day
 	fuel_remaining = min(fuel_remaining + amount, max_fuel * 2)  # Allow up to 2 days stockpile
+
+	# Relight the fire if it was extinguished
+	if not is_lit and fuel_remaining > 0:
+		_set_fire_state(true)
+		print("[FirePit] Fire relit with added fuel!")
+
 	var days_remaining: float = fuel_remaining / max_fuel
 	print("[FirePit] Fuel added. Remaining: %.1f days" % days_remaining)
 

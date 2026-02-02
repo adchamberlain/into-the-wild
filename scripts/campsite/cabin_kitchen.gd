@@ -67,8 +67,10 @@ func interact(player: Node) -> bool:
 	var best_recipe: String = _find_best_recipe(player_inventory)
 
 	if best_recipe.is_empty():
-		_show_notification("No ingredients! Need fish, herbs, or mushrooms.", Color(1.0, 0.6, 0.4))
-		print("[Kitchen] No ingredients for cooking. Need fish, herbs, or mushrooms.")
+		# Give helpful message about what's missing
+		var missing_msg: String = _get_missing_ingredients_message(player_inventory)
+		_show_notification(missing_msg, Color(1.0, 0.6, 0.4))
+		print("[Kitchen] %s" % missing_msg)
 		return true
 
 	# Cook the recipe
@@ -104,6 +106,51 @@ func interact(player: Node) -> bool:
 	print("[Kitchen] Cooked %s! (+%.0f hunger, +%.0f health)" % [recipe.get("name"), hunger_restore, health_restore])
 
 	return true
+
+
+## Get a helpful message about what ingredients are missing.
+func _get_missing_ingredients_message(inventory: Node) -> String:
+	# Find the recipe closest to completion and tell the player what's missing
+	var closest_recipe: String = ""
+	var closest_missing: Dictionary = {}
+	var fewest_missing: int = 999
+
+	for recipe_id: String in KITCHEN_RECIPES:
+		var recipe: Dictionary = KITCHEN_RECIPES[recipe_id]
+		var inputs: Dictionary = recipe.get("inputs", {})
+		var missing: Dictionary = {}
+
+		for item: String in inputs:
+			var needed: int = inputs[item]
+			var have: int = inventory.get_item_count(item) if inventory.has_method("get_item_count") else 0
+			if have < needed:
+				missing[item] = needed - have
+
+		var total_missing: int = 0
+		for item: String in missing:
+			total_missing += missing[item]
+
+		if total_missing > 0 and total_missing < fewest_missing:
+			fewest_missing = total_missing
+			closest_recipe = recipe_id
+			closest_missing = missing
+
+	if closest_recipe.is_empty():
+		return "No cooking ingredients found."
+
+	var recipe_name: String = KITCHEN_RECIPES[closest_recipe].get("name", closest_recipe)
+	var missing_items: Array[String] = []
+	for item: String in closest_missing:
+		var count: int = closest_missing[item]
+		if count == 1:
+			missing_items.append("1 %s" % item)
+		else:
+			missing_items.append("%d %ss" % [count, item])
+
+	if missing_items.size() == 1:
+		return "Need %s for %s" % [missing_items[0], recipe_name]
+	else:
+		return "Need %s for %s" % [", ".join(missing_items), recipe_name]
 
 
 func _find_best_recipe(inventory: Node) -> String:

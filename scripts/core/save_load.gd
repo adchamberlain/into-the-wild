@@ -666,6 +666,11 @@ func _apply_campsite_data(data: Dictionary) -> void:
 		for struct_data: Dictionary in data["structures"]:
 			_recreate_structure(struct_data, structures_container)
 
+	# Remove any trees that spawned on top of the loaded structures
+	# (trees spawn during terrain generation before structures are loaded)
+	if chunk_manager and chunk_manager.has_method("remove_trees_overlapping_structures"):
+		chunk_manager.remove_trees_overlapping_structures()
+
 	# NOTE: We intentionally do NOT emit campsite_level_changed here
 	# to avoid showing the level-up celebration when loading a saved game.
 	# The HUD will update its display when it receives game_loaded signal.
@@ -1251,7 +1256,17 @@ func _create_cabin() -> StaticBody3D:
 	roof_right.material_override = roof_mat
 	cabin.add_child(roof_right)
 
-	# Protection area
+	# Interior: Bed (back right corner)
+	var bed: StaticBody3D = _create_cabin_bed()
+	bed.position = Vector3(width / 2 - 1.2, 0, -depth / 2 + 1.2)
+	cabin.add_child(bed)
+
+	# Interior: Kitchen (back left corner)
+	var kitchen: StaticBody3D = _create_cabin_kitchen()
+	kitchen.position = Vector3(-width / 2 + 1.2, 0, -depth / 2 + 1.0)
+	cabin.add_child(kitchen)
+
+	# Protection area (covers entire cabin interior)
 	var area: Area3D = Area3D.new()
 	area.name = "ProtectionArea"
 	var area_collision: CollisionShape3D = CollisionShape3D.new()
@@ -1260,6 +1275,123 @@ func _create_cabin() -> StaticBody3D:
 	area_collision.shape = box_area
 	area_collision.position.y = height / 2
 	area.add_child(area_collision)
+	area.body_entered.connect(cabin._on_protection_area_body_entered)
+	area.body_exited.connect(cabin._on_protection_area_body_exited)
 	cabin.add_child(area)
 
 	return cabin
+
+
+func _create_cabin_bed() -> StaticBody3D:
+	var bed: StaticBody3D = StaticBody3D.new()
+	bed.name = "CabinBed"
+	bed.set_script(load("res://scripts/campsite/cabin_bed.gd"))
+
+	var frame_mat: StandardMaterial3D = StandardMaterial3D.new()
+	frame_mat.albedo_color = Color(0.45, 0.32, 0.2)
+
+	var blanket_mat: StandardMaterial3D = StandardMaterial3D.new()
+	blanket_mat.albedo_color = Color(0.3, 0.45, 0.6)  # Blue blanket
+
+	var pillow_mat: StandardMaterial3D = StandardMaterial3D.new()
+	pillow_mat.albedo_color = Color(0.9, 0.88, 0.82)  # White pillow
+
+	# Bed frame
+	var frame: MeshInstance3D = MeshInstance3D.new()
+	var frame_mesh: BoxMesh = BoxMesh.new()
+	frame_mesh.size = Vector3(1.8, 0.3, 1.0)
+	frame.mesh = frame_mesh
+	frame.position.y = 0.15
+	frame.material_override = frame_mat
+	bed.add_child(frame)
+
+	# Mattress/blanket
+	var blanket: MeshInstance3D = MeshInstance3D.new()
+	var blanket_mesh: BoxMesh = BoxMesh.new()
+	blanket_mesh.size = Vector3(1.6, 0.15, 0.9)
+	blanket.mesh = blanket_mesh
+	blanket.position = Vector3(0, 0.375, 0)
+	blanket.material_override = blanket_mat
+	bed.add_child(blanket)
+
+	# Pillow
+	var pillow: MeshInstance3D = MeshInstance3D.new()
+	var pillow_mesh: BoxMesh = BoxMesh.new()
+	pillow_mesh.size = Vector3(0.5, 0.12, 0.35)
+	pillow.mesh = pillow_mesh
+	pillow.position = Vector3(-0.5, 0.5, 0)
+	pillow.material_override = pillow_mat
+	bed.add_child(pillow)
+
+	# Collision for interaction
+	var collision: CollisionShape3D = CollisionShape3D.new()
+	var box_shape: BoxShape3D = BoxShape3D.new()
+	box_shape.size = Vector3(1.8, 0.5, 1.0)
+	collision.shape = box_shape
+	collision.position.y = 0.25
+	bed.add_child(collision)
+
+	return bed
+
+
+func _create_cabin_kitchen() -> StaticBody3D:
+	var kitchen: StaticBody3D = StaticBody3D.new()
+	kitchen.name = "CabinKitchen"
+	kitchen.set_script(load("res://scripts/campsite/cabin_kitchen.gd"))
+
+	var wood_mat: StandardMaterial3D = StandardMaterial3D.new()
+	wood_mat.albedo_color = Color(0.5, 0.38, 0.25)
+
+	var stone_mat: StandardMaterial3D = StandardMaterial3D.new()
+	stone_mat.albedo_color = Color(0.5, 0.5, 0.52)
+
+	var fire_mat: StandardMaterial3D = StandardMaterial3D.new()
+	fire_mat.albedo_color = Color(1.0, 0.5, 0.1)
+	fire_mat.emission_enabled = true
+	fire_mat.emission = Color(1.0, 0.4, 0.0)
+	fire_mat.emission_energy_multiplier = 1.5
+
+	# Counter/cabinet base
+	var counter: MeshInstance3D = MeshInstance3D.new()
+	var counter_mesh: BoxMesh = BoxMesh.new()
+	counter_mesh.size = Vector3(1.5, 0.8, 0.8)
+	counter.mesh = counter_mesh
+	counter.position.y = 0.4
+	counter.material_override = wood_mat
+	kitchen.add_child(counter)
+
+	# Stone cooking surface
+	var surface: MeshInstance3D = MeshInstance3D.new()
+	var surface_mesh: BoxMesh = BoxMesh.new()
+	surface_mesh.size = Vector3(1.5, 0.1, 0.8)
+	surface.mesh = surface_mesh
+	surface.position.y = 0.85
+	surface.material_override = stone_mat
+	kitchen.add_child(surface)
+
+	# Small cooking fire (always lit)
+	var fire: MeshInstance3D = MeshInstance3D.new()
+	var fire_mesh: BoxMesh = BoxMesh.new()
+	fire_mesh.size = Vector3(0.3, 0.25, 0.3)
+	fire.mesh = fire_mesh
+	fire.position = Vector3(0.4, 1.025, 0)
+	fire.material_override = fire_mat
+	kitchen.add_child(fire)
+
+	# Light from fire
+	var light: OmniLight3D = OmniLight3D.new()
+	light.light_color = Color(1.0, 0.6, 0.2)
+	light.light_energy = 1.5
+	light.omni_range = 4.0
+	light.position = Vector3(0.4, 1.2, 0)
+	kitchen.add_child(light)
+
+	# Collision for interaction
+	var collision: CollisionShape3D = CollisionShape3D.new()
+	var box_shape: BoxShape3D = BoxShape3D.new()
+	box_shape.size = Vector3(1.5, 0.9, 0.8)
+	collision.shape = box_shape
+	collision.position.y = 0.45
+	kitchen.add_child(collision)
+
+	return kitchen
