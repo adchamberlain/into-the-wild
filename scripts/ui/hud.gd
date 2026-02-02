@@ -291,8 +291,8 @@ func _update_control_hints() -> void:
 	var using_controller: bool = input_manager and input_manager.is_using_controller()
 
 	if using_controller:
-		# Controller prompts
-		equip_hint_label.text = "Create-Equip  Touchpad-Craft  Options-Pause"
+		# Controller prompts (Share=left button, Pad=touchpad, Menu=right button)
+		equip_hint_label.text = "Share-Equip  Pad-Craft  Menu-Pause"
 	else:
 		# Keyboard prompts
 		equip_hint_label.text = "I-Equip C-Craft Tab-Config K-Save L-Load"

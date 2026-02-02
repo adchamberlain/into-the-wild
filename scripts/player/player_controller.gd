@@ -178,7 +178,8 @@ func _process_normal_movement(delta: float) -> void:
 		velocity.y -= gravity * delta
 
 	# Handle jump (works with both keyboard and controller via action)
-	if Input.is_action_just_pressed("jump") and is_on_floor():
+	# Using is_action_pressed allows holding the button to jump repeatedly when landing
+	if Input.is_action_pressed("jump") and is_on_floor():
 		velocity.y = jump_velocity
 
 	# Handle sprint (works with both keyboard and controller via action)

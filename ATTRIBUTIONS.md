@@ -24,4 +24,16 @@ This file documents third-party assets and their sources used in Into the Wild.
 
 ---
 
-*Last updated: 2026-01-31*
+## Ambient Sounds
+
+**River/Stream Ambient** (`river_ambient.mp3`)
+- Source: Pixabay
+- License: Pixabay Content License (royalty-free, no attribution required)
+
+**Pond/Lake Ambient** (`pond_ambient.mp3`)
+- Source: Pixabay
+- License: Pixabay Content License (royalty-free, no attribution required)
+
+---
+
+*Last updated: 2026-02-01*

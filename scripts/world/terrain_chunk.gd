@@ -81,16 +81,24 @@ func _add_top_face(st: SurfaceTool, x: float, z: float, size: float, height: flo
 
 	var normal := Vector3.UP
 
+	# Get cell center for region lookup
+	var center_x: float = x + size / 2.0
+	var center_z: float = z + size / 2.0
+
+	# Get region-specific colors
+	var region: ChunkManager.RegionType = chunk_manager.get_region_at(center_x, center_z)
+	var region_colors: Dictionary = chunk_manager.get_region_colors(region)
+	var grass_color: Color = region_colors["grass"]
+
 	# Color variation based on world position for consistency across chunks
 	var world_cx: int = chunk_coord.x * chunk_manager.chunk_size_cells + cx
 	var world_cz: int = chunk_coord.y * chunk_manager.chunk_size_cells + cz
 	var variation: float = sin(world_cx * 12.9898 + world_cz * 78.233) * 0.08
 
-	var grass_color: Color = chunk_manager.grass_color
 	var cell_grass: Color = Color(
-		clamp(grass_color.r + variation, 0.20, 0.38),
-		clamp(grass_color.g + variation * 0.5, 0.45, 0.62),
-		clamp(grass_color.b + variation * 0.3, 0.08, 0.22)
+		clamp(grass_color.r + variation, grass_color.r - 0.08, grass_color.r + 0.10),
+		clamp(grass_color.g + variation * 0.5, grass_color.g - 0.07, grass_color.g + 0.10),
+		clamp(grass_color.b + variation * 0.3, grass_color.b - 0.07, grass_color.b + 0.07)
 	)
 
 	# Triangle 1
@@ -161,8 +169,13 @@ func _add_side_faces(st: SurfaceTool, x: float, z: float, size: float, height: f
 
 
 func _add_side_quad(st: SurfaceTool, v0: Vector3, v1: Vector3, v2: Vector3, v3: Vector3, normal: Vector3) -> void:
-	var grass_color: Color = chunk_manager.grass_color
-	var dirt_color: Color = chunk_manager.dirt_color
+	# Get region-specific colors based on position
+	var center_x: float = (v0.x + v1.x) / 2.0
+	var center_z: float = (v0.z + v2.z) / 2.0
+	var region: ChunkManager.RegionType = chunk_manager.get_region_at(center_x, center_z)
+	var region_colors: Dictionary = chunk_manager.get_region_colors(region)
+	var grass_color: Color = region_colors["grass"]
+	var dirt_color: Color = region_colors["dirt"]
 
 	var grass_thickness: float = 0.25
 	var total_height: float = v0.y - v2.y
@@ -170,14 +183,14 @@ func _add_side_quad(st: SurfaceTool, v0: Vector3, v1: Vector3, v2: Vector3, v3: 
 	# Color variation based on position
 	var variation: float = sin(v0.x * 12.9898 + v0.z * 78.233 + v0.y * 37.719) * 0.06
 	var cell_grass: Color = Color(
-		clamp(grass_color.r + variation, 0.20, 0.38),
-		clamp(grass_color.g + variation * 0.5, 0.45, 0.62),
-		clamp(grass_color.b + variation * 0.3, 0.08, 0.22)
+		clamp(grass_color.r + variation, grass_color.r - 0.08, grass_color.r + 0.10),
+		clamp(grass_color.g + variation * 0.5, grass_color.g - 0.07, grass_color.g + 0.10),
+		clamp(grass_color.b + variation * 0.3, grass_color.b - 0.07, grass_color.b + 0.07)
 	)
 	var cell_dirt: Color = Color(
-		clamp(dirt_color.r + variation, 0.32, 0.50),
-		clamp(dirt_color.g + variation * 0.8, 0.18, 0.32),
-		clamp(dirt_color.b + variation * 0.5, 0.06, 0.18)
+		clamp(dirt_color.r + variation, dirt_color.r - 0.08, dirt_color.r + 0.10),
+		clamp(dirt_color.g + variation * 0.8, dirt_color.g - 0.08, dirt_color.g + 0.10),
+		clamp(dirt_color.b + variation * 0.5, dirt_color.b - 0.08, dirt_color.b + 0.10)
 	)
 
 	if total_height > grass_thickness:
@@ -334,20 +347,21 @@ func _spawn_chunk_trees() -> void:
 				z += tree_grid_size
 				continue
 
-			# Skip if in pond area
-			var pond_center: Vector2 = chunk_manager.pond_center
-			var pond_radius: float = chunk_manager.pond_radius
-			var dist_to_pond: float = Vector2(world_x - pond_center.x, world_z - pond_center.y).length()
-			if dist_to_pond < pond_radius + 2.0:
+			# Skip if in any pond area
+			if chunk_manager.is_near_any_pond(world_x, world_z, 2.0):
 				z += tree_grid_size
 				continue
+
+			# Get region type and tree multiplier
+			var region: ChunkManager.RegionType = chunk_manager.get_region_at(world_x, world_z)
+			var tree_multiplier: float = chunk_manager.get_vegetation_multiplier(region, "tree")
 
 			# Get forest density from noise
 			var density_value: float = (chunk_manager.forest_noise.get_noise_2d(world_x, world_z) + 1.0) * 0.5
 
 			var spawn_chance: float = 0.0
 			if density_value > 0.35:
-				spawn_chance = tree_density * (density_value - 0.35) / 0.65 * 2.5
+				spawn_chance = tree_density * (density_value - 0.35) / 0.65 * 2.5 * tree_multiplier
 
 			if rng.randf() < spawn_chance:
 				# Add jitter
@@ -425,11 +439,8 @@ func _spawn_chunk_resources() -> void:
 			var res_x: float = world_x + jitter_x
 			var res_z: float = world_z + jitter_z
 
-			# Skip if in pond area (check AFTER jitter is applied)
-			var pond_center: Vector2 = chunk_manager.pond_center
-			var pond_radius: float = chunk_manager.pond_radius
-			var dist_to_pond: float = Vector2(res_x - pond_center.x, res_z - pond_center.y).length()
-			if dist_to_pond < pond_radius + 2.0:
+			# Skip if inside any pond area (check AFTER jitter is applied)
+			if chunk_manager.is_near_any_pond(res_x, res_z, 2.0):
 				z += resource_grid_size
 				continue
 
@@ -443,6 +454,12 @@ func _spawn_chunk_resources() -> void:
 			# Distance from campsite affects spawn rates
 			var dist_from_camp: float = Vector2(res_x, res_z).length()
 
+			# Get region type and multipliers for this position
+			var region: ChunkManager.RegionType = chunk_manager.get_region_at(res_x, res_z)
+			var rock_mult: float = chunk_manager.get_vegetation_multiplier(region, "rock")
+			var berry_mult: float = chunk_manager.get_vegetation_multiplier(region, "berry")
+			var herb_mult: float = chunk_manager.get_vegetation_multiplier(region, "herb")
+
 			# Try spawning different resource types
 			var resource_roll: float = rng.randf()
 
@@ -454,19 +471,30 @@ func _spawn_chunk_resources() -> void:
 				z += resource_grid_size
 				continue
 
-			# Rocks - more common away from campsite
+			# Rocks - spawn near water pools (shoreline rocks) + region-based
 			resource_roll = rng.randf()
-			var rock_chance: float = chunk_manager.rock_density
-			if dist_from_camp > 10.0:
-				rock_chance *= 1.5
+			var dist_to_pond: float = chunk_manager.get_distance_to_nearest_pond(res_x, res_z)
+			var pond_radius: float = chunk_manager.pond_radius
+			var rock_chance: float = 0.0
+
+			# Rocks spawn in a band around ponds (from pond edge to ~15 units out)
+			var dist_from_pond_edge: float = dist_to_pond - pond_radius
+			if dist_from_pond_edge > 0.0 and dist_from_pond_edge < 15.0:
+				# Higher chance closer to water edge, tapering off with distance
+				var proximity_factor: float = 1.0 - (dist_from_pond_edge / 15.0)
+				rock_chance = chunk_manager.rock_density * 8.0 * proximity_factor * rock_mult
+			else:
+				# Region-based rock spawning (rocky areas have many more rocks)
+				rock_chance = chunk_manager.rock_density * rock_mult
+
 			if resource_roll < rock_chance and chunk_manager.rock_scene:
 				_spawn_resource(chunk_manager.rock_scene, res_x, res_y, res_z, rng)
 				z += resource_grid_size
 				continue
 
-			# Berry bushes - clustered in clearings (inverse of forest)
+			# Berry bushes - clustered in clearings (inverse of forest), region-adjusted
 			resource_roll = rng.randf()
-			var berry_chance: float = chunk_manager.berry_density * (1.5 - forest_value)
+			var berry_chance: float = chunk_manager.berry_density * (1.5 - forest_value) * berry_mult
 			if resource_roll < berry_chance and chunk_manager.berry_bush_scene:
 				_spawn_resource(chunk_manager.berry_bush_scene, res_x, res_y, res_z, rng)
 				z += resource_grid_size
@@ -480,9 +508,9 @@ func _spawn_chunk_resources() -> void:
 				z += resource_grid_size
 				continue
 
-			# Herbs - scattered everywhere
+			# Herbs - scattered everywhere, region-adjusted
 			resource_roll = rng.randf()
-			if resource_roll < chunk_manager.herb_density and chunk_manager.herb_scene:
+			if resource_roll < chunk_manager.herb_density * herb_mult and chunk_manager.herb_scene:
 				_spawn_resource(chunk_manager.herb_scene, res_x, res_y, res_z, rng)
 
 			z += resource_grid_size
@@ -560,11 +588,8 @@ func _spawn_chunk_decorations() -> void:
 		var world_x: float = chunk_world_x + x
 		var world_z: float = chunk_world_z + z
 
-		# Skip if in pond area
-		var pond_center: Vector2 = chunk_manager.pond_center
-		var pond_radius: float = chunk_manager.pond_radius
-		var dist_to_pond: float = Vector2(world_x - pond_center.x, world_z - pond_center.y).length()
-		if dist_to_pond < pond_radius + 1.0:
+		# Skip if in any pond area
+		if chunk_manager.is_near_any_pond(world_x, world_z, 1.0):
 			attempts += 1
 			continue
 
@@ -593,10 +618,8 @@ func _spawn_chunk_decorations() -> void:
 		var world_x: float = chunk_world_x + x
 		var world_z: float = chunk_world_z + z
 
-		var pond_center: Vector2 = chunk_manager.pond_center
-		var pond_radius: float = chunk_manager.pond_radius
-		var dist_to_pond: float = Vector2(world_x - pond_center.x, world_z - pond_center.y).length()
-		if dist_to_pond < pond_radius + 1.0:
+		# Skip if in any pond area
+		if chunk_manager.is_near_any_pond(world_x, world_z, 1.0):
 			attempts += 1
 			continue
 

@@ -406,13 +406,252 @@ UI shows "(Requires Bench)" when not at bench.
 
 ---
 
+## Session 32 - Environment Improvements (2026-02-01)
+
+**Multiple Water Pools**: World now generates multiple ponds spread across the landscape:
+- 5 ponds total (configurable via `pond_count`)
+- First pond always near campsite at (15, 12) for reliable fishing access
+- Additional ponds placed randomly with 60-unit minimum spacing
+- Ponds must be at least 25 units from campsite
+- Each pond gets terrain depression and fishing spot when chunk loads
+- Deterministic placement (same seed = same pond locations)
+
+**Rocks Near Water**: Rocks now spawn primarily near pond shorelines:
+- High density within 15 units of pond edges (8x base density at water's edge)
+- Density tapers off with distance from water
+- Very rare rocks elsewhere (10% of base density)
+- Creates natural shoreline rock formations around all water features
+
+**Code Refactoring**:
+- `pond_center` single variable replaced with `pond_locations: Array[Vector2]`
+- New helper functions: `get_distance_to_nearest_pond()`, `is_near_any_pond()`
+- Tree, resource, and decoration spawning updated to check all ponds
+- Fishing spots spawned dynamically as chunks containing ponds load
+
+**Files Modified**: `scripts/world/chunk_manager.gd`, `scripts/world/terrain_chunk.gd`
+
+---
+
+## Session 33 - Terrain Variety (2026-02-01)
+
+**Region System**: World now has 4 distinct terrain types with unique characteristics:
+
+**Region Types** (determined by low-frequency noise at 0.008):
+- **MEADOW** (noise < -0.3): Gentle rolling terrain, lighter vibrant green grass
+- **FOREST** (noise -0.3 to 0.2): Dense trees, default dark green (previous terrain)
+- **HILLS** (noise 0.2 to 0.5): Dramatic elevation changes with detail noise
+- **ROCKY** (noise > 0.5): Jagged blocky cliffs, grey stone surface
+
+**Height Generation by Region**:
+| Region | Height Scale | Height Step | Character |
+|--------|-------------|-------------|-----------|
+| MEADOW | 2.0 | 0.5 | Gentle rolling terrain |
+| FOREST | 5.0 | 1.0 | Current default |
+| HILLS | 12.0 | 1.5 | Dramatic elevation (up to ~15 units) |
+| ROCKY | 8.0 | 2.0 | Jagged, blocky cliffs |
+
+Hills also get additional detail noise (+3 units variation) for more interesting terrain.
+
+**Surface Colors by Region**:
+| Region | Grass Color | Dirt Color |
+|--------|------------|------------|
+| MEADOW | Lighter green (0.35, 0.58, 0.20) | Light brown (0.45, 0.30, 0.18) |
+| FOREST | Dark green (0.28, 0.52, 0.15) | Brown (0.40, 0.26, 0.14) |
+| HILLS | Medium green (0.32, 0.48, 0.18) | Medium brown (0.42, 0.28, 0.16) |
+| ROCKY | Grey stone (0.45, 0.42, 0.38) | Dark grey (0.35, 0.33, 0.30) |
+
+**Vegetation Spawning by Region**:
+| Region | Trees | Rocks | Berries/Herbs |
+|--------|-------|-------|---------------|
+| MEADOW | 10% | 30% | 200% |
+| FOREST | 150% | 100% | 100% |
+| HILLS | 60% | 150% | 80% |
+| ROCKY | 20% | 500% | 20% |
+
+Rocky regions provide foundation for future cave system.
+
+**New Noise Generators**:
+- `region_noise`: Frequency 0.008 for ~125 unit regions
+- `detail_noise`: Frequency 0.04 for hills terrain variation
+
+**New ChunkManager API**:
+- `get_region_at(x, z)` → RegionType
+- `get_region_colors(region)` → Dictionary with grass/dirt colors
+- `get_vegetation_multiplier(region, type)` → float multiplier
+
+**Files Modified**: `scripts/world/chunk_manager.gd`, `scripts/world/terrain_chunk.gd`
+
+---
+
+## Session 34 - Enhanced Water Features (2026-02-01)
+
+**Complete water system overhaul** with varied ponds, lakes, rivers, and ambient sound infrastructure.
+
+### Water Body System Redesign
+
+**New Data Structures** (`chunk_manager.gd`):
+- `WaterBodyType` enum: POND, LAKE, RIVER
+- `water_bodies: Array[Dictionary]` replaces simple `pond_locations` array
+- Each water body stores: type, center, radius, depth
+- `rivers: Array[Dictionary]` stores river paths with fishing pools
+
+### Region-Specific Ponds
+
+| Region | Radius Range | Depth |
+|--------|-------------|-------|
+| MEADOW | 10-14 | 2.5 |
+| FOREST | 6-10 | 2.5 |
+| HILLS | 5-8 | 3.0 |
+| ROCKY | 4-6 | 3.5 |
+
+### Lake Generation (NEW)
+
+- 2-3 large lakes per world (20-30 unit radius)
+- MEADOW regions only (flat terrain)
+- 80+ unit spacing between lakes
+- 40+ unit spacing from ponds
+- Must be 50+ units from spawn
+- 8 fish per lake (vs 5 for ponds)
+
+### River Generation (NEW)
+
+- 2-3 rivers per world
+- Source points in HILLS/ROCKY regions (high terrain)
+- Path follows terrain gradient downhill toward MEADOW
+- Natural curved paths with perpendicular offsets
+- Base width: 5 units, fishing pool width: 8 units
+- Depth: 2.0 units with sloped cross-section profile
+- Fishing pools placed every 40 units along river
+
+**River Path Algorithm**:
+1. Find source in high terrain region
+2. Sample heights in multiple directions
+3. Follow lowest path with random curve offsets
+4. Stop when reaching MEADOW or 120+ units length
+5. Smooth path for natural appearance
+
+### Terrain Carving Updates
+
+- `get_height_at()` now handles variable radii for ponds/lakes
+- River cross-section: flat floor (40% width), sloped edges (40-100% width)
+- All water bodies carve terrain appropriately
+
+### Unified Water Detection
+
+- New `is_in_water(x, z, buffer)` function checks all water types
+- `is_near_any_pond()` now wraps `is_in_water()` for backward compatibility
+- `get_nearest_water_body()` returns detailed water body info
+- Trees, resources, decorations use unified water check
+
+### River Rendering
+
+- Inline river segment creation (no external scene required)
+- PlaneMesh water surface per segment
+- Area3D for swimming detection with enter/exit signals
+- Segments spawned as chunks load
+- Fishing pools at river widening points
+
+### Ambient Sound System (NEW)
+
+**AmbientSoundManager** singleton (`scripts/core/ambient_sound_manager.gd`):
+- Up to 6 AudioStreamPlayer3D emitters for water sounds
+- Spatial audio with natural falloff (8 unit full volume, 40 unit max distance)
+- Emitters positioned at nearby water bodies and river waypoints
+- Update throttling (0.5 second intervals)
+- Graceful handling when audio file not present
+
+**Audio Bus Layout** (`resources/default_bus_layout.tres`):
+- Master (default)
+- Music (for background tracks)
+- Ambient (for environmental sounds, -8dB default)
+- SFX (for gameplay sounds)
+
+**Audio Files**:
+- `assets/audio/ambient/pond_ambient.mp3` - Calm water sound for ponds and lakes
+- `assets/audio/ambient/river_ambient.mp3` - Flowing stream sound for rivers
+- Source: Pixabay (royalty-free, no attribution required)
+
+### New Files
+
+| File | Purpose |
+|------|---------|
+| `scripts/core/ambient_sound_manager.gd` | Spatial ambient audio singleton |
+| `resources/default_bus_layout.tres` | Audio bus configuration |
+
+### Improved Hills & Rocky Terrain
+
+**HILLS Region**:
+- Height scale increased from 12 to 22 for much taller hills
+- Step size changed to 1.0 (always jumpable)
+- New `hill_noise` creates dramatic large-scale peaks with variation
+- New `path_noise` carves winding valleys through hills for climbing routes
+- Power curve applied to hill shapes for more dramatic peaks
+- Detail noise increased to 4 units for surface variation
+
+**ROCKY Region**:
+- Height scale increased from 8 to 12
+- Step size changed from 2.0 to 1.0 (now jumpable)
+- Uses same path_noise to create some climbing routes
+- Jagged detail with higher frequency noise
+
+**Climbable Paths**: Path noise creates natural valleys that wind through terrain, ensuring every hill has at least one route with 1-step increments that can be jumped.
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/chunk_manager.gd` | Water body system, rivers, terrain carving, `is_in_water()`, improved hills/rocky terrain |
+| `project.godot` | AmbientSoundManager autoload, audio bus reference |
+| `ATTRIBUTIONS.md` | Water sound asset info |
+
+---
+
+## Session 35 - Rope Ladder (2026-02-01)
+
+**New Craftable Structure**: Rope Ladder for climbing steep cliffs.
+
+### Recipe
+- **Inputs**: 2 rope + 4 branches
+- **Output**: rope_ladder_kit
+- **Requires**: Crafting bench
+
+### Placement
+- Place against any vertical surface
+- 8 unit tall ladder with visual rungs
+- Grid-snapped like other structures
+
+### Climbing Mechanics
+- Walk into ladder to grab it
+- W/Forward: Climb up
+- S/Backward: Climb down
+- Space/Jump: Also climbs up
+- At top: Player pushed forward onto ledge
+- At bottom: Normal movement resumes
+
+### Visual Design
+- Two tan rope lines running vertically
+- Wood rungs every 0.5 units
+- Top anchor knot/hook visual
+- Matches blocky aesthetic
+
+### Files Created
+- `scripts/campsite/structure_rope_ladder.gd` - Ladder structure with climbing logic
+
+### Files Modified
+- `scripts/crafting/crafting_system.gd` - Added rope_ladder_kit recipe
+- `scripts/campsite/structure_data.gd` - Added rope_ladder structure definition
+- `scripts/campsite/placement_system.gd` - Added _create_rope_ladder() function
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Sound effects (footsteps, interactions, ambient)
+1. Sound effects (footsteps, interactions)
 2. Game balancing and polish
 3. Pixelated textures (optional)
 4. Optional: DualSense haptics and adaptive triggers
+5. Cave entrances in rocky regions (deferred)
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

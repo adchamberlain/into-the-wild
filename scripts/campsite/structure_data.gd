@@ -64,6 +64,12 @@ const STRUCTURES: Dictionary = {
 		"protection_radius": 8.0,
 		"category": "shelter",
 		"min_camp_level": 3
+	},
+	"rope_ladder": {
+		"name": "Rope Ladder",
+		"scene": "res://scenes/campsite/structures/rope_ladder.tscn",
+		"item_required": "rope_ladder_kit",
+		"category": "utility"
 	}
 }
 
@@ -76,7 +82,8 @@ const PLACEABLE_ITEMS: Array[String] = [
 	"drying_rack_kit",
 	"garden_plot_kit",
 	"canvas_tent_kit",
-	"cabin_kit"
+	"cabin_kit",
+	"rope_ladder_kit"
 ]
 
 

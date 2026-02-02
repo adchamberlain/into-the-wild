@@ -392,6 +392,8 @@ func _create_structure_programmatically() -> Node3D:
 			return _create_canvas_tent()
 		"cabin":
 			return _create_cabin()
+		"rope_ladder":
+			return _create_rope_ladder()
 	return null
 
 
@@ -1115,3 +1117,77 @@ func _create_cabin_kitchen() -> StaticBody3D:
 	kitchen.add_child(collision)
 
 	return kitchen
+
+
+func _create_rope_ladder() -> StaticBody3D:
+	var ladder: StaticBody3D = StaticBody3D.new()
+	ladder.name = "RopeLadder"
+	ladder.set_script(load("res://scripts/campsite/structure_rope_ladder.gd"))
+
+	var rope_mat: StandardMaterial3D = StandardMaterial3D.new()
+	rope_mat.albedo_color = Color(0.55, 0.45, 0.3)  # Tan rope color
+
+	var wood_mat: StandardMaterial3D = StandardMaterial3D.new()
+	wood_mat.albedo_color = Color(0.5, 0.35, 0.2)  # Wood rungs
+
+	var ladder_height: float = 8.0
+	var rung_spacing: float = 0.5
+	var ladder_width: float = 0.6
+
+	# Collision (thin box along the ladder)
+	var collision: CollisionShape3D = CollisionShape3D.new()
+	var box_shape: BoxShape3D = BoxShape3D.new()
+	box_shape.size = Vector3(ladder_width + 0.2, ladder_height, 0.3)
+	collision.shape = box_shape
+	collision.position.y = ladder_height / 2
+	ladder.add_child(collision)
+
+	# Left rope
+	var rope_left: MeshInstance3D = MeshInstance3D.new()
+	var rope_mesh: BoxMesh = BoxMesh.new()
+	rope_mesh.size = Vector3(0.05, ladder_height, 0.05)
+	rope_left.mesh = rope_mesh
+	rope_left.position = Vector3(-ladder_width / 2, ladder_height / 2, 0)
+	rope_left.material_override = rope_mat
+	ladder.add_child(rope_left)
+
+	# Right rope
+	var rope_right: MeshInstance3D = MeshInstance3D.new()
+	rope_right.mesh = rope_mesh
+	rope_right.position = Vector3(ladder_width / 2, ladder_height / 2, 0)
+	rope_right.material_override = rope_mat
+	ladder.add_child(rope_right)
+
+	# Rungs
+	var rung_mesh: BoxMesh = BoxMesh.new()
+	rung_mesh.size = Vector3(ladder_width, 0.06, 0.08)
+
+	var num_rungs: int = int(ladder_height / rung_spacing)
+	for i: int in range(num_rungs):
+		var rung: MeshInstance3D = MeshInstance3D.new()
+		rung.mesh = rung_mesh
+		rung.position = Vector3(0, 0.25 + i * rung_spacing, 0)
+		rung.material_override = wood_mat
+		ladder.add_child(rung)
+
+	# Top anchor (hook/knot visual)
+	var anchor: MeshInstance3D = MeshInstance3D.new()
+	var anchor_mesh: BoxMesh = BoxMesh.new()
+	anchor_mesh.size = Vector3(0.2, 0.15, 0.15)
+	anchor.mesh = anchor_mesh
+	anchor.position = Vector3(0, ladder_height + 0.1, 0)
+	anchor.material_override = rope_mat
+	ladder.add_child(anchor)
+
+	# Climb detection area - larger than collision so player can grab it
+	var climb_area: Area3D = Area3D.new()
+	climb_area.name = "ClimbArea"
+	var area_collision: CollisionShape3D = CollisionShape3D.new()
+	var area_shape: BoxShape3D = BoxShape3D.new()
+	area_shape.size = Vector3(ladder_width + 0.8, ladder_height + 1.0, 0.8)
+	area_collision.shape = area_shape
+	area_collision.position.y = ladder_height / 2
+	climb_area.add_child(area_collision)
+	ladder.add_child(climb_area)
+
+	return ladder
