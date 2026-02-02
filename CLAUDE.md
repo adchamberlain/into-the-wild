@@ -18,6 +18,17 @@
 
 This log serves as our historical record of development progress.
 
+### Spawn/Campsite Location
+
+The player spawn and campsite area must always have these characteristics:
+
+- **Forest region**: 60-unit radius around spawn (0,0) is always FOREST, never plains/meadow/rocky
+- **Nearby fishing pond**: Guaranteed pond at approximately (15, 12) - close but not at spawn
+- **Trees and cover**: Forest density provides plenty of trees for resources and atmosphere
+- **Near terrain variation**: Hills/rocky regions should be accessible but not at the immediate spawn
+
+Rivers and other water features must stay 40+ units away from spawn to keep the campsite area clean.
+
 ### Code Style
 
 - Godot 4.5 requires explicit type annotations (no Variant inference)
