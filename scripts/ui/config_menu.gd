@@ -70,6 +70,9 @@ var focused_slot_index: int = 0  # For slot panel navigation
 
 
 func _ready() -> void:
+	# Add to group for UI state detection
+	add_to_group("config_menu")
+
 	# Get node references
 	if time_manager_path:
 		time_manager = get_node_or_null(time_manager_path)

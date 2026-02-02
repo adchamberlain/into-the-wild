@@ -179,7 +179,8 @@ func _process_normal_movement(delta: float) -> void:
 
 	# Handle jump (works with both keyboard and controller via action)
 	# Using is_action_pressed allows holding the button to jump repeatedly when landing
-	if Input.is_action_pressed("jump") and is_on_floor():
+	# Don't jump if a UI menu is open (X button used for ui_accept)
+	if Input.is_action_pressed("jump") and is_on_floor() and not _is_ui_blocking_input():
 		velocity.y = jump_velocity
 
 	# Handle sprint (works with both keyboard and controller via action)
@@ -393,3 +394,38 @@ func _notification(what: int) -> void:
 func _update_fall_protection(_delta: float) -> void:
 	if global_position.y < fall_warning_y:
 		push_warning("[Player] Falling unusually low (y=%.1f). World floor will catch at y=-100." % global_position.y)
+
+
+## Check if any UI menu is open and blocking player input.
+## This prevents actions like jump from triggering when X is used for ui_accept.
+func _is_ui_blocking_input() -> bool:
+	# Check if game is paused (pause menu open)
+	if get_tree().paused:
+		return true
+
+	# Check for open menus by looking for nodes in the crafting_ui group with is_open
+	for node in get_tree().get_nodes_in_group("crafting_ui"):
+		if "is_open" in node and node.is_open:
+			return true
+
+	# Check for equipment menu (uses is_visible property)
+	for node in get_tree().get_nodes_in_group("equipment_menu"):
+		if "is_visible" in node and node.is_visible:
+			return true
+
+	# Check for config menu (uses is_visible property)
+	for node in get_tree().get_nodes_in_group("config_menu"):
+		if "is_visible" in node and node.is_visible:
+			return true
+
+	# Check for storage UI
+	for node in get_tree().get_nodes_in_group("storage_ui"):
+		if node.visible:
+			return true
+
+	# Check for fire menu
+	for node in get_tree().get_nodes_in_group("fire_menu"):
+		if node.visible:
+			return true
+
+	return false

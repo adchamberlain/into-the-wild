@@ -41,6 +41,9 @@ var slot_panels: Array[PanelContainer] = []  # For highlighting focused item
 
 
 func _ready() -> void:
+	# Add to group for UI state detection
+	add_to_group("equipment_menu")
+
 	# Get player reference
 	if player_path:
 		player = get_node_or_null(player_path)
