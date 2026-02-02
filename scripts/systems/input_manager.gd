@@ -44,6 +44,8 @@ const CONTROLLER_PROMPTS: Dictionary = {
 
 
 func _ready() -> void:
+	# This node must process even when the tree is paused
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	# Process input to detect device changes
 	set_process_input(true)
 

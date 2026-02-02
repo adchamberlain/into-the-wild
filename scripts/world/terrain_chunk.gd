@@ -352,6 +352,11 @@ func _spawn_chunk_trees() -> void:
 				z += tree_grid_size
 				continue
 
+			# Skip if there's a player structure at this location
+			if chunk_manager.is_position_blocked_by_structure(world_x, world_z, 1.5):
+				z += tree_grid_size
+				continue
+
 			# Get region type and tree multiplier
 			var region: ChunkManager.RegionType = chunk_manager.get_region_at(world_x, world_z)
 			var tree_multiplier: float = chunk_manager.get_vegetation_multiplier(region, "tree")

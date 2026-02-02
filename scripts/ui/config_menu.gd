@@ -71,8 +71,16 @@ var focused_slot_index: int = 0  # For slot panel navigation
 
 
 func _ready() -> void:
+	# This node must process even when the tree is paused (opened from pause menu)
+	process_mode = Node.PROCESS_MODE_ALWAYS
+
 	# Add to group for UI state detection
 	add_to_group("config_menu")
+
+	# Connect to InputManager for device change updates
+	var input_mgr: Node = get_node_or_null("/root/InputManager")
+	if input_mgr and input_mgr.has_signal("input_device_changed"):
+		input_mgr.input_device_changed.connect(_on_input_device_changed)
 
 	# Get node references
 	if time_manager_path:
@@ -251,31 +259,35 @@ func _create_slot_panel() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# Don't process input if not in tree (prevents null viewport errors during scene transitions)
+	if not is_inside_tree():
+		return
+
 	# Keyboard shortcuts
 	if event is InputEventKey and event.pressed:
 		# Toggle menu with Tab key
 		if event.physical_keycode == KEY_TAB:
 			toggle_menu()
-			get_viewport().set_input_as_handled()
+			_handle_input()
 			return
 		# Escape to close slot panel or menu
 		elif event.physical_keycode == KEY_ESCAPE:
 			if slot_panel and slot_panel.visible:
 				_hide_slot_panel()
-				get_viewport().set_input_as_handled()
+				_handle_input()
 			elif is_visible:
 				toggle_menu()
-				get_viewport().set_input_as_handled()
+				_handle_input()
 			return
 		# Quick save with K (Keep)
 		elif event.physical_keycode == KEY_K:
 			_on_save_pressed()
-			get_viewport().set_input_as_handled()
+			_handle_input()
 			return
 		# Quick load with L (Load)
 		elif event.physical_keycode == KEY_L:
 			_on_load_pressed()
-			get_viewport().set_input_as_handled()
+			_handle_input()
 			return
 
 	# Controller: Open config menu with L3+R3 (both stick buttons)
@@ -283,12 +295,12 @@ func _input(event: InputEvent) -> void:
 		if event.button_index == JOY_BUTTON_LEFT_STICK:
 			if Input.is_joy_button_pressed(event.device, JOY_BUTTON_RIGHT_STICK):
 				toggle_menu()
-				get_viewport().set_input_as_handled()
+				_handle_input()
 				return
 		elif event.button_index == JOY_BUTTON_RIGHT_STICK:
 			if Input.is_joy_button_pressed(event.device, JOY_BUTTON_LEFT_STICK):
 				toggle_menu()
-				get_viewport().set_input_as_handled()
+				_handle_input()
 				return
 
 	# Only handle navigation when menu is open
@@ -299,53 +311,59 @@ func _input(event: InputEvent) -> void:
 	if slot_panel and slot_panel.visible:
 		if event.is_action_pressed("ui_cancel"):
 			_hide_slot_panel()
-			get_viewport().set_input_as_handled()
+			_handle_input()
 			return
 		if event.is_action_pressed("ui_down"):
 			_navigate_slot_buttons(1)
-			get_viewport().set_input_as_handled()
+			_handle_input()
 			return
 		if event.is_action_pressed("ui_up"):
 			_navigate_slot_buttons(-1)
-			get_viewport().set_input_as_handled()
+			_handle_input()
 			return
 		if event.is_action_pressed("ui_accept"):
 			_activate_focused_slot_button()
-			get_viewport().set_input_as_handled()
+			_handle_input()
 			return
 		return
 
 	# Controller cancel to close menu
 	if event.is_action_pressed("ui_cancel"):
 		toggle_menu()
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
 
 	# D-pad navigation
 	if event.is_action_pressed("ui_down"):
 		_navigate_controls(1)
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
 	if event.is_action_pressed("ui_up"):
 		_navigate_controls(-1)
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
 
 	# Left/right to adjust sliders or toggle checkboxes
 	if event.is_action_pressed("ui_left"):
 		_adjust_focused_control(-1)
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
 	if event.is_action_pressed("ui_right"):
 		_adjust_focused_control(1)
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
 
 	# Accept to toggle checkbox or press button
 	if event.is_action_pressed("ui_accept"):
 		_activate_focused_control()
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
+
+
+func _handle_input() -> void:
+	var vp: Viewport = get_viewport()
+	if vp:
+		vp.set_input_as_handled()
 
 
 func toggle_menu() -> void:
@@ -666,7 +684,7 @@ func _show_save_status(message: String, color: Color) -> void:
 func _build_focusable_controls() -> void:
 	focusable_controls.clear()
 
-	# Add controls in order they appear in the menu
+	# Add controls in visual order (top to bottom as they appear in the menu)
 	if hunger_toggle:
 		focusable_controls.append(hunger_toggle)
 	if health_toggle:
@@ -679,10 +697,10 @@ func _build_focusable_controls() -> void:
 		focusable_controls.append(unlimited_fire_toggle)
 	if show_coordinates_toggle:
 		focusable_controls.append(show_coordinates_toggle)
-	if day_length_slider:
-		focusable_controls.append(day_length_slider)
 	if tree_respawn_slider:
 		focusable_controls.append(tree_respawn_slider)
+	if day_length_slider:
+		focusable_controls.append(day_length_slider)
 	if music_toggle:
 		focusable_controls.append(music_toggle)
 	if music_volume_slider:
@@ -778,12 +796,33 @@ func _activate_focused_slot_button() -> void:
 			button.pressed.emit()
 
 
-## Update hint label based on input device.
+## Called when input device changes (controller <-> keyboard).
+func _on_input_device_changed(_is_controller: bool) -> void:
+	if is_visible:
+		_update_hint_label()
+
+
+## Update hint label and button text based on input device.
 func _update_hint_label() -> void:
-	if not hint_label:
-		return
 	var input_mgr: Node = get_node_or_null("/root/InputManager")
-	if input_mgr and input_mgr.is_using_controller():
-		hint_label.text = "L3+R3 or ○ to close"
-	else:
-		hint_label.text = "Press TAB to close"
+	var using_controller: bool = input_mgr and input_mgr.is_using_controller()
+
+	# Update hint label
+	if hint_label:
+		if using_controller:
+			hint_label.text = "↑↓ Navigate  ←→ Adjust  × Select  ○ Close"
+		else:
+			hint_label.text = "Press TAB to close"
+
+	# Update Save/Load button labels
+	if save_button:
+		if using_controller:
+			save_button.text = "Save"
+		else:
+			save_button.text = "Save (K)"
+
+	if load_button:
+		if using_controller:
+			load_button.text = "Load"
+		else:
+			load_button.text = "Load (L)"

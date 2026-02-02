@@ -8,9 +8,15 @@ signal player_slept()
 const FULL_HEALTH_RESTORE: bool = true
 const FULL_HUNGER_RESTORE: bool = true
 
+# Rest position and camera angle
+@export var rest_position_offset: Vector3 = Vector3(0, 0.5, 0)  # Lying on bed
+@export var rest_camera_rotation: float = -80.0  # Looking up at ceiling (degrees)
+
 # State
 var is_player_sleeping: bool = false
 var sleeping_player: Node = null
+var player_original_position: Vector3
+var player_original_rotation: Vector3
 
 
 func _ready() -> void:
@@ -41,6 +47,22 @@ func interact(player: Node) -> bool:
 func _go_to_sleep(player: Node) -> void:
 	is_player_sleeping = true
 	sleeping_player = player
+
+	# Store original transforms
+	player_original_position = player.global_position
+	player_original_rotation = player.rotation
+
+	# Move player to bed position
+	var rest_pos: Vector3 = global_position + rest_position_offset
+	player.global_position = rest_pos
+
+	# Rotate player to align with bed
+	player.rotation = Vector3(0, rotation.y, 0)
+
+	# Tilt camera to look up at the ceiling
+	if player.has_node("Camera3D"):
+		var camera: Node3D = player.get_node("Camera3D")
+		camera.rotation = Vector3(deg_to_rad(rest_camera_rotation), 0, 0)
 
 	# Disable player movement
 	if player.has_method("set_resting"):
@@ -123,6 +145,19 @@ func _do_full_restore(player: Node) -> void:
 func _wake_up(player: Node) -> void:
 	is_player_sleeping = false
 	sleeping_player = null
+
+	# Position player standing next to the bed
+	var exit_offset: Vector3 = Vector3(-1.0, 0, 0).rotated(Vector3.UP, rotation.y)
+	player.global_position = global_position + exit_offset
+	player.global_position.y = global_position.y + 1.0  # Stand height
+
+	# Face the player toward the bed
+	player.rotation.y = rotation.y + PI / 2
+
+	# Reset camera to neutral
+	if player.has_node("Camera3D"):
+		var camera: Node3D = player.get_node("Camera3D")
+		camera.rotation = Vector3(0, 0, 0)
 
 	# Re-enable player movement
 	if player.has_method("set_resting"):

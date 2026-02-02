@@ -61,10 +61,10 @@ var sun_colors: Dictionary = {
 }
 
 var sun_intensities: Dictionary = {
-	"dawn": 0.5,
-	"day": 1.0,
-	"dusk": 0.4,
-	"night": 0.1
+	"dawn": 0.55,
+	"day": 1.1,
+	"dusk": 0.45,
+	"night": 0.12
 }
 
 var time_manager: Node

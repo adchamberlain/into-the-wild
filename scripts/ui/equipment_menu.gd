@@ -153,10 +153,14 @@ func _update_display() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# Don't process input if not in tree (prevents null viewport errors during scene transitions)
+	if not is_inside_tree():
+		return
+
 	# Toggle menu with I key or Create button
 	if event.is_action_pressed("open_inventory"):
 		toggle_menu()
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
 
 	# Only handle other inputs when menu is open
@@ -166,24 +170,30 @@ func _input(event: InputEvent) -> void:
 	# Close menu with cancel action when open
 	if event.is_action_pressed("ui_cancel"):
 		toggle_menu()
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
 
 	# D-pad navigation
 	if event.is_action_pressed("ui_down"):
 		_navigate_slots(1)
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
 	if event.is_action_pressed("ui_up"):
 		_navigate_slots(-1)
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
 
 	# Cross button (ui_accept) to equip focused item
 	if event.is_action_pressed("ui_accept"):
 		_equip_focused_slot()
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
+
+
+func _handle_input() -> void:
+	var vp: Viewport = get_viewport()
+	if vp:
+		vp.set_input_as_handled()
 
 
 func toggle_menu() -> void:

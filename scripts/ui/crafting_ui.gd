@@ -60,6 +60,10 @@ func _ready() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# Don't process input if not in tree (prevents null viewport errors during scene transitions)
+	if not is_inside_tree():
+		return
+
 	# Handle crafting menu toggle (C key or Touchpad button)
 	if event.is_action_pressed("open_crafting"):
 		_toggle_crafting()
@@ -72,24 +76,30 @@ func _input(event: InputEvent) -> void:
 	# Close crafting menu with cancel action when open
 	if event.is_action_pressed("ui_cancel"):
 		toggle_crafting_menu(false)
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
 
 	# D-pad navigation
 	if event.is_action_pressed("ui_down"):
 		_navigate_recipes(1)
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
 	if event.is_action_pressed("ui_up"):
 		_navigate_recipes(-1)
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
 
 	# Cross button (ui_accept) to craft focused recipe
 	if event.is_action_pressed("ui_accept"):
 		_craft_focused_recipe()
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
+
+
+func _handle_input() -> void:
+	var vp: Viewport = get_viewport()
+	if vp:
+		vp.set_input_as_handled()
 
 
 func _toggle_crafting() -> void:

@@ -55,6 +55,10 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# Don't process input if not in tree (prevents null viewport errors during scene transitions)
+	if not is_inside_tree():
+		return
+
 	if not is_open:
 		return
 
@@ -62,46 +66,52 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.physical_keycode == KEY_ESCAPE or event.physical_keycode == KEY_E:
 			close_storage()
-			get_viewport().set_input_as_handled()
+			_handle_input()
 			return
 
 	# Close with interact action (L2 on controller) - but not immediately after opening
 	if event.is_action_pressed("interact") and open_cooldown_timer <= 0:
 		close_storage()
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
 
 	# Controller cancel to close
 	if event.is_action_pressed("ui_cancel"):
 		close_storage()
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
 
 	# D-pad up/down to navigate items
 	if event.is_action_pressed("ui_down"):
 		_navigate_items(1)
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
 	if event.is_action_pressed("ui_up"):
 		_navigate_items(-1)
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
 
 	# D-pad left/right to navigate within row or switch panels
 	if event.is_action_pressed("ui_left"):
 		_navigate_horizontal(-1)
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
 	if event.is_action_pressed("ui_right"):
 		_navigate_horizontal(1)
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
 
 	# Cross button to transfer focused item
 	if event.is_action_pressed("ui_accept"):
 		_transfer_focused_item()
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
+
+
+func _handle_input() -> void:
+	var vp: Viewport = get_viewport()
+	if vp:
+		vp.set_input_as_handled()
 
 
 ## Open storage UI for a specific storage container.

@@ -1331,3 +1331,35 @@ func get_pending_load_count() -> int:
 
 func get_pending_unload_count() -> int:
 	return chunks_to_unload.size()
+
+
+## Check if a position overlaps with any player structure.
+## Used to prevent trees from spawning on top of structures.
+func is_position_blocked_by_structure(x: float, z: float, radius: float = 1.5) -> bool:
+	var campsite_mgr: Node = get_node_or_null("/root/Main/CampsiteManager")
+	if not campsite_mgr or not campsite_mgr.has_method("get_placed_structures"):
+		return false
+
+	var structures: Array = campsite_mgr.get_placed_structures()
+	var pos_2d: Vector2 = Vector2(x, z)
+
+	for structure: Node in structures:
+		if not is_instance_valid(structure):
+			continue
+
+		var struct_pos: Vector3 = structure.global_position
+		var struct_pos_2d: Vector2 = Vector2(struct_pos.x, struct_pos.z)
+
+		# Get structure's footprint radius
+		var footprint: float = 1.0
+		if "structure_type" in structure:
+			footprint = StructureData.get_footprint_radius(structure.structure_type)
+
+		# Check if tree would overlap with structure
+		var distance: float = pos_2d.distance_to(struct_pos_2d)
+		var min_distance: float = footprint + radius
+
+		if distance < min_distance:
+			return true
+
+	return false

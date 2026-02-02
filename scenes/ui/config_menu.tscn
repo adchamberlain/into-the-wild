@@ -13,10 +13,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -200.0
-offset_top = -300.0
-offset_right = 200.0
-offset_bottom = 300.0
+offset_left = -250.0
+offset_top = -350.0
+offset_right = 250.0
+offset_bottom = 350.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -28,7 +28,7 @@ theme_override_constants/separation = 15
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 0.8, 1)
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 36
+theme_override_font_sizes/font_size = 48
 text = "Game Config"
 horizontal_alignment = 1
 
@@ -38,39 +38,39 @@ layout_mode = 2
 [node name="HungerToggle" type="CheckButton" parent="Panel/VBoxContainer"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 28
+theme_override_font_sizes/font_size = 32
 text = "Hunger Depletion"
 
 [node name="HealthToggle" type="CheckButton" parent="Panel/VBoxContainer"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 28
+theme_override_font_sizes/font_size = 32
 text = "Health Drain (Starvation)"
 
 [node name="WeatherDamageToggle" type="CheckButton" parent="Panel/VBoxContainer"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 28
+theme_override_font_sizes/font_size = 32
 text = "Weather Damage (Storms/Cold)"
 
 [node name="WeatherToggle" type="CheckButton" parent="Panel/VBoxContainer"]
 layout_mode = 2
 button_pressed = true
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 28
+theme_override_font_sizes/font_size = 32
 text = "Weather System"
 
 [node name="UnlimitedFireToggle" type="CheckButton" parent="Panel/VBoxContainer"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 28
+theme_override_font_sizes/font_size = 32
 text = "Unlimited Fire Burn Time"
 
 [node name="ShowCoordinatesToggle" type="CheckButton" parent="Panel/VBoxContainer"]
 layout_mode = 2
 button_pressed = true
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 28
+theme_override_font_sizes/font_size = 32
 text = "Show Coordinates"
 
 [node name="TreeRespawnContainer" type="VBoxContainer" parent="Panel/VBoxContainer"]
@@ -79,7 +79,7 @@ layout_mode = 2
 [node name="TreeRespawnLabel" type="Label" parent="Panel/VBoxContainer/TreeRespawnContainer"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 28
+theme_override_font_sizes/font_size = 32
 text = "Tree Respawn Time"
 
 [node name="TreeRespawnSlider" type="HSlider" parent="Panel/VBoxContainer/TreeRespawnContainer"]
@@ -94,7 +94,7 @@ value = 1.0
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.85, 1.0, 1)
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 28
 text = "1 day"
 horizontal_alignment = 1
 
@@ -107,7 +107,7 @@ layout_mode = 2
 [node name="DayLengthLabel" type="Label" parent="Panel/VBoxContainer/DayLengthContainer"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 28
+theme_override_font_sizes/font_size = 32
 text = "Day Length"
 
 [node name="DayLengthSlider" type="HSlider" parent="Panel/VBoxContainer/DayLengthContainer"]
@@ -121,7 +121,7 @@ value = 20.0
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.85, 1.0, 1)
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 28
 text = "20 min"
 horizontal_alignment = 1
 
@@ -132,7 +132,7 @@ layout_mode = 2
 layout_mode = 2
 button_pressed = true
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 28
+theme_override_font_sizes/font_size = 32
 text = "Background Music"
 
 [node name="MusicVolumeContainer" type="VBoxContainer" parent="Panel/VBoxContainer"]
@@ -141,7 +141,7 @@ layout_mode = 2
 [node name="MusicVolumeLabel" type="Label" parent="Panel/VBoxContainer/MusicVolumeContainer"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 28
+theme_override_font_sizes/font_size = 32
 text = "Music Volume"
 
 [node name="MusicVolumeSlider" type="HSlider" parent="Panel/VBoxContainer/MusicVolumeContainer"]
@@ -154,7 +154,7 @@ value = 50.0
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.85, 1.0, 1)
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 28
 text = "50%"
 horizontal_alignment = 1
 
@@ -169,21 +169,21 @@ theme_override_constants/separation = 20
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 28
 text = "Save (K)"
 
 [node name="LoadButton" type="Button" parent="Panel/VBoxContainer/SaveLoadContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 28
 text = "Load (L)"
 
 [node name="SaveStatusLabel" type="Label" parent="Panel/VBoxContainer"]
 visible = false
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 26
 text = "Status"
 horizontal_alignment = 1
 
@@ -194,6 +194,6 @@ layout_mode = 2
 layout_mode = 2
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 26
 text = "Press TAB to close"
 horizontal_alignment = 1

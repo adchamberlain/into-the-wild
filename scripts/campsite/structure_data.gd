@@ -119,3 +119,9 @@ static func is_placeable_item(item_type: String) -> bool:
 static func get_scene_path(structure_type: String) -> String:
 	var data: Dictionary = get_structure(structure_type)
 	return data.get("scene", "")
+
+
+## Get the footprint radius for a structure type.
+static func get_footprint_radius(structure_type: String) -> float:
+	var data: Dictionary = get_structure(structure_type)
+	return data.get("footprint_radius", 1.0)

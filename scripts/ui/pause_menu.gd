@@ -74,57 +74,67 @@ func _ready() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# Don't process input if not in tree (prevents null viewport errors during scene transitions)
+	if not is_inside_tree():
+		return
+
 	# Handle pause action (Escape key or Options button) - can pause/unpause anytime
 	if event.is_action_pressed("pause"):
 		if showing_credits:
 			_on_back_pressed()
 		else:
 			toggle_pause()
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
 
-	# Handle ui_cancel (Circle button) - only when already paused, to avoid
-	# conflicting with "unequip" action which also uses Circle
-	if event.is_action_pressed("ui_cancel") and is_paused:
+	# Handle ui_cancel (Circle button) - only when already paused AND panel visible
+	# (not when config menu is open), to avoid conflicting with other menus
+	if event.is_action_pressed("ui_cancel") and is_paused and panel.visible:
 		if showing_slots:
 			_hide_slot_panel()
 		elif showing_credits:
 			_on_back_pressed()
 		else:
 			resume_game()
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
 
 	# D-pad navigation for slot panel
 	if is_paused and showing_slots:
 		if event.is_action_pressed("ui_down"):
 			_navigate_slot_buttons(1)
-			get_viewport().set_input_as_handled()
+			_handle_input()
 			return
 		if event.is_action_pressed("ui_up"):
 			_navigate_slot_buttons(-1)
-			get_viewport().set_input_as_handled()
+			_handle_input()
 			return
 		if event.is_action_pressed("ui_accept"):
 			_activate_focused_slot_button()
-			get_viewport().set_input_as_handled()
+			_handle_input()
 			return
 		return
 
-	# D-pad navigation when paused
-	if is_paused and not showing_credits and not showing_slots:
+	# D-pad navigation when paused (only when pause panel is visible, not when settings open)
+	if is_paused and not showing_credits and not showing_slots and panel.visible:
 		if event.is_action_pressed("ui_down"):
 			_navigate_buttons(1)
-			get_viewport().set_input_as_handled()
+			_handle_input()
 			return
 		if event.is_action_pressed("ui_up"):
 			_navigate_buttons(-1)
-			get_viewport().set_input_as_handled()
+			_handle_input()
 			return
 		if event.is_action_pressed("ui_accept"):
 			_activate_focused_button()
-			get_viewport().set_input_as_handled()
+			_handle_input()
 			return
+
+
+func _handle_input() -> void:
+	var vp: Viewport = get_viewport()
+	if vp:
+		vp.set_input_as_handled()
 
 
 func toggle_pause() -> void:

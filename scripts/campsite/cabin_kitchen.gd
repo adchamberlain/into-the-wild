@@ -67,6 +67,7 @@ func interact(player: Node) -> bool:
 	var best_recipe: String = _find_best_recipe(player_inventory)
 
 	if best_recipe.is_empty():
+		_show_notification("No ingredients! Need fish, herbs, or mushrooms.", Color(1.0, 0.6, 0.4))
 		print("[Kitchen] No ingredients for cooking. Need fish, herbs, or mushrooms.")
 		return true
 
@@ -88,6 +89,16 @@ func interact(player: Node) -> bool:
 		if hunger_restore > 0 and "hunger" in player_stats and "max_hunger" in player_stats:
 			player_stats.hunger = min(player_stats.hunger + hunger_restore, player_stats.max_hunger)
 			player_stats.hunger_changed.emit(player_stats.hunger, player_stats.max_hunger)
+
+	# Show notification with what was cooked
+	var msg: String = "Cooked %s!" % recipe.get("name")
+	if hunger_restore > 0 and health_restore > 0:
+		msg += " +%.0f hunger, +%.0f health" % [hunger_restore, health_restore]
+	elif hunger_restore > 0:
+		msg += " +%.0f hunger" % hunger_restore
+	elif health_restore > 0:
+		msg += " +%.0f health" % health_restore
+	_show_notification(msg, Color(1.0, 0.85, 0.4))
 
 	food_cooked.emit(recipe.get("name", best_recipe))
 	print("[Kitchen] Cooked %s! (+%.0f hunger, +%.0f health)" % [recipe.get("name"), hunger_restore, health_restore])
@@ -121,6 +132,19 @@ func _find_best_recipe(inventory: Node) -> String:
 
 func get_interaction_text() -> String:
 	return "Cook at Kitchen"
+
+
+func _find_hud() -> Node:
+	var root: Node = get_tree().root
+	if root.has_node("Main/HUD"):
+		return root.get_node("Main/HUD")
+	return null
+
+
+func _show_notification(message: String, color: Color) -> void:
+	var hud: Node = _find_hud()
+	if hud and hud.has_method("show_notification"):
+		hud.show_notification(message, color)
 
 
 ## Get available recipes as a list.

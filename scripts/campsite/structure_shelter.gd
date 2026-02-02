@@ -175,12 +175,12 @@ func _exit_rest_mode(player: Node) -> void:
 	is_player_resting = false
 
 	# Move player back outside (to the open/front side of shelter - positive local Z)
-	# The lean-to has its open side at positive Z (where FrameFront is at z=1.0)
-	var exit_offset: Vector3 = Vector3(0, 0, 2.5).rotated(Vector3.UP, rotation.y + PI)
+	# The opening is at +Z, so exit there without the PI rotation
+	var exit_offset: Vector3 = Vector3(0, 0, 2.5).rotated(Vector3.UP, rotation.y)
 	player.global_position = global_position + exit_offset
 	player.global_position.y = global_position.y + 1.0  # Stand height
 
-	# Face the player towards the shelter
+	# Face the player towards the shelter (looking back at it)
 	player.rotation.y = rotation.y + PI
 
 	# Restore camera rotation

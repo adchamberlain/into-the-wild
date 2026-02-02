@@ -33,8 +33,11 @@ var focused_button_index: int = 0
 var button_list: Array[Button] = []
 
 # Cooldown to prevent L2 from immediately closing menu after opening
-const OPEN_COOLDOWN: float = 0.3
+const OPEN_COOLDOWN: float = 0.5
 var open_cooldown_timer: float = 0.0
+
+# Track if L2/interact was released since menu opened (prevents close-on-release)
+var interact_was_released: bool = false
 
 # Input manager reference for dynamic button prompts
 var input_manager: Node
@@ -81,6 +84,10 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# Don't process input if not in tree (prevents null viewport errors during scene transitions)
+	if not is_inside_tree():
+		return
+
 	if not is_open:
 		return
 
@@ -88,36 +95,48 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.physical_keycode == KEY_ESCAPE or event.physical_keycode == KEY_E:
 			close_menu()
-			get_viewport().set_input_as_handled()
+			_handle_input()
 			return
 
-	# Close with interact action (L2 on controller) - but not immediately after opening
-	if event.is_action_pressed("interact") and open_cooldown_timer <= 0:
+	# Track when interact/L2 is released (so we only close on a fresh press)
+	if event.is_action_released("interact"):
+		interact_was_released = true
+
+	# Close with interact action (L2 on controller) - but only after cooldown AND release
+	if event.is_action_pressed("interact") and open_cooldown_timer <= 0 and interact_was_released:
 		close_menu()
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
 
 	# Controller/keyboard cancel
 	if event.is_action_pressed("ui_cancel"):
 		close_menu()
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
 
 	# D-pad navigation
 	if event.is_action_pressed("ui_down"):
 		_navigate_buttons(1)
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
 	if event.is_action_pressed("ui_up"):
 		_navigate_buttons(-1)
-		get_viewport().set_input_as_handled()
+		_handle_input()
 		return
 
 	# Accept button to activate focused button
-	if event.is_action_pressed("ui_accept"):
-		_activate_focused_button()
-		get_viewport().set_input_as_handled()
+	# Also consume jump action since X/Cross is mapped to both ui_accept and jump
+	if event.is_action_pressed("ui_accept") or event.is_action_pressed("jump"):
+		if event.is_action_pressed("ui_accept"):
+			_activate_focused_button()
+		_handle_input()
 		return
+
+
+func _handle_input() -> void:
+	var vp: Viewport = get_viewport()
+	if vp:
+		vp.set_input_as_handled()
 
 
 ## Open the fire menu for a specific fire pit.
@@ -126,8 +145,9 @@ func open_menu(fire: Node) -> void:
 	is_open = true
 	panel.visible = true
 
-	# Set cooldown to prevent L2 from immediately closing
+	# Set cooldown and reset release tracking to prevent L2 from immediately closing
 	open_cooldown_timer = OPEN_COOLDOWN
+	interact_was_released = false
 
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 
@@ -143,12 +163,21 @@ func open_menu(fire: Node) -> void:
 
 
 ## Close the fire menu.
+## Uses call_deferred to keep is_open true until end of frame,
+## preventing player from jumping when X is used for menu selection.
 func close_menu() -> void:
-	is_open = false
 	panel.visible = false
 	current_fire = null
 
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+
+	# Defer setting is_open to false so _is_ui_blocking_input() still returns true
+	# for the remainder of this frame (prevents jump when X closes menu)
+	call_deferred("_set_closed")
+
+
+func _set_closed() -> void:
+	is_open = false
 
 
 ## Refresh menu state based on inventory.

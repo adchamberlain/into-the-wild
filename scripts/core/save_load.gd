@@ -31,6 +31,9 @@ var chunk_manager: Node
 
 
 func _ready() -> void:
+	# Ensure SaveLoad works even if the game is paused (e.g., during scene reload)
+	process_mode = Node.PROCESS_MODE_ALWAYS
+
 	# Get references (some may need deferred lookup)
 	if player_path:
 		player = get_node_or_null(player_path)
@@ -44,6 +47,12 @@ func _ready() -> void:
 		resource_manager = get_node_or_null(resource_manager_path)
 	if chunk_manager_path:
 		chunk_manager = get_node_or_null(chunk_manager_path)
+
+	# Log if any critical references are missing
+	if not player:
+		push_warning("[SaveLoad] Player reference not found!")
+	if not chunk_manager:
+		push_warning("[SaveLoad] ChunkManager reference not found!")
 
 	# CraftingSystem is created dynamically by CraftingUI, so defer lookup
 	call_deferred("_get_crafting_system")
@@ -65,13 +74,32 @@ func _get_crafting_system() -> void:
 func _check_pending_load() -> void:
 	# Check if there's a pending save to load (after scene reload for world seed change)
 	var game_state: Node = get_node_or_null("/root/GameState")
-	if game_state:
-		var pending_slot: int = game_state.consume_pending_load_slot()
-		if pending_slot > 0:
-			print("[SaveLoad] Loading pending save from slot %d after scene reload" % pending_slot)
-			# Need to wait a frame for all nodes to be ready
+	if not game_state:
+		push_warning("[SaveLoad] GameState autoload not found!")
+		return
+
+	var pending_slot: int = game_state.consume_pending_load_slot()
+	if pending_slot > 0:
+		print("[SaveLoad] Loading pending save from slot %d after scene reload" % pending_slot)
+
+		# Wait for terrain to be ready (chunk_manager needs time to initialize)
+		# Wait multiple frames to ensure all nodes are ready
+		for i: int in range(3):
 			await get_tree().process_frame
-			load_game_slot(pending_slot)
+
+		# Re-acquire references in case they weren't available initially
+		if not player and player_path:
+			player = get_node_or_null(player_path)
+		if not chunk_manager and chunk_manager_path:
+			chunk_manager = get_node_or_null(chunk_manager_path)
+
+		if not player:
+			push_error("[SaveLoad] Cannot load: Player reference not found!")
+			load_failed.emit("Player not found")
+			return
+
+		print("[SaveLoad] References after wait - Player: %s, ChunkManager: %s" % [player != null, chunk_manager != null])
+		load_game_slot(pending_slot)
 
 
 func _ensure_save_directory() -> void:
@@ -182,6 +210,9 @@ func load_game_slot(slot: int) -> bool:
 			return true
 
 	_apply_save_data(save_data)
+
+	# Ensure game is unpaused after loading (in case we loaded from pause menu)
+	get_tree().paused = false
 
 	print("[SaveLoad] Game loaded from %s (slot %d)" % [filepath, slot])
 	game_loaded.emit(filepath, slot)
@@ -436,31 +467,49 @@ func _collect_crafting_data() -> Dictionary:
 
 ## Apply loaded data to the game.
 func _apply_save_data(data: Dictionary) -> void:
+	print("[SaveLoad] Applying save data...")
+	print("[SaveLoad] References: player=%s time_manager=%s weather_manager=%s campsite_manager=%s chunk_manager=%s" % [
+		player != null, time_manager != null, weather_manager != null, campsite_manager != null, chunk_manager != null
+	])
+
 	# Apply in reverse order of dependencies
 
 	# Time first (weather depends on it)
 	if data.has("time") and time_manager:
+		print("[SaveLoad] Applying time data...")
 		_apply_time_data(data["time"])
+	elif data.has("time"):
+		push_warning("[SaveLoad] Skipping time data - time_manager is null")
 
 	# Weather
 	if data.has("weather") and weather_manager:
+		print("[SaveLoad] Applying weather data...")
 		_apply_weather_data(data["weather"])
+	elif data.has("weather"):
+		push_warning("[SaveLoad] Skipping weather data - weather_manager is null")
 
 	# Resources (before player loads in)
 	if data.has("resources") and resource_manager:
+		print("[SaveLoad] Applying resource data...")
 		_apply_resource_data(data["resources"])
 
 	# Crafting
 	if data.has("crafting") and crafting_system:
+		print("[SaveLoad] Applying crafting data...")
 		_apply_crafting_data(data["crafting"])
 
 	# Campsite (structures)
 	if data.has("campsite") and campsite_manager:
+		print("[SaveLoad] Applying campsite data...")
 		_apply_campsite_data(data["campsite"])
+	elif data.has("campsite"):
+		push_warning("[SaveLoad] Skipping campsite data - campsite_manager is null")
 
 	# Player last (position, stats, inventory)
 	if data.has("player") and player:
 		_apply_player_data(data["player"])
+	elif data.has("player"):
+		push_error("[SaveLoad] Cannot apply player data - player is null!")
 
 	# Post-load: Verify crafting flags based on inventory (for backward compatibility)
 	_verify_crafting_flags_from_inventory()
@@ -503,6 +552,12 @@ func _verify_crafting_flags_from_inventory() -> void:
 
 
 func _apply_player_data(data: Dictionary) -> void:
+	if not player:
+		push_error("[SaveLoad] Cannot apply player data: player is null!")
+		return
+
+	print("[SaveLoad] Applying player data...")
+
 	# Position
 	if data.has("position"):
 		var pos: Dictionary = data["position"]

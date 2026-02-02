@@ -140,6 +140,7 @@ respawn_time_hours = 6.0
 respawn_enabled = true
 time_manager_path = NodePath("../TimeManager")
 resources_container_path = NodePath("../Resources")
+campsite_manager_path = NodePath("../CampsiteManager")
 
 [node name="SaveLoad" type="Node" parent="."]
 script = ExtResource("14_save_load")

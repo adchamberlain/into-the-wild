@@ -655,6 +655,164 @@ Rocky regions provide foundation for future cave system.
 
 ---
 
+## Session 36 - Structure Spacing & Move Functionality (2026-02-01)
+
+**Structure Spacing Validation**: Prevents placing structures too close to each other.
+- Added `footprint_radius` to each structure type in StructureData
+- 1 meter minimum edge-to-edge spacing enforced
+- Preview turns red when placement would overlap
+- Edge-to-edge calculation: center distance - both radii >= min_spacing
+
+**Footprint Radii** (based on collision sizes):
+| Structure | Footprint Radius |
+|-----------|------------------|
+| fire_pit | 0.85 |
+| basic_shelter | 1.4 |
+| storage_container | 0.6 |
+| crafting_bench | 0.7 |
+| drying_rack | 0.8 |
+| herb_garden | 1.25 |
+| canvas_tent | 2.0 |
+| cabin | 4.0 |
+| rope_ladder | 0.5 |
+
+**Move Structure Feature**: Relocate placed structures without rebuilding.
+- Look at structure and press M (keyboard) or D-pad Up (controller)
+- Original structure becomes semi-transparent (50% alpha)
+- Green/red preview shows new location validity
+- R/R2 to confirm, Q/Circle to cancel
+- Structure stays at original position if cancelled
+- Move respects spacing validation (excludes self from check)
+
+**New Input Action**: `move_structure`
+- Keyboard: M key
+- Controller: D-pad Up (button_index 11)
+
+**HUD Update**: Interaction prompt now shows move hint when looking at structures:
+- Example: `[E] Use Fire  [M] Move`
+- Keyboard/controller prompts update dynamically
+
+**New Signals** (`PlacementSystem`):
+- `structure_move_started(structure: Node3D)`
+- `structure_move_confirmed(structure: Node3D, old_pos: Vector3, new_pos: Vector3)`
+- `structure_move_cancelled(structure: Node3D)`
+
+**Bug Fix**: Structures placed underground on elevated terrain
+- Previous code hardcoded `target_pos.y = 0` regardless of terrain height
+- Added `_get_ground_height()` function that raycasts from y=50 down to find actual terrain surface
+- Structures now correctly sit on terrain at any elevation
+
+### Files Modified
+| File | Changes |
+|------|---------|
+| `scripts/campsite/structure_data.gd` | Added footprint_radius to all structures |
+| `scripts/campsite/placement_system.gd` | Spacing validation, move mode, ground height raycast |
+| `scripts/campsite/campsite_manager.gd` | Added get_placed_structures() method |
+| `scripts/player/player_controller.gd` | Move input handling, _try_move_structure() |
+| `scripts/ui/hud.gd` | Move hint in interaction prompt |
+| `scripts/systems/input_manager.gd` | move_structure button prompts |
+| `project.godot` | move_structure input action |
+
+---
+
+## Session 37 - Bug Fixes & Save/Load Improvements (2026-02-01)
+
+### UI Null Viewport Fix
+
+Fixed "Cannot call method 'set_input_as_handled' on a null value" error that occurred during scene transitions.
+
+**Root Cause**: `get_viewport()` returns null when a node is not in the scene tree, which can happen during scene reload (e.g., when loading a save with different world seed).
+
+**Fix Applied to All UI Files**:
+- Added `is_inside_tree()` check at start of `_input()` functions
+- Added `_handle_input()` helper function that safely checks viewport before calling `set_input_as_handled()`
+
+**Files Modified**: `config_menu.gd`, `pause_menu.gd`, `fire_menu.gd`, `storage_ui.gd`, `equipment_menu.gd`, `crafting_ui.gd`
+
+### Save/Load System Improvements
+
+**Problem**: Loading a saved game from a fresh start (different world seed) showed only blue sky with nothing visible.
+
+**Improvements Made** (`scripts/core/save_load.gd`):
+1. Added `process_mode = PROCESS_MODE_ALWAYS` to ensure SaveLoad works even if game is paused
+2. Added warnings when critical node references (player, chunk_manager) are not found
+3. Improved `_check_pending_load()`:
+   - Waits 3 frames instead of 1 for terrain to fully initialize
+   - Re-acquires node references after waiting (in case they weren't available initially)
+   - Better error logging with reference status
+4. Added `get_tree().paused = false` after loading to ensure game is unpaused
+5. Added detailed logging throughout `_apply_save_data()` to help diagnose issues
+
+### Fire Menu Jump Fix
+
+**Problem**: Pressing X button to select a menu option also made the player jump.
+
+**Root Cause**: When X is pressed:
+1. Menu handles `ui_accept` and calls the action (e.g., Warm Up)
+2. Action function calls `close_menu()` which sets `is_open = false`
+3. Same frame, player controller's `_physics_process` checks `_is_ui_blocking_input()`
+4. Menu appears closed, so jump is allowed
+
+**Fix** (`scripts/ui/fire_menu.gd`):
+1. Consume both `ui_accept` and `jump` actions in `_input()` when menu is open
+2. Defer `is_open = false` to end of frame via `call_deferred("_set_closed")`
+3. This ensures `_is_ui_blocking_input()` returns true for entire frame when menu closes
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/core/save_load.gd` | process_mode, better logging, error handling, unpause after load |
+| `scripts/ui/config_menu.gd` | Null viewport safety |
+| `scripts/ui/pause_menu.gd` | Null viewport safety |
+| `scripts/ui/fire_menu.gd` | Null viewport safety, jump fix with deferred close |
+| `scripts/ui/storage_ui.gd` | Null viewport safety |
+| `scripts/ui/equipment_menu.gd` | Null viewport safety |
+| `scripts/ui/crafting_ui.gd` | Null viewport safety |
+
+### Trees Don't Spawn on Structures
+
+**Problem**: If a player cut down a tree and placed a structure (like a shelter) at that location, the tree could respawn inside the structure.
+
+**Fix Applied**:
+1. **Resource respawning** (`resource_manager.gd`):
+   - Added `campsite_manager_path` reference
+   - Added `_is_structure_blocking_respawn()` function
+   - Before respawning a tree, checks if any structure is within range
+   - If blocked, keeps tree in depleted list to check again later
+
+2. **Chunk tree spawning** (`chunk_manager.gd`, `terrain_chunk.gd`):
+   - Added `is_position_blocked_by_structure()` helper function
+   - When chunks load and spawn trees, checks each position against structures
+   - Uses structure footprint radius + tree radius for overlap detection
+
+**Files Modified**:
+| File | Changes |
+|------|---------|
+| `scripts/resources/resource_manager.gd` | Structure blocking check for respawns |
+| `scripts/world/chunk_manager.gd` | `is_position_blocked_by_structure()` helper |
+| `scripts/world/terrain_chunk.gd` | Check structures before spawning trees |
+| `scenes/main.tscn` | Added campsite_manager_path to ResourceManager |
+
+### Cabin Placement Distance Fix
+
+**Problem**: Could not place the log cabin because validation always failed - player was always "too close" even at maximum placement distance.
+
+**Root Cause**:
+- Cabin footprint radius is 4.0m
+- Validation required player to be at least 3.5m from structure center (footprint - 0.5)
+- But `placement_distance` was only 3.0m, so cabin was always placed too close
+
+**Fix** (`placement_system.gd`):
+- `_update_preview_position()`: Calculate `effective_distance` based on footprint
+  - For structures with footprint > 2.0m, use `max(placement_distance, footprint + 1.5)`
+  - Cabin now placed at 5.5m instead of 3.0m
+- `_validate_placement()`: Increase `max_distance` for large structures
+  - For structures with footprint > 2.0m, allow `footprint + 3.0m` max distance
+  - Cabin can now be placed up to 7.0m away
+
+---
+
 ## Next Session
 
 ### Planned Tasks

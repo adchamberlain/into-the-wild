@@ -12,9 +12,11 @@ signal resource_respawned(resource_node: ResourceNode)
 # Node references
 @export var time_manager_path: NodePath
 @export var resources_container_path: NodePath
+@export var campsite_manager_path: NodePath
 
 var time_manager: Node
 var resources_container: Node3D
+var campsite_manager: Node
 
 # Tracking
 var depleted_resources: Array[Dictionary] = []  # {node, depleted_at_hour, depleted_at_minute, days_elapsed}
@@ -33,6 +35,9 @@ func _ready() -> void:
 
 	if resources_container_path:
 		resources_container = get_node_or_null(resources_container_path)
+
+	if campsite_manager_path:
+		campsite_manager = get_node_or_null(campsite_manager_path)
 
 	# Find and register all resource nodes
 	call_deferred("_discover_resources")
@@ -143,14 +148,60 @@ func _check_respawns() -> void:
 		if elapsed >= respawn_minutes:
 			to_respawn.append(info)
 
-	# Respawn resources
+	# Respawn resources (but not if a structure is in the way)
 	for info: Dictionary in to_respawn:
 		var resource: ResourceNode = info["node"]
 		if is_instance_valid(resource):
+			# Check if there's a structure blocking respawn
+			if _is_structure_blocking_respawn(resource.global_position):
+				# Don't respawn yet - structure is in the way
+				# Keep in depleted list to check again later
+				continue
+
 			resource.respawn()
 			resource_respawned.emit(resource)
 
 		depleted_resources.erase(info)
+
+
+## Check if a structure is blocking respawn at the given position.
+## Trees shouldn't respawn if a structure has been placed where they were.
+func _is_structure_blocking_respawn(position: Vector3) -> bool:
+	if not campsite_manager:
+		# Try to find campsite manager if not set
+		campsite_manager = get_node_or_null("/root/Main/CampsiteManager")
+		if not campsite_manager:
+			return false
+
+	if not campsite_manager.has_method("get_placed_structures"):
+		return false
+
+	var structures: Array = campsite_manager.get_placed_structures()
+	var resource_pos_2d: Vector2 = Vector2(position.x, position.z)
+
+	# Buffer distance - trees are about 1-2 units radius, structures have footprints
+	const TREE_RADIUS: float = 1.5
+
+	for structure: Node in structures:
+		if not is_instance_valid(structure):
+			continue
+
+		var struct_pos: Vector3 = structure.global_position
+		var struct_pos_2d: Vector2 = Vector2(struct_pos.x, struct_pos.z)
+
+		# Get structure's footprint radius
+		var footprint: float = 1.0
+		if "structure_type" in structure:
+			footprint = StructureData.get_footprint_radius(structure.structure_type)
+
+		# Check if tree would overlap with structure (edge to edge)
+		var distance: float = resource_pos_2d.distance_to(struct_pos_2d)
+		var min_distance: float = footprint + TREE_RADIUS
+
+		if distance < min_distance:
+			return true
+
+	return false
 
 
 ## Get all resource nodes (for save/load).
