@@ -32,9 +32,17 @@ var is_open: bool = false
 var focused_button_index: int = 0
 var button_list: Array[Button] = []
 
+# Input manager reference for dynamic button prompts
+var input_manager: Node
+
 
 func _ready() -> void:
 	add_to_group("fire_menu")
+
+	# Get InputManager singleton
+	input_manager = get_node_or_null("/root/InputManager")
+	if input_manager and input_manager.has_signal("input_device_changed"):
+		input_manager.input_device_changed.connect(_on_input_device_changed)
 
 	# Get player reference
 	if player_path:
@@ -58,6 +66,9 @@ func _ready() -> void:
 	# Start closed
 	panel.visible = false
 	is_open = false
+
+	# Update button prompts
+	_update_button_prompts()
 
 
 func _input(event: InputEvent) -> void:
@@ -107,6 +118,7 @@ func open_menu(fire: Node) -> void:
 	focused_button_index = 0
 
 	_refresh_menu()
+	_update_button_prompts()
 
 	# Focus first button for controller navigation
 	call_deferred("_focus_first_button")
@@ -290,3 +302,20 @@ func _activate_focused_button() -> void:
 		var button: Button = button_list[focused_button_index]
 		if not button.disabled:
 			button.pressed.emit()
+
+
+## Update button prompts based on current input device.
+func _update_button_prompts() -> void:
+	if not close_button:
+		return
+
+	var close_prompt: String = "E"
+	if input_manager and input_manager.has_method("get_prompt"):
+		close_prompt = input_manager.get_prompt("interact")
+
+	close_button.text = "Close [%s]" % close_prompt
+
+
+## Called when input device changes between keyboard and controller.
+func _on_input_device_changed(_is_controller: bool) -> void:
+	_update_button_prompts()
