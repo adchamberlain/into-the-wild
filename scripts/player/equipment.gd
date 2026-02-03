@@ -15,8 +15,9 @@ const EQUIPPABLE_ITEMS: Dictionary = {
 		"slot": 1,
 		"has_light": true,
 		"light_color": Color(1.0, 0.8, 0.4),
-		"light_energy": 2.0,
-		"light_range": 10.0
+		"light_energy": 8.0,
+		"light_range": 15.0,
+		"placeable": true
 	},
 	"primitive_axe": {
 		"name": "Primitive Axe",

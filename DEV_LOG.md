@@ -1438,15 +1438,50 @@ Added missing preserved and cooked food values:
 - Smoker creates premium preserved food
 - Focus shifts to building and exploration
 
+### Torch Light Fix
+
+**Problem**: Equipped torch light wasn't visible because energy was too low (2.0) compared to ambient lighting (~1.0).
+
+**Fix**: Increased torch light_energy from 2.0 to 8.0 and light_range from 10.0 to 15.0.
+
+### Placeable Torches
+
+**New Feature**: Torches can now be placed on the ground as a light source and reclaimed later.
+
+**Placement**:
+- Equip torch and press R/R2 to place
+- Torch stands upright in the ground
+- Provides same light as held torch (energy 8.0, range 15.0)
+- Subtle flicker animation for atmosphere
+
+**Reclaim**:
+- Look at placed torch and press E/Square to pick up
+- Returns torch to inventory
+- Can also use M/D-pad Up to move it like other structures
+
+**Visual Design**:
+- Wooden stick handle
+- Cloth wrap near top
+- Blocky flame with emissive material
+- Inner bright flame core
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `scripts/campsite/structure_placed_torch.gd` | Placed torch behavior with reclaim |
+
 ### Files Modified
 
 | File | Changes |
 |------|---------|
 | `scripts/player/player_stats.gd` | Reduced hunger_depletion_rate from 0.1 to 0.05 |
 | `scripts/resources/resource_manager.gd` | Reduced tree_respawn_time_hours from 168 to 48 |
-| `scripts/player/equipment.gd` | Increased primitive_axe durability from 30 to 50 |
+| `scripts/player/equipment.gd` | Increased primitive_axe durability; torch light energy 2→8, range 10→15, added placeable |
 | `scripts/world/chunk_manager.gd` | Increased berry_density to 0.03, herb_density to 0.025 |
 | `scripts/player/player_controller.gd` | Added raw_meat, cooked_meat, dried foods, and smoked foods |
+| `scripts/campsite/structure_data.gd` | Added placed_torch structure, torch to PLACEABLE_ITEMS |
+| `scripts/campsite/placement_system.gd` | Added _create_placed_torch() visual builder |
 
 ---
 

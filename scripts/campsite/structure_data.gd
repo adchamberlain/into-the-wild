@@ -111,6 +111,15 @@ const STRUCTURES: Dictionary = {
 		"category": "utility",
 		"min_camp_level": 3,
 		"footprint_radius": 0.5
+	},
+	"placed_torch": {
+		"name": "Torch",
+		"scene": "res://scenes/campsite/structures/placed_torch.tscn",
+		"item_required": "torch",
+		"provides_light": true,
+		"category": "utility",
+		"footprint_radius": 0.3,
+		"reclaimable": true
 	}
 }
 
@@ -128,7 +137,8 @@ const PLACEABLE_ITEMS: Array[String] = [
 	"snare_trap_kit",
 	"smithing_station_kit",
 	"smoker_kit",
-	"weather_vane_kit"
+	"weather_vane_kit",
+	"torch"
 ]
 
 
