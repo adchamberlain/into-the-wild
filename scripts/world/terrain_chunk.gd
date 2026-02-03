@@ -101,27 +101,81 @@ func _add_top_face(st: SurfaceTool, x: float, z: float, size: float, height: flo
 		clamp(grass_color.b + variation * 0.3, grass_color.b - 0.07, grass_color.b + 0.07)
 	)
 
-	# Triangle 1
-	st.set_color(cell_grass)
+	# Calculate vertex AO for each corner
+	# Sample heights at the 3 diagonal neighbors that share each corner
+	var ao0: float = _calculate_vertex_ao(x, z, height, -1, -1)  # NW corner (v0)
+	var ao1: float = _calculate_vertex_ao(x + size, z, height, 1, -1)  # NE corner (v1)
+	var ao2: float = _calculate_vertex_ao(x + size, z + size, height, 1, 1)  # SE corner (v2)
+	var ao3: float = _calculate_vertex_ao(x, z + size, height, -1, 1)  # SW corner (v3)
+
+	# Apply AO to colors
+	var color0: Color = cell_grass * ao0
+	var color1: Color = cell_grass * ao1
+	var color2: Color = cell_grass * ao2
+	var color3: Color = cell_grass * ao3
+
+	# Get UV coordinates for top face (grass_top texture or stone for rocky)
+	var uvs: Array[Vector2]
+	if region == ChunkManager.RegionType.ROCKY:
+		uvs = TerrainTextures.get_stone_uvs()
+	else:
+		uvs = TerrainTextures.get_top_face_uvs()
+
+	# Triangle 1: v0, v2, v1
+	st.set_color(color0)
 	st.set_normal(normal)
+	st.set_uv(uvs[0])
 	st.add_vertex(v0)
-	st.set_color(cell_grass)
+	st.set_color(color2)
 	st.set_normal(normal)
+	st.set_uv(uvs[2])
 	st.add_vertex(v2)
-	st.set_color(cell_grass)
+	st.set_color(color1)
 	st.set_normal(normal)
+	st.set_uv(uvs[1])
 	st.add_vertex(v1)
 
-	# Triangle 2
-	st.set_color(cell_grass)
+	# Triangle 2: v0, v3, v2
+	st.set_color(color0)
 	st.set_normal(normal)
+	st.set_uv(uvs[0])
 	st.add_vertex(v0)
-	st.set_color(cell_grass)
+	st.set_color(color3)
 	st.set_normal(normal)
+	st.set_uv(uvs[3])
 	st.add_vertex(v3)
-	st.set_color(cell_grass)
+	st.set_color(color2)
 	st.set_normal(normal)
+	st.set_uv(uvs[2])
 	st.add_vertex(v2)
+
+
+## Calculate ambient occlusion factor for a vertex corner.
+## dir_x/dir_z indicate which corner (-1,-1 = NW, 1,-1 = NE, 1,1 = SE, -1,1 = SW)
+func _calculate_vertex_ao(vertex_x: float, vertex_z: float, current_height: float, dir_x: int, dir_z: int) -> float:
+	var cell_size: float = chunk_manager.cell_size
+	var ao_strength: float = 0.12  # How much each occluding neighbor darkens
+
+	# Sample the 3 neighbors that share this corner
+	# Cardinal neighbors (share an edge)
+	var neighbor_x_height: float = chunk_manager.get_height_at(vertex_x + dir_x * cell_size, vertex_z)
+	var neighbor_z_height: float = chunk_manager.get_height_at(vertex_x, vertex_z + dir_z * cell_size)
+	# Diagonal neighbor (share just the corner)
+	var neighbor_diag_height: float = chunk_manager.get_height_at(vertex_x + dir_x * cell_size, vertex_z + dir_z * cell_size)
+
+	# Count how many neighbors are higher (would cast shadow on this corner)
+	var occlusion_count: int = 0
+	if neighbor_x_height > current_height:
+		occlusion_count += 1
+	if neighbor_z_height > current_height:
+		occlusion_count += 1
+	if neighbor_diag_height > current_height:
+		# Diagonal counts less (further away)
+		occlusion_count += 1
+
+	# AO factor: 1.0 = no occlusion, lower = darker
+	var ao: float = 1.0 - (occlusion_count * ao_strength)
+	return clamp(ao, 0.55, 1.0)  # Don't go too dark
 
 
 func _add_side_faces(st: SurfaceTool, x: float, z: float, size: float, height: float, cx: int, cz: int, chunk_size_cells: int) -> void:
@@ -193,74 +247,166 @@ func _add_side_quad(st: SurfaceTool, v0: Vector3, v1: Vector3, v2: Vector3, v3: 
 		clamp(dirt_color.b + variation * 0.5, dirt_color.b - 0.08, dirt_color.b + 0.10)
 	)
 
+	# Calculate AO for side face vertices
+	# Top vertices (v0, v1) are at the cliff edge - check if there's terrain above (overhang)
+	# Bottom vertices (v2, v3) are in a corner - darker due to surrounding terrain
+	var ao_top: float = _calculate_side_ao_top(center_x, center_z, v0.y, normal)
+	var ao_bottom: float = _calculate_side_ao_bottom(center_x, center_z, v2.y, normal)
+
+	# Get UV coordinates for side faces
+	var side_uvs: Array[Vector2] = TerrainTextures.get_side_face_uvs(total_height > grass_thickness)
+	var dirt_uvs: Array[Vector2] = TerrainTextures.get_side_face_uvs(false)  # Pure dirt UVs
+
 	if total_height > grass_thickness:
 		# Split into grass strip + dirt
 		var grass_bottom_y: float = v0.y - grass_thickness
 		var g2 := Vector3(v1.x, grass_bottom_y, v1.z)
 		var g3 := Vector3(v0.x, grass_bottom_y, v0.z)
 
-		# Grass strip
-		st.set_color(cell_grass)
+		# Grass strip (top vertices use top AO, grass-bottom uses interpolated AO)
+		var ao_grass_bottom: float = lerp(ao_top, ao_bottom, grass_thickness / total_height)
+		var grass_top_col: Color = cell_grass * ao_top
+		var grass_bot_col: Color = cell_grass * ao_grass_bottom
+
+		# UV interpolation for grass strip (top 25% of texture roughly)
+		var uv_grass_top_l: Vector2 = side_uvs[0]
+		var uv_grass_top_r: Vector2 = side_uvs[1]
+		var grass_v_ratio: float = 0.25  # Grass covers top 25% of texture
+		var uv_grass_bot_l: Vector2 = Vector2(side_uvs[0].x, lerp(side_uvs[0].y, side_uvs[3].y, grass_v_ratio))
+		var uv_grass_bot_r: Vector2 = Vector2(side_uvs[1].x, lerp(side_uvs[1].y, side_uvs[2].y, grass_v_ratio))
+
+		st.set_color(grass_top_col)
 		st.set_normal(normal)
+		st.set_uv(uv_grass_top_l)
 		st.add_vertex(v0)
-		st.set_color(cell_grass)
+		st.set_color(grass_top_col)
 		st.set_normal(normal)
+		st.set_uv(uv_grass_top_r)
 		st.add_vertex(v1)
-		st.set_color(cell_grass)
+		st.set_color(grass_bot_col)
 		st.set_normal(normal)
+		st.set_uv(uv_grass_bot_r)
 		st.add_vertex(g2)
 
-		st.set_color(cell_grass)
+		st.set_color(grass_top_col)
 		st.set_normal(normal)
+		st.set_uv(uv_grass_top_l)
 		st.add_vertex(v0)
-		st.set_color(cell_grass)
+		st.set_color(grass_bot_col)
 		st.set_normal(normal)
+		st.set_uv(uv_grass_bot_r)
 		st.add_vertex(g2)
-		st.set_color(cell_grass)
+		st.set_color(grass_bot_col)
 		st.set_normal(normal)
+		st.set_uv(uv_grass_bot_l)
 		st.add_vertex(g3)
 
-		# Dirt section
-		st.set_color(cell_dirt)
+		# Dirt section (interpolate AO from grass bottom to actual bottom)
+		var dirt_top_col: Color = cell_dirt * ao_grass_bottom
+		var dirt_bot_col: Color = cell_dirt * ao_bottom
+
+		st.set_color(dirt_top_col)
 		st.set_normal(normal)
+		st.set_uv(dirt_uvs[0])
 		st.add_vertex(g3)
-		st.set_color(cell_dirt)
+		st.set_color(dirt_top_col)
 		st.set_normal(normal)
+		st.set_uv(dirt_uvs[1])
 		st.add_vertex(g2)
-		st.set_color(cell_dirt)
+		st.set_color(dirt_bot_col)
 		st.set_normal(normal)
+		st.set_uv(dirt_uvs[2])
 		st.add_vertex(v2)
 
-		st.set_color(cell_dirt)
+		st.set_color(dirt_top_col)
 		st.set_normal(normal)
+		st.set_uv(dirt_uvs[0])
 		st.add_vertex(g3)
-		st.set_color(cell_dirt)
+		st.set_color(dirt_bot_col)
 		st.set_normal(normal)
+		st.set_uv(dirt_uvs[2])
 		st.add_vertex(v2)
-		st.set_color(cell_dirt)
+		st.set_color(dirt_bot_col)
 		st.set_normal(normal)
+		st.set_uv(dirt_uvs[3])
 		st.add_vertex(v3)
 	else:
-		# All grass for short sides
-		st.set_color(cell_grass)
+		# All grass for short sides (use grass_side texture)
+		var grass_top_col: Color = cell_grass * ao_top
+		var grass_bot_col: Color = cell_grass * ao_bottom
+
+		st.set_color(grass_top_col)
 		st.set_normal(normal)
+		st.set_uv(side_uvs[0])
 		st.add_vertex(v0)
-		st.set_color(cell_grass)
+		st.set_color(grass_top_col)
 		st.set_normal(normal)
+		st.set_uv(side_uvs[1])
 		st.add_vertex(v1)
-		st.set_color(cell_grass)
+		st.set_color(grass_bot_col)
 		st.set_normal(normal)
+		st.set_uv(side_uvs[2])
 		st.add_vertex(v2)
 
-		st.set_color(cell_grass)
+		st.set_color(grass_top_col)
 		st.set_normal(normal)
+		st.set_uv(side_uvs[0])
 		st.add_vertex(v0)
-		st.set_color(cell_grass)
+		st.set_color(grass_bot_col)
 		st.set_normal(normal)
+		st.set_uv(side_uvs[2])
 		st.add_vertex(v2)
-		st.set_color(cell_grass)
+		st.set_color(grass_bot_col)
 		st.set_normal(normal)
+		st.set_uv(side_uvs[3])
 		st.add_vertex(v3)
+
+
+## Calculate AO for top vertices of a side face (cliff edge).
+func _calculate_side_ao_top(x: float, z: float, height: float, face_normal: Vector3) -> float:
+	var cell_size: float = chunk_manager.cell_size
+
+	# Check if there's terrain directly above this face (overhang effect)
+	# Sample behind the face (opposite to normal direction) and above
+	var behind_x: float = x - face_normal.x * cell_size
+	var behind_z: float = z - face_normal.z * cell_size
+	var behind_height: float = chunk_manager.get_height_at(behind_x, behind_z)
+
+	# If the terrain behind is higher, this edge is in shadow
+	if behind_height > height:
+		return 0.85  # Subtle darkening at cliff edge
+	return 1.0
+
+
+## Calculate AO for bottom vertices of a side face (in corner/crevice).
+func _calculate_side_ao_bottom(x: float, z: float, height: float, face_normal: Vector3) -> float:
+	var cell_size: float = chunk_manager.cell_size
+	var ao_strength: float = 0.10
+
+	# Bottom vertices are recessed - check surrounding terrain heights
+	# Sample in front of the face and to the sides
+	var front_x: float = x + face_normal.x * cell_size
+	var front_z: float = z + face_normal.z * cell_size
+	var front_height: float = chunk_manager.get_height_at(front_x, front_z)
+
+	# Also check perpendicular directions
+	var perp_x: float = -face_normal.z  # Perpendicular direction
+	var perp_z: float = face_normal.x
+	var left_height: float = chunk_manager.get_height_at(x + perp_x * cell_size, z + perp_z * cell_size)
+	var right_height: float = chunk_manager.get_height_at(x - perp_x * cell_size, z - perp_z * cell_size)
+
+	var occlusion_count: int = 0
+	if front_height > height:
+		occlusion_count += 1
+	if left_height > height:
+		occlusion_count += 1
+	if right_height > height:
+		occlusion_count += 1
+
+	# Bottom of cliffs/walls are naturally darker
+	var base_darkness: float = 0.90  # 10% darker as base
+	var ao: float = base_darkness - (occlusion_count * ao_strength)
+	return clamp(ao, 0.55, 0.95)
 
 
 func _generate_collision() -> void:

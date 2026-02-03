@@ -953,15 +953,84 @@ assets/audio/sfx/
 
 ---
 
+## Session 39 - Visual Polish (2026-02-02)
+
+**Three visual improvements** for a more Minecraft-like aesthetic: distance fog, vertex ambient occlusion, and pixelated textures.
+
+### Distance Fog
+
+**Persistent atmospheric fog** that's always on (not just during weather):
+- Base fog density: 0.008 (subtle distance fade)
+- Fog color lerps with time of day to match sky horizon:
+  - Dawn: Warm orange-pink `(0.95, 0.75, 0.6)`
+  - Day: Light blue `(0.65, 0.75, 0.9)`
+  - Dusk: Orange `(0.9, 0.6, 0.5)`
+  - Night: Dark blue `(0.1, 0.1, 0.2)`
+- Weather fog ADDS to base density instead of replacing it
+- Creates atmospheric depth and helps hide chunk loading at distance
+
+### Vertex Ambient Occlusion
+
+**Per-vertex AO** darkens corners where terrain blocks meet:
+
+**Top Face AO**:
+- Each of 4 corner vertices samples 3 adjacent cell heights
+- If neighbor is higher, that corner is darker (12% per occluding neighbor)
+- Creates natural shadowing at block edges
+- Clamped to 55-100% brightness
+
+**Side Face AO**:
+- Top vertices: Check for overhang from terrain behind
+- Bottom vertices: Naturally darker (10% base) + additional from surrounding heights
+- AO interpolated along face for smooth gradient
+- Bottom of cliffs appears recessed/shadowed
+
+### Pixelated Textures
+
+**16x16 procedural textures** generated at runtime:
+
+**Texture Atlas** (32x32, 4 textures in 2x2 grid):
+| Position | Texture | Description |
+|----------|---------|-------------|
+| Top-left | grass_top | Green with pixel variation |
+| Top-right | grass_side | 4px grass strip over dirt |
+| Bottom-left | dirt | Brown with dark spots |
+| Bottom-right | stone | Grey with crack patterns |
+
+**UV Mapping**:
+- Top faces: Full grass_top (or stone for ROCKY regions)
+- Side faces: grass_side for tall faces, dirt for pure dirt sections
+- UV coordinates per-vertex with atlas lookups
+
+**Material Setup**:
+- `TEXTURE_FILTER_NEAREST` for crisp pixels (no interpolation)
+- Texture modulates with vertex color (preserves region tinting + AO)
+- Combined effect: texture detail × region color × AO darkening
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `scripts/world/terrain_textures.gd` | TerrainTextures class - generates 16x16 textures programmatically |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/environment_manager.gd` | Persistent distance fog, time-based fog color, weather fog adds to base |
+| `scripts/world/terrain_chunk.gd` | Vertex AO calculation for top and side faces, UV coordinates |
+| `scripts/world/chunk_manager.gd` | Textured material with atlas and nearest-neighbor filtering |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
 1. Source ~23 sound files from Pixabay to populate sfx directories
 2. Add UI sounds to menus (optional)
 3. Game balancing and polish
-4. Pixelated textures (optional)
-5. Optional: DualSense haptics and adaptive triggers
-6. Cave entrances in rocky regions (deferred)
+4. Optional: DualSense haptics and adaptive triggers
+5. Cave entrances in rocky regions (deferred)
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

@@ -615,6 +615,15 @@ func _setup_material() -> void:
 	terrain_material.metallic = 0.0
 	terrain_material.cull_mode = BaseMaterial3D.CULL_DISABLED
 
+	# Add pixelated texture atlas
+	var texture_atlas: ImageTexture = TerrainTextures.get_texture_atlas()
+	if texture_atlas:
+		terrain_material.albedo_texture = texture_atlas
+		# CRITICAL: Use nearest-neighbor filtering for crisp pixelated look
+		terrain_material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+		# Texture modulates with vertex color (preserves region tinting + AO)
+		terrain_material.albedo_color = Color.WHITE
+
 
 func _setup_world_floor() -> void:
 	# Create an impenetrable floor at the bottom of the world (like bedrock)

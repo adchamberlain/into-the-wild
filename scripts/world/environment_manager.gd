@@ -74,6 +74,18 @@ var sky_material: ProceduralSkyMaterial
 # Cached camera reference for performance
 var cached_camera: Camera3D = null
 
+# Base distance fog settings (always on for atmosphere)
+var base_fog_density: float = 0.008  # Subtle distance fade
+var base_fog_start: float = 30.0     # Start fading at 30 units
+
+# Fog colors for different times (matched to sky horizon)
+var fog_colors: Dictionary = {
+	"dawn": Color(0.95, 0.75, 0.6),
+	"day": Color(0.65, 0.75, 0.9),
+	"dusk": Color(0.9, 0.6, 0.5),
+	"night": Color(0.1, 0.1, 0.2)
+}
+
 # Weather overlay
 var current_weather: String = "Clear"
 var weather_color_modifiers: Dictionary = {
@@ -144,6 +156,14 @@ func _setup_environment() -> void:
 	environment.ssao_enabled = false
 	environment.ssil_enabled = false  # SSIL is very GPU-intensive
 	environment.glow_enabled = false  # Glow adds GPU overhead
+
+	# Enable base distance fog for atmosphere (always on)
+	environment.fog_enabled = true
+	environment.fog_mode = Environment.FOG_MODE_EXPONENTIAL
+	environment.fog_density = base_fog_density
+	environment.fog_light_color = fog_colors["day"]
+	environment.fog_light_energy = 0.5  # Subtle fog, not overpowering
+	environment.fog_sun_scatter = 0.0   # Disabled - causes bright reflections
 
 
 func _setup_night_sky() -> void:
@@ -359,6 +379,12 @@ func _update_environment() -> void:
 		var sun_angle: float = time_manager.get_sun_angle()
 		sun_light.rotation.x = -sun_angle + PI / 2  # Overhead at noon
 
+	# Update fog color to match sky horizon (time of day)
+	var from_fog: Color = fog_colors[from_key]
+	var to_fog: Color = fog_colors[to_key]
+	var fog_color: Color = from_fog.lerp(to_fog, blend)
+	environment.fog_light_color = fog_color
+
 	# Update blocky sun mesh position
 	_update_sun_position(progress)
 
@@ -471,16 +497,18 @@ func set_weather_overlay(weather: String) -> void:
 func _apply_weather_effects() -> void:
 	var color_mod: Color = weather_color_modifiers.get(current_weather, Color(1.0, 1.0, 1.0))
 	var intensity_mod: float = weather_intensity_modifiers.get(current_weather, 1.0)
-	var fog_density: float = weather_fog_density.get(current_weather, 0.0)
+	var weather_fog: float = weather_fog_density.get(current_weather, 0.0)
 
-	# Apply fog effect
-	if fog_density > 0:
-		environment.fog_enabled = true
-		environment.fog_density = fog_density
-		environment.fog_light_color = color_mod.lightened(0.3)
-		environment.fog_light_energy = 0.5
-	else:
-		environment.fog_enabled = false
+	# Weather fog ADDS to base fog (fog is always on for atmosphere)
+	# Base fog provides distance fade, weather adds extra density
+	var total_fog_density: float = base_fog_density + weather_fog
+	environment.fog_density = total_fog_density
+
+	# Weather modifies fog color slightly
+	if weather_fog > 0.005:
+		# Heavy weather tints the fog
+		var current_fog: Color = environment.fog_light_color
+		environment.fog_light_color = current_fog.lerp(color_mod.lightened(0.2), 0.4)
 
 	# Adjust ambient light based on weather
 	var base_ambient: Color = environment.ambient_light_color
