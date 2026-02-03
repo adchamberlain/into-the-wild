@@ -1342,8 +1342,8 @@ func get_pending_unload_count() -> int:
 	return chunks_to_unload.size()
 
 
-## Remove trees that overlap with player structures.
-## Called after loading a saved game to clean up trees that spawned before structures were loaded.
+## Remove trees and resources that overlap with player structures.
+## Called after loading a saved game to clean up items that spawned before structures were loaded.
 func remove_trees_overlapping_structures() -> void:
 	var campsite_mgr: Node = get_node_or_null("/root/Main/CampsiteManager")
 	if not campsite_mgr or not campsite_mgr.has_method("get_placed_structures"):
@@ -1353,7 +1353,8 @@ func remove_trees_overlapping_structures() -> void:
 	if structures.is_empty():
 		return
 
-	var removed_count: int = 0
+	var trees_removed: int = 0
+	var resources_removed: int = 0
 
 	# Iterate through all loaded chunks
 	for chunk_coord: Vector2i in loaded_chunks.keys():
@@ -1395,10 +1396,46 @@ func remove_trees_overlapping_structures() -> void:
 		for tree: Node3D in trees_to_remove:
 			chunk.spawned_trees.erase(tree)
 			tree.queue_free()
-			removed_count += 1
+			trees_removed += 1
 
-	if removed_count > 0:
-		print("[ChunkManager] Removed %d trees overlapping with structures" % removed_count)
+		# Check each resource (mushrooms, herbs, berries, etc.) in this chunk
+		var resources_to_remove: Array[Node3D] = []
+		for resource: Node3D in chunk.spawned_resources:
+			if not is_instance_valid(resource):
+				continue
+
+			var res_pos: Vector3 = resource.global_position
+			var res_pos_2d: Vector2 = Vector2(res_pos.x, res_pos.z)
+
+			# Check against all structures
+			for structure: Node in structures:
+				if not is_instance_valid(structure):
+					continue
+
+				var struct_pos: Vector3 = structure.global_position
+				var struct_pos_2d: Vector2 = Vector2(struct_pos.x, struct_pos.z)
+
+				# Get structure's footprint radius
+				var footprint: float = 1.0
+				if "structure_type" in structure:
+					footprint = StructureData.get_footprint_radius(structure.structure_type)
+
+				# Small resource radius for overlap check
+				var resource_radius: float = 0.5
+				var min_distance: float = footprint + resource_radius
+
+				if res_pos_2d.distance_to(struct_pos_2d) < min_distance:
+					resources_to_remove.append(resource)
+					break  # No need to check other structures
+
+		# Remove overlapping resources
+		for resource: Node3D in resources_to_remove:
+			chunk.spawned_resources.erase(resource)
+			resource.queue_free()
+			resources_removed += 1
+
+	if trees_removed > 0 or resources_removed > 0:
+		print("[ChunkManager] Removed %d trees and %d resources overlapping with structures" % [trees_removed, resources_removed])
 
 
 ## Check if a position overlaps with any player structure.

@@ -108,8 +108,10 @@ func _ready() -> void:
 		# Connect to player's inventory
 		if player.has_method("get_inventory"):
 			inventory = player.get_inventory()
+			print("[HUD] Got inventory from player: %s" % inventory)
 			if inventory:
 				inventory.inventory_changed.connect(_on_inventory_changed)
+				print("[HUD] Connected to inventory.inventory_changed signal")
 
 		# Connect to player's stats
 		if player.has_method("get_stats"):
@@ -356,14 +358,17 @@ func _on_tool_broken(item_type: String) -> void:
 
 
 func _on_inventory_changed() -> void:
+	print("[HUD] Inventory changed signal received, updating display")
 	_update_inventory_display()
 
 
 func _update_inventory_display() -> void:
 	if not inventory or not item_list:
+		print("[HUD] Cannot update inventory display: inventory=%s, item_list=%s" % [inventory, item_list])
 		return
 
 	var items: Dictionary = inventory.get_all_items()
+	print("[HUD] Updating inventory display with items: %s" % items)
 
 	# Show/hide empty label
 	if empty_label:

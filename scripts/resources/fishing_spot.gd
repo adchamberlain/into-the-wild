@@ -346,10 +346,15 @@ func _attempt_catch() -> void:
 
 	if current_player:
 		var inventory: Node = _get_player_inventory(current_player)
+		print("[FishingSpot] current_player: %s, inventory: %s" % [current_player, inventory])
 		if inventory:
+			var old_count: int = inventory.get_item_count(fish_type)
 			inventory.add_item(fish_type, 1)
-			print("[FishingSpot] Caught a %s!" % fish_type)
+			var new_count: int = inventory.get_item_count(fish_type)
+			print("[FishingSpot] Caught a %s! Inventory %s count: %d -> %d" % [fish_type, fish_type, old_count, new_count])
 			_show_notification("Caught a fish!", Color(0.4, 1.0, 0.4))
+		else:
+			print("[FishingSpot] ERROR: Could not get player inventory!")
 
 		# Show catch animation on equipment
 		var equipment: Node = _get_player_equipment(current_player)

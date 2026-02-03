@@ -595,6 +595,11 @@ func _spawn_chunk_resources() -> void:
 				z += resource_grid_size
 				continue
 
+			# Skip if there's a player structure at this location
+			if chunk_manager.is_position_blocked_by_structure(res_x, res_z, 0.5):
+				z += resource_grid_size
+				continue
+
 			var res_y: float = chunk_manager.get_height_at(res_x, res_z)
 
 			# Skip if in water (negative height = pond)

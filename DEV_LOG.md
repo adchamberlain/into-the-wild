@@ -1023,6 +1023,125 @@ assets/audio/sfx/
 
 ---
 
+## Session 40 - Distance Fog Fix (2026-02-02)
+
+**Fixed fog being too dense when player is far from spawn.**
+
+### Problem
+
+The previous exponential fog system calculated fog based on absolute world-space distance from the camera. This caused terrain far from the origin to appear heavily fogged even in clear weather, because the exponential falloff accumulated over large distances.
+
+### Solution
+
+Switched from `FOG_MODE_EXPONENTIAL` to `FOG_MODE_DEPTH` which uses camera-relative depth values:
+- `fog_depth_begin`: 60 units (fog starts)
+- `fog_depth_end`: 300 units (full fog)
+- `fog_depth_curve`: 1.0 (linear falloff)
+
+This ensures fog is consistent regardless of where the player is in the world - it always fades terrain between 60-300 units from the camera.
+
+### Weather Integration
+
+Weather now affects visibility by modifying `fog_depth_end`:
+| Weather | Visibility Distance |
+|---------|---------------------|
+| Clear | 300 units |
+| Heat Wave | 250 units |
+| Cold Snap | 220 units |
+| Rain | 200 units |
+| Storm | 120 units |
+| Fog | 80 units |
+
+Weather fog density values were also reduced since they now add extra haze on top of depth fog.
+
+### Files Modified
+- `scripts/world/environment_manager.gd` - Switched to depth fog, added weather visibility distances
+
+### Drying Rack Interaction Text Fix
+
+**Problem**: When adding food to the drying rack, the percentage progress wasn't shown until the player looked away and back.
+
+**Cause**: `_update_interaction_target()` only emits `interaction_target_changed` when the target changes. After interaction, the target is still the same drying rack, so the HUD wasn't updated even though `get_interaction_text()` returned new text.
+
+**Fix**: In `_try_interact()`, re-emit `interaction_target_changed` after calling `interact()` to refresh the HUD with any updated text.
+
+**Files Modified**: `scripts/player/player_controller.gd`
+
+### Cabin Structure Fix
+
+**Problem**: The log cabin had visible gaps at the top where you could see through to the sky. The peaked roof left triangular openings at the front and back (gable areas).
+
+**Fix**: Added three new elements to the cabin structure:
+1. **Ceiling** - Flat wooden ceiling at wall height to close off the interior
+2. **Front gable wall** - Fills the triangular gap under the roof at the front
+3. **Back gable wall** - Fills the triangular gap under the roof at the back
+
+Also adjusted roof angle from 25° to 30° for better coverage and tweaked positioning.
+
+**Files Modified**: `scripts/campsite/placement_system.gd`, `scripts/core/save_load.gd`
+
+### Kitchen Recipe Message Fix
+
+**Problem**: When cooking at the cabin kitchen, the "missing ingredients" message was confusing. It would say "Need 1 dried fish" when the player already had 1 dried fish - but the recipe actually required 2.
+
+**Cause**: The message showed how many *more* items were needed (the difference), but phrased it as the total needed, causing confusion.
+
+**Fix**: Changed the message format to show both the required amount and current inventory:
+- Before: "Need 1 dried fish for Preserved Meal"
+- After: "Need 2 dried fish (have 1) for Preserved Meal"
+
+Also replaced underscores with spaces in item names for better readability (e.g., "dried fish" instead of "dried_fish").
+
+**Files Modified**: `scripts/campsite/cabin_kitchen.gd`
+
+### Dynamic Interaction Text Refresh
+
+**Problem**: The drying rack percentage only updated when the player looked away and back, or interacted with it. The text was static even though the drying progress was advancing.
+
+**Fix**: Added a periodic refresh timer (1 second interval) that automatically updates the interaction text for the current target. This makes dynamic text like the drying rack's "Drying Fish (45%)" update in real-time while the player looks at it.
+
+**Files Modified**: `scripts/player/player_controller.gd`
+
+### A-Frame Cabin Redesign
+
+**Problem**: The original cabin had walls poking out at odd angles with rectangular gable boxes that didn't fit the angled roof properly.
+
+**Solution**: Complete redesign as an Austrian-style A-frame cabin:
+- **Steep roof panels** extend from short knee walls (0.8m) up to a high peak (5.5m)
+- **Stepped triangular walls** at front and back use stacked boxes that get narrower toward the peak (blocky Minecraft aesthetic)
+- **Doorway** cut into the front triangular wall
+- **No separate ceiling** - the angled roof IS the ceiling/walls on the sides
+- **Dimensions**: 6x6 base, 5.5m peak height
+
+The A-frame design is cleaner and more distinctive, matching the traditional alpine cabin style.
+
+**Bug Fixes**:
+1. **Roof corners sticking out** - Fixed roof panel positioning so they start from the knee wall base and extend cleanly to the peak without overlapping corners
+2. **Can't enter cabin** - Split front wall collision into three parts (left of door, right of door, above door) leaving a gap for the doorway
+
+### Resources Don't Spawn Inside Structures
+
+**Problem**: Mushrooms, herbs, and other small resources could spawn inside structure footprints.
+
+**Fix**:
+1. Added `is_position_blocked_by_structure()` check to the resource spawning loop in terrain_chunk.gd for initial chunk spawning
+2. Extended `remove_trees_overlapping_structures()` in chunk_manager.gd to also remove resources (mushrooms, herbs, berries, etc.) that overlap with structures when loading a saved game
+
+Note: Resource respawning already had this check in resource_manager.gd.
+
+### A-Frame Roof Peak Fix
+
+**Problem**: Roof panel corners were still sticking out at the peak where the two angled panels meet.
+
+**Fix**:
+1. Shortened roof panels by calculating the corner extension distance and subtracting it from the panel length
+2. Added a ridge cap (horizontal box at the peak) to cover the gap and create a clean ridge line
+3. Formula: `corner_extension = roof_thickness / (2 * sin(roof_angle))`
+
+**Files Modified**: `scripts/campsite/placement_system.gd`, `scripts/core/save_load.gd`, `scripts/world/terrain_chunk.gd`, `scripts/world/chunk_manager.gd`
+
+---
+
 ## Next Session
 
 ### Planned Tasks

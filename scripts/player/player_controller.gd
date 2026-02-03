@@ -41,6 +41,10 @@ var climbing_structure: Node = null  # The ladder we're climbing
 const INTERACTION_CHECK_INTERVAL: float = 0.1  # Check 10x/sec instead of 60x/sec
 var interaction_check_timer: float = 0.0
 
+# Interaction text refresh for dynamic objects (e.g., drying rack percentage)
+const INTERACTION_TEXT_REFRESH_INTERVAL: float = 1.0  # Refresh text every 1 second
+var interaction_text_refresh_timer: float = 0.0
+
 # Interact cooldown (prevents analog trigger jitter on L2)
 const INTERACT_COOLDOWN: float = 0.15
 var interact_cooldown_timer: float = 0.0
@@ -168,6 +172,16 @@ func _physics_process(delta: float) -> void:
 	if interaction_check_timer >= INTERACTION_CHECK_INTERVAL:
 		interaction_check_timer = 0.0
 		_update_interaction_target()
+
+	# Periodically refresh interaction text for dynamic objects (e.g., drying rack progress)
+	if current_interaction_target:
+		interaction_text_refresh_timer += delta
+		if interaction_text_refresh_timer >= INTERACTION_TEXT_REFRESH_INTERVAL:
+			interaction_text_refresh_timer = 0.0
+			var interaction_text: String = _get_interaction_text(current_interaction_target)
+			interaction_target_changed.emit(current_interaction_target, interaction_text)
+	else:
+		interaction_text_refresh_timer = 0.0
 
 	# Fall-through protection: track safe position and recover if fallen
 	_update_fall_protection(delta)
@@ -322,6 +336,10 @@ func _get_interaction_text(target: Node) -> String:
 func _try_interact() -> void:
 	if current_interaction_target and current_interaction_target.has_method("interact"):
 		current_interaction_target.interact(self)
+		# Refresh interaction text in case it changed (e.g., drying rack progress)
+		if current_interaction_target:
+			var interaction_text: String = _get_interaction_text(current_interaction_target)
+			interaction_target_changed.emit(current_interaction_target, interaction_text)
 
 
 func get_inventory() -> Inventory:

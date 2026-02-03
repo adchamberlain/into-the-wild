@@ -75,8 +75,10 @@ var sky_material: ProceduralSkyMaterial
 var cached_camera: Camera3D = null
 
 # Base distance fog settings (always on for atmosphere)
-var base_fog_density: float = 0.008  # Subtle distance fade
-var base_fog_start: float = 30.0     # Start fading at 30 units
+# Using depth fog mode for consistent fog regardless of player position
+var base_fog_depth_begin: float = 60.0    # Fog starts at 60 units from camera
+var base_fog_depth_end: float = 300.0     # Full fog at 300 units (far terrain)
+var base_fog_depth_curve: float = 1.0     # Linear falloff (1.0 = linear)
 
 # Fog colors for different times (matched to sky horizon)
 var fog_colors: Dictionary = {
@@ -106,11 +108,21 @@ var weather_intensity_modifiers: Dictionary = {
 }
 var weather_fog_density: Dictionary = {
 	"Clear": 0.0,
-	"Rain": 0.01,
-	"Storm": 0.02,
-	"Fog": 0.08,
-	"Heat Wave": 0.005,
-	"Cold Snap": 0.01
+	"Rain": 0.005,
+	"Storm": 0.01,
+	"Fog": 0.02,
+	"Heat Wave": 0.002,
+	"Cold Snap": 0.005
+}
+
+# Weather affects fog depth end (visibility distance)
+var weather_fog_depth_end: Dictionary = {
+	"Clear": 300.0,     # Full visibility
+	"Rain": 200.0,      # Slightly reduced
+	"Storm": 120.0,     # Heavily reduced
+	"Fog": 80.0,        # Very low visibility
+	"Heat Wave": 250.0, # Heat haze slightly reduces
+	"Cold Snap": 220.0  # Cold air slightly reduces
 }
 
 
@@ -158,9 +170,12 @@ func _setup_environment() -> void:
 	environment.glow_enabled = false  # Glow adds GPU overhead
 
 	# Enable base distance fog for atmosphere (always on)
+	# Using depth mode for consistent fog regardless of player world position
 	environment.fog_enabled = true
-	environment.fog_mode = Environment.FOG_MODE_EXPONENTIAL
-	environment.fog_density = base_fog_density
+	environment.fog_mode = Environment.FOG_MODE_DEPTH
+	environment.fog_depth_begin = base_fog_depth_begin
+	environment.fog_depth_end = base_fog_depth_end
+	environment.fog_depth_curve = base_fog_depth_curve
 	environment.fog_light_color = fog_colors["day"]
 	environment.fog_light_energy = 0.5  # Subtle fog, not overpowering
 	environment.fog_sun_scatter = 0.0   # Disabled - causes bright reflections
@@ -498,11 +513,13 @@ func _apply_weather_effects() -> void:
 	var color_mod: Color = weather_color_modifiers.get(current_weather, Color(1.0, 1.0, 1.0))
 	var intensity_mod: float = weather_intensity_modifiers.get(current_weather, 1.0)
 	var weather_fog: float = weather_fog_density.get(current_weather, 0.0)
+	var weather_depth_end: float = weather_fog_depth_end.get(current_weather, base_fog_depth_end)
 
-	# Weather fog ADDS to base fog (fog is always on for atmosphere)
-	# Base fog provides distance fade, weather adds extra density
-	var total_fog_density: float = base_fog_density + weather_fog
-	environment.fog_density = total_fog_density
+	# Weather reduces visibility by adjusting fog depth end
+	environment.fog_depth_end = weather_depth_end
+
+	# Weather fog adds extra haze density on top of depth fog
+	environment.fog_density = weather_fog
 
 	# Weather modifies fog color slightly
 	if weather_fog > 0.005:

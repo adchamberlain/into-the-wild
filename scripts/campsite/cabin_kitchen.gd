@@ -110,9 +110,9 @@ func interact(player: Node) -> bool:
 
 ## Get a helpful message about what ingredients are missing.
 func _get_missing_ingredients_message(inventory: Node) -> String:
-	# Find the recipe closest to completion and tell the player what's missing
+	# Find the recipe closest to completion and tell the player what's needed
 	var closest_recipe: String = ""
-	var closest_missing: Dictionary = {}
+	var closest_missing: Dictionary = {}  # item -> {needed: int, have: int}
 	var fewest_missing: int = 999
 
 	for recipe_id: String in KITCHEN_RECIPES:
@@ -124,11 +124,11 @@ func _get_missing_ingredients_message(inventory: Node) -> String:
 			var needed: int = inputs[item]
 			var have: int = inventory.get_item_count(item) if inventory.has_method("get_item_count") else 0
 			if have < needed:
-				missing[item] = needed - have
+				missing[item] = {"needed": needed, "have": have}
 
 		var total_missing: int = 0
 		for item: String in missing:
-			total_missing += missing[item]
+			total_missing += missing[item]["needed"] - missing[item]["have"]
 
 		if total_missing > 0 and total_missing < fewest_missing:
 			fewest_missing = total_missing
@@ -141,11 +141,15 @@ func _get_missing_ingredients_message(inventory: Node) -> String:
 	var recipe_name: String = KITCHEN_RECIPES[closest_recipe].get("name", closest_recipe)
 	var missing_items: Array[String] = []
 	for item: String in closest_missing:
-		var count: int = closest_missing[item]
-		if count == 1:
-			missing_items.append("1 %s" % item)
+		var info: Dictionary = closest_missing[item]
+		var needed: int = info["needed"]
+		var have: int = info["have"]
+		# Show "need X (have Y)" format for clarity
+		var item_name: String = item.replace("_", " ")
+		if needed > 1:
+			missing_items.append("%d %s (have %d)" % [needed, item_name, have])
 		else:
-			missing_items.append("%d %ss" % [count, item])
+			missing_items.append("%d %s (have %d)" % [needed, item_name, have])
 
 	if missing_items.size() == 1:
 		return "Need %s for %s" % [missing_items[0], recipe_name]

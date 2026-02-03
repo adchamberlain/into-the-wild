@@ -1127,6 +1127,7 @@ func _create_canvas_tent() -> StaticBody3D:
 
 
 func _create_cabin() -> StaticBody3D:
+	# Austrian A-frame cabin design
 	var cabin: StaticBody3D = StaticBody3D.new()
 	cabin.name = "LogCabin"
 	cabin.set_script(load("res://scripts/campsite/structure_cabin.gd"))
@@ -1135,145 +1136,222 @@ func _create_cabin() -> StaticBody3D:
 	log_mat.albedo_color = Color(0.45, 0.30, 0.18)
 
 	var roof_mat: StandardMaterial3D = StandardMaterial3D.new()
-	roof_mat.albedo_color = Color(0.35, 0.22, 0.12)
+	roof_mat.albedo_color = Color(0.30, 0.18, 0.10)
 
 	var floor_mat: StandardMaterial3D = StandardMaterial3D.new()
 	floor_mat.albedo_color = Color(0.5, 0.38, 0.25)
 
-	var width: float = 6.0
-	var height: float = 3.0
-	var depth: float = 5.0
-	var wall_thick: float = 0.3
-	var door_width: float = 1.2
+	# A-frame dimensions
+	var base_width: float = 6.0
+	var depth: float = 6.0
+	var peak_height: float = 5.5
+	var wall_thick: float = 0.25
+	var knee_wall_height: float = 0.8
+	var door_width: float = 1.4
 	var door_height: float = 2.2
+
+	# Calculate roof panel dimensions
+	var roof_rise: float = peak_height - knee_wall_height
+	var roof_run: float = base_width / 2.0
+	var roof_length: float = sqrt(roof_rise * roof_rise + roof_run * roof_run)
+	var roof_angle: float = rad_to_deg(atan2(roof_rise, roof_run))
 
 	# Floor
 	var floor_mesh: MeshInstance3D = MeshInstance3D.new()
 	var floor_box: BoxMesh = BoxMesh.new()
-	floor_box.size = Vector3(width - wall_thick * 2, 0.1, depth - wall_thick * 2)
+	floor_box.size = Vector3(base_width - 0.2, 0.1, depth - 0.2)
 	floor_mesh.mesh = floor_box
 	floor_mesh.position.y = 0.05
 	floor_mesh.material_override = floor_mat
 	cabin.add_child(floor_mesh)
 
-	# Back wall
-	var back_wall: MeshInstance3D = MeshInstance3D.new()
-	var back_mesh: BoxMesh = BoxMesh.new()
-	back_mesh.size = Vector3(width, height, wall_thick)
-	back_wall.mesh = back_mesh
-	back_wall.position = Vector3(0, height / 2, -depth / 2 + wall_thick / 2)
-	back_wall.material_override = log_mat
-	cabin.add_child(back_wall)
+	# Short knee walls on left and right
+	var knee_mesh: BoxMesh = BoxMesh.new()
+	knee_mesh.size = Vector3(wall_thick, knee_wall_height, depth)
 
-	var back_col: CollisionShape3D = CollisionShape3D.new()
-	var back_shape: BoxShape3D = BoxShape3D.new()
-	back_shape.size = Vector3(width, height, wall_thick)
-	back_col.shape = back_shape
-	back_col.position = back_wall.position
-	cabin.add_child(back_col)
+	var left_knee: MeshInstance3D = MeshInstance3D.new()
+	left_knee.mesh = knee_mesh
+	left_knee.position = Vector3(-base_width / 2 + wall_thick / 2, knee_wall_height / 2, 0)
+	left_knee.material_override = log_mat
+	cabin.add_child(left_knee)
 
-	# Side walls
-	var side_mesh: BoxMesh = BoxMesh.new()
-	side_mesh.size = Vector3(wall_thick, height, depth)
+	var left_knee_col: CollisionShape3D = CollisionShape3D.new()
+	left_knee_col.shape = BoxShape3D.new()
+	(left_knee_col.shape as BoxShape3D).size = knee_mesh.size
+	left_knee_col.position = left_knee.position
+	cabin.add_child(left_knee_col)
 
-	var left_wall: MeshInstance3D = MeshInstance3D.new()
-	left_wall.mesh = side_mesh
-	left_wall.position = Vector3(-width / 2 + wall_thick / 2, height / 2, 0)
-	left_wall.material_override = log_mat
-	cabin.add_child(left_wall)
+	var right_knee: MeshInstance3D = MeshInstance3D.new()
+	right_knee.mesh = knee_mesh
+	right_knee.position = Vector3(base_width / 2 - wall_thick / 2, knee_wall_height / 2, 0)
+	right_knee.material_override = log_mat
+	cabin.add_child(right_knee)
 
-	var left_col: CollisionShape3D = CollisionShape3D.new()
-	left_col.shape = BoxShape3D.new()
-	(left_col.shape as BoxShape3D).size = Vector3(wall_thick, height, depth)
-	left_col.position = left_wall.position
-	cabin.add_child(left_col)
+	var right_knee_col: CollisionShape3D = CollisionShape3D.new()
+	right_knee_col.shape = BoxShape3D.new()
+	(right_knee_col.shape as BoxShape3D).size = knee_mesh.size
+	right_knee_col.position = right_knee.position
+	cabin.add_child(right_knee_col)
 
-	var right_wall: MeshInstance3D = MeshInstance3D.new()
-	right_wall.mesh = side_mesh
-	right_wall.position = Vector3(width / 2 - wall_thick / 2, height / 2, 0)
-	right_wall.material_override = log_mat
-	cabin.add_child(right_wall)
+	# A-frame roof panels - shorten so corners don't extend past peak
+	var roof_thickness: float = 0.2
+	var corner_extension: float = roof_thickness / (2.0 * sin(deg_to_rad(roof_angle)))
+	var shortened_roof_length: float = roof_length - corner_extension
 
-	var right_col: CollisionShape3D = CollisionShape3D.new()
-	right_col.shape = BoxShape3D.new()
-	(right_col.shape as BoxShape3D).size = Vector3(wall_thick, height, depth)
-	right_col.position = right_wall.position
-	cabin.add_child(right_col)
-
-	# Front wall with doorway
-	var front_side_width: float = (width - door_width) / 2
-	var front_mesh: BoxMesh = BoxMesh.new()
-	front_mesh.size = Vector3(front_side_width, height, wall_thick)
-
-	var front_left: MeshInstance3D = MeshInstance3D.new()
-	front_left.mesh = front_mesh
-	front_left.position = Vector3(-width / 2 + front_side_width / 2 + wall_thick / 2, height / 2, depth / 2 - wall_thick / 2)
-	front_left.material_override = log_mat
-	cabin.add_child(front_left)
-
-	var fl_col: CollisionShape3D = CollisionShape3D.new()
-	fl_col.shape = BoxShape3D.new()
-	(fl_col.shape as BoxShape3D).size = Vector3(front_side_width, height, wall_thick)
-	fl_col.position = front_left.position
-	cabin.add_child(fl_col)
-
-	var front_right: MeshInstance3D = MeshInstance3D.new()
-	front_right.mesh = front_mesh
-	front_right.position = Vector3(width / 2 - front_side_width / 2 - wall_thick / 2, height / 2, depth / 2 - wall_thick / 2)
-	front_right.material_override = log_mat
-	cabin.add_child(front_right)
-
-	var fr_col: CollisionShape3D = CollisionShape3D.new()
-	fr_col.shape = BoxShape3D.new()
-	(fr_col.shape as BoxShape3D).size = Vector3(front_side_width, height, wall_thick)
-	fr_col.position = front_right.position
-	cabin.add_child(fr_col)
-
-	# Above door
-	var above_door: MeshInstance3D = MeshInstance3D.new()
-	var above_mesh: BoxMesh = BoxMesh.new()
-	above_mesh.size = Vector3(door_width, height - door_height, wall_thick)
-	above_door.mesh = above_mesh
-	above_door.position = Vector3(0, door_height + (height - door_height) / 2, depth / 2 - wall_thick / 2)
-	above_door.material_override = log_mat
-	cabin.add_child(above_door)
-
-	# Roof
 	var roof_mesh: BoxMesh = BoxMesh.new()
-	roof_mesh.size = Vector3(width / 2 + 0.5, 0.15, depth + 0.6)
+	roof_mesh.size = Vector3(shortened_roof_length, roof_thickness, depth + 0.5)
+
+	var half_length: float = shortened_roof_length / 2.0
+	var roof_center_x: float = -roof_run + half_length * cos(deg_to_rad(roof_angle))
+	var roof_center_y: float = knee_wall_height + half_length * sin(deg_to_rad(roof_angle))
 
 	var roof_left: MeshInstance3D = MeshInstance3D.new()
 	roof_left.mesh = roof_mesh
-	roof_left.position = Vector3(-width / 4, height + 0.6, 0)
-	roof_left.rotation_degrees.z = 25
+	roof_left.position = Vector3(roof_center_x, roof_center_y, 0)
+	roof_left.rotation_degrees.z = roof_angle
 	roof_left.material_override = roof_mat
 	cabin.add_child(roof_left)
 
 	var roof_right: MeshInstance3D = MeshInstance3D.new()
 	roof_right.mesh = roof_mesh
-	roof_right.position = Vector3(width / 4, height + 0.6, 0)
-	roof_right.rotation_degrees.z = -25
+	roof_right.position = Vector3(-roof_center_x, roof_center_y, 0)
+	roof_right.rotation_degrees.z = -roof_angle
 	roof_right.material_override = roof_mat
 	cabin.add_child(roof_right)
 
-	# Interior: Bed (back right corner)
+	# Ridge cap at the peak
+	var ridge_cap: MeshInstance3D = MeshInstance3D.new()
+	var ridge_mesh: BoxMesh = BoxMesh.new()
+	var ridge_width: float = corner_extension * 2.5
+	ridge_mesh.size = Vector3(ridge_width, roof_thickness, depth + 0.5)
+	ridge_cap.mesh = ridge_mesh
+	ridge_cap.position = Vector3(0, peak_height + roof_thickness / 2, 0)
+	ridge_cap.material_override = roof_mat
+	cabin.add_child(ridge_cap)
+
+	# Roof collision
+	var roof_col_left: CollisionShape3D = CollisionShape3D.new()
+	roof_col_left.shape = BoxShape3D.new()
+	(roof_col_left.shape as BoxShape3D).size = Vector3(shortened_roof_length, 0.25, depth)
+	roof_col_left.position = Vector3(roof_center_x, roof_center_y, 0)
+	roof_col_left.rotation_degrees.z = roof_angle
+	cabin.add_child(roof_col_left)
+
+	var roof_col_right: CollisionShape3D = CollisionShape3D.new()
+	roof_col_right.shape = BoxShape3D.new()
+	(roof_col_right.shape as BoxShape3D).size = Vector3(shortened_roof_length, 0.25, depth)
+	roof_col_right.position = Vector3(-roof_center_x, roof_center_y, 0)
+	roof_col_right.rotation_degrees.z = -roof_angle
+	cabin.add_child(roof_col_right)
+
+	# Front and back walls - stepped triangle (blocky style)
+	var step_height: float = 1.0
+	var num_steps: int = int(peak_height / step_height)
+	var front_z: float = depth / 2 - wall_thick / 2
+	var back_z: float = -depth / 2 + wall_thick / 2
+
+	for i: int in range(num_steps):
+		var y_pos: float = i * step_height + step_height / 2
+		var height_ratio: float = float(i * step_height) / peak_height
+		var width_at_height: float = base_width * (1.0 - height_ratio * 0.95)
+		width_at_height = max(width_at_height, 0.5)
+
+		if i == 0 or i == 1:
+			var side_width: float = (width_at_height - door_width) / 2
+			if side_width > 0.2:
+				var front_left: MeshInstance3D = MeshInstance3D.new()
+				var fl_box: BoxMesh = BoxMesh.new()
+				fl_box.size = Vector3(side_width, step_height, wall_thick)
+				front_left.mesh = fl_box
+				front_left.position = Vector3(-width_at_height / 2 + side_width / 2, y_pos, front_z)
+				front_left.material_override = log_mat
+				cabin.add_child(front_left)
+
+				var front_right: MeshInstance3D = MeshInstance3D.new()
+				var fr_box: BoxMesh = BoxMesh.new()
+				fr_box.size = Vector3(side_width, step_height, wall_thick)
+				front_right.mesh = fr_box
+				front_right.position = Vector3(width_at_height / 2 - side_width / 2, y_pos, front_z)
+				front_right.material_override = log_mat
+				cabin.add_child(front_right)
+
+			if i == 1:
+				var above_height: float = step_height - (door_height - step_height)
+				if above_height > 0:
+					var above_door: MeshInstance3D = MeshInstance3D.new()
+					var ad_box: BoxMesh = BoxMesh.new()
+					ad_box.size = Vector3(door_width, above_height, wall_thick)
+					above_door.mesh = ad_box
+					above_door.position = Vector3(0, door_height + above_height / 2, front_z)
+					above_door.material_override = log_mat
+					cabin.add_child(above_door)
+		else:
+			var front_row: MeshInstance3D = MeshInstance3D.new()
+			var row_box: BoxMesh = BoxMesh.new()
+			row_box.size = Vector3(width_at_height, step_height, wall_thick)
+			front_row.mesh = row_box
+			front_row.position = Vector3(0, y_pos, front_z)
+			front_row.material_override = log_mat
+			cabin.add_child(front_row)
+
+		var back_row: MeshInstance3D = MeshInstance3D.new()
+		var back_box: BoxMesh = BoxMesh.new()
+		back_box.size = Vector3(width_at_height, step_height, wall_thick)
+		back_row.mesh = back_box
+		back_row.position = Vector3(0, y_pos, back_z)
+		back_row.material_override = log_mat
+		cabin.add_child(back_row)
+
+	# Front wall collisions - split to leave doorway gap
+	var front_side_col_width: float = (base_width - door_width) / 2.0
+
+	# Left side of doorway
+	var front_col_left: CollisionShape3D = CollisionShape3D.new()
+	front_col_left.shape = BoxShape3D.new()
+	(front_col_left.shape as BoxShape3D).size = Vector3(front_side_col_width, peak_height, wall_thick)
+	front_col_left.position = Vector3(-base_width / 2 + front_side_col_width / 2, peak_height / 2, front_z)
+	cabin.add_child(front_col_left)
+
+	# Right side of doorway
+	var front_col_right: CollisionShape3D = CollisionShape3D.new()
+	front_col_right.shape = BoxShape3D.new()
+	(front_col_right.shape as BoxShape3D).size = Vector3(front_side_col_width, peak_height, wall_thick)
+	front_col_right.position = Vector3(base_width / 2 - front_side_col_width / 2, peak_height / 2, front_z)
+	cabin.add_child(front_col_right)
+
+	# Above doorway
+	var front_col_above: CollisionShape3D = CollisionShape3D.new()
+	front_col_above.shape = BoxShape3D.new()
+	var above_door_height: float = peak_height - door_height
+	(front_col_above.shape as BoxShape3D).size = Vector3(door_width, above_door_height, wall_thick)
+	front_col_above.position = Vector3(0, door_height + above_door_height / 2, front_z)
+	cabin.add_child(front_col_above)
+
+	# Back wall collision (solid - no door)
+	var back_col: CollisionShape3D = CollisionShape3D.new()
+	back_col.shape = BoxShape3D.new()
+	(back_col.shape as BoxShape3D).size = Vector3(base_width, peak_height, wall_thick)
+	back_col.position = Vector3(0, peak_height / 2, back_z)
+	cabin.add_child(back_col)
+
+	# Interior: Bed
 	var bed: StaticBody3D = _create_cabin_bed()
-	bed.position = Vector3(width / 2 - 1.2, 0, -depth / 2 + 1.2)
+	bed.position = Vector3(base_width / 2 - 1.5, 0, -depth / 2 + 1.5)
 	cabin.add_child(bed)
 
-	# Interior: Kitchen (back left corner)
+	# Interior: Kitchen
 	var kitchen: StaticBody3D = _create_cabin_kitchen()
-	kitchen.position = Vector3(-width / 2 + 1.2, 0, -depth / 2 + 1.0)
+	kitchen.position = Vector3(-base_width / 2 + 1.5, 0, -depth / 2 + 1.2)
 	cabin.add_child(kitchen)
 
-	# Protection area (covers entire cabin interior)
+	# Protection area
 	var area: Area3D = Area3D.new()
 	area.name = "ProtectionArea"
 	var area_collision: CollisionShape3D = CollisionShape3D.new()
 	var box_area: BoxShape3D = BoxShape3D.new()
-	box_area.size = Vector3(width, height + 2, depth)
+	box_area.size = Vector3(base_width, peak_height, depth)
 	area_collision.shape = box_area
-	area_collision.position.y = height / 2
+	area_collision.position.y = peak_height / 2
 	area.add_child(area_collision)
 	area.body_entered.connect(cabin._on_protection_area_body_entered)
 	area.body_exited.connect(cabin._on_protection_area_body_exited)
