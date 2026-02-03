@@ -131,9 +131,9 @@ var ore_scene: PackedScene
 # Resource spawning settings
 @export var branch_density: float = 0.08  # Branches per grid cell chance
 @export var rock_density: float = 0.03
-@export var berry_density: float = 0.02
+@export var berry_density: float = 0.03
 @export var mushroom_density: float = 0.025
-@export var herb_density: float = 0.02
+@export var herb_density: float = 0.025
 
 # Fishing spots (one per pond/lake)
 var fishing_spot_scene: PackedScene

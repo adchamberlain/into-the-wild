@@ -64,14 +64,26 @@ var water_surface_y: float = 0.15  # Y position of water surface (matches pond_h
 
 # Food values (hunger restored per item)
 const FOOD_VALUES: Dictionary = {
+	# Raw foods
 	"berry": 15.0,
 	"mushroom": 10.0,
 	"herb": 5.0,
 	"fish": 25.0,
+	"raw_meat": 20.0,
+	# Processed
 	"berry_pouch": 40.0,
+	# Cooked (fire pit)
 	"cooked_berries": 25.0,
 	"cooked_mushroom": 20.0,
 	"cooked_fish": 40.0,
+	"cooked_meat": 35.0,
+	# Preserved (drying rack)
+	"dried_fish": 30.0,
+	"dried_berries": 20.0,
+	"dried_mushroom": 15.0,
+	# Smoked (smoker - Level 3)
+	"smoked_meat": 45.0,
+	"smoked_fish": 50.0,
 }
 
 # Healing items (instant health restore)

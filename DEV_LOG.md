@@ -1344,14 +1344,118 @@ Added to SFXManager with cooldowns:
 
 ---
 
+## Session 43 - Resource Economy Balancing (2026-02-03)
+
+**Game balancing adjustments** to create satisfying progression that's challenging but not frustrating. Focus on a camping adventure experience rather than hardcore survival.
+
+### Hunger System Rebalancing
+
+**File**: `scripts/player/player_stats.gd`
+
+| Parameter | Before | After | Impact |
+|-----------|--------|-------|--------|
+| hunger_depletion_rate | 0.1/sec | 0.05/sec | 2x longer between meals (~33 min vs ~16 min) |
+
+- At rest: ~33 minutes from full to empty (was ~16 min)
+- Sprinting (2x multiplier): ~16 minutes (was ~8 min)
+- Reduces constant eating pressure, allows more exploration time
+
+### Tree Respawn Time
+
+**File**: `scripts/resources/resource_manager.gd`
+
+| Parameter | Before | After | Impact |
+|-----------|--------|-------|--------|
+| tree_respawn_time_hours | 168 (7 days) | 48 (2 days) | Trees respawn much faster |
+
+- Players who chop trees on day 1 get them back by day 3
+- Prevents permanent deforestation of play area
+- Still meaningful enough to plan resource gathering
+
+### Primitive Axe Durability
+
+**File**: `scripts/player/equipment.gd`
+
+| Tool | Before | After | Trees Before Breaking |
+|------|--------|-------|----------------------|
+| primitive_axe | 30 | 50 | ~12 trees (was ~7) |
+
+- More forgiving early game experience
+- Still creates urgency to upgrade to stone axe
+- 67% more uses per primitive axe
+
+### Resource Spawn Density
+
+**File**: `scripts/world/chunk_manager.gd`
+
+| Resource | Before | After | Change |
+|----------|--------|-------|--------|
+| berry_density | 0.02 | 0.03 | 50% more berries |
+| herb_density | 0.02 | 0.025 | 25% more herbs |
+
+- Berries more abundant for food chain reliability
+- More herbs for healing salve crafting
+
+### Expanded Food Values
+
+**File**: `scripts/player/player_controller.gd`
+
+Added missing preserved and cooked food values:
+
+| Category | Food Item | Hunger Restored |
+|----------|-----------|-----------------|
+| **Raw** | berry | 15 |
+| | mushroom | 10 |
+| | herb | 5 |
+| | fish | 25 |
+| | raw_meat (NEW) | 20 |
+| **Processed** | berry_pouch | 40 |
+| **Cooked** | cooked_berries | 25 |
+| | cooked_mushroom | 20 |
+| | cooked_fish | 40 |
+| | cooked_meat (NEW) | 35 |
+| **Preserved** | dried_fish (NEW) | 30 |
+| | dried_berries (NEW) | 20 |
+| | dried_mushroom (NEW) | 15 |
+| **Smoked** | smoked_meat (NEW) | 45 |
+| | smoked_fish (NEW) | 50 |
+
+### Progression Impact
+
+**Early Game (Level 1, Day 1-2)**:
+- 33 min between full meals = less pressure
+- Primitive axe lasts ~12 trees = enough to establish camp
+- Berries more abundant for reliable food
+
+**Mid Game (Level 2, Day 3-7)**:
+- Stone axe trivializes wood gathering
+- Drying rack creates food stockpile
+- Fishing + preservation = food abundance
+
+**Late Game (Level 3, Day 8+)**:
+- Metal axe makes gathering relaxing
+- Kitchen provides best food efficiency
+- Smoker creates premium preserved food
+- Focus shifts to building and exploration
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/player/player_stats.gd` | Reduced hunger_depletion_rate from 0.1 to 0.05 |
+| `scripts/resources/resource_manager.gd` | Reduced tree_respawn_time_hours from 168 to 48 |
+| `scripts/player/equipment.gd` | Increased primitive_axe durability from 30 to 50 |
+| `scripts/world/chunk_manager.gd` | Increased berry_density to 0.03, herb_density to 0.025 |
+| `scripts/player/player_controller.gd` | Added raw_meat, cooked_meat, dried foods, and smoked foods |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. ~~Source ~23 sound files from Pixabay to populate sfx directories (including animal sounds)~~ ✓ Done
-2. ~~Add UI sounds to menus (optional)~~ ✓ Done
-3. Game balancing and polish
-4. Optional: DualSense haptics and adaptive triggers
-5. Cave entrances in rocky regions (deferred)
+1. ~~Game balancing and polish~~ ✓ Done
+2. Optional: DualSense haptics and adaptive triggers
+3. Cave entrances in rocky regions (deferred)
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

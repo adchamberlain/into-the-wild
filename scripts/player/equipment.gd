@@ -132,7 +132,7 @@ const EQUIPPABLE_ITEMS: Dictionary = {
 
 # Tool durability settings
 const TOOL_MAX_DURABILITY: Dictionary = {
-	"primitive_axe": 30,
+	"primitive_axe": 50,
 	"stone_axe": 150,
 	"metal_axe": 300,
 	"fishing_rod": 50

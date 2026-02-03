@@ -6,7 +6,7 @@ signal resource_respawned(resource_node: ResourceNode)
 
 # Respawn settings (in game hours)
 @export var respawn_time_hours: float = 6.0  # Game hours until respawn for regular resources
-@export var tree_respawn_time_hours: float = 168.0  # Game hours until tree respawn (7 days default)
+@export var tree_respawn_time_hours: float = 48.0  # Game hours until tree respawn (2 days)
 @export var respawn_enabled: bool = true
 
 # Node references

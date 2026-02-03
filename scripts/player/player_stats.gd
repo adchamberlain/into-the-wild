@@ -11,7 +11,7 @@ signal player_died()
 @export var max_hunger: float = 100.0
 
 # Hunger depletion rates (per second)
-@export var hunger_depletion_rate: float = 0.1  # Base rate when idle (~16 min to empty)
+@export var hunger_depletion_rate: float = 0.05  # Base rate when idle (~33 min to empty)
 @export var hunger_sprint_multiplier: float = 2.0  # Multiplier when sprinting
 
 # Health effects
