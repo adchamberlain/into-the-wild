@@ -230,10 +230,12 @@ func _process_normal_movement(delta: float) -> void:
 	# Get input direction from actions (supports both keyboard and controller)
 	var input_dir: Vector2 = _get_movement_input()
 
-	var direction: Vector3 = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
+	var direction: Vector3 = Vector3.ZERO
+	if input_dir.length() > 0:
+		direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 
 	# Apply movement
-	if direction:
+	if direction.length() > 0:
 		velocity.x = direction.x * current_speed
 		velocity.z = direction.z * current_speed
 
@@ -255,6 +257,10 @@ func _get_movement_input() -> Vector2:
 	# Get input from actions (works with keyboard WASD and left stick)
 	input_dir.x = Input.get_action_strength("move_right") - Input.get_action_strength("move_left")
 	input_dir.y = Input.get_action_strength("move_backward") - Input.get_action_strength("move_forward")
+
+	# Apply deadzone to prevent joystick drift from triggering movement/footsteps
+	if input_dir.length() < 0.15:
+		return Vector2.ZERO
 
 	# Clamp for analog stick diagonal movement
 	if input_dir.length() > 1.0:
@@ -289,10 +295,12 @@ func _process_swimming(delta: float) -> void:
 	# Slower horizontal movement while swimming (use shared input function)
 	var input_dir: Vector2 = _get_movement_input()
 
-	var direction: Vector3 = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
+	var direction: Vector3 = Vector3.ZERO
+	if input_dir.length() > 0:
+		direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 
 	# Apply slower movement in water
-	if direction:
+	if direction.length() > 0:
 		velocity.x = direction.x * swim_move_speed
 		velocity.z = direction.z * swim_move_speed
 

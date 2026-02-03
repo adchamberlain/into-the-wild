@@ -458,6 +458,9 @@ func _generate_rivers() -> void:
 		if river_path.size() < 4:
 			continue  # Too short, try again
 
+		# Smooth the path to eliminate sharp corners
+		river_path = _smooth_river_path(river_path)
+
 		# Place fishing pools along the river
 		var fishing_pools: Array[Vector2] = _place_fishing_pools(river_path)
 
@@ -539,6 +542,59 @@ func _generate_river_path(source: Vector2, rng: RandomNumberGenerator) -> Array[
 			break
 
 	return path
+
+
+func _smooth_river_path(path: Array[Vector2]) -> Array[Vector2]:
+	## Smooth a river path using Catmull-Rom spline interpolation
+	## This creates gentle curves instead of sharp corners
+	if path.size() < 3:
+		return path
+
+	var smoothed: Array[Vector2] = []
+	var subdivisions: int = 8  # More subdivisions for smoother curves
+
+	for i in range(path.size() - 1):
+		# Get 4 control points for Catmull-Rom (p0, p1, p2, p3)
+		var p0: Vector2 = path[max(0, i - 1)]
+		var p1: Vector2 = path[i]
+		var p2: Vector2 = path[min(path.size() - 1, i + 1)]
+		var p3: Vector2 = path[min(path.size() - 1, i + 2)]
+
+		# Add the start point
+		smoothed.append(p1)
+
+		# Add interpolated points
+		for j in range(1, subdivisions):
+			var t: float = float(j) / float(subdivisions)
+			var point: Vector2 = _catmull_rom(p0, p1, p2, p3, t)
+			smoothed.append(point)
+
+	# Add the final point
+	smoothed.append(path[path.size() - 1])
+
+	return smoothed
+
+
+func _catmull_rom(p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, t: float) -> Vector2:
+	## Catmull-Rom spline interpolation between p1 and p2
+	var t2: float = t * t
+	var t3: float = t2 * t
+
+	var x: float = 0.5 * (
+		(2.0 * p1.x) +
+		(-p0.x + p2.x) * t +
+		(2.0 * p0.x - 5.0 * p1.x + 4.0 * p2.x - p3.x) * t2 +
+		(-p0.x + 3.0 * p1.x - 3.0 * p2.x + p3.x) * t3
+	)
+
+	var y: float = 0.5 * (
+		(2.0 * p1.y) +
+		(-p0.y + p2.y) * t +
+		(2.0 * p0.y - 5.0 * p1.y + 4.0 * p2.y - p3.y) * t2 +
+		(-p0.y + 3.0 * p1.y - 3.0 * p2.y + p3.y) * t3
+	)
+
+	return Vector2(x, y)
 
 
 func _place_fishing_pools(river_path: Array[Vector2]) -> Array[Vector2]:
@@ -1182,25 +1238,62 @@ func _spawn_entire_river(river_idx: int, river: Dictionary) -> void:
 	var left_edges: Array[Vector3] = []
 	var right_edges: Array[Vector3] = []
 
+	# Taper settings - river narrows at start and end
+	var taper_points: int = 8  # Number of points to taper over (increased for smoother taper)
+	var min_width_factor: float = 0.1  # Minimum width as fraction of full width
+
 	for i in range(path.size()):
 		var current: Vector2 = path[i]
-		var direction: Vector2
+		var perpendicular: Vector2
 
 		if i == 0:
-			# First point - use direction to next point
-			direction = (path[1] - path[0]).normalized()
+			# First point - use perpendicular to next segment
+			var direction: Vector2 = (path[1] - path[0]).normalized()
+			perpendicular = Vector2(-direction.y, direction.x)
 		elif i == path.size() - 1:
-			# Last point - use direction from previous point
-			direction = (path[i] - path[i - 1]).normalized()
+			# Last point - use perpendicular to previous segment
+			var direction: Vector2 = (path[i] - path[i - 1]).normalized()
+			perpendicular = Vector2(-direction.y, direction.x)
 		else:
-			# Middle points - average direction from prev and to next
+			# Middle points - calculate proper miter perpendicular
 			var dir_in: Vector2 = (path[i] - path[i - 1]).normalized()
 			var dir_out: Vector2 = (path[i + 1] - path[i]).normalized()
-			direction = ((dir_in + dir_out) / 2.0).normalized()
 
-		var perpendicular: Vector2 = Vector2(-direction.y, direction.x)
-		var left: Vector2 = current + perpendicular * half_width
-		var right: Vector2 = current - perpendicular * half_width
+			# Calculate the miter direction (bisector of the angle)
+			var miter: Vector2 = (dir_in + dir_out).normalized()
+
+			# If directions are nearly opposite, use perpendicular to incoming
+			if miter.length() < 0.1:
+				perpendicular = Vector2(-dir_in.y, dir_in.x)
+			else:
+				perpendicular = Vector2(-miter.y, miter.x)
+
+				# Calculate miter length factor to maintain consistent width
+				var perp_in: Vector2 = Vector2(-dir_in.y, dir_in.x)
+				var dot: float = perpendicular.dot(perp_in)
+				if abs(dot) > 0.1:
+					# Limit miter extension to prevent spikes at sharp corners
+					var miter_scale: float = 1.0 / abs(dot)
+					miter_scale = min(miter_scale, 2.0)  # Cap at 2x to avoid extreme spikes
+					perpendicular = perpendicular * miter_scale
+
+				perpendicular = perpendicular.normalized()
+
+		# Calculate taper factor for start and end of river
+		var taper: float = 1.0
+		if i < taper_points:
+			# Taper at start - use smooth easing
+			var t: float = float(i) / float(taper_points)
+			taper = min_width_factor + (1.0 - min_width_factor) * (t * t)  # Quadratic ease-in
+		elif i > path.size() - 1 - taper_points:
+			# Taper at end - use smooth easing
+			var dist_from_end: int = path.size() - 1 - i
+			var t: float = float(dist_from_end) / float(taper_points)
+			taper = min_width_factor + (1.0 - min_width_factor) * (t * t)  # Quadratic ease-in
+
+		var current_half_width: float = half_width * taper
+		var left: Vector2 = current + perpendicular * current_half_width
+		var right: Vector2 = current - perpendicular * current_half_width
 
 		left_edges.append(Vector3(left.x, water_y, left.y))
 		right_edges.append(Vector3(right.x, water_y, right.y))

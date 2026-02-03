@@ -14,8 +14,8 @@ var landing_speed: float = 3.0
 
 # Perch settings
 var perch_height: float = 0.0  # Height above terrain when perched (can be on ground or in tree)
-var chirp_interval_min: float = 5.0
-var chirp_interval_max: float = 15.0
+var chirp_interval_min: float = 12.0  # Longer intervals - many birds in world
+var chirp_interval_max: float = 30.0
 var chirp_timer: float = 0.0
 
 # Wing animation
@@ -227,12 +227,9 @@ func _flap_wings(delta: float) -> void:
 		wing_left.position.y = 0.10 + y_offset
 		wing_right.position.y = 0.10 + y_offset
 
-	# Play flap sound occasionally
-	if sin(wing_angle * TAU) > 0.9 and not is_wings_up:
+	# Track wing position for animation (sound removed - too frequent with many birds)
+	if sin(wing_angle * TAU) > 0.9:
 		is_wings_up = true
-		var sfx_manager: Node = get_node_or_null("/root/SFXManager")
-		if sfx_manager and sfx_manager.has_method("play_sfx"):
-			sfx_manager.play_sfx("bird_flap")
 	elif sin(wing_angle * TAU) < 0:
 		is_wings_up = false
 
@@ -246,9 +243,11 @@ func _fold_wings() -> void:
 
 
 func _chirp() -> void:
-	var sfx_manager: Node = get_node_or_null("/root/SFXManager")
-	if sfx_manager and sfx_manager.has_method("play_sfx"):
-		sfx_manager.play_sfx("bird_chirp")
+	# Only chirp if player is nearby (sounds are 2D, not spatial)
+	if player and global_position.distance_to(player.global_position) < 15.0:
+		var sfx_manager: Node = get_node_or_null("/root/SFXManager")
+		if sfx_manager and sfx_manager.has_method("play_sfx"):
+			sfx_manager.play_sfx("bird_chirp")
 
 
 func _start_flying() -> void:

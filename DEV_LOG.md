@@ -1347,8 +1347,8 @@ Added to SFXManager with cooldowns:
 ## Next Session
 
 ### Planned Tasks
-1. Source ~23 sound files from Pixabay to populate sfx directories (including animal sounds)
-2. Add UI sounds to menus (optional)
+1. ~~Source ~23 sound files from Pixabay to populate sfx directories (including animal sounds)~~ ✓ Done
+2. ~~Add UI sounds to menus (optional)~~ ✓ Done
 3. Game balancing and polish
 4. Optional: DualSense haptics and adaptive triggers
 5. Cave entrances in rocky regions (deferred)

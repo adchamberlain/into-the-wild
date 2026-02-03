@@ -116,10 +116,11 @@ func _process_hop(delta: float) -> void:
 		global_position = hop_end_pos
 		hop_count += 1
 
-		# Play hop sound
-		var sfx_manager: Node = get_node_or_null("/root/SFXManager")
-		if sfx_manager and sfx_manager.has_method("play_sfx"):
-			sfx_manager.play_sfx("rabbit_hop")
+		# Play hop sound only if player is very close (sounds are 2D, not spatial)
+		if player and global_position.distance_to(player.global_position) < 8.0:
+			var sfx_manager: Node = get_node_or_null("/root/SFXManager")
+			if sfx_manager and sfx_manager.has_method("play_sfx"):
+				sfx_manager.play_sfx("rabbit_hop")
 
 		# Start next hop if we have more
 		if hop_count < target_hop_count:

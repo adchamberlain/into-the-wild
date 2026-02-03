@@ -28,10 +28,10 @@ const DEFAULT_COOLDOWNS: Dictionary = {
 	"menu_close": 0.1,
 	"select": 0.05,
 	"cancel": 0.1,
-	# Animal sounds
-	"rabbit_hop": 0.2,
-	"bird_chirp": 0.5,
-	"bird_flap": 0.3,
+	# Animal sounds - very long cooldowns since many animals exist in world
+	"rabbit_hop": 3.0,  # Only hear a hop every 3 seconds max
+	"bird_chirp": 8.0,  # Rare chirps
+	"bird_flap": 5.0,   # Rare flap sounds
 }
 
 # Anti-repetition tracking for footsteps
