@@ -28,6 +28,10 @@ const DEFAULT_COOLDOWNS: Dictionary = {
 	"menu_close": 0.1,
 	"select": 0.05,
 	"cancel": 0.1,
+	# Animal sounds
+	"rabbit_hop": 0.2,
+	"bird_chirp": 0.5,
+	"bird_flap": 0.3,
 }
 
 # Anti-repetition tracking for footsteps
@@ -63,6 +67,11 @@ const SFX_PATHS: Dictionary = {
 	# Placement sounds
 	"place_confirm": "res://assets/audio/sfx/placement/confirm.mp3",
 	"place_cancel": "res://assets/audio/sfx/placement/cancel.mp3",
+
+	# Animal sounds
+	"rabbit_hop": "res://assets/audio/sfx/animals/rabbit_hop.mp3",
+	"bird_chirp": "res://assets/audio/sfx/animals/bird_chirp.mp3",
+	"bird_flap": "res://assets/audio/sfx/animals/bird_flap.mp3",
 }
 
 # Footstep paths (multiple variants per surface)

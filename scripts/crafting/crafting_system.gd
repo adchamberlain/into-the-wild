@@ -26,6 +26,14 @@ func _load_recipes() -> void:
 	# Basic recipes (hand-craftable with C key)
 	# Advanced recipes require crafting bench (requires_bench: true)
 	recipes = {
+		"primitive_axe": {
+			"name": "Primitive Axe",
+			"inputs": {"river_rock": 1, "branch": 1},
+			"output_type": "primitive_axe",
+			"output_amount": 1,
+			"description": "A very crude axe. Better than nothing.",
+			"requires_bench": false
+		},
 		"stone_axe": {
 			"name": "Stone Axe",
 			"inputs": {"river_rock": 2, "branch": 1},
@@ -148,6 +156,51 @@ func _load_recipes() -> void:
 			"output_amount": 1,
 			"description": "A portable ladder for climbing steep cliffs.",
 			"requires_bench": true
+		},
+		"snare_trap_kit": {
+			"name": "Snare Trap Kit",
+			"inputs": {"rope": 2, "branch": 4},
+			"output_type": "snare_trap_kit",
+			"output_amount": 1,
+			"description": "Materials to build a trap for small game.",
+			"requires_bench": true,
+			"min_camp_level": 2
+		},
+		"smithing_station_kit": {
+			"name": "Smithing Station Kit",
+			"inputs": {"river_rock": 15, "wood": 8, "rope": 2},
+			"output_type": "smithing_station_kit",
+			"output_amount": 1,
+			"description": "Materials to build a forge for smelting ore.",
+			"requires_bench": true,
+			"min_camp_level": 3
+		},
+		"smoker_kit": {
+			"name": "Smoker Kit",
+			"inputs": {"wood": 10, "river_rock": 6, "rope": 2},
+			"output_type": "smoker_kit",
+			"output_amount": 1,
+			"description": "Materials to build a meat smoker.",
+			"requires_bench": true,
+			"min_camp_level": 3
+		},
+		"weather_vane_kit": {
+			"name": "Weather Vane Kit",
+			"inputs": {"branch": 6, "metal_ingot": 1},
+			"output_type": "weather_vane_kit",
+			"output_amount": 1,
+			"description": "Materials to build a weather forecasting vane.",
+			"requires_bench": true,
+			"min_camp_level": 3
+		},
+		"metal_axe": {
+			"name": "Metal Axe",
+			"inputs": {"metal_ingot": 2, "branch": 2},
+			"output_type": "metal_axe",
+			"output_amount": 1,
+			"description": "A strong metal axe. Very efficient!",
+			"requires_bench": true,
+			"min_camp_level": 3
 		}
 	}
 

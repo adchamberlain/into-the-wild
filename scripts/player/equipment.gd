@@ -18,11 +18,26 @@ const EQUIPPABLE_ITEMS: Dictionary = {
 		"light_energy": 2.0,
 		"light_range": 10.0
 	},
+	"primitive_axe": {
+		"name": "Primitive Axe",
+		"slot": 14,
+		"has_light": false,
+		"tool_type": "axe",
+		"effectiveness": 0.5
+	},
 	"stone_axe": {
 		"name": "Stone Axe",
 		"slot": 2,
 		"has_light": false,
-		"tool_type": "axe"
+		"tool_type": "axe",
+		"effectiveness": 1.0
+	},
+	"metal_axe": {
+		"name": "Metal Axe",
+		"slot": 15,
+		"has_light": false,
+		"tool_type": "axe",
+		"effectiveness": 2.0
 	},
 	"campfire_kit": {
 		"name": "Campfire Kit",
@@ -88,12 +103,38 @@ const EQUIPPABLE_ITEMS: Dictionary = {
 		"slot": 13,
 		"has_light": false,
 		"placeable": true
+	},
+	"snare_trap_kit": {
+		"name": "Snare Trap Kit",
+		"slot": 16,
+		"has_light": false,
+		"placeable": true
+	},
+	"smithing_station_kit": {
+		"name": "Smithing Station Kit",
+		"slot": 17,
+		"has_light": false,
+		"placeable": true
+	},
+	"smoker_kit": {
+		"name": "Smoker Kit",
+		"slot": 18,
+		"has_light": false,
+		"placeable": true
+	},
+	"weather_vane_kit": {
+		"name": "Weather Vane Kit",
+		"slot": 19,
+		"has_light": false,
+		"placeable": true
 	}
 }
 
 # Tool durability settings
 const TOOL_MAX_DURABILITY: Dictionary = {
+	"primitive_axe": 30,
 	"stone_axe": 150,
+	"metal_axe": 300,
 	"fishing_rod": 50
 }
 
@@ -287,7 +328,7 @@ func equip(item_type: String) -> bool:
 	if tool_type == "fishing":
 		_create_fishing_rod()
 	elif tool_type == "axe":
-		_create_stone_axe()
+		_create_axe_model(item_type)
 
 	print("[Equipment] Equipped %s" % item_data.get("name", item_type))
 	item_equipped.emit(item_type)
@@ -481,6 +522,15 @@ func has_tool_equipped(tool_type: String) -> bool:
 	return item_data.get("tool_type", "") == tool_type
 
 
+## Get the effectiveness multiplier for the currently equipped tool.
+## Returns 1.0 if no tool or tool has no effectiveness defined.
+func get_tool_effectiveness() -> float:
+	if equipped_item == "":
+		return 1.0
+	var item_data: Dictionary = EQUIPPABLE_ITEMS.get(equipped_item, {})
+	return item_data.get("effectiveness", 1.0)
+
+
 func _create_torch_light(item_data: Dictionary) -> void:
 	if torch_light:
 		return
@@ -512,12 +562,13 @@ func _remove_torch_light() -> void:
 		torch_light = null
 
 
-func _create_stone_axe() -> void:
+## Create an axe model based on the axe type.
+func _create_axe_model(axe_type: String) -> void:
 	if stone_axe_model:
 		return
 
 	stone_axe_model = Node3D.new()
-	stone_axe_model.name = "StoneAxeModel"
+	stone_axe_model.name = "AxeModel"
 
 	# Handle (wooden stick) - blocky
 	var handle := MeshInstance3D.new()
@@ -533,52 +584,18 @@ func _create_stone_axe() -> void:
 
 	stone_axe_model.add_child(handle)
 
-	# Stone head - blocky wedge shape
-	# Head extends in -Z direction (toward screen/target when swinging)
-	var head := MeshInstance3D.new()
-	head.name = "Head"
-	var head_mesh := BoxMesh.new()
-	head_mesh.size = Vector3(0.06, 0.12, 0.18)  # Thin, short, deep (extends in Z)
-	head.mesh = head_mesh
-
-	var head_mat := StandardMaterial3D.new()
-	head_mat.albedo_color = Color(0.5, 0.5, 0.5)  # Stone grey
-	head.material_override = head_mat
-	head.position = Vector3(0, 0.22, -0.06)  # At top of handle, offset forward
-
-	stone_axe_model.add_child(head)
-
-	# Blade edge (slightly darker to show the cutting edge) - faces forward (-Z)
-	var blade := MeshInstance3D.new()
-	blade.name = "Blade"
-	var blade_mesh := BoxMesh.new()
-	blade_mesh.size = Vector3(0.05, 0.1, 0.02)
-	blade.mesh = blade_mesh
-
-	var blade_mat := StandardMaterial3D.new()
-	blade_mat.albedo_color = Color(0.4, 0.4, 0.42)  # Darker stone
-	blade.material_override = blade_mat
-	blade.position = Vector3(0, 0.22, -0.16)  # At front edge of head
-
-	stone_axe_model.add_child(blade)
-
-	# Binding (rope/vine wrapping where head meets handle)
-	var binding := MeshInstance3D.new()
-	binding.name = "Binding"
-	var binding_mesh := BoxMesh.new()
-	binding_mesh.size = Vector3(0.08, 0.06, 0.08)
-	binding.mesh = binding_mesh
-
-	var binding_mat := StandardMaterial3D.new()
-	binding_mat.albedo_color = Color(0.55, 0.45, 0.3)  # Rope/leather tan
-	binding.material_override = binding_mat
-	binding.position = Vector3(0, 0.2, 0)  # Where head meets handle
-
-	stone_axe_model.add_child(binding)
+	# Create head based on axe type
+	match axe_type:
+		"primitive_axe":
+			_add_primitive_axe_head(stone_axe_model)
+		"stone_axe":
+			_add_stone_axe_head(stone_axe_model)
+		"metal_axe":
+			_add_metal_axe_head(stone_axe_model)
+		_:
+			_add_stone_axe_head(stone_axe_model)  # Default to stone
 
 	# Position: held in right hand, vertical with natural 18 degree clockwise tilt
-	# Lower-right of screen, handle pointing down
-	# Use constants to ensure consistent positioning after animations
 	stone_axe_model.position = AXE_REST_POSITION
 	stone_axe_model.rotation_degrees = AXE_REST_ROTATION
 
@@ -587,6 +604,144 @@ func _create_stone_axe() -> void:
 		var camera: Camera3D = player.get_node_or_null("Camera3D")
 		if camera:
 			camera.add_child(stone_axe_model)
+
+
+func _add_primitive_axe_head(axe_model: Node3D) -> void:
+	# Very crude stone head - irregular, smaller
+	var head := MeshInstance3D.new()
+	head.name = "Head"
+	var head_mesh := BoxMesh.new()
+	head_mesh.size = Vector3(0.05, 0.10, 0.12)  # Smaller than stone axe
+	head.mesh = head_mesh
+
+	var head_mat := StandardMaterial3D.new()
+	head_mat.albedo_color = Color(0.45, 0.42, 0.38)  # Rough greyish stone
+	head.material_override = head_mat
+	head.position = Vector3(0, 0.22, -0.04)
+
+	axe_model.add_child(head)
+
+	# Crude blade edge
+	var blade := MeshInstance3D.new()
+	blade.name = "Blade"
+	var blade_mesh := BoxMesh.new()
+	blade_mesh.size = Vector3(0.04, 0.08, 0.02)
+	blade.mesh = blade_mesh
+
+	var blade_mat := StandardMaterial3D.new()
+	blade_mat.albedo_color = Color(0.38, 0.36, 0.34)
+	blade.material_override = blade_mat
+	blade.position = Vector3(0, 0.22, -0.11)
+
+	axe_model.add_child(blade)
+
+	# Simple vine binding (thinner, more crude)
+	var binding := MeshInstance3D.new()
+	binding.name = "Binding"
+	var binding_mesh := BoxMesh.new()
+	binding_mesh.size = Vector3(0.06, 0.04, 0.06)
+	binding.mesh = binding_mesh
+
+	var binding_mat := StandardMaterial3D.new()
+	binding_mat.albedo_color = Color(0.35, 0.45, 0.25)  # Green vine
+	binding.material_override = binding_mat
+	binding.position = Vector3(0, 0.2, 0)
+
+	axe_model.add_child(binding)
+
+
+func _add_stone_axe_head(axe_model: Node3D) -> void:
+	# Stone head - blocky wedge shape
+	var head := MeshInstance3D.new()
+	head.name = "Head"
+	var head_mesh := BoxMesh.new()
+	head_mesh.size = Vector3(0.06, 0.12, 0.18)
+	head.mesh = head_mesh
+
+	var head_mat := StandardMaterial3D.new()
+	head_mat.albedo_color = Color(0.5, 0.5, 0.5)  # Stone grey
+	head.material_override = head_mat
+	head.position = Vector3(0, 0.22, -0.06)
+
+	axe_model.add_child(head)
+
+	# Blade edge
+	var blade := MeshInstance3D.new()
+	blade.name = "Blade"
+	var blade_mesh := BoxMesh.new()
+	blade_mesh.size = Vector3(0.05, 0.1, 0.02)
+	blade.mesh = blade_mesh
+
+	var blade_mat := StandardMaterial3D.new()
+	blade_mat.albedo_color = Color(0.4, 0.4, 0.42)
+	blade.material_override = blade_mat
+	blade.position = Vector3(0, 0.22, -0.16)
+
+	axe_model.add_child(blade)
+
+	# Binding
+	var binding := MeshInstance3D.new()
+	binding.name = "Binding"
+	var binding_mesh := BoxMesh.new()
+	binding_mesh.size = Vector3(0.08, 0.06, 0.08)
+	binding.mesh = binding_mesh
+
+	var binding_mat := StandardMaterial3D.new()
+	binding_mat.albedo_color = Color(0.55, 0.45, 0.3)
+	binding.material_override = binding_mat
+	binding.position = Vector3(0, 0.2, 0)
+
+	axe_model.add_child(binding)
+
+
+func _add_metal_axe_head(axe_model: Node3D) -> void:
+	# Metal head - larger, more refined shape
+	var head := MeshInstance3D.new()
+	head.name = "Head"
+	var head_mesh := BoxMesh.new()
+	head_mesh.size = Vector3(0.06, 0.14, 0.22)  # Larger than stone
+	head.mesh = head_mesh
+
+	var head_mat := StandardMaterial3D.new()
+	head_mat.albedo_color = Color(0.55, 0.55, 0.58)  # Light metal grey
+	head_mat.metallic = 0.7
+	head_mat.roughness = 0.3
+	head.material_override = head_mat
+	head.position = Vector3(0, 0.24, -0.08)
+
+	axe_model.add_child(head)
+
+	# Sharp metal blade edge
+	var blade := MeshInstance3D.new()
+	blade.name = "Blade"
+	var blade_mesh := BoxMesh.new()
+	blade_mesh.size = Vector3(0.04, 0.12, 0.02)
+	blade.mesh = blade_mesh
+
+	var blade_mat := StandardMaterial3D.new()
+	blade_mat.albedo_color = Color(0.7, 0.7, 0.72)  # Shiny edge
+	blade_mat.metallic = 0.9
+	blade_mat.roughness = 0.1
+	blade.material_override = blade_mat
+	blade.position = Vector3(0, 0.24, -0.20)
+
+	axe_model.add_child(blade)
+
+	# Metal collar (instead of binding)
+	var collar := MeshInstance3D.new()
+	collar.name = "Collar"
+	var collar_mesh := BoxMesh.new()
+	collar_mesh.size = Vector3(0.08, 0.04, 0.08)
+	collar.mesh = collar_mesh
+
+	var collar_mat := StandardMaterial3D.new()
+	collar_mat.albedo_color = Color(0.4, 0.38, 0.36)  # Dark metal
+	collar_mat.metallic = 0.5
+	collar_mat.roughness = 0.5
+	collar.material_override = collar_mat
+	collar.position = Vector3(0, 0.22, 0)
+
+	axe_model.add_child(collar)
 
 
 func _remove_stone_axe() -> void:

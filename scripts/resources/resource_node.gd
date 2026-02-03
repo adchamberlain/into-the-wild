@@ -30,7 +30,8 @@ signal depleted()
 var is_depleted: bool = false
 var is_animating: bool = false
 var original_scale: Vector3
-var chop_progress: int = 0  # Current chops received
+var chop_progress: int = 0  # Current chops received (legacy, rounded from float)
+var chop_progress_float: float = 0.0  # Fractional chop progress for tool effectiveness
 
 # Respawn tracking
 var depleted_time: float = 0.0  # When the resource was depleted (game time)
@@ -163,14 +164,21 @@ func receive_chop(player: Node) -> bool:
 		if not equipment or not equipment.has_tool_equipped(required_tool):
 			return false
 
-	chop_progress += 1
-	print("[Resource] Chop %d/%d" % [chop_progress, chops_required])
+		# Apply tool effectiveness to chop progress
+		var effectiveness: float = equipment.get_tool_effectiveness()
+		chop_progress_float += effectiveness
+		chop_progress = int(chop_progress_float)  # Update integer for display
+		print("[Resource] Chop %.1f/%d (effectiveness: %.1f)" % [chop_progress_float, chops_required, effectiveness])
+	else:
+		chop_progress_float += 1.0
+		chop_progress = int(chop_progress_float)
+		print("[Resource] Chop %d/%d" % [chop_progress, chops_required])
 
 	# Play chop feedback animation (shake)
 	_play_chop_animation()
 
-	# Check if fully harvested
-	if chop_progress >= chops_required:
+	# Check if fully harvested (using float for precision)
+	if chop_progress_float >= float(chops_required):
 		# Delay the gather to let chop animation play
 		get_tree().create_timer(0.2).timeout.connect(_complete_harvest.bind(player))
 
@@ -301,6 +309,7 @@ func _set_depleted_state(depleted: bool) -> void:
 func respawn() -> void:
 	# Reset state
 	chop_progress = 0
+	chop_progress_float = 0.0
 	scale = original_scale
 
 	# Restore visibility and collision

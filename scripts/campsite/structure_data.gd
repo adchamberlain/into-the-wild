@@ -79,6 +79,38 @@ const STRUCTURES: Dictionary = {
 		"item_required": "rope_ladder_kit",
 		"category": "utility",
 		"footprint_radius": 0.5
+	},
+	"snare_trap": {
+		"name": "Snare Trap",
+		"scene": "res://scenes/campsite/structures/snare_trap.tscn",
+		"item_required": "snare_trap_kit",
+		"category": "hunting",
+		"min_camp_level": 2,
+		"footprint_radius": 0.8
+	},
+	"smithing_station": {
+		"name": "Smithing Station",
+		"scene": "res://scenes/campsite/structures/smithing_station.tscn",
+		"item_required": "smithing_station_kit",
+		"category": "crafting",
+		"min_camp_level": 3,
+		"footprint_radius": 1.2
+	},
+	"smoker": {
+		"name": "Smoker",
+		"scene": "res://scenes/campsite/structures/smoker.tscn",
+		"item_required": "smoker_kit",
+		"category": "food",
+		"min_camp_level": 3,
+		"footprint_radius": 1.0
+	},
+	"weather_vane": {
+		"name": "Weather Vane",
+		"scene": "res://scenes/campsite/structures/weather_vane.tscn",
+		"item_required": "weather_vane_kit",
+		"category": "utility",
+		"min_camp_level": 3,
+		"footprint_radius": 0.5
 	}
 }
 
@@ -92,7 +124,11 @@ const PLACEABLE_ITEMS: Array[String] = [
 	"garden_plot_kit",
 	"canvas_tent_kit",
 	"cabin_kit",
-	"rope_ladder_kit"
+	"rope_ladder_kit",
+	"snare_trap_kit",
+	"smithing_station_kit",
+	"smoker_kit",
+	"weather_vane_kit"
 ]
 
 

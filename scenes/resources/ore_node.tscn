@@ -1,0 +1,53 @@
+[gd_scene load_steps=7 format=3 uid="uid://ore_node001"]
+
+[ext_resource type="Script" path="res://scripts/resources/ore_node.gd" id="1_ore"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ore"]
+size = Vector3(1.2, 0.8, 1.0)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ore_base"]
+size = Vector3(1.2, 0.8, 1.0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ore_base"]
+albedo_color = Color(0.42, 0.42, 0.44, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ore_vein"]
+size = Vector3(0.3, 0.25, 0.05)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ore_vein"]
+albedo_color = Color(0.55, 0.35, 0.25, 1)
+
+[node name="OreNode" type="StaticBody3D"]
+script = ExtResource("1_ore")
+resource_type = "iron_ore"
+resource_amount = 2
+interaction_text = "Mine"
+secondary_resource_type = "river_rock"
+secondary_resource_amount = 1
+required_tool = "axe"
+chops_required = 3
+adjust_to_terrain = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+shape = SubResource("BoxShape3D_ore")
+
+[node name="RockBase" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+mesh = SubResource("BoxMesh_ore_base")
+material_override = SubResource("StandardMaterial3D_ore_base")
+
+[node name="OreVein1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0.5, 0.48)
+mesh = SubResource("BoxMesh_ore_vein")
+material_override = SubResource("StandardMaterial3D_ore_vein")
+
+[node name="OreVein2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.25, 0.35, 0.48)
+mesh = SubResource("BoxMesh_ore_vein")
+material_override = SubResource("StandardMaterial3D_ore_vein")
+
+[node name="OreVein3" type="MeshInstance3D" parent="."]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0.58, 0.45, 0.15)
+mesh = SubResource("BoxMesh_ore_vein")
+material_override = SubResource("StandardMaterial3D_ore_vein")

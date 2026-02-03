@@ -1142,10 +1142,212 @@ Note: Resource respawning already had this check in resource_manager.gd.
 
 ---
 
+## Session 41 - Tool Tiers, Traps & Stations (2026-02-02)
+
+**Three major feature sets** expanding content depth: tool tiers, animal trapping, and level 3 crafting stations.
+
+### Tool Tier System
+
+**Tool Effectiveness Multiplier** - Different axes now have varying chopping power:
+
+| Tool | Durability | Effectiveness | Chops per Tree |
+|------|------------|---------------|----------------|
+| Primitive Axe | 30 | 0.5 | 4 |
+| Stone Axe | 150 | 1.0 | 2 |
+| Metal Axe | 300 | 2.0 | 1 |
+
+**Implementation**:
+- Added `effectiveness` field to `EQUIPPABLE_ITEMS` in equipment.gd
+- New `get_tool_effectiveness()` helper function
+- ResourceNode now uses `chop_progress_float` for fractional progress
+- Each axe type has distinct visual model (primitive has vine binding, metal has shiny blade)
+
+**Recipes**:
+- Primitive Axe: 1 river_rock + 1 branch (no bench required)
+- Metal Axe: 2 metal_ingot + 2 branch (requires bench, camp level 3)
+
+### Ore Resource & Smithing
+
+**Iron Ore Deposits**:
+- New `OreNode` class extending ResourceNode
+- Spawns in ROCKY (4.5% chance) and HILLS (1.5% chance) regions
+- Requires axe, 3 chops to harvest
+- Yields: 2 iron_ore + 1 river_rock
+
+**Smithing Station** (Level 3 structure):
+- Smelts iron_ore → metal_ingot
+- Requires 2 wood as fuel per smelt
+- Processing time: 120 seconds (2 game hours)
+- Visual: Stone forge with coal pit, bellows, and anvil
+
+**Recipe**: 15 river_rock + 8 wood + 2 rope (requires bench, camp level 3)
+
+### Snare Trap & Animal Resources
+
+**Snare Trap** (Level 2 structure):
+- Requires bait (berry, mushroom, or herb)
+- Checks for catch every game hour when baited
+- 15% catch chance per check
+
+**Catch Table**:
+| Animal | Chance | Loot |
+|--------|--------|------|
+| Rabbit | 70% | 2 raw_meat + 1 hide |
+| Bird | 30% | 1 raw_meat + 2 feathers |
+
+**New Resources**: raw_meat, hide, feathers
+
+**Recipe**: 2 rope + 4 branches (requires bench, camp level 2)
+
+### Smoker Structure
+
+**Smoker** (Level 3 structure):
+- Converts raw_meat → smoked_meat
+- Also works with fish → smoked_fish
+- Requires 1 wood as fuel
+- Processing time: 180 seconds (3 game hours)
+- Visual: Wooden frame with smoking racks over stone fire pit
+
+**Recipe**: 10 wood + 6 river_rock + 2 rope (requires bench, camp level 3)
+
+### Weather Vane
+
+**Weather Vane** (Level 3 structure):
+- Shows current weather on interact
+- Displays forecast for next weather period
+- Arrow wobbles with animated wind effect
+- Cardinal direction markers (N/S/E/W)
+
+**Weather Manager Updates**:
+- Added `next_weather` tracking
+- New `_generate_forecast()` function
+- `get_current_weather_name()` and `get_next_weather()` API
+- 85% forecast accuracy (slight chance of being wrong)
+
+**Recipe**: 6 branches + 1 metal_ingot (requires bench, camp level 3)
+
+### New Files Created
+
+| File | Purpose |
+|------|---------|
+| `scripts/resources/ore_node.gd` | Ore deposit resource node |
+| `scenes/resources/ore_node.tscn` | Ore visual with rust-colored veins |
+| `scripts/campsite/structure_smithing_station.gd` | Ore smelting logic |
+| `scripts/campsite/structure_snare_trap.gd` | Animal trapping logic |
+| `scripts/campsite/structure_smoker.gd` | Meat smoking logic |
+| `scripts/campsite/structure_weather_vane.gd` | Weather display logic |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/player/equipment.gd` | Added primitive_axe, metal_axe, effectiveness, new kit items |
+| `scripts/resources/resource_node.gd` | Fractional chop progress with tool effectiveness |
+| `scripts/crafting/crafting_system.gd` | 6 new recipes |
+| `scripts/campsite/structure_data.gd` | 4 new structures + placeables |
+| `scripts/campsite/placement_system.gd` | Visual creation for new structures |
+| `scripts/world/terrain_chunk.gd` | Ore spawning in ROCKY/HILLS |
+| `scripts/world/chunk_manager.gd` | Load ore_scene |
+| `scripts/world/weather_manager.gd` | Forecast system |
+
+---
+
+## Session 42 - Ambient Animals (2026-02-02)
+
+**Ambient wildlife system** that provides atmospheric life to the wilderness. Rabbits and birds spawn in chunks and flee when the player approaches.
+
+### Architecture
+
+**Base Class** (`scripts/creatures/ambient_animal_base.gd`):
+- State machine: IDLE → MOVING → FLEEING
+- Throttled player proximity checks (4x/second for performance)
+- Configurable flee and awareness distances
+- Terrain height sampling via ChunkManager
+- `despawn()` method for chunk cleanup
+
+### Rabbit Behavior
+
+**AmbientRabbit** (`scripts/creatures/ambient_rabbit.gd`):
+- Hopping movement with parabolic arc animation
+- 3 hops per movement cycle, 8 rapid hops when fleeing
+- Flee distance: 8 units
+- Brown-grey blocky mesh (body, head, ears, tail)
+- Squash/stretch animation during hops
+
+| State | Behavior |
+|-------|----------|
+| IDLE | Stand still 2-8 seconds |
+| MOVING | 3 hops in random direction |
+| FLEEING | 8 rapid hops away from player |
+
+### Bird Behavior
+
+**AmbientBird** (`scripts/creatures/ambient_bird.gd`):
+- Hybrid perched/flying behavior
+- Wing flapping animation during flight
+- Chirps while perched (5-15 second intervals)
+- Flee distance: 12 units
+- Grey-blue blocky mesh (body, head, wings, tail, beak)
+
+| State | Behavior |
+|-------|----------|
+| PERCHED | Sit on ground or elevated, chirp periodically |
+| FLYING | Fly 3-8s toward random target |
+| LANDING | Descend to ground or tree height |
+| FLEEING | Take off vertically, fly away fast |
+
+### Spawn Rates by Region
+
+| Region | Rabbits | Birds |
+|--------|---------|-------|
+| MEADOW | 1-2 | 1-2 |
+| FOREST | 1-3 | 1-2 |
+| HILLS | 0-1 | 1-3 |
+| ROCKY | 0 | 0-2 |
+
+Maximum 4 animals per chunk for performance.
+
+### Performance Optimizations
+
+1. **Node3D only** - No CharacterBody3D or physics
+2. **Throttled checks** - Player distance checked 4x/second, not every frame
+3. **Simple meshes** - BoxMesh for all parts (matches game aesthetic)
+4. **Chunk lifecycle** - Created/destroyed with chunks, no global tracking
+5. **Deterministic seeding** - Consistent animal positions per chunk
+
+### Sound Effects
+
+Added to SFXManager with cooldowns:
+- `rabbit_hop` (0.2s cooldown)
+- `bird_chirp` (0.5s cooldown)
+- `bird_flap` (0.3s cooldown)
+
+**Note**: Sound files needed in `assets/audio/sfx/animals/`:
+- `rabbit_hop.mp3` - Soft thump
+- `bird_chirp.mp3` - Single chirp
+- `bird_flap.mp3` - Wing sound
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `scripts/creatures/ambient_animal_base.gd` | Base class with state machine |
+| `scripts/creatures/ambient_rabbit.gd` | Hopping rabbit behavior |
+| `scripts/creatures/ambient_bird.gd` | Flying/perching bird behavior |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/terrain_chunk.gd` | Animal spawning, `spawned_animals` array, cleanup in `unload()` |
+| `scripts/core/sfx_manager.gd` | Animal sound paths and cooldowns |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Source ~23 sound files from Pixabay to populate sfx directories
+1. Source ~23 sound files from Pixabay to populate sfx directories (including animal sounds)
 2. Add UI sounds to menus (optional)
 3. Game balancing and polish
 4. Optional: DualSense haptics and adaptive triggers

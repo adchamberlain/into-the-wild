@@ -126,6 +126,7 @@ var rock_scene: PackedScene
 var berry_bush_scene: PackedScene
 var mushroom_scene: PackedScene
 var herb_scene: PackedScene
+var ore_scene: PackedScene
 
 # Resource spawning settings
 @export var branch_density: float = 0.08  # Branches per grid cell chance
@@ -657,6 +658,7 @@ func _load_scenes() -> void:
 	berry_bush_scene = load("res://scenes/resources/berry_bush.tscn")
 	mushroom_scene = load("res://scenes/resources/mushroom.tscn")
 	herb_scene = load("res://scenes/resources/herb.tscn")
+	ore_scene = load("res://scenes/resources/ore_node.tscn")
 
 	if not tree_scene:
 		push_warning("[ChunkManager] Failed to load tree scene")

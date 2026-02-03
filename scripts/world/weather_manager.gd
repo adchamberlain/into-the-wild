@@ -11,6 +11,10 @@ var current_weather: Weather = Weather.CLEAR
 var weather_duration_remaining: float = 0.0
 var weather_enabled: bool = true  # Can be toggled by ConfigMenu
 
+# Forecast system - predicts next weather
+var next_weather: Weather = Weather.CLEAR
+var forecast_accuracy: float = 0.85  # 85% chance forecast is correct
+
 # Damage rates (per second)
 @export var storm_damage_rate: float = 2.0
 @export var cold_damage_rate: float = 1.5
@@ -226,27 +230,32 @@ func _roll_for_new_weather() -> void:
 	cumulative += rain_chance
 	if roll < cumulative:
 		_set_weather(Weather.RAIN)
+		_generate_forecast()
 		return
 
 	# Fog - more common in early game (spring-like)
 	cumulative += fog_chance
 	if roll < cumulative:
 		_set_weather(Weather.FOG)
+		_generate_forecast()
 		return
 
 	# Heat wave - rare
 	cumulative += heat_wave_chance
 	if roll < cumulative:
 		_set_weather(Weather.HEAT_WAVE)
+		_generate_forecast()
 		return
 
 	# Cold snap - rare
 	cumulative += cold_snap_chance
 	if roll < cumulative:
 		_set_weather(Weather.COLD_SNAP)
+		_generate_forecast()
 		return
 
 	# Otherwise stays clear (most likely outcome ~67% chance)
+	_generate_forecast()
 	print("[WeatherManager] Weather check: staying clear")
 
 
@@ -404,3 +413,75 @@ func set_weather_debug(weather_name: String) -> void:
 			_set_weather(Weather.HEAT_WAVE)
 		"cold", "cold_snap", "coldsnap":
 			_set_weather(Weather.COLD_SNAP)
+
+
+## Generate a forecast for the next weather period.
+func _generate_forecast() -> void:
+	# Simulate what the next weather might be
+	var roll: float = randf()
+	var cumulative: float = 0.0
+
+	# If current weather is not clear, there's a chance it continues
+	if current_weather != Weather.CLEAR:
+		if randf() < weather_persistence_chance:
+			next_weather = current_weather
+			return
+
+	# Otherwise roll for new weather (same logic as _roll_for_new_weather)
+	cumulative += rain_chance
+	if roll < cumulative:
+		next_weather = Weather.RAIN
+		return
+
+	cumulative += fog_chance
+	if roll < cumulative:
+		next_weather = Weather.FOG
+		return
+
+	cumulative += heat_wave_chance
+	if roll < cumulative:
+		next_weather = Weather.HEAT_WAVE
+		return
+
+	cumulative += cold_snap_chance
+	if roll < cumulative:
+		next_weather = Weather.COLD_SNAP
+		return
+
+	next_weather = Weather.CLEAR
+
+
+## Get the current weather name (for weather vane).
+func get_current_weather_name() -> String:
+	return get_weather_name()
+
+
+## Get the forecast for the next weather period.
+## Note: forecast has ~85% accuracy, may be wrong!
+func get_next_weather() -> String:
+	# Slight chance the forecast is wrong
+	if randf() > forecast_accuracy:
+		# Return a random different weather
+		var weathers: Array[Weather] = [Weather.CLEAR, Weather.RAIN, Weather.FOG, Weather.STORM]
+		var wrong_weather: Weather = weathers[randi() % weathers.size()]
+		return _weather_to_string(wrong_weather)
+
+	return _weather_to_string(next_weather)
+
+
+## Convert Weather enum to string.
+func _weather_to_string(weather: Weather) -> String:
+	match weather:
+		Weather.CLEAR:
+			return "Clear"
+		Weather.RAIN:
+			return "Rain"
+		Weather.STORM:
+			return "Storm"
+		Weather.FOG:
+			return "Fog"
+		Weather.HEAT_WAVE:
+			return "Heat Wave"
+		Weather.COLD_SNAP:
+			return "Cold Snap"
+	return "Unknown"

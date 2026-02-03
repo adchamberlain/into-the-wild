@@ -11,6 +11,7 @@ A solo camping adventure game built in Godot 4.5. Survive in the wilderness by g
 - **Biome variety** - Mixed forests with oak, big oak, and birch trees
 - **Natural features** - Ponds for swimming and fishing, grass, flowers
 - **Blocky terrain** - Cell-based terrain with vertical cliffs and height variation
+- **Ambient wildlife** - Rabbits and birds that flee when approached
 
 ### Survival Systems
 - **Health & Hunger** - Manage your vital stats to stay alive

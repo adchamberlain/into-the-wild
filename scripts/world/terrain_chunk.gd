@@ -16,6 +16,7 @@ var resources_container: Node3D
 # Track what we've spawned for cleanup
 var spawned_trees: Array[Node3D] = []
 var spawned_resources: Array[Node3D] = []
+var spawned_animals: Array[Node3D] = []
 var is_generated: bool = false
 
 
@@ -33,6 +34,7 @@ func generate() -> void:
 	_spawn_chunk_trees()
 	_spawn_chunk_resources()
 	_spawn_chunk_decorations()
+	_spawn_chunk_animals()
 
 	is_generated = true
 
@@ -668,6 +670,18 @@ func _spawn_chunk_resources() -> void:
 			resource_roll = rng.randf()
 			if resource_roll < chunk_manager.herb_density * herb_mult and chunk_manager.herb_scene:
 				_spawn_resource(chunk_manager.herb_scene, res_x, res_y, res_z, rng)
+				z += resource_grid_size
+				continue
+
+			# Ore deposits - spawn in ROCKY (4.5%) and HILLS (1.5%) regions
+			resource_roll = rng.randf()
+			var ore_chance: float = 0.0
+			if region == ChunkManager.RegionType.ROCKY:
+				ore_chance = 0.045  # 4.5% chance in rocky
+			elif region == ChunkManager.RegionType.HILLS:
+				ore_chance = 0.015  # 1.5% chance in hills
+			if resource_roll < ore_chance and chunk_manager.ore_scene:
+				_spawn_resource(chunk_manager.ore_scene, res_x, res_y, res_z, rng)
 
 			z += resource_grid_size
 		x += resource_grid_size
@@ -870,6 +884,113 @@ func _create_flower(pos: Vector3, petal_color: Color, rng: RandomNumberGenerator
 	decorations_container.add_child(flower)
 
 
+func _spawn_chunk_animals() -> void:
+	## Spawn ambient wildlife based on region type
+	var cell_size: float = chunk_manager.cell_size
+	var chunk_size_cells: int = chunk_manager.chunk_size_cells
+	var chunk_world_size: float = chunk_size_cells * cell_size
+
+	var chunk_world_x: float = chunk_coord.x * chunk_world_size
+	var chunk_world_z: float = chunk_coord.y * chunk_world_size
+
+	# Use deterministic random for consistent animal placement
+	var chunk_seed: int = chunk_coord.x * 91939 ^ chunk_coord.y * 37573
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = chunk_seed
+
+	# Get the dominant region for this chunk (sample center)
+	var center_x: float = chunk_world_x + chunk_world_size / 2.0
+	var center_z: float = chunk_world_z + chunk_world_size / 2.0
+	var region: ChunkManager.RegionType = chunk_manager.get_region_at(center_x, center_z)
+
+	# Determine spawn counts based on region
+	var rabbit_count: int = 0
+	var bird_count: int = 0
+
+	match region:
+		ChunkManager.RegionType.MEADOW:
+			rabbit_count = rng.randi_range(1, 2)
+			bird_count = rng.randi_range(1, 2)
+		ChunkManager.RegionType.FOREST:
+			rabbit_count = rng.randi_range(1, 3)
+			bird_count = rng.randi_range(1, 2)
+		ChunkManager.RegionType.HILLS:
+			rabbit_count = rng.randi_range(0, 1)
+			bird_count = rng.randi_range(1, 3)
+		ChunkManager.RegionType.ROCKY:
+			rabbit_count = 0
+			bird_count = rng.randi_range(0, 2)
+
+	# Cap total animals per chunk for performance
+	var max_animals: int = 4
+	var total_requested: int = rabbit_count + bird_count
+	if total_requested > max_animals:
+		# Scale down proportionally
+		var scale: float = float(max_animals) / float(total_requested)
+		rabbit_count = int(rabbit_count * scale)
+		bird_count = max_animals - rabbit_count
+
+	# Spawn rabbits
+	var spawned_rabbits: int = 0
+	for _i in range(rabbit_count):
+		var spawn_pos: Vector3 = _find_animal_spawn_position(rng, chunk_world_x, chunk_world_z, chunk_world_size)
+		if spawn_pos != Vector3.ZERO:
+			_spawn_rabbit(spawn_pos)
+			spawned_rabbits += 1
+
+	# Spawn birds
+	var spawned_birds: int = 0
+	for _i in range(bird_count):
+		var spawn_pos: Vector3 = _find_animal_spawn_position(rng, chunk_world_x, chunk_world_z, chunk_world_size)
+		if spawn_pos != Vector3.ZERO:
+			_spawn_bird(spawn_pos)
+			spawned_birds += 1
+
+	if spawned_rabbits > 0 or spawned_birds > 0:
+		print("[TerrainChunk] Spawned %d rabbits, %d birds in chunk (%d, %d)" % [spawned_rabbits, spawned_birds, chunk_coord.x, chunk_coord.y])
+
+
+func _find_animal_spawn_position(rng: RandomNumberGenerator, chunk_x: float, chunk_z: float, chunk_size: float) -> Vector3:
+	## Find a valid spawn position for an animal within this chunk
+	var max_attempts: int = 10
+
+	for _attempt in range(max_attempts):
+		var x: float = chunk_x + rng.randf() * chunk_size
+		var z: float = chunk_z + rng.randf() * chunk_size
+
+		# Skip if too close to spawn/campsite
+		var dist_from_camp: float = Vector2(x, z).length()
+		if dist_from_camp < 15.0:
+			continue
+
+		# Skip water areas
+		if chunk_manager.is_near_any_pond(x, z, 3.0):
+			continue
+
+		# Get terrain height
+		var y: float = chunk_manager.get_height_at(x, z)
+		if y < 0:
+			continue  # Water
+
+		return Vector3(x, y, z)
+
+	return Vector3.ZERO  # No valid position found
+
+
+func _spawn_rabbit(pos: Vector3) -> void:
+	var rabbit: AmbientRabbit = AmbientRabbit.new()
+	rabbit.position = pos
+	add_child(rabbit)
+	spawned_animals.append(rabbit)
+
+
+func _spawn_bird(pos: Vector3) -> void:
+	var bird: AmbientBird = AmbientBird.new()
+	bird.position = pos
+	add_child(bird)
+	spawned_animals.append(bird)
+
+
 func unload() -> void:
 	# Clean up all children
 	for tree in spawned_trees:
@@ -881,6 +1002,15 @@ func unload() -> void:
 		if is_instance_valid(resource):
 			resource.queue_free()
 	spawned_resources.clear()
+
+	# Clean up animals with despawn method
+	for animal in spawned_animals:
+		if is_instance_valid(animal):
+			if animal.has_method("despawn"):
+				animal.despawn()
+			else:
+				animal.queue_free()
+	spawned_animals.clear()
 
 	if terrain_mesh:
 		terrain_mesh.queue_free()

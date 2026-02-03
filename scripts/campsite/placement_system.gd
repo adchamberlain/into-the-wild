@@ -690,6 +690,14 @@ func _create_structure_programmatically() -> Node3D:
 			return _create_cabin()
 		"rope_ladder":
 			return _create_rope_ladder(calculated_ladder_height)
+		"snare_trap":
+			return _create_snare_trap()
+		"smithing_station":
+			return _create_smithing_station()
+		"smoker":
+			return _create_smoker()
+		"weather_vane":
+			return _create_weather_vane()
 	return null
 
 
@@ -1725,3 +1733,346 @@ func _create_rope_ladder(custom_height: float = -1.0) -> StaticBody3D:
 	ladder.set("ladder_height", ladder_height)
 
 	return ladder
+
+
+func _create_snare_trap() -> StaticBody3D:
+	var trap: StaticBody3D = StaticBody3D.new()
+	trap.name = "SnareTrap"
+	trap.set_script(load("res://scripts/campsite/structure_snare_trap.gd"))
+
+	var wood_mat: StandardMaterial3D = StandardMaterial3D.new()
+	wood_mat.albedo_color = Color(0.5, 0.35, 0.2)
+
+	var rope_mat: StandardMaterial3D = StandardMaterial3D.new()
+	rope_mat.albedo_color = Color(0.55, 0.45, 0.3)
+
+	# Collision
+	var collision: CollisionShape3D = CollisionShape3D.new()
+	var box_shape: BoxShape3D = BoxShape3D.new()
+	box_shape.size = Vector3(0.8, 0.5, 0.8)
+	collision.shape = box_shape
+	collision.position.y = 0.25
+	trap.add_child(collision)
+
+	# Base stakes (forked sticks)
+	var stake_mesh: BoxMesh = BoxMesh.new()
+	stake_mesh.size = Vector3(0.08, 0.4, 0.08)
+
+	var stake1: MeshInstance3D = MeshInstance3D.new()
+	stake1.mesh = stake_mesh
+	stake1.position = Vector3(-0.25, 0.2, -0.2)
+	stake1.rotation_degrees.z = -10
+	stake1.material_override = wood_mat
+	trap.add_child(stake1)
+
+	var stake2: MeshInstance3D = MeshInstance3D.new()
+	stake2.mesh = stake_mesh
+	stake2.position = Vector3(0.25, 0.2, -0.2)
+	stake2.rotation_degrees.z = 10
+	trap.add_child(stake2)
+	stake2.material_override = wood_mat
+
+	# Crossbar
+	var crossbar: MeshInstance3D = MeshInstance3D.new()
+	var crossbar_mesh: BoxMesh = BoxMesh.new()
+	crossbar_mesh.size = Vector3(0.6, 0.06, 0.06)
+	crossbar.mesh = crossbar_mesh
+	crossbar.position = Vector3(0, 0.38, -0.2)
+	crossbar.material_override = wood_mat
+	trap.add_child(crossbar)
+
+	# Snare loop (simplified as a torus-like shape made of boxes)
+	var loop_base: MeshInstance3D = MeshInstance3D.new()
+	var loop_mesh: BoxMesh = BoxMesh.new()
+	loop_mesh.size = Vector3(0.4, 0.03, 0.4)
+	loop_base.mesh = loop_mesh
+	loop_base.position = Vector3(0, 0.02, 0.1)
+	loop_base.material_override = rope_mat
+	trap.add_child(loop_base)
+
+	# Trigger stick
+	var trigger: MeshInstance3D = MeshInstance3D.new()
+	var trigger_mesh: BoxMesh = BoxMesh.new()
+	trigger_mesh.size = Vector3(0.04, 0.2, 0.04)
+	trigger.mesh = trigger_mesh
+	trigger.position = Vector3(0, 0.1, 0.1)
+	trigger.material_override = wood_mat
+	trap.add_child(trigger)
+
+	return trap
+
+
+func _create_smithing_station() -> StaticBody3D:
+	var station: StaticBody3D = StaticBody3D.new()
+	station.name = "SmithingStation"
+	station.set_script(load("res://scripts/campsite/structure_smithing_station.gd"))
+
+	var stone_mat: StandardMaterial3D = StandardMaterial3D.new()
+	stone_mat.albedo_color = Color(0.45, 0.45, 0.48)
+
+	var dark_stone_mat: StandardMaterial3D = StandardMaterial3D.new()
+	dark_stone_mat.albedo_color = Color(0.3, 0.3, 0.32)
+
+	var wood_mat: StandardMaterial3D = StandardMaterial3D.new()
+	wood_mat.albedo_color = Color(0.5, 0.35, 0.2)
+
+	var coal_mat: StandardMaterial3D = StandardMaterial3D.new()
+	coal_mat.albedo_color = Color(0.15, 0.15, 0.15)
+
+	var fire_mat: StandardMaterial3D = StandardMaterial3D.new()
+	fire_mat.albedo_color = Color(1.0, 0.5, 0.1)
+	fire_mat.emission_enabled = true
+	fire_mat.emission = Color(1.0, 0.4, 0.0)
+	fire_mat.emission_energy_multiplier = 1.5
+
+	# Collision
+	var collision: CollisionShape3D = CollisionShape3D.new()
+	var box_shape: BoxShape3D = BoxShape3D.new()
+	box_shape.size = Vector3(1.8, 1.0, 1.2)
+	collision.shape = box_shape
+	collision.position.y = 0.5
+	station.add_child(collision)
+
+	# Stone forge base
+	var base: MeshInstance3D = MeshInstance3D.new()
+	var base_mesh: BoxMesh = BoxMesh.new()
+	base_mesh.size = Vector3(1.2, 0.8, 1.0)
+	base.mesh = base_mesh
+	base.position = Vector3(0, 0.4, 0)
+	base.material_override = stone_mat
+	station.add_child(base)
+
+	# Forge pit (darker, recessed area)
+	var pit: MeshInstance3D = MeshInstance3D.new()
+	var pit_mesh: BoxMesh = BoxMesh.new()
+	pit_mesh.size = Vector3(0.6, 0.1, 0.6)
+	pit.mesh = pit_mesh
+	pit.position = Vector3(0, 0.85, 0)
+	pit.material_override = dark_stone_mat
+	station.add_child(pit)
+
+	# Coal bed
+	var coal: MeshInstance3D = MeshInstance3D.new()
+	var coal_mesh: BoxMesh = BoxMesh.new()
+	coal_mesh.size = Vector3(0.5, 0.08, 0.5)
+	coal.mesh = coal_mesh
+	coal.position = Vector3(0, 0.84, 0)
+	coal.material_override = coal_mat
+	station.add_child(coal)
+
+	# Fire glow (small)
+	var fire: MeshInstance3D = MeshInstance3D.new()
+	var fire_mesh: BoxMesh = BoxMesh.new()
+	fire_mesh.size = Vector3(0.3, 0.15, 0.3)
+	fire.mesh = fire_mesh
+	fire.position = Vector3(0, 0.95, 0)
+	fire.material_override = fire_mat
+	station.add_child(fire)
+
+	# Bellows (to the side)
+	var bellows: MeshInstance3D = MeshInstance3D.new()
+	var bellows_mesh: BoxMesh = BoxMesh.new()
+	bellows_mesh.size = Vector3(0.35, 0.25, 0.5)
+	bellows.mesh = bellows_mesh
+	bellows.position = Vector3(0.6, 0.6, 0.3)
+	bellows.material_override = wood_mat
+	station.add_child(bellows)
+
+	# Anvil (separate block)
+	var anvil: MeshInstance3D = MeshInstance3D.new()
+	var anvil_mesh: BoxMesh = BoxMesh.new()
+	anvil_mesh.size = Vector3(0.5, 0.4, 0.3)
+	anvil.mesh = anvil_mesh
+	anvil.position = Vector3(-0.9, 0.2, 0)
+	anvil.material_override = dark_stone_mat
+	station.add_child(anvil)
+
+	# Light from forge
+	var light: OmniLight3D = OmniLight3D.new()
+	light.light_color = Color(1.0, 0.5, 0.2)
+	light.light_energy = 2.0
+	light.omni_range = 5.0
+	light.position = Vector3(0, 1.0, 0)
+	station.add_child(light)
+
+	return station
+
+
+func _create_smoker() -> StaticBody3D:
+	var smoker: StaticBody3D = StaticBody3D.new()
+	smoker.name = "Smoker"
+	smoker.set_script(load("res://scripts/campsite/structure_smoker.gd"))
+
+	var wood_mat: StandardMaterial3D = StandardMaterial3D.new()
+	wood_mat.albedo_color = Color(0.45, 0.32, 0.2)
+
+	var dark_wood_mat: StandardMaterial3D = StandardMaterial3D.new()
+	dark_wood_mat.albedo_color = Color(0.3, 0.22, 0.15)
+
+	var stone_mat: StandardMaterial3D = StandardMaterial3D.new()
+	stone_mat.albedo_color = Color(0.4, 0.4, 0.42)
+
+	# Collision
+	var collision: CollisionShape3D = CollisionShape3D.new()
+	var box_shape: BoxShape3D = BoxShape3D.new()
+	box_shape.size = Vector3(1.0, 1.5, 1.0)
+	collision.shape = box_shape
+	collision.position.y = 0.75
+	smoker.add_child(collision)
+
+	# Stone fire pit base
+	var base: MeshInstance3D = MeshInstance3D.new()
+	var base_mesh: BoxMesh = BoxMesh.new()
+	base_mesh.size = Vector3(0.8, 0.3, 0.8)
+	base.mesh = base_mesh
+	base.position = Vector3(0, 0.15, 0)
+	base.material_override = stone_mat
+	smoker.add_child(base)
+
+	# Wooden frame (box structure around the smoking area)
+	var frame_post_mesh: BoxMesh = BoxMesh.new()
+	frame_post_mesh.size = Vector3(0.1, 1.2, 0.1)
+
+	var corners: Array[Vector3] = [
+		Vector3(-0.4, 0.9, -0.4),
+		Vector3(0.4, 0.9, -0.4),
+		Vector3(-0.4, 0.9, 0.4),
+		Vector3(0.4, 0.9, 0.4)
+	]
+
+	for i: int in range(4):
+		var post: MeshInstance3D = MeshInstance3D.new()
+		post.mesh = frame_post_mesh
+		post.position = corners[i]
+		post.material_override = wood_mat
+		smoker.add_child(post)
+
+	# Roof/cover (keeps smoke in)
+	var roof: MeshInstance3D = MeshInstance3D.new()
+	var roof_mesh: BoxMesh = BoxMesh.new()
+	roof_mesh.size = Vector3(1.0, 0.1, 1.0)
+	roof.mesh = roof_mesh
+	roof.position = Vector3(0, 1.55, 0)
+	roof.material_override = dark_wood_mat
+	smoker.add_child(roof)
+
+	# Smoking racks (horizontal bars for hanging meat)
+	var rack_mesh: BoxMesh = BoxMesh.new()
+	rack_mesh.size = Vector3(0.7, 0.04, 0.04)
+
+	for i: int in range(2):
+		var rack: MeshInstance3D = MeshInstance3D.new()
+		rack.mesh = rack_mesh
+		rack.position = Vector3(0, 0.8 + i * 0.35, 0)
+		rack.material_override = wood_mat
+		smoker.add_child(rack)
+
+	# Cross rack
+	var cross_rack: MeshInstance3D = MeshInstance3D.new()
+	var cross_mesh: BoxMesh = BoxMesh.new()
+	cross_mesh.size = Vector3(0.04, 0.04, 0.7)
+	cross_rack.mesh = cross_mesh
+	cross_rack.position = Vector3(0, 0.8, 0)
+	cross_rack.material_override = wood_mat
+	smoker.add_child(cross_rack)
+
+	return smoker
+
+
+func _create_weather_vane() -> StaticBody3D:
+	var vane: StaticBody3D = StaticBody3D.new()
+	vane.name = "WeatherVane"
+	vane.set_script(load("res://scripts/campsite/structure_weather_vane.gd"))
+
+	var wood_mat: StandardMaterial3D = StandardMaterial3D.new()
+	wood_mat.albedo_color = Color(0.5, 0.35, 0.2)
+
+	var metal_mat: StandardMaterial3D = StandardMaterial3D.new()
+	metal_mat.albedo_color = Color(0.55, 0.55, 0.58)
+	metal_mat.metallic = 0.7
+	metal_mat.roughness = 0.3
+
+	var arrow_mat: StandardMaterial3D = StandardMaterial3D.new()
+	arrow_mat.albedo_color = Color(0.6, 0.58, 0.55)
+	arrow_mat.metallic = 0.6
+	arrow_mat.roughness = 0.4
+
+	# Collision
+	var collision: CollisionShape3D = CollisionShape3D.new()
+	var box_shape: BoxShape3D = BoxShape3D.new()
+	box_shape.size = Vector3(0.4, 2.5, 0.4)
+	collision.shape = box_shape
+	collision.position.y = 1.25
+	vane.add_child(collision)
+
+	# Wooden post
+	var post: MeshInstance3D = MeshInstance3D.new()
+	var post_mesh: BoxMesh = BoxMesh.new()
+	post_mesh.size = Vector3(0.15, 2.0, 0.15)
+	post.mesh = post_mesh
+	post.position = Vector3(0, 1.0, 0)
+	post.material_override = wood_mat
+	vane.add_child(post)
+
+	# Metal cap/pivot point
+	var pivot: MeshInstance3D = MeshInstance3D.new()
+	var pivot_mesh: BoxMesh = BoxMesh.new()
+	pivot_mesh.size = Vector3(0.1, 0.15, 0.1)
+	pivot.mesh = pivot_mesh
+	pivot.position = Vector3(0, 2.1, 0)
+	pivot.material_override = metal_mat
+	vane.add_child(pivot)
+
+	# Arrow/pointer (rotates with wind)
+	var arrow_parent: Node3D = Node3D.new()
+	arrow_parent.name = "ArrowPivot"
+	arrow_parent.position = Vector3(0, 2.2, 0)
+	vane.add_child(arrow_parent)
+
+	# Arrow shaft
+	var shaft: MeshInstance3D = MeshInstance3D.new()
+	var shaft_mesh: BoxMesh = BoxMesh.new()
+	shaft_mesh.size = Vector3(0.8, 0.04, 0.04)
+	shaft.mesh = shaft_mesh
+	shaft.material_override = arrow_mat
+	arrow_parent.add_child(shaft)
+
+	# Arrow head (triangular, simplified as box)
+	var head: MeshInstance3D = MeshInstance3D.new()
+	var head_mesh: BoxMesh = BoxMesh.new()
+	head_mesh.size = Vector3(0.2, 0.08, 0.15)
+	head.mesh = head_mesh
+	head.position = Vector3(0.5, 0, 0)
+	head.material_override = arrow_mat
+	arrow_parent.add_child(head)
+
+	# Arrow tail (feather/fin shape)
+	var tail: MeshInstance3D = MeshInstance3D.new()
+	var tail_mesh: BoxMesh = BoxMesh.new()
+	tail_mesh.size = Vector3(0.15, 0.12, 0.02)
+	tail.mesh = tail_mesh
+	tail.position = Vector3(-0.45, 0, 0)
+	tail.material_override = arrow_mat
+	arrow_parent.add_child(tail)
+
+	# Cardinal direction letters (N, S, E, W) - simplified as small blocks
+	var letter_mesh: BoxMesh = BoxMesh.new()
+	letter_mesh.size = Vector3(0.08, 0.12, 0.02)
+
+	var directions: Array[Dictionary] = [
+		{"pos": Vector3(0, 1.9, -0.2), "label": "N"},
+		{"pos": Vector3(0, 1.9, 0.2), "label": "S"},
+		{"pos": Vector3(0.2, 1.9, 0), "label": "E", "rot": 90},
+		{"pos": Vector3(-0.2, 1.9, 0), "label": "W", "rot": 90}
+	]
+
+	for dir: Dictionary in directions:
+		var marker: MeshInstance3D = MeshInstance3D.new()
+		marker.mesh = letter_mesh
+		marker.position = dir["pos"]
+		if dir.has("rot"):
+			marker.rotation_degrees.y = dir["rot"]
+		marker.material_override = metal_mat
+		vane.add_child(marker)
+
+	return vane
