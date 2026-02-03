@@ -24,6 +24,7 @@ buses/default_bus_layout="res://resources/default_bus_layout.tres"
 
 InputManager="*res://scripts/systems/input_manager.gd"
 AmbientSoundManager="*res://scripts/core/ambient_sound_manager.gd"
+SFXManager="*res://scripts/core/sfx_manager.gd"
 GameState="*res://scripts/core/game_state.gd"
 
 [display]

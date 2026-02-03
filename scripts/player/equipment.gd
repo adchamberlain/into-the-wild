@@ -358,6 +358,7 @@ func _use_tool() -> bool:
 		_play_swing_animation()
 		var success: bool = target.receive_chop(player)
 		if success:
+			SFXManager.play_sfx("chop")
 			item_used.emit(equipped_item)
 			# Use durability on successful chop
 			use_durability(1)
@@ -402,6 +403,9 @@ func _play_swing_animation() -> void:
 	var camera: Camera3D = player.get_node_or_null("Camera3D")
 	if not camera:
 		return
+
+	# Play swing sound
+	SFXManager.play_sfx("swing")
 
 	# Animate the stone axe model if equipped
 	if stone_axe_model:
@@ -684,6 +688,9 @@ func show_fishing_cast() -> void:
 	if not fishing_rod_model or not player:
 		return
 
+	# Play cast sound
+	SFXManager.play_sfx("cast")
+
 	is_line_cast = true
 
 	# Create pivot at rod tip and line as child
@@ -726,6 +733,9 @@ func show_fishing_cast() -> void:
 func show_fish_caught() -> void:
 	if not fishing_rod_model or not player:
 		return
+
+	# Play fish caught sound
+	SFXManager.play_sfx("fish_caught")
 
 	# Create caught fish model if needed
 	if not caught_fish_model:
@@ -920,6 +930,9 @@ func use_durability(amount: int = 1) -> bool:
 ## Break the currently equipped tool.
 func _break_tool() -> void:
 	var broken_item: String = equipped_item
+
+	# Play tool break sound
+	SFXManager.play_sfx("tool_break")
 
 	# Remove from inventory
 	if inventory:

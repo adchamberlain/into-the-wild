@@ -48,6 +48,10 @@ var interact_cooldown_timer: float = 0.0
 # Fall-through protection (debug only - world floor provides actual protection)
 var fall_warning_y: float = -50.0  # Log warning if player falls this low
 
+# Footstep sound timing
+var footstep_timer: float = 0.0
+const FOOTSTEP_INTERVAL: float = 0.4  # Time between footstep sounds
+
 # Swimming settings
 var swim_sink_speed: float = 3.0  # How fast player sinks in water
 var swim_rise_speed: float = 2.5  # How fast player rises when pressing space
@@ -150,7 +154,9 @@ func _physics_process(delta: float) -> void:
 	_handle_controller_look(delta)
 
 	# Handle swimming vs normal movement
-	if is_in_water:
+	# Only use swimming if actually submerged (below water surface), not just in water area
+	var actually_swimming: bool = is_in_water and global_position.y < water_surface_y
+	if actually_swimming:
 		_process_swimming(delta)
 	else:
 		_process_normal_movement(delta)
@@ -216,10 +222,16 @@ func _process_normal_movement(delta: float) -> void:
 	if direction:
 		velocity.x = direction.x * current_speed
 		velocity.z = direction.z * current_speed
+
+		# Play footstep sounds while moving on floor
+		if is_on_floor():
+			_update_footsteps(get_physics_process_delta_time())
 	else:
 		# Decelerate smoothly
 		velocity.x = move_toward(velocity.x, 0, current_speed)
 		velocity.z = move_toward(velocity.z, 0, current_speed)
+		# Reset footstep timer when stopped
+		footstep_timer = 0.0
 
 
 ## Get movement input from both keyboard and controller.
@@ -269,10 +281,14 @@ func _process_swimming(delta: float) -> void:
 	if direction:
 		velocity.x = direction.x * swim_move_speed
 		velocity.z = direction.z * swim_move_speed
+
+		# Play water splashing sounds while swimming
+		_update_footsteps(delta)
 	else:
 		# Decelerate smoothly (faster in water - more drag)
 		velocity.x = move_toward(velocity.x, 0, swim_move_speed * 2)
 		velocity.z = move_toward(velocity.z, 0, swim_move_speed * 2)
+		footstep_timer = 0.0
 
 
 func _update_interaction_target() -> void:
@@ -433,6 +449,33 @@ func _notification(what: int) -> void:
 func _update_fall_protection(_delta: float) -> void:
 	if global_position.y < fall_warning_y:
 		push_warning("[Player] Falling unusually low (y=%.1f). World floor will catch at y=-100." % global_position.y)
+
+
+## Update footstep sounds based on movement.
+func _update_footsteps(delta: float) -> void:
+	footstep_timer += delta
+	if footstep_timer >= FOOTSTEP_INTERVAL:
+		footstep_timer = 0.0
+		var surface: String = _get_surface_type()
+		SFXManager.play_footstep(surface)
+
+
+## Get the surface type at the player's current position for footstep sounds.
+func _get_surface_type() -> String:
+	# Only play water sounds if actually submerged (below water surface)
+	if is_in_water and global_position.y < water_surface_y:
+		return "water"
+
+	# Try to detect terrain region via ChunkManager
+	var chunk_manager: Node = get_tree().get_first_node_in_group("chunk_manager")
+	if chunk_manager and chunk_manager.has_method("get_region_at"):
+		var region: int = chunk_manager.get_region_at(global_position.x, global_position.z)
+		# ChunkManager.RegionType: MEADOW=0, FOREST=1, HILLS=2, ROCKY=3
+		if region == 2 or region == 3:  # HILLS or ROCKY
+			return "stone"
+
+	# Default to grass for forest, plains, meadow
+	return "grass"
 
 
 ## Check if any UI menu is open and blocking player input.

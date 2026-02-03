@@ -813,14 +813,155 @@ Fixed "Cannot call method 'set_input_as_handled' on a null value" error that occ
 
 ---
 
+## Session 38 - Sound Effects System (2026-02-02)
+
+**SFXManager Singleton**: New pooled audio player system for gameplay sound effects.
+
+### Architecture
+
+**Pool System** (`scripts/core/sfx_manager.gd`):
+- 8 AudioStreamPlayer instances routed to "SFX" bus
+- Round-robin allocation for overlapping sounds
+- Preloads all sounds at startup for instant playback
+
+**Cooldown System**:
+| Sound Type | Cooldown |
+|------------|----------|
+| footstep | 0.3s |
+| chop | 0.15s |
+| swing | 0.2s |
+| pickup | 0.1s |
+| berry_pluck | 0.15s |
+| tree_fall | 0.5s |
+| cast | 0.3s |
+| fish_caught | 0.5s |
+| tool_break | 0.5s |
+| place_confirm | 0.2s |
+| place_cancel | 0.2s |
+
+**Anti-Repetition**: Footsteps track last-played variant per surface to avoid repeating same sound.
+
+### Public API
+
+```gdscript
+SFXManager.play_footstep(surface: String)  # "grass", "stone", "water"
+SFXManager.play_sfx(sound_name: String)    # "chop", "swing", "pickup", etc.
+SFXManager.set_volume(volume: float)       # 0.0 to 1.0
+```
+
+### Sound Categories
+
+**Footsteps** (4 variants each):
+- `grass_1..4.mp3` - Default walking sound
+- `stone_1..4.mp3` - Rocky/hills terrain
+- `water_1..4.mp3` - Swimming/wading
+
+**Tools**:
+- `axe_swing.mp3` - Swing animation
+- `wood_chop.mp3` - Hit on tree
+- `tool_break.mp3` - Durability depleted
+
+**Gathering**:
+- `item_pickup.mp3` - Generic pickup
+- `berry_pluck.mp3` - Berries and herbs
+- `tree_fall.mp3` - Tree chopped down
+
+**Fishing**:
+- `cast.mp3` - Line cast
+- `fish_caught.mp3` - Successful catch
+
+**Placement**:
+- `confirm.mp3` - Structure placed
+- `cancel.mp3` - Placement cancelled
+
+### Integration Points
+
+**Player Movement** (`player_controller.gd`):
+- Footsteps every 0.4s while moving on floor
+- Surface detection: Rocky/Hills → stone, Water → water, else → grass
+- Works in both normal movement and swimming
+
+**Equipment** (`equipment.gd`):
+- Swing sound on every axe swing
+- Chop sound on successful tree hit
+- Tool break sound when durability depleted
+- Cast sound when fishing line thrown
+- Fish caught sound on successful catch
+
+**Resource Nodes** (`resource_node.gd`):
+- Berry pluck for berries/herbs
+- Generic pickup for other resources
+- Tree fall when multi-chop tree harvested
+
+**Placement System** (`placement_system.gd`):
+- Confirm sound on structure placement
+- Cancel sound when placement cancelled
+- Same sounds for move confirm/cancel
+
+### Sound File Structure
+
+```
+assets/audio/sfx/
+├── footsteps/
+│   ├── grass_1..4.mp3
+│   ├── stone_1..4.mp3
+│   └── water_1..4.mp3
+├── tools/
+│   ├── axe_swing.mp3
+│   ├── wood_chop.mp3
+│   └── tool_break.mp3
+├── gather/
+│   ├── item_pickup.mp3
+│   ├── berry_pluck.mp3
+│   └── tree_fall.mp3
+├── fishing/
+│   ├── cast.mp3
+│   └── fish_caught.mp3
+├── placement/
+│   ├── confirm.mp3
+│   └── cancel.mp3
+└── ui/
+    ├── menu_open.mp3
+    ├── menu_close.mp3
+    ├── select.mp3
+    └── cancel.mp3
+```
+
+**Audio files sourced from OpenGameArt.org** (CC0/CC-BY licensed) - see ATTRIBUTIONS.md for credits.
+
+### Bug Fixes During Testing
+
+1. **Dictionary iteration type error**: Removed explicit `: String` type annotations when iterating over dictionary keys (returns Variant in Godot 4.x)
+
+2. **Region type mismatch**: `get_region_at()` returns `RegionType` enum (int), not String - fixed comparison logic
+
+3. **Water sounds on adjacent blocks**: Added Y-position check (`global_position.y < water_surface_y`) to only play water footsteps when actually submerged
+
+4. **Slow movement near water**: Swimming movement was triggered by `is_in_water` flag alone - now requires both `is_in_water` AND being below water surface
+
+### Files Created
+- `scripts/core/sfx_manager.gd` - SFXManager singleton
+
+### Files Modified
+| File | Changes |
+|------|---------|
+| `project.godot` | Added SFXManager autoload |
+| `scripts/player/player_controller.gd` | Footstep timer and surface detection |
+| `scripts/player/equipment.gd` | Tool swing/chop/break and fishing sounds |
+| `scripts/resources/resource_node.gd` | Gather and tree fall sounds |
+| `scripts/campsite/placement_system.gd` | Placement confirm/cancel sounds |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Sound effects (footsteps, interactions)
-2. Game balancing and polish
-3. Pixelated textures (optional)
-4. Optional: DualSense haptics and adaptive triggers
-5. Cave entrances in rocky regions (deferred)
+1. Source ~23 sound files from Pixabay to populate sfx directories
+2. Add UI sounds to menus (optional)
+3. Game balancing and polish
+4. Pixelated textures (optional)
+5. Optional: DualSense haptics and adaptive triggers
+6. Cave entrances in rocky regions (deferred)
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

@@ -171,6 +171,9 @@ func cancel_placement() -> void:
 	if not is_placing:
 		return
 
+	# Play cancel sound
+	SFXManager.play_sfx("place_cancel")
+
 	_destroy_preview()
 	is_placing = false
 	placement_cooldown_timer = 0.0
@@ -652,6 +655,9 @@ func _confirm_placement() -> void:
 	if campsite_manager and campsite_manager.has_method("register_structure"):
 		campsite_manager.register_structure(structure, current_structure_type)
 
+	# Play placement confirm sound
+	SFXManager.play_sfx("place_confirm")
+
 	# Emit signal
 	placement_confirmed.emit(current_structure_type, place_pos)
 	print("[PlacementSystem] Placed %s at %s" % [current_structure_type, place_pos])
@@ -1029,6 +1035,9 @@ func _confirm_move() -> void:
 	# Restore transparency
 	_set_structure_transparency(moving_structure, 1.0)
 
+	# Play placement confirm sound
+	SFXManager.play_sfx("place_confirm")
+
 	# Emit signal
 	structure_move_confirmed.emit(moving_structure, old_pos, new_pos)
 	print("[PlacementSystem] Moved %s from %s to %s" % [moving_structure_type, old_pos, new_pos])
@@ -1041,6 +1050,9 @@ func _confirm_move() -> void:
 func cancel_move() -> void:
 	if not is_moving:
 		return
+
+	# Play cancel sound
+	SFXManager.play_sfx("place_cancel")
 
 	# Restore transparency (structure stays at original position)
 	if moving_structure:

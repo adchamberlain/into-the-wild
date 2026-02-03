@@ -131,6 +131,12 @@ func interact(player: Node) -> bool:
 	# Play gather animation
 	_play_gather_animation()
 
+	# Play appropriate gather sound
+	if resource_type == "berry" or resource_type == "herb":
+		SFXManager.play_sfx("berry_pluck")
+	else:
+		SFXManager.play_sfx("pickup")
+
 	# Emit signal for any listeners
 	gathered.emit(resource_type, resource_amount)
 
@@ -174,6 +180,10 @@ func receive_chop(player: Node) -> bool:
 func _complete_harvest(player: Node) -> void:
 	# Play gather animation
 	_play_gather_animation()
+
+	# Play tree fall sound for trees (multi-chop resources)
+	if chops_required > 1:
+		SFXManager.play_sfx("tree_fall")
 
 	# Emit signal for any listeners
 	gathered.emit(resource_type, resource_amount)
