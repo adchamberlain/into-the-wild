@@ -70,6 +70,7 @@ const FOOD_VALUES: Dictionary = {
 	"herb": 5.0,
 	"fish": 25.0,
 	"raw_meat": 20.0,
+	"osha_root": 20.0,  # Alpine medicinal plant - also restores hunger
 	# Processed
 	"berry_pouch": 40.0,
 	# Cooked (fire pit)
@@ -89,6 +90,7 @@ const FOOD_VALUES: Dictionary = {
 # Healing items (instant health restore)
 const HEALING_ITEMS: Dictionary = {
 	"healing_salve": 30.0,
+	"osha_root": 25.0,  # Alpine medicinal plant - potent healer
 }
 
 
@@ -528,8 +530,8 @@ func _get_surface_type() -> String:
 	var chunk_manager: Node = get_tree().get_first_node_in_group("chunk_manager")
 	if chunk_manager and chunk_manager.has_method("get_region_at"):
 		var region: int = chunk_manager.get_region_at(global_position.x, global_position.z)
-		# ChunkManager.RegionType: MEADOW=0, FOREST=1, HILLS=2, ROCKY=3
-		if region == 2 or region == 3:  # HILLS or ROCKY
+		# ChunkManager.RegionType: MEADOW=0, FOREST=1, HILLS=2, ROCKY=3, MOUNTAIN=4
+		if region == 2 or region == 3 or region == 4:  # HILLS, ROCKY, or MOUNTAIN
 			return "stone"
 
 	# Default to grass for forest, plains, meadow

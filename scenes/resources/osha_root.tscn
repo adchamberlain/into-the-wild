@@ -1,0 +1,47 @@
+[gd_scene load_steps=8 format=3 uid="uid://osharoot001"]
+
+[ext_resource type="Script" path="res://scripts/resources/resource_node.gd" id="1_resource"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_osha"]
+size = Vector3(0.4, 0.35, 0.4)
+
+[sub_resource type="BoxMesh" id="BoxMesh_leaves1"]
+size = Vector3(0.3, 0.2, 0.12)
+
+[sub_resource type="BoxMesh" id="BoxMesh_leaves2"]
+size = Vector3(0.12, 0.2, 0.3)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_leaves"]
+albedo_color = Color(0.25, 0.5, 0.2, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_root"]
+size = Vector3(0.15, 0.2, 0.15)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_root"]
+albedo_color = Color(0.35, 0.22, 0.12, 1)
+
+[node name="OshaRoot" type="StaticBody3D"]
+script = ExtResource("1_resource")
+resource_type = "osha_root"
+resource_amount = 1
+interaction_text = "Dig"
+adjust_to_terrain = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.175, 0)
+shape = SubResource("BoxShape3D_osha")
+
+[node name="Leaves1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+mesh = SubResource("BoxMesh_leaves1")
+material_override = SubResource("StandardMaterial3D_leaves")
+
+[node name="Leaves2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+mesh = SubResource("BoxMesh_leaves2")
+material_override = SubResource("StandardMaterial3D_leaves")
+
+[node name="Root" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+mesh = SubResource("BoxMesh_root")
+material_override = SubResource("StandardMaterial3D_root")
