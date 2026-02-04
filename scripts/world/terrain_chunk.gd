@@ -899,8 +899,8 @@ func _spawn_chunk_animals() -> void:
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = chunk_seed
 
-	# Only 30% of chunks have any animals - skip most chunks
-	if rng.randf() > 0.30:
+	# Only 15% of chunks have any animals - reduced for performance
+	if rng.randf() > 0.15:
 		return
 
 	# Get the dominant region for this chunk (sample center)

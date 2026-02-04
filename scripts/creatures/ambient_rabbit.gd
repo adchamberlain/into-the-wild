@@ -100,6 +100,10 @@ func _build_mesh() -> void:
 func _process(delta: float) -> void:
 	super._process(delta)
 
+	# Skip rabbit-specific processing if too far (culled by base class)
+	if is_too_far:
+		return
+
 	# Handle hop animation
 	if is_hopping:
 		_process_hop(delta)
@@ -117,8 +121,8 @@ func _process_hop(delta: float) -> void:
 		hop_count += 1
 
 		# Play hop sound only if player is very close (sounds are 2D, not spatial)
+		# Uses cached sfx_manager from base class for performance
 		if player and global_position.distance_to(player.global_position) < 8.0:
-			var sfx_manager: Node = get_node_or_null("/root/SFXManager")
 			if sfx_manager and sfx_manager.has_method("play_sfx"):
 				sfx_manager.play_sfx("rabbit_hop")
 
@@ -153,23 +157,23 @@ func _start_single_hop() -> void:
 	var hop_dir: Vector3 = move_direction.normalized()
 	var target_pos: Vector3 = global_position + hop_dir * hop_distance
 
-	# Sample terrain height at target
+	# Sample terrain height at target (only once for performance)
 	if chunk_manager and chunk_manager.has_method("get_height_at"):
 		var terrain_height: float = chunk_manager.get_height_at(target_pos.x, target_pos.z)
-		# Avoid water
+		# Avoid water - turn around but use current height instead of resampling
 		if terrain_height < 0:
 			move_direction = -move_direction
 			hop_dir = move_direction.normalized()
 			target_pos = global_position + hop_dir * hop_distance
-			terrain_height = chunk_manager.get_height_at(target_pos.x, target_pos.z)
-			if terrain_height < 0:
-				terrain_height = 0
+			# Use current Y position instead of expensive second terrain sample
+			terrain_height = global_position.y
 		target_pos.y = terrain_height
 
 	hop_end_pos = target_pos
 
-	# Face hop direction
-	if hop_dir.length() > 0.1:
+	# Face hop direction (respects throttling from base class)
+	if hop_dir.length() > 0.1 and rotation_timer >= ROTATION_UPDATE_INTERVAL:
+		rotation_timer = 0.0
 		var look_target: Vector3 = global_position + hop_dir
 		mesh_container.look_at(look_target, Vector3.UP)
 

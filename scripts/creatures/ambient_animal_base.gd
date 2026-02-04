@@ -23,6 +23,13 @@ var proximity_check_timer: float = 0.0
 const PROXIMITY_CHECK_INTERVAL: float = 0.25  # Check 4 times per second
 var player: Node3D = null
 var chunk_manager: Node = null
+var sfx_manager: Node = null  # Cached for performance
+
+# Distance-based culling
+const PROCESSING_DISTANCE: float = 50.0  # Don't process animals beyond this
+const ROTATION_UPDATE_INTERVAL: float = 0.1  # Throttle look_at() calls
+var rotation_timer: float = 0.0
+var is_too_far: bool = false  # Skip processing when far from player
 
 # Movement
 var move_direction: Vector3 = Vector3.ZERO
@@ -39,10 +46,11 @@ func _ready() -> void:
 	# Unique seed per animal for varied behavior
 	rng.seed = hash(global_position) + randi()
 
-	# Find player and chunk manager
+	# Find player, chunk manager, and SFX manager (cache for performance)
 	await get_tree().process_frame
 	player = get_tree().get_first_node_in_group("player")
 	chunk_manager = get_tree().get_first_node_in_group("chunk_manager")
+	sfx_manager = get_node_or_null("/root/SFXManager")
 
 	# Create mesh container for rotation
 	mesh_container = Node3D.new()
@@ -57,11 +65,18 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	# Throttled player proximity check
+	# Throttled player proximity check (also updates distance culling)
 	proximity_check_timer += delta
 	if proximity_check_timer >= PROXIMITY_CHECK_INTERVAL:
 		proximity_check_timer = 0.0
 		_check_player_proximity()
+
+	# Skip processing if too far from player (performance optimization)
+	if is_too_far:
+		return
+
+	# Update rotation timer
+	rotation_timer += delta
 
 	# Update state
 	state_timer -= delta
@@ -80,6 +95,9 @@ func _check_player_proximity() -> void:
 		return
 
 	var distance_to_player: float = global_position.distance_to(player.global_position)
+
+	# Distance-based culling - skip processing for far away animals
+	is_too_far = distance_to_player > PROCESSING_DISTANCE
 
 	# Flee if player is too close
 	if distance_to_player < flee_distance and current_state != State.FLEEING:
@@ -165,8 +183,9 @@ func _move_animal(delta: float, speed: float) -> void:
 
 	global_position = new_pos
 
-	# Face movement direction
-	if move_direction.length() > 0.1:
+	# Face movement direction (throttled for performance)
+	if move_direction.length() > 0.1 and rotation_timer >= ROTATION_UPDATE_INTERVAL:
+		rotation_timer = 0.0
 		var look_target: Vector3 = global_position + move_direction
 		mesh_container.look_at(look_target, Vector3.UP)
 
