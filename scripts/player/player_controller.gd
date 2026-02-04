@@ -106,7 +106,22 @@ func _ready() -> void:
 		interaction_ray.enabled = true
 
 
+func _is_loading_screen_active() -> bool:
+	## Check if loading screen is currently displayed
+	var loading_screen: Node = get_tree().get_first_node_in_group("loading_screen")
+	if loading_screen:
+		return true
+	# Also check by class name in case group not set
+	for child in get_tree().root.get_children():
+		if child is CanvasLayer and child.has_method("skip_loading"):
+			return true
+	return false
+
+
 func _input(event: InputEvent) -> void:
+	# Block all input while loading screen is active
+	if _is_loading_screen_active():
+		return
 	# Handle mouse look (disabled while resting)
 	if event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
 		if not is_resting:
@@ -157,6 +172,11 @@ func _handle_mouse_look(event: InputEventMouseMotion) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	# Block all processing while loading screen is active
+	if _is_loading_screen_active():
+		velocity = Vector3.ZERO
+		return
+
 	# Update interact cooldown (must tick even while resting)
 	if interact_cooldown_timer > 0:
 		interact_cooldown_timer -= delta

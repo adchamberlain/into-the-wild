@@ -36,6 +36,7 @@ var star_timer: float = 0.0
 
 func _ready() -> void:
 	layer = 100
+	add_to_group("loading_screen")
 	_create_ui()
 	_show_artwork(0)
 	set_process(true)
