@@ -67,8 +67,8 @@ func _create_ui() -> void:
 	var top_line := ColorRect.new()
 	top_line.color = Color(0.6, 0.5, 0.3, 0.4)
 	top_line.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	top_line.offset_top = 50
-	top_line.offset_bottom = 52
+	top_line.offset_top = 140
+	top_line.offset_bottom = 142
 	top_line.offset_left = 100
 	top_line.offset_right = -100
 	root_control.add_child(top_line)
@@ -79,8 +79,8 @@ func _create_ui() -> void:
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	title_label.offset_top = 70
-	title_label.offset_bottom = 150
+	title_label.offset_top = 160
+	title_label.offset_bottom = 250
 	title_label.add_theme_font_size_override("font_size", 72)
 	title_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
 	root_control.add_child(title_label)
@@ -91,8 +91,8 @@ func _create_ui() -> void:
 	subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	subtitle_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	subtitle_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	subtitle_label.offset_top = 155
-	subtitle_label.offset_bottom = 215
+	subtitle_label.offset_top = 250
+	subtitle_label.offset_bottom = 310
 	subtitle_label.add_theme_font_size_override("font_size", 42)
 	subtitle_label.add_theme_color_override("font_color", Color(0.65, 0.6, 0.5))
 	root_control.add_child(subtitle_label)
@@ -101,8 +101,8 @@ func _create_ui() -> void:
 	var top_line2 := ColorRect.new()
 	top_line2.color = Color(0.6, 0.5, 0.3, 0.4)
 	top_line2.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	top_line2.offset_top = 225
-	top_line2.offset_bottom = 227
+	top_line2.offset_top = 320
+	top_line2.offset_bottom = 322
 	top_line2.offset_left = 100
 	top_line2.offset_right = -100
 	root_control.add_child(top_line2)
