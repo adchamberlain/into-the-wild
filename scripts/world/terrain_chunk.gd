@@ -64,18 +64,22 @@ func generate() -> void:
 	if is_generated:
 		return
 
-	# Generate terrain mesh and collision immediately (required for player to walk)
+	# Generate terrain mesh immediately (required for visuals)
 	_generate_terrain_mesh()
-	_generate_collision()
 
-	# Defer spawning to spread work across frames and prevent stuttering
-	# Each call_deferred runs on the next idle frame
+	# Defer collision and all spawning to spread work across frames
+	call_deferred("_deferred_generate_collision")
 	call_deferred("_spawn_chunk_trees")
 	call_deferred("_deferred_spawn_resources")
 	call_deferred("_deferred_spawn_decorations")
 	call_deferred("_deferred_spawn_animals")
 
 	is_generated = true
+
+
+func _deferred_generate_collision() -> void:
+	# Generate collision shape from mesh (much faster than 256 individual boxes)
+	_generate_collision_from_mesh()
 
 
 func _deferred_spawn_resources() -> void:
@@ -99,6 +103,11 @@ func _deferred_spawn_animals() -> void:
 	_spawn_chunk_animals()
 
 
+# Cached height values for this chunk (includes 1 cell border for neighbor lookups)
+var _height_cache: Array = []
+var _height_cache_size: int = 0
+
+
 func _generate_terrain_mesh() -> void:
 	var surface_tool: SurfaceTool = SurfaceTool.new()
 	surface_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -110,22 +119,32 @@ func _generate_terrain_mesh() -> void:
 	var chunk_world_x: float = chunk_coord.x * chunk_size_cells * cell_size
 	var chunk_world_z: float = chunk_coord.y * chunk_size_cells * cell_size
 
+	# Pre-compute and cache all heights (including 1 cell border for neighbor lookups)
+	# This dramatically reduces noise sampling calls
+	_height_cache_size = chunk_size_cells + 2  # +2 for border cells
+	_height_cache.resize(_height_cache_size)
+	for cz in range(_height_cache_size):
+		_height_cache[cz] = []
+		_height_cache[cz].resize(_height_cache_size)
+		for cx in range(_height_cache_size):
+			var world_x: float = chunk_world_x + ((cx - 1) * cell_size) + cell_size / 2.0
+			var world_z: float = chunk_world_z + ((cz - 1) * cell_size) + cell_size / 2.0
+			_height_cache[cz][cx] = chunk_manager.get_height_at(world_x, world_z)
+
 	# Generate each cell in this chunk
 	for cz in range(chunk_size_cells):
 		for cx in range(chunk_size_cells):
 			var world_x: float = chunk_world_x + (cx * cell_size)
 			var world_z: float = chunk_world_z + (cz * cell_size)
 
-			# Get height at cell center
-			var center_x: float = world_x + cell_size / 2.0
-			var center_z: float = world_z + cell_size / 2.0
-			var height: float = chunk_manager.get_height_at(center_x, center_z)
+			# Get height from cache (offset by 1 for border)
+			var height: float = _height_cache[cz + 1][cx + 1]
 
 			# Create top face
-			_add_top_face(surface_tool, world_x, world_z, cell_size, height, cx, cz)
+			_add_top_face_cached(surface_tool, world_x, world_z, cell_size, height, cx, cz)
 
 			# Create side faces where there's height difference
-			_add_side_faces(surface_tool, world_x, world_z, cell_size, height, cx, cz, chunk_size_cells)
+			_add_side_faces_cached(surface_tool, world_x, world_z, cell_size, height, cx, cz, chunk_size_cells)
 
 	var mesh: ArrayMesh = surface_tool.commit()
 
@@ -133,6 +152,146 @@ func _generate_terrain_mesh() -> void:
 	terrain_mesh.mesh = mesh
 	terrain_mesh.material_override = chunk_manager.get_terrain_material()
 	add_child(terrain_mesh)
+
+	# Clear height cache to free memory
+	_height_cache.clear()
+
+
+func _add_top_face_cached(st: SurfaceTool, x: float, z: float, size: float, height: float, cx: int, cz: int) -> void:
+	# Use cached height values for AO calculations
+	var v0 := Vector3(x, height, z)
+	var v1 := Vector3(x + size, height, z)
+	var v2 := Vector3(x + size, height, z + size)
+	var v3 := Vector3(x, height, z + size)
+
+	var normal := Vector3.UP
+
+	# Get cell center for region lookup
+	var center_x: float = x + size / 2.0
+	var center_z: float = z + size / 2.0
+
+	# Get region-specific colors
+	var region: ChunkManager.RegionType = chunk_manager.get_region_at(center_x, center_z)
+	var region_colors: Dictionary = chunk_manager.get_region_colors(region)
+	var grass_color: Color = region_colors["grass"]
+
+	# Color variation based on world position for consistency across chunks
+	var world_cx: int = chunk_coord.x * chunk_manager.chunk_size_cells + cx
+	var world_cz: int = chunk_coord.y * chunk_manager.chunk_size_cells + cz
+	var variation: float = sin(world_cx * 12.9898 + world_cz * 78.233) * 0.08
+
+	var cell_grass: Color = Color(
+		clamp(grass_color.r + variation, grass_color.r - 0.08, grass_color.r + 0.10),
+		clamp(grass_color.g + variation * 0.5, grass_color.g - 0.07, grass_color.g + 0.10),
+		clamp(grass_color.b + variation * 0.3, grass_color.b - 0.07, grass_color.b + 0.07)
+	)
+
+	# Calculate vertex AO using cached heights (offset by 1 for border)
+	var ao0: float = _calculate_vertex_ao_cached(cx, cz, height, -1, -1)  # NW corner
+	var ao1: float = _calculate_vertex_ao_cached(cx + 1, cz, height, 1, -1)  # NE corner
+	var ao2: float = _calculate_vertex_ao_cached(cx + 1, cz + 1, height, 1, 1)  # SE corner
+	var ao3: float = _calculate_vertex_ao_cached(cx, cz + 1, height, -1, 1)  # SW corner
+
+	# Apply AO to colors
+	var color0: Color = cell_grass * ao0
+	var color1: Color = cell_grass * ao1
+	var color2: Color = cell_grass * ao2
+	var color3: Color = cell_grass * ao3
+
+	# Get UV coordinates for top face
+	var uvs: Array[Vector2]
+	if region == ChunkManager.RegionType.ROCKY:
+		uvs = TerrainTextures.get_stone_uvs()
+	else:
+		uvs = TerrainTextures.get_top_face_uvs()
+
+	# Triangle 1: v0, v2, v1
+	st.set_color(color0)
+	st.set_normal(normal)
+	st.set_uv(uvs[0])
+	st.add_vertex(v0)
+	st.set_color(color2)
+	st.set_normal(normal)
+	st.set_uv(uvs[2])
+	st.add_vertex(v2)
+	st.set_color(color1)
+	st.set_normal(normal)
+	st.set_uv(uvs[1])
+	st.add_vertex(v1)
+
+	# Triangle 2: v0, v3, v2
+	st.set_color(color0)
+	st.set_normal(normal)
+	st.set_uv(uvs[0])
+	st.add_vertex(v0)
+	st.set_color(color3)
+	st.set_normal(normal)
+	st.set_uv(uvs[3])
+	st.add_vertex(v3)
+	st.set_color(color2)
+	st.set_normal(normal)
+	st.set_uv(uvs[2])
+	st.add_vertex(v2)
+
+
+func _calculate_vertex_ao_cached(cx: int, cz: int, current_height: float, dir_x: int, dir_z: int) -> float:
+	# Use cached heights for AO calculation
+	var ao_strength: float = 0.12
+
+	# Cache indices (offset by 1 for border)
+	var base_cx: int = cx + 1
+	var base_cz: int = cz + 1
+
+	# Sample the 3 neighbors that share this corner
+	var neighbor_x_height: float = _height_cache[base_cz][base_cx + dir_x]
+	var neighbor_z_height: float = _height_cache[base_cz + dir_z][base_cx]
+	var neighbor_diag_height: float = _height_cache[base_cz + dir_z][base_cx + dir_x]
+
+	# Count how many neighbors are higher
+	var occlusion_count: int = 0
+	if neighbor_x_height > current_height:
+		occlusion_count += 1
+	if neighbor_z_height > current_height:
+		occlusion_count += 1
+	if neighbor_diag_height > current_height:
+		occlusion_count += 1
+
+	var ao: float = 1.0 - (occlusion_count * ao_strength)
+	return clamp(ao, 0.55, 1.0)
+
+
+func _add_side_faces_cached(st: SurfaceTool, x: float, z: float, size: float, height: float, cx: int, cz: int, chunk_size_cells: int) -> void:
+	# Use cached heights for neighbor lookups (offset by 1 for border)
+	var base_cx: int = cx + 1
+	var base_cz: int = cz + 1
+
+	# North side (z-)
+	var north_height: float = _height_cache[base_cz - 1][base_cx]
+	if height > north_height:
+		_add_side_quad(st, Vector3(x, height, z), Vector3(x + size, height, z),
+					   Vector3(x + size, north_height, z), Vector3(x, north_height, z),
+					   Vector3(0, 0, -1))
+
+	# South side (z+)
+	var south_height: float = _height_cache[base_cz + 1][base_cx]
+	if height > south_height:
+		_add_side_quad(st, Vector3(x + size, height, z + size), Vector3(x, height, z + size),
+					   Vector3(x, south_height, z + size), Vector3(x + size, south_height, z + size),
+					   Vector3(0, 0, 1))
+
+	# West side (x-)
+	var west_height: float = _height_cache[base_cz][base_cx - 1]
+	if height > west_height:
+		_add_side_quad(st, Vector3(x, height, z + size), Vector3(x, height, z),
+					   Vector3(x, west_height, z), Vector3(x, west_height, z + size),
+					   Vector3(-1, 0, 0))
+
+	# East side (x+)
+	var east_height: float = _height_cache[base_cz][base_cx + 1]
+	if height > east_height:
+		_add_side_quad(st, Vector3(x + size, height, z), Vector3(x + size, height, z + size),
+					   Vector3(x + size, east_height, z + size), Vector3(x + size, east_height, z),
+					   Vector3(1, 0, 0))
 
 
 func _add_top_face(st: SurfaceTool, x: float, z: float, size: float, height: float, cx: int, cz: int) -> void:
@@ -471,47 +630,28 @@ func _calculate_side_ao_bottom(x: float, z: float, height: float, face_normal: V
 	return clamp(ao, 0.55, 0.95)
 
 
-func _generate_collision() -> void:
-	# Use box collision for each cell to create true Minecraft-style blocky collision
-	# This prevents walking up block edges - player must jump
+func _generate_collision_from_mesh() -> void:
+	# Generate collision from the mesh - much faster than 256 individual boxes
+	# Uses ConcavePolygonShape3D which matches the terrain mesh exactly
+	if not terrain_mesh or not terrain_mesh.mesh:
+		return
+
 	terrain_collision = StaticBody3D.new()
 	terrain_collision.name = "TerrainCollision"
 
-	var cell_size: float = chunk_manager.cell_size
-	var chunk_size_cells: int = chunk_manager.chunk_size_cells
-	var chunk_world_size: float = chunk_size_cells * cell_size
+	var collision_shape: CollisionShape3D = CollisionShape3D.new()
 
-	var chunk_world_x: float = chunk_coord.x * chunk_world_size
-	var chunk_world_z: float = chunk_coord.y * chunk_world_size
+	# Create collision from the mesh faces
+	var shape: ConcavePolygonShape3D = terrain_mesh.mesh.create_trimesh_shape()
+	collision_shape.shape = shape
 
-	# Create a box collision for each terrain cell
-	for cz in range(chunk_size_cells):
-		for cx in range(chunk_size_cells):
-			var world_x: float = chunk_world_x + cx * cell_size
-			var world_z: float = chunk_world_z + cz * cell_size
-			var center_x: float = world_x + cell_size / 2.0
-			var center_z: float = world_z + cell_size / 2.0
-
-			var height: float = chunk_manager.get_height_at(center_x, center_z)
-
-			# Create box from y=height going down to y=-10 (thick enough for pond floor too)
-			# Pond floor is at -2.5, so we need boxes to extend below that
-			var box_bottom: float = -10.0
-			var box_height: float = height - box_bottom
-			if box_height <= 0:
-				continue
-
-			var collision_shape: CollisionShape3D = CollisionShape3D.new()
-			var box: BoxShape3D = BoxShape3D.new()
-			box.size = Vector3(cell_size, box_height, cell_size)
-
-			collision_shape.shape = box
-			# Position box so top surface is at terrain height
-			collision_shape.position = Vector3(center_x, height - box_height / 2.0, center_z)
-
-			terrain_collision.add_child(collision_shape)
-
+	terrain_collision.add_child(collision_shape)
 	add_child(terrain_collision)
+
+
+func _generate_collision() -> void:
+	# Legacy function - now calls the optimized version
+	_generate_collision_from_mesh()
 
 
 func _spawn_chunk_trees() -> void:
