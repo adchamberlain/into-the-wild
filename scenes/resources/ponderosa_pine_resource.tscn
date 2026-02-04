@@ -1,0 +1,90 @@
+[gd_scene load_steps=14 format=3 uid="uid://ponderosa001"]
+
+[ext_resource type="Script" path="res://scripts/resources/resource_node.gd" id="1_resource"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_trunk"]
+size = Vector3(1.2, 7.0, 1.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_trunk"]
+size = Vector3(1.0, 7.0, 1.0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_trunk"]
+albedo_color = Color(0.6, 0.35, 0.15, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_needles"]
+albedo_color = Color(0.15, 0.35, 0.18, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_canopy_bottom"]
+size = Vector3(4.5, 1.5, 4.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_canopy_mid1"]
+size = Vector3(3.8, 1.5, 3.8)
+
+[sub_resource type="BoxMesh" id="BoxMesh_canopy_mid2"]
+size = Vector3(3.0, 1.5, 3.0)
+
+[sub_resource type="BoxMesh" id="BoxMesh_canopy_top"]
+size = Vector3(2.2, 1.5, 2.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_canopy_peak"]
+size = Vector3(1.2, 1.5, 1.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_canopy_cross"]
+size = Vector3(5.0, 1.2, 3.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_canopy"]
+size = Vector3(4.5, 6.0, 4.5)
+
+[node name="PonderosaPineResource" type="StaticBody3D"]
+script = ExtResource("1_resource")
+resource_type = "wood"
+resource_amount = 5
+interaction_text = "Chop"
+secondary_resource_type = "branch"
+secondary_resource_amount = 3
+required_tool = "axe"
+chops_required = 4
+adjust_to_terrain = false
+
+[node name="TrunkCollision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, 0)
+shape = SubResource("BoxShape3D_trunk")
+
+[node name="TrunkMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, 0)
+mesh = SubResource("BoxMesh_trunk")
+material_override = SubResource("StandardMaterial3D_trunk")
+
+[node name="CanopyBottom" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.0, 0)
+mesh = SubResource("BoxMesh_canopy_bottom")
+material_override = SubResource("StandardMaterial3D_needles")
+
+[node name="CanopyMid1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7.5, 0)
+mesh = SubResource("BoxMesh_canopy_mid1")
+material_override = SubResource("StandardMaterial3D_needles")
+
+[node name="CanopyMid2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 9.0, 0)
+mesh = SubResource("BoxMesh_canopy_mid2")
+material_override = SubResource("StandardMaterial3D_needles")
+
+[node name="CanopyTop" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 10.5, 0)
+mesh = SubResource("BoxMesh_canopy_top")
+material_override = SubResource("StandardMaterial3D_needles")
+
+[node name="CanopyPeak" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 12.0, 0)
+mesh = SubResource("BoxMesh_canopy_peak")
+material_override = SubResource("StandardMaterial3D_needles")
+
+[node name="CanopyCross" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.5, 0)
+mesh = SubResource("BoxMesh_canopy_cross")
+material_override = SubResource("StandardMaterial3D_needles")
+
+[node name="CanopyCollision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 9.0, 0)
+shape = SubResource("BoxShape3D_canopy")

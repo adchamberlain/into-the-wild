@@ -1851,12 +1851,147 @@ Fixed "Cannot call method 'look_at' on a null value" error after loading screen.
 
 ---
 
+## Session 48 - Mountain Biome & Ponderosa Pines (2026-02-04)
+
+### New MOUNTAIN Biome
+
+Added a fifth region type for dramatic alpine peaks far from spawn, creating exploration goals and elevation-based progression.
+
+**Region Characteristics:**
+| Property | Value |
+|----------|-------|
+| Noise threshold | > 0.6 AND > 100 units from spawn |
+| Height scale | 50.0 (tallest terrain) |
+| Height step | 1.5 (dramatic blocky cliffs) |
+| Grass color | Alpine grey-green (0.38, 0.45, 0.35) |
+| Dirt color | Mountain grey (0.42, 0.40, 0.38) |
+
+**Vegetation Multipliers:**
+| Resource | Multiplier |
+|----------|------------|
+| Trees | 0.8x (mostly ponderosa below treeline) |
+| Rocks | 3.0x |
+| Berries | 0.3x |
+| Herbs | 0.5x |
+| Osha Root | 2.0x (alpine specialty) |
+
+**Terrain Generation:**
+- Uses `hill_noise` at 0.8x frequency for large-scale mountain shapes
+- Power curve (1.8) for dramatic peaks
+- Medium-scale ridges add 8 units variation
+- Detail noise adds 5 units of surface variation
+- Climbing paths carved via `path_noise` (threshold 0.25)
+- Minimum height 15 units
+
+### Ponderosa Pine Trees
+
+New tree type that grows at elevation and dominates the MOUNTAIN biome, creating realistic alpine forests.
+
+**Visual Design** (`scenes/resources/ponderosa_pine_resource.tscn`):
+- Tall straight trunk (7 units vs 5 for big oak)
+- Orange-brown bark color (distinctive ponderosa look)
+- Conical canopy with 5 stacked needle layers tapering to peak
+- Total height: ~12 units when fully grown
+
+**Resource Yield:**
+- 5 wood, 3 branches
+- 4 chops required with axe
+
+**Spawning Rules:**
+| Region | Elevation | Ponderosa Chance |
+|--------|-----------|------------------|
+| MOUNTAIN | < 45 units (below treeline) | 85% |
+| MOUNTAIN | ≥ 45 units (above treeline) | No trees |
+| Any | > 25 units | 50% (outside groves) |
+| Any | > 15 units in pine grove | 70% |
+
+**Pine Grove Clustering:**
+- New `pine_grove_noise` (frequency 0.05) creates natural grove patterns
+- Groves form at noise values > 0.2
+- Creates realistic stands of ponderosa on hillsides
+
+### Alpine Lakes
+
+High-elevation lakes in MOUNTAIN regions.
+
+**Generation Parameters:**
+| Parameter | Value |
+|-----------|-------|
+| Count | 2 per world |
+| Radius range | 12-18 units |
+| Depth | 4.0 units |
+| Min distance from spawn | 100 units |
+| Min spacing between alpine lakes | 60 units |
+
+**Features:**
+- Marked with `is_alpine: true` flag
+- Fishing available (same as regular lakes)
+- Carved into mountain terrain
+
+### Osha Root - Alpine Medicinal Plant
+
+New resource exclusive to high-altitude areas, providing both healing and hunger restoration.
+
+**Visual Design** (`scenes/resources/osha_root.tscn`):
+- Crossed leaves (celery-like appearance)
+- Visible brown root at base
+- Small plant profile
+
+**Resource Properties:**
+- `resource_type: "osha_root"`
+- Hand-gatherable (no tool required)
+- Interaction text: "Dig"
+
+**Spawning Rules:**
+| Region | Elevation | Spawn Chance |
+|--------|-----------|--------------|
+| MOUNTAIN | 20-45 units | 4% (base × 2.0 mult) |
+| HILLS | > 25 units | 1% (base × 0.5 mult) |
+| ROCKY | > 25 units | 0.6% (base × 0.3 mult) |
+
+**Consumption Effects:**
+- Hunger restored: 20
+- Health restored: 25
+- Both effects apply when consumed (checks health first)
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `scenes/resources/ponderosa_pine_resource.tscn` | Ponderosa pine tree with conical canopy |
+| `scenes/resources/osha_root.tscn` | Alpine medicinal plant |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/chunk_manager.gd` | Added MOUNTAIN to RegionType, region parameters, alpine lake generation, pine_grove_noise, ponderosa/osha scene loading, MOUNTAIN terrain height calculation |
+| `scripts/world/terrain_chunk.gd` | Ponderosa spawning with elevation/grove logic, osha root spawning, treeline mechanic, MOUNTAIN animal spawning |
+| `scripts/player/player_controller.gd` | Added osha_root to FOOD_VALUES (20) and HEALING_ITEMS (25), updated footstep surface detection for MOUNTAIN |
+
+### Gameplay Impact
+
+**Early Exploration:**
+- Mountains visible in distance, creating exploration goals
+- Ponderosa pines mark transition to higher elevations
+
+**Mid-Game:**
+- Access to mountain regions for osha root (powerful healing+food)
+- Alpine lakes for alternative fishing spots
+
+**Late-Game:**
+- Full mountain exploration with climbing paths
+- Osha root farming for expedition supplies
+
+---
+
 ## Next Session
 
 ### Planned Tasks
 1. Optional: DualSense haptics and adaptive triggers
 2. Test and polish cave system integration
 3. Add sound effects for thorns clearing and cave ambience
+4. Test mountain terrain generation and ponderosa spawning
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

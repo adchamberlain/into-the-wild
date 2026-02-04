@@ -3,7 +3,7 @@ class_name ChunkManager
 ## Manages dynamic loading/unloading of terrain chunks around the player.
 
 # Region types for terrain variety
-enum RegionType { MEADOW, FOREST, HILLS, ROCKY }
+enum RegionType { MEADOW, FOREST, HILLS, ROCKY, MOUNTAIN }
 
 # Water body types
 enum WaterBodyType { POND, LAKE, RIVER }
@@ -71,8 +71,17 @@ var region_pond_params: Dictionary = {
 	RegionType.MEADOW: {"radius_min": 10.0, "radius_max": 14.0, "depth": 2.5},
 	RegionType.FOREST: {"radius_min": 6.0, "radius_max": 10.0, "depth": 2.5},
 	RegionType.HILLS: {"radius_min": 5.0, "radius_max": 8.0, "depth": 3.0},
-	RegionType.ROCKY: {"radius_min": 4.0, "radius_max": 6.0, "depth": 3.5}
+	RegionType.ROCKY: {"radius_min": 4.0, "radius_max": 6.0, "depth": 3.5},
+	RegionType.MOUNTAIN: {"radius_min": 8.0, "radius_max": 12.0, "depth": 4.0}
 }
+
+# Alpine lake settings (high elevation lakes in MOUNTAIN region)
+var alpine_lake_count: int = 2  # Target number of alpine lakes
+var alpine_lake_min_radius: float = 12.0
+var alpine_lake_max_radius: float = 18.0
+var alpine_lake_depth: float = 4.0
+var alpine_lake_min_elevation: float = 30.0  # Minimum terrain height for alpine lakes
+var alpine_lake_min_spacing: float = 60.0  # Min distance between alpine lakes
 
 # Legacy support - computed from water_bodies for existing code
 var pond_locations: Array[Vector2] = []
@@ -100,6 +109,10 @@ var region_colors: Dictionary = {
 	RegionType.ROCKY: {
 		"grass": Color(0.45, 0.42, 0.38),  # Grey stone
 		"dirt": Color(0.35, 0.33, 0.30)     # Dark grey
+	},
+	RegionType.MOUNTAIN: {
+		"grass": Color(0.38, 0.45, 0.35),  # Alpine grey-green
+		"dirt": Color(0.42, 0.40, 0.38)     # Mountain grey
 	}
 }
 
@@ -108,15 +121,17 @@ var region_height_params: Dictionary = {
 	RegionType.MEADOW: {"scale": 2.0, "step": 0.5},   # Gentle rolling terrain
 	RegionType.FOREST: {"scale": 5.0, "step": 1.0},   # Current default
 	RegionType.HILLS: {"scale": 22.0, "step": 1.0},   # Dramatic hills with jumpable steps
-	RegionType.ROCKY: {"scale": 12.0, "step": 1.0}    # Jagged cliffs with jumpable steps
+	RegionType.ROCKY: {"scale": 12.0, "step": 1.0},   # Jagged cliffs with jumpable steps
+	RegionType.MOUNTAIN: {"scale": 50.0, "step": 1.5} # Tall peaks with dramatic blocky cliffs
 }
 
 # Region-specific vegetation multipliers
 var region_vegetation: Dictionary = {
-	RegionType.MEADOW: {"tree": 0.1, "rock": 0.3, "berry": 2.0, "herb": 2.0},
-	RegionType.FOREST: {"tree": 1.5, "rock": 1.0, "berry": 1.0, "herb": 1.0},
-	RegionType.HILLS: {"tree": 0.6, "rock": 1.5, "berry": 0.8, "herb": 0.8},
-	RegionType.ROCKY: {"tree": 0.2, "rock": 5.0, "berry": 0.2, "herb": 0.2}
+	RegionType.MEADOW: {"tree": 0.1, "rock": 0.3, "berry": 2.0, "herb": 2.0, "osha": 0.0},
+	RegionType.FOREST: {"tree": 1.5, "rock": 1.0, "berry": 1.0, "herb": 1.0, "osha": 0.0},
+	RegionType.HILLS: {"tree": 0.6, "rock": 1.5, "berry": 0.8, "herb": 0.8, "osha": 0.5},
+	RegionType.ROCKY: {"tree": 0.2, "rock": 5.0, "berry": 0.2, "herb": 0.2, "osha": 0.3},
+	RegionType.MOUNTAIN: {"tree": 0.8, "rock": 3.0, "berry": 0.3, "herb": 0.5, "osha": 2.0}
 }
 
 # Noise generators
@@ -126,6 +141,7 @@ var region_noise: FastNoiseLite  # Low-frequency noise for region determination
 var detail_noise: FastNoiseLite  # Higher-frequency detail for hills
 var hill_noise: FastNoiseLite    # Large-scale hill shapes
 var path_noise: FastNoiseLite    # Creates valleys/paths through hills for climbing
+var pine_grove_noise: FastNoiseLite  # Clustering for ponderosa pine groves
 var noise_seed: int = 0
 var noise_seed_set: bool = false  # True if seed was set externally (e.g., from save file)
 
@@ -133,6 +149,7 @@ var noise_seed_set: bool = false  # True if seed was set externally (e.g., from 
 var tree_scene: PackedScene
 var big_tree_scene: PackedScene
 var birch_tree_scene: PackedScene
+var ponderosa_pine_scene: PackedScene
 
 # Resource scenes
 var branch_scene: PackedScene
@@ -141,6 +158,7 @@ var berry_bush_scene: PackedScene
 var mushroom_scene: PackedScene
 var herb_scene: PackedScene
 var ore_scene: PackedScene
+var osha_root_scene: PackedScene
 
 # Resource spawning settings
 @export var branch_density: float = 0.08  # Branches per grid cell chance
@@ -276,6 +294,13 @@ func _setup_noise() -> void:
 	path_noise.frequency = 0.025  # Medium frequency for winding paths
 	path_noise.fractal_octaves = 2
 
+	# Pine grove noise - creates clustering for ponderosa pine stands
+	pine_grove_noise = FastNoiseLite.new()
+	pine_grove_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	pine_grove_noise.seed = noise_seed + 5500
+	pine_grove_noise.frequency = 0.05  # Medium frequency for grove-sized clusters
+	pine_grove_noise.fractal_octaves = 2
+
 
 ## Get the current world seed for saving.
 func get_world_seed() -> int:
@@ -297,12 +322,13 @@ func _generate_water_bodies() -> void:
 
 	_generate_pond_locations()
 	_generate_lakes()
+	_generate_alpine_lakes()
 	_generate_rivers()
 
 	# Update legacy pond_locations for backward compatibility
 	_update_legacy_pond_locations()
 
-	print("[ChunkManager] Water features generated: %d ponds, %d lakes, %d rivers" % [
+	print("[ChunkManager] Water features generated: %d ponds, %d lakes (incl. alpine), %d rivers" % [
 		_count_water_bodies(WaterBodyType.POND),
 		_count_water_bodies(WaterBodyType.LAKE),
 		rivers.size()
@@ -433,6 +459,61 @@ func _generate_lakes() -> void:
 		lakes_generated += 1
 		print("[ChunkManager] Generated lake at (%.1f, %.1f) radius=%.1f" % [
 			candidate.x, candidate.y, lake_radius
+		])
+
+
+func _generate_alpine_lakes() -> void:
+	## Generate high-elevation lakes in MOUNTAIN regions
+	var alpine_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	alpine_rng.seed = noise_seed + 1888
+
+	var world_extent: float = 180.0  # Larger extent for mountain regions
+	var attempts: int = 0
+	var max_attempts: int = alpine_lake_count * 150
+	var alpine_lakes_generated: int = 0
+
+	while alpine_lakes_generated < alpine_lake_count and attempts < max_attempts:
+		attempts += 1
+
+		# Generate random position (far from spawn where mountains are)
+		var candidate: Vector2 = Vector2(
+			alpine_rng.randf_range(-world_extent, world_extent),
+			alpine_rng.randf_range(-world_extent, world_extent)
+		)
+
+		# Alpine lakes must be far from spawn
+		if candidate.length() < 100.0:
+			continue
+
+		# Must be in MOUNTAIN region
+		var region: RegionType = get_region_at(candidate.x, candidate.y)
+		if region != RegionType.MOUNTAIN:
+			continue
+
+		# Check distance from existing water bodies
+		var too_close: bool = false
+		for body in water_bodies:
+			var required_spacing: float = alpine_lake_min_spacing if body["type"] == WaterBodyType.LAKE else 40.0
+			if candidate.distance_to(body["center"]) < required_spacing + body["radius"]:
+				too_close = true
+				break
+
+		if too_close:
+			continue
+
+		var alpine_radius: float = alpine_rng.randf_range(alpine_lake_min_radius, alpine_lake_max_radius)
+
+		water_bodies.append({
+			"type": WaterBodyType.LAKE,
+			"center": candidate,
+			"radius": alpine_radius,
+			"depth": alpine_lake_depth,
+			"is_alpine": true  # Mark as alpine lake
+		})
+
+		alpine_lakes_generated += 1
+		print("[ChunkManager] Generated alpine lake at (%.1f, %.1f) radius=%.1f" % [
+			candidate.x, candidate.y, alpine_radius
 		])
 
 
@@ -863,6 +944,7 @@ func _load_scenes() -> void:
 	tree_scene = load("res://scenes/resources/tree_resource.tscn")
 	big_tree_scene = load("res://scenes/resources/big_tree_resource.tscn")
 	birch_tree_scene = load("res://scenes/resources/birch_tree_resource.tscn")
+	ponderosa_pine_scene = load("res://scenes/resources/ponderosa_pine_resource.tscn")
 	fishing_spot_scene = load("res://scenes/resources/fishing_spot.tscn")
 
 	# Load resource scenes
@@ -872,6 +954,7 @@ func _load_scenes() -> void:
 	mushroom_scene = load("res://scenes/resources/mushroom.tscn")
 	herb_scene = load("res://scenes/resources/herb.tscn")
 	ore_scene = load("res://scenes/resources/ore_node.tscn")
+	osha_root_scene = load("res://scenes/resources/osha_root.tscn")
 
 	# Load obstacle and cave scripts
 	obstacle_thorns_script = load("res://scripts/world/obstacle_thorns.gd")
@@ -879,6 +962,10 @@ func _load_scenes() -> void:
 
 	if not tree_scene:
 		push_warning("[ChunkManager] Failed to load tree scene")
+	if not ponderosa_pine_scene:
+		push_warning("[ChunkManager] Failed to load ponderosa pine scene")
+	if not osha_root_scene:
+		push_warning("[ChunkManager] Failed to load osha root scene")
 	if not obstacle_thorns_script:
 		push_warning("[ChunkManager] Failed to load obstacle_thorns script")
 
@@ -895,6 +982,12 @@ func get_region_at(x: float, z: float) -> RegionType:
 		return RegionType.FOREST
 
 	var value: float = region_noise.get_noise_2d(x, z)
+
+	# MOUNTAIN regions appear at extreme high noise values AND far from spawn
+	# This creates distant mountain peaks that players can explore
+	if value > 0.6 and spawn_distance > 100.0:
+		return RegionType.MOUNTAIN
+
 	if value < -0.3:
 		return RegionType.MEADOW
 	elif value < 0.2:
@@ -1034,6 +1127,39 @@ func get_height_at(x: float, z: float) -> float:
 				height -= path_strength * height * 0.4
 
 		height = max(1.0, height)
+
+	# Special terrain generation for MOUNTAIN - tall dramatic peaks with treeline
+	elif region == RegionType.MOUNTAIN:
+		# Large-scale mountain shapes using hill noise with higher amplitude
+		var mountain_shape: float = hill_noise.get_noise_2d(snapped_x * 0.8, snapped_z * 0.8)
+		# Transform to 0-1 range, then apply power curve for dramatic peaks
+		mountain_shape = (mountain_shape + 1.0) * 0.5
+		mountain_shape = pow(mountain_shape, 1.8)  # More dramatic than hills
+		height = mountain_shape * region_height_scale
+
+		# Add medium-scale ridges
+		var ridge: float = hill_noise.get_noise_2d(snapped_x * 1.2, snapped_z * 1.2)
+		ridge = (ridge + 1.0) * 0.5
+		height += ridge * 8.0
+
+		# Add detail variation for rocky surface
+		var detail: float = detail_noise.get_noise_2d(snapped_x * 1.5, snapped_z * 1.5)
+		height += detail * 5.0
+
+		# Carve climbing paths through mountains (similar to hills but sparser)
+		var path_value: float = path_noise.get_noise_2d(snapped_x, snapped_z)
+		var mountain_path_threshold: float = 0.25
+
+		if path_value > mountain_path_threshold:
+			var has_carved_neighbor: bool = _has_carved_neighbor(snapped_x, snapped_z, mountain_path_threshold)
+			if has_carved_neighbor:
+				var path_strength: float = (path_value - mountain_path_threshold) / (1.0 - mountain_path_threshold)
+				# Mountains have gentler paths to maintain grandeur
+				var path_reduction: float = path_strength * height * 0.5
+				height -= path_reduction
+
+		# Ensure mountains have significant minimum height
+		height = max(15.0, height)
 
 	# Quantize to blocky steps (using region-specific step size)
 	height = floor(height / region_height_step) * region_height_step

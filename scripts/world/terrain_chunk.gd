@@ -763,11 +763,35 @@ func _spawn_chunk_trees() -> void:
 
 				var tree_y: float = chunk_manager.get_height_at(tree_x, tree_z)
 
-				# Choose tree type
+				# Choose tree type based on region and elevation
 				var tree: Node3D
 				var tree_type_roll: float = rng.randf()
+				var ponderosa_scene: PackedScene = chunk_manager.ponderosa_pine_scene
 
-				if tree_type_roll < 0.60:
+				# Ponderosa pines dominate in MOUNTAIN region and at higher elevations
+				var use_ponderosa: bool = false
+				if ponderosa_scene:
+					if region == ChunkManager.RegionType.MOUNTAIN:
+						# In mountains: 85% ponderosa below treeline (45 units), no trees above
+						if tree_y < 45.0:
+							use_ponderosa = tree_type_roll < 0.85
+						else:
+							# Above treeline - no trees spawn (skip)
+							z += tree_grid_size
+							continue
+					elif tree_y > 15.0:
+						# At elevation in other biomes: use pine grove noise for clustering
+						var pine_grove_value: float = chunk_manager.pine_grove_noise.get_noise_2d(tree_x, tree_z)
+						if pine_grove_value > 0.2:
+							# In a pine grove cluster - higher chance of ponderosa
+							use_ponderosa = tree_type_roll < 0.7
+						elif tree_y > 25.0:
+							# High elevation even outside groves - some ponderosa
+							use_ponderosa = tree_type_roll < 0.5
+
+				if use_ponderosa:
+					tree = ponderosa_scene.instantiate()
+				elif tree_type_roll < 0.60:
 					tree = tree_scene.instantiate()
 				elif tree_type_roll < 0.90 and big_tree_scene:
 					tree = big_tree_scene.instantiate()
@@ -918,8 +942,30 @@ func _spawn_chunk_resources() -> void:
 				ore_chance = 0.045  # 4.5% chance in rocky
 			elif region == ChunkManager.RegionType.HILLS:
 				ore_chance = 0.015  # 1.5% chance in hills
+			elif region == ChunkManager.RegionType.MOUNTAIN:
+				ore_chance = 0.03  # 3% chance in mountains
 			if resource_roll < ore_chance and chunk_manager.ore_scene:
 				_spawn_resource(chunk_manager.ore_scene, res_x, res_y, res_z, rng)
+				z += resource_grid_size
+				continue
+
+			# Osha root - alpine medicinal plant, spawns at high elevations
+			resource_roll = rng.randf()
+			var osha_mult: float = chunk_manager.get_vegetation_multiplier(region, "osha")
+			var osha_base_chance: float = 0.02  # 2% base chance
+			var osha_chance: float = 0.0
+
+			# Osha root grows at high elevations and in mountain regions
+			if region == ChunkManager.RegionType.MOUNTAIN:
+				# In mountains: spawns below treeline but above base
+				if res_y > 20.0 and res_y < 45.0:
+					osha_chance = osha_base_chance * osha_mult
+			elif res_y > 25.0:
+				# At high elevation in other biomes (hills, rocky)
+				osha_chance = osha_base_chance * osha_mult
+
+			if resource_roll < osha_chance and chunk_manager.osha_root_scene:
+				_spawn_resource(chunk_manager.osha_root_scene, res_x, res_y, res_z, rng)
 
 			z += resource_grid_size
 		x += resource_grid_size
@@ -1154,6 +1200,9 @@ func _spawn_chunk_animals() -> void:
 		ChunkManager.RegionType.ROCKY:
 			rabbit_count = 0
 			bird_count = rng.randi_range(0, 1)
+		ChunkManager.RegionType.MOUNTAIN:
+			rabbit_count = 0
+			bird_count = rng.randi_range(0, 1)  # Alpine birds (eagles soaring)
 
 	# Cap total animals per chunk for performance
 	var max_animals: int = 2
