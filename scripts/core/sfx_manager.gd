@@ -28,6 +28,8 @@ const DEFAULT_COOLDOWNS: Dictionary = {
 	"menu_close": 0.1,
 	"select": 0.05,
 	"cancel": 0.1,
+	# Trap sounds
+	"trap_snap": 0.5,  # Trap catching prey
 	# Animal sounds - very long cooldowns since many animals exist in world
 	"rabbit_hop": 3.0,  # Only hear a hop every 3 seconds max
 	"bird_chirp": 8.0,  # Rare chirps
@@ -67,6 +69,9 @@ const SFX_PATHS: Dictionary = {
 	# Placement sounds
 	"place_confirm": "res://assets/audio/sfx/placement/confirm.mp3",
 	"place_cancel": "res://assets/audio/sfx/placement/cancel.mp3",
+
+	# Trap sounds
+	"trap_snap": "res://assets/audio/sfx/traps/trap_snap.mp3",
 
 	# Animal sounds
 	"rabbit_hop": "res://assets/audio/sfx/animals/rabbit_hop.mp3",
