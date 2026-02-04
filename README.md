@@ -8,10 +8,12 @@ A solo camping adventure game built in Godot 4.5. Survive in the wilderness by g
 
 ### Infinite Procedural World
 - **Chunk-based terrain** - Endless exploration with procedurally generated landscapes
+- **Four distinct regions** - Meadow (gentle rolling hills), Forest (dense trees), Hills (dramatic terrain with climbing paths), Rocky (jagged cliffs with caves)
 - **Biome variety** - Mixed forests with oak, big oak, and birch trees
-- **Natural features** - Ponds for swimming and fishing, grass, flowers
+- **Natural features** - Ponds, lakes, and rivers for swimming and fishing
 - **Blocky terrain** - Cell-based terrain with vertical cliffs and height variation
 - **Ambient wildlife** - Rabbits and birds that flee when approached
+- **Cave entrances** - Explorable underground areas in rocky regions (requires torch)
 
 ### Survival Systems
 - **Health & Hunger** - Manage your vital stats to stay alive
@@ -53,7 +55,7 @@ Build up your camp through three levels:
 
 | Slot | Item | Description |
 |------|------|-------------|
-| 1 | Torch | Portable light source |
+| 1 | Torch | Portable light source (required to enter caves) |
 | 2 | Stone Axe | Chop trees (150 durability) |
 | 3 | Campfire Kit | Place a fire pit |
 | 4 | Rope | Crafting material |
@@ -61,6 +63,8 @@ Build up your camp through three levels:
 | 6 | Storage Box | Place storage container |
 | 7 | Fishing Rod | Catch fish (50 durability) |
 | 8 | Crafting Bench Kit | Place a workbench |
+| 20 | Machete | Clear thorny obstacles (200 durability) |
+| 21 | Lantern | Bright light source, 2x torch range |
 
 ## Controls
 

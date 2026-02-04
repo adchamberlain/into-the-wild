@@ -1774,6 +1774,83 @@ Implemented a major exploration progression system with two components:
 
 ---
 
+## Session 47 - Chunk Loading Performance & Loading Screen Polish (2026-02-03)
+
+### Critical Performance Fix: Chunk Boundary Stuttering
+
+Fixed severe jitter/freezing that occurred every time the player crossed chunk boundaries while moving.
+
+**Root Causes Identified and Fixed:**
+
+1. **Redundant Noise Sampling** - Each 16x16 chunk was calling `get_height_at()` 4,000+ times for mesh generation, AO calculations, and collision.
+
+2. **256 Collision Shapes Per Chunk** - Creating 256 individual `BoxShape3D` nodes per chunk caused major frame spikes.
+
+3. **Synchronous Heavy Operations** - All spawning happened in a single frame when chunks loaded.
+
+**Solutions Implemented:**
+
+| Optimization | Before | After | Improvement |
+|--------------|--------|-------|-------------|
+| Height sampling | ~4,350 calls/chunk | ~324 calls/chunk | 13x reduction |
+| Collision shapes | 256 BoxShape3D/chunk | 1 HeightMapShape3D/chunk | 256x reduction |
+| Spawning | All in one frame | Deferred across frames | Eliminates spikes |
+
+### Technical Details
+
+**Height Caching** (`scripts/world/terrain_chunk.gd`):
+- Pre-compute all heights into 18x18 array (16 cells + 1 border on each side)
+- Cache populated once during mesh generation
+- Reused for AO calculations, side faces, and collision generation
+- Cleared after collision to free memory
+
+**HeightMapShape3D Collision**:
+- Single `HeightMapShape3D` per chunk instead of 256 `BoxShape3D`
+- Built from same height cache used for mesh
+- Properly scaled and positioned at chunk center
+- Works correctly with `CharacterBody3D.move_and_slide()`
+
+**Deferred Spawning**:
+- Trees, resources, decorations, and animals spawn on subsequent frames via `call_deferred()`
+- Extra frame delays using `await get_tree().process_frame` to spread load further
+
+### Loading Screen Improvements
+
+**Visual Polish**:
+- Fixed viewport coverage (added root_control container for proper anchoring)
+- Enlarged camping artwork
+- Increased subtitle font size (20→42px)
+- Increased progress label font size (18→36px)
+- Moved title section lower for professional video game appearance
+
+**Player Controls**:
+- Disabled all input while loading screen active
+- Added `_is_loading_screen_active()` check in player controller
+- Prevents movement/interaction during world initialization
+
+### Bug Fix: Ambient Animals
+
+Fixed "Cannot call method 'look_at' on a null value" error after loading screen.
+- Cause: `mesh_container` created after `await` in `_ready()`, but `_process()` could run during the await
+- Fix: Create `mesh_container` before any `await` calls in `AmbientAnimalBase._ready()`
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/terrain_chunk.gd` | Height caching, HeightMapShape3D collision, deferred spawning |
+| `scripts/world/chunk_manager.gd` | Reduced obstacle/cave counts for initial testing |
+| `scripts/ui/loading_screen.gd` | Visual improvements, proper viewport coverage |
+| `scripts/player/player_controller.gd` | Disable controls during loading screen |
+| `scripts/creatures/ambient_animal_base.gd` | Fix mesh_container null error |
+
+### Performance Results
+
+- **Before**: Game froze for 100-200ms every ~9 steps while sprinting (chunk boundary crossing)
+- **After**: Smooth gameplay with no perceptible stuttering when crossing chunk boundaries
+
+---
+
 ## Next Session
 
 ### Planned Tasks
