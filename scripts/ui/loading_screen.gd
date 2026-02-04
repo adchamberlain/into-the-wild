@@ -91,9 +91,9 @@ func _create_ui() -> void:
 	subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	subtitle_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	subtitle_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	subtitle_label.offset_top = 150
-	subtitle_label.offset_bottom = 200
-	subtitle_label.add_theme_font_size_override("font_size", 32)
+	subtitle_label.offset_top = 155
+	subtitle_label.offset_bottom = 215
+	subtitle_label.add_theme_font_size_override("font_size", 42)
 	subtitle_label.add_theme_color_override("font_color", Color(0.65, 0.6, 0.5))
 	root_control.add_child(subtitle_label)
 
@@ -101,8 +101,8 @@ func _create_ui() -> void:
 	var top_line2 := ColorRect.new()
 	top_line2.color = Color(0.6, 0.5, 0.3, 0.4)
 	top_line2.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	top_line2.offset_top = 210
-	top_line2.offset_bottom = 212
+	top_line2.offset_top = 225
+	top_line2.offset_bottom = 227
 	top_line2.offset_left = 100
 	top_line2.offset_right = -100
 	root_control.add_child(top_line2)
@@ -172,9 +172,9 @@ func _create_ui() -> void:
 	progress_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	progress_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	progress_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	progress_label.offset_top = -110
-	progress_label.offset_bottom = -70
-	progress_label.add_theme_font_size_override("font_size", 28)
+	progress_label.offset_top = -115
+	progress_label.offset_bottom = -65
+	progress_label.add_theme_font_size_override("font_size", 36)
 	progress_label.add_theme_color_override("font_color", Color(0.55, 0.55, 0.55))
 	root_control.add_child(progress_label)
 
