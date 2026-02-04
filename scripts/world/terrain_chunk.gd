@@ -19,6 +19,41 @@ var spawned_resources: Array[Node3D] = []
 var spawned_animals: Array[Node3D] = []
 var is_generated: bool = false
 
+# Shared materials (static to avoid shader compilation per decoration)
+static var _grass_mat: StandardMaterial3D = null
+static var _flower_stem_mat: StandardMaterial3D = null
+static var _flower_red_mat: StandardMaterial3D = null
+static var _flower_yellow_mat: StandardMaterial3D = null
+
+
+static func _get_grass_material() -> StandardMaterial3D:
+	if not _grass_mat:
+		_grass_mat = StandardMaterial3D.new()
+		_grass_mat.vertex_color_use_as_albedo = true
+		_grass_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return _grass_mat
+
+
+static func _get_flower_stem_material() -> StandardMaterial3D:
+	if not _flower_stem_mat:
+		_flower_stem_mat = StandardMaterial3D.new()
+		_flower_stem_mat.albedo_color = Color(0.2, 0.5, 0.15)
+	return _flower_stem_mat
+
+
+static func _get_flower_material(color: Color) -> StandardMaterial3D:
+	# Use red or yellow based on color
+	if color.r > color.g:
+		if not _flower_red_mat:
+			_flower_red_mat = StandardMaterial3D.new()
+			_flower_red_mat.albedo_color = Color(0.9, 0.2, 0.2)
+		return _flower_red_mat
+	else:
+		if not _flower_yellow_mat:
+			_flower_yellow_mat = StandardMaterial3D.new()
+			_flower_yellow_mat.albedo_color = Color(0.95, 0.9, 0.2)
+		return _flower_yellow_mat
+
 
 func setup(coord: Vector2i, manager: Node) -> void:
 	chunk_coord = coord
@@ -29,14 +64,39 @@ func generate() -> void:
 	if is_generated:
 		return
 
+	# Generate terrain mesh and collision immediately (required for player to walk)
 	_generate_terrain_mesh()
 	_generate_collision()
-	_spawn_chunk_trees()
-	_spawn_chunk_resources()
-	_spawn_chunk_decorations()
-	_spawn_chunk_animals()
+
+	# Defer spawning to spread work across frames and prevent stuttering
+	# Each call_deferred runs on the next idle frame
+	call_deferred("_spawn_chunk_trees")
+	call_deferred("_deferred_spawn_resources")
+	call_deferred("_deferred_spawn_decorations")
+	call_deferred("_deferred_spawn_animals")
 
 	is_generated = true
+
+
+func _deferred_spawn_resources() -> void:
+	# Extra frame delay to spread load
+	await get_tree().process_frame
+	_spawn_chunk_resources()
+
+
+func _deferred_spawn_decorations() -> void:
+	# Extra frame delay to spread load
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_spawn_chunk_decorations()
+
+
+func _deferred_spawn_animals() -> void:
+	# Extra frame delay to spread load
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_spawn_chunk_animals()
 
 
 func _generate_terrain_mesh() -> void:
@@ -739,13 +799,14 @@ func _spawn_chunk_decorations() -> void:
 	decoration_noise.frequency = 0.15
 
 	# Calculate how many decorations for this chunk (scaled by chunk area)
+	# Reduced counts significantly for performance
 	var chunk_area: float = chunk_world_size * chunk_world_size
 	var world_area: float = 110.0 * 110.0  # Original decoration area (55 radius * 2)
 	var area_ratio: float = chunk_area / world_area
 
-	var target_grass: int = int(250 * area_ratio)
-	var target_red_flowers: int = int(35 * area_ratio)
-	var target_yellow_flowers: int = int(35 * area_ratio)
+	var target_grass: int = int(60 * area_ratio)  # Reduced from 250
+	var target_red_flowers: int = int(10 * area_ratio)  # Reduced from 35
+	var target_yellow_flowers: int = int(10 * area_ratio)  # Reduced from 35
 
 	var grass_count: int = 0
 	var attempts: int = 0
@@ -830,11 +891,7 @@ func _create_grass_tuft(pos: Vector3, rng: RandomNumberGenerator) -> void:
 
 	var mesh: ArrayMesh = st.commit()
 	grass.mesh = mesh
-
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
-	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	grass.material_override = mat
+	grass.material_override = _get_grass_material()
 
 	grass.position = pos
 	grass.rotation.y = rng.randf() * TAU
@@ -860,10 +917,7 @@ func _create_flower(pos: Vector3, petal_color: Color, rng: RandomNumberGenerator
 	var stem_mesh: BoxMesh = BoxMesh.new()
 	stem_mesh.size = Vector3(0.05, 0.3, 0.05)
 	stem.mesh = stem_mesh
-
-	var stem_mat: StandardMaterial3D = StandardMaterial3D.new()
-	stem_mat.albedo_color = Color(0.2, 0.5, 0.15)
-	stem.material_override = stem_mat
+	stem.material_override = _get_flower_stem_material()
 	stem.position.y = 0.15
 	flower.add_child(stem)
 
@@ -872,10 +926,7 @@ func _create_flower(pos: Vector3, petal_color: Color, rng: RandomNumberGenerator
 	var head_mesh: BoxMesh = BoxMesh.new()
 	head_mesh.size = Vector3(0.15, 0.12, 0.15)
 	head.mesh = head_mesh
-
-	var head_mat: StandardMaterial3D = StandardMaterial3D.new()
-	head_mat.albedo_color = petal_color
-	head.material_override = head_mat
+	head.material_override = _get_flower_material(petal_color)
 	head.position.y = 0.35
 	flower.add_child(head)
 
