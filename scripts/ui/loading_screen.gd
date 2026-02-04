@@ -11,6 +11,7 @@ var min_display_time: float = 2.5  # Minimum time to show loading screen
 var elapsed_time: float = 0.0
 
 # UI references
+var root_control: Control  # Root container that fills the screen
 var background: ColorRect
 var title_label: Label
 var artwork_container: Control
@@ -38,73 +39,52 @@ func _ready() -> void:
 
 
 func _create_ui() -> void:
-	# Get viewport size for proper sizing (with fallback for safety)
-	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-	if viewport_size.x < 100 or viewport_size.y < 100:
-		viewport_size = Vector2(1920, 1080)  # Fallback to common resolution
+	# Create a root Control that fills the entire viewport
+	# This is necessary because CanvasLayer doesn't have a size for anchors to work
+	root_control = Control.new()
+	root_control.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root_control.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(root_control)
 
 	# Dark background that covers entire screen
 	background = ColorRect.new()
 	background.color = Color(0.06, 0.07, 0.1, 1.0)
-	background.position = Vector2.ZERO
-	background.size = viewport_size
-	# Use anchors to stretch with window
-	background.anchor_left = 0.0
-	background.anchor_top = 0.0
-	background.anchor_right = 1.0
-	background.anchor_bottom = 1.0
-	background.offset_left = 0
-	background.offset_top = 0
-	background.offset_right = 0
-	background.offset_bottom = 0
+	background.set_anchors_preset(Control.PRESET_FULL_RECT)
 	background.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(background)
+	root_control.add_child(background)
 
-	# Connect to viewport size changes to keep background covering full screen
-	get_viewport().size_changed.connect(_on_viewport_size_changed)
-	# Also call once deferred to ensure proper sizing after scene is fully loaded
-	call_deferred("_on_viewport_size_changed")
-
-	# Game title at top
+	# Game title at top (centered horizontally, 10% from top)
 	title_label = Label.new()
 	title_label.text = "INTO THE WILD"
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title_label.anchors_preset = Control.PRESET_CENTER_TOP
-	title_label.anchor_top = 0.1
-	title_label.anchor_bottom = 0.1
-	title_label.offset_top = 0
-	title_label.offset_bottom = 80
-	title_label.offset_left = -300
-	title_label.offset_right = 300
+	title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	title_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	title_label.offset_top = 80
+	title_label.offset_bottom = 160
 	title_label.add_theme_font_size_override("font_size", 64)
 	title_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
-	add_child(title_label)
+	root_control.add_child(title_label)
 
-	# Artwork container (centered)
+	# Artwork container (centered in screen)
 	artwork_container = Control.new()
-	artwork_container.anchors_preset = Control.PRESET_CENTER
-	artwork_container.anchor_left = 0.5
-	artwork_container.anchor_right = 0.5
-	artwork_container.anchor_top = 0.5
-	artwork_container.anchor_bottom = 0.5
-	artwork_container.offset_left = -150
-	artwork_container.offset_right = 150
+	artwork_container.set_anchors_preset(Control.PRESET_CENTER)
+	artwork_container.offset_left = -100
+	artwork_container.offset_right = 100
 	artwork_container.offset_top = -100
 	artwork_container.offset_bottom = 100
-	add_child(artwork_container)
+	root_control.add_child(artwork_container)
 
-	# Progress label at bottom
+	# Progress label at bottom (centered horizontally, 85% from top)
 	progress_label = Label.new()
 	progress_label.text = "Preparing the wilderness..."
 	progress_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	progress_label.anchors_preset = Control.PRESET_CENTER_BOTTOM
-	progress_label.anchor_top = 0.85
-	progress_label.anchor_bottom = 0.85
-	progress_label.offset_left = -300
-	progress_label.offset_right = 300
+	progress_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	progress_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	progress_label.offset_top = -100
+	progress_label.offset_bottom = -40
 	progress_label.add_theme_font_size_override("font_size", 24)
 	progress_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
-	add_child(progress_label)
+	root_control.add_child(progress_label)
 
 	# Try to apply custom font
 	var font_path: String = "res://resources/hud_font.tres"
@@ -458,10 +438,7 @@ func _finish_loading() -> void:
 	await get_tree().create_timer(0.3).timeout
 
 	var tween: Tween = create_tween()
-	tween.tween_property(background, "color:a", 0.0, 0.5)
-	tween.parallel().tween_property(title_label, "modulate:a", 0.0, 0.5)
-	tween.parallel().tween_property(artwork_container, "modulate:a", 0.0, 0.5)
-	tween.parallel().tween_property(progress_label, "modulate:a", 0.0, 0.5)
+	tween.tween_property(root_control, "modulate:a", 0.0, 0.5)
 
 	tween.tween_callback(_on_fade_complete)
 
@@ -475,9 +452,3 @@ func _on_fade_complete() -> void:
 func skip_loading() -> void:
 	if is_loading:
 		_finish_loading()
-
-
-func _on_viewport_size_changed() -> void:
-	if background and is_instance_valid(background):
-		var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-		background.size = viewport_size
