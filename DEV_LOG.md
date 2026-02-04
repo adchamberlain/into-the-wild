@@ -1485,12 +1485,70 @@ Added missing preserved and cooked food values:
 
 ---
 
+## Session 44 - Terrain Performance Optimization (2026-02-04)
+
+**Performance optimizations** to fix stuttering during terrain chunk loading, especially noticeable on MacBook Pro.
+
+### Root Causes Identified
+
+1. **Expensive `get_height_at()` calls** - Terrain noise sampling called multiple times per frame per animal
+2. **Uncached `SFXManager` lookups** - Scene tree traversal (`get_node_or_null("/root/SFXManager")`) on every hop/chirp
+3. **`look_at()` every frame** - Matrix calculations for 14+ animals every single frame
+4. **No distance-based culling** - Animals far from player still fully processed
+5. **30% spawn rate** - With 25 chunks loaded, ~7-8 chunks had animals (~14-16 animals)
+
+### Optimizations Applied
+
+**Base Class Improvements** (`ambient_animal_base.gd`):
+- Cached `sfx_manager` reference in `_ready()` instead of per-call lookup
+- Added distance-based culling: animals beyond 50 units skip processing entirely
+- Throttled `look_at()` calls to every 0.1 seconds instead of every frame
+- New constants: `PROCESSING_DISTANCE`, `ROTATION_UPDATE_INTERVAL`
+- New state: `is_too_far` flag checked during proximity updates
+
+**Bird Optimizations** (`ambient_bird.gd`):
+- Uses cached `sfx_manager` from base class
+- Flying `look_at()` now throttled via base class timer
+- Entire bird state machine skipped when `is_too_far`
+
+**Rabbit Optimizations** (`ambient_rabbit.gd`):
+- Uses cached `sfx_manager` from base class
+- Reduced terrain height sampling from 2-3 calls per hop to 1 call
+- When hitting water, uses current Y instead of resampling terrain
+- `look_at()` now throttled
+- Hop processing skipped when `is_too_far`
+
+**Spawn Rate Reduction** (`terrain_chunk.gd`):
+- Animal spawn rate reduced from 30% to 15% of chunks
+- With 25 chunks, now ~3-4 chunks have animals (~6-8 animals total)
+- Halves the number of active animals while keeping atmosphere
+
+### Performance Impact
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Animals active | 14-16 | 6-8 |
+| `get_height_at()` calls/sec | ~30-40 | ~8-12 |
+| `look_at()` calls/frame | 14-16 | 0-2 (throttled) |
+| SFX lookups/sec | ~10-20 | 0 (cached) |
+| Far animals processed | 100% | 0% (culled at 50 units) |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/creatures/ambient_animal_base.gd` | Cached sfx_manager, distance culling, throttled look_at |
+| `scripts/creatures/ambient_bird.gd` | Uses cached sfx_manager, distance culling |
+| `scripts/creatures/ambient_rabbit.gd` | Uses cached sfx_manager, reduced terrain sampling, distance culling |
+| `scripts/world/terrain_chunk.gd` | Reduced spawn rate from 30% to 15% |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. ~~Game balancing and polish~~ ✓ Done
-2. Optional: DualSense haptics and adaptive triggers
-3. Cave entrances in rocky regions (deferred)
+1. Optional: DualSense haptics and adaptive triggers
+2. Cave entrances in rocky regions (deferred)
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

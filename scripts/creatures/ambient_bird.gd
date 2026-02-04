@@ -137,6 +137,10 @@ func _build_mesh() -> void:
 func _process(delta: float) -> void:
 	super._process(delta)
 
+	# Skip bird-specific processing if too far (culled by base class)
+	if is_too_far:
+		return
+
 	# Bird-specific state processing
 	match bird_state:
 		BirdState.PERCHED:
@@ -169,8 +173,9 @@ func _process_flying(delta: float) -> void:
 
 	global_position += movement
 
-	# Face flight direction
-	if direction.length() > 0.1:
+	# Face flight direction (throttled for performance)
+	if direction.length() > 0.1 and rotation_timer >= ROTATION_UPDATE_INTERVAL:
+		rotation_timer = 0.0
 		var look_target: Vector3 = global_position + direction
 		mesh_container.look_at(look_target, Vector3.UP)
 		# Tilt slightly in flight direction
@@ -244,8 +249,8 @@ func _fold_wings() -> void:
 
 func _chirp() -> void:
 	# Only chirp if player is nearby (sounds are 2D, not spatial)
+	# Uses cached sfx_manager from base class for performance
 	if player and global_position.distance_to(player.global_position) < 15.0:
-		var sfx_manager: Node = get_node_or_null("/root/SFXManager")
 		if sfx_manager and sfx_manager.has_method("play_sfx"):
 			sfx_manager.play_sfx("bird_chirp")
 
