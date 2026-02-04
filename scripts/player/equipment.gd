@@ -128,6 +128,22 @@ const EQUIPPABLE_ITEMS: Dictionary = {
 		"slot": 19,
 		"has_light": false,
 		"placeable": true
+	},
+	"machete": {
+		"name": "Machete",
+		"slot": 20,
+		"has_light": false,
+		"tool_type": "machete",
+		"effectiveness": 1.0
+	},
+	"lantern": {
+		"name": "Lantern",
+		"slot": 21,
+		"has_light": true,
+		"light_color": Color(0.9, 0.95, 1.0),
+		"light_energy": 16.0,
+		"light_range": 30.0,
+		"placeable": true
 	}
 }
 
@@ -136,7 +152,8 @@ const TOOL_MAX_DURABILITY: Dictionary = {
 	"primitive_axe": 50,
 	"stone_axe": 150,
 	"metal_axe": 300,
-	"fishing_rod": 50
+	"fishing_rod": 50,
+	"machete": 200
 }
 
 # Current durability for each tool (item_type -> current durability)
@@ -330,6 +347,8 @@ func equip(item_type: String) -> bool:
 		_create_fishing_rod()
 	elif tool_type == "axe":
 		_create_axe_model(item_type)
+	elif tool_type == "machete":
+		_create_machete_model()
 
 	print("[Equipment] Equipped %s" % item_data.get("name", item_type))
 	item_equipped.emit(item_type)
@@ -346,6 +365,7 @@ func unequip() -> void:
 	# Remove item effects
 	_remove_torch_light()
 	_remove_stone_axe()
+	_remove_machete()
 	_remove_fishing_rod()
 
 	equipped_item = ""
@@ -390,17 +410,27 @@ func _use_tool() -> bool:
 		return false
 
 	var target: Node = interaction_ray.get_collider()
-	if not target or not target.is_in_group("resource_node"):
+
+	# Check for valid targets: resource_node or obstacle groups
+	var valid_target: bool = false
+	if target:
+		valid_target = target.is_in_group("resource_node") or target.is_in_group("obstacle")
+
+	if not target or not valid_target:
 		_play_swing_animation()
 		print("[Equipment] Can't chop that")
 		return false
 
-	# Try to chop the resource
+	# Try to chop the resource or obstacle
 	if target.has_method("receive_chop"):
 		_play_swing_animation()
 		var success: bool = target.receive_chop(player)
 		if success:
-			SFXManager.play_sfx("chop")
+			# Play appropriate sound based on target type
+			if target.is_in_group("obstacle"):
+				SFXManager.play_sfx("swing")  # Use swing sound for clearing
+			else:
+				SFXManager.play_sfx("chop")
 			item_used.emit(equipped_item)
 			# Use durability on successful chop
 			use_durability(1)
@@ -479,6 +509,34 @@ func _play_swing_animation() -> void:
 		axe_swing_tween.parallel().tween_property(stone_axe_model, "position", AXE_REST_POSITION, 0.12)
 
 		print("[Equipment] *chop*")
+	elif machete_model:
+		# Animate machete swing (horizontal slash motion)
+		if axe_swing_tween and axe_swing_tween.is_valid():
+			axe_swing_tween.kill()
+			machete_model.position = MACHETE_REST_POSITION
+			machete_model.rotation_degrees = MACHETE_REST_ROTATION
+
+		axe_swing_tween = player.create_tween()
+		axe_swing_tween.set_trans(Tween.TRANS_QUAD)
+		axe_swing_tween.set_ease(Tween.EASE_OUT)
+
+		# Wind up: pull back to the right
+		axe_swing_tween.tween_property(machete_model, "rotation_degrees",
+			Vector3(MACHETE_REST_ROTATION.x, MACHETE_REST_ROTATION.y + 40, MACHETE_REST_ROTATION.z + 15), 0.1)
+		axe_swing_tween.parallel().tween_property(machete_model, "position",
+			Vector3(MACHETE_REST_POSITION.x + 0.1, MACHETE_REST_POSITION.y, MACHETE_REST_POSITION.z + 0.1), 0.1)
+
+		# Slash left: horizontal swing across
+		axe_swing_tween.tween_property(machete_model, "rotation_degrees",
+			Vector3(MACHETE_REST_ROTATION.x, MACHETE_REST_ROTATION.y - 50, MACHETE_REST_ROTATION.z - 10), 0.08)
+		axe_swing_tween.parallel().tween_property(machete_model, "position",
+			Vector3(MACHETE_REST_POSITION.x - 0.15, MACHETE_REST_POSITION.y, MACHETE_REST_POSITION.z - 0.1), 0.08)
+
+		# Return to rest position
+		axe_swing_tween.tween_property(machete_model, "rotation_degrees", MACHETE_REST_ROTATION, 0.12)
+		axe_swing_tween.parallel().tween_property(machete_model, "position", MACHETE_REST_POSITION, 0.12)
+
+		print("[Equipment] *slash*")
 	else:
 		# Fallback camera punch for other tools
 		var original_rot: Vector3 = camera.rotation
@@ -749,6 +807,97 @@ func _remove_stone_axe() -> void:
 	if stone_axe_model:
 		stone_axe_model.queue_free()
 		stone_axe_model = null
+
+
+# Machete visual
+var machete_model: Node3D = null
+const MACHETE_REST_POSITION: Vector3 = Vector3(0.35, -0.25, -0.65)
+const MACHETE_REST_ROTATION: Vector3 = Vector3(15, -10, -25)
+
+
+func _create_machete_model() -> void:
+	if machete_model:
+		return
+
+	machete_model = Node3D.new()
+	machete_model.name = "MacheteModel"
+
+	# Handle (wooden grip)
+	var handle := MeshInstance3D.new()
+	handle.name = "Handle"
+	var handle_mesh := BoxMesh.new()
+	handle_mesh.size = Vector3(0.04, 0.18, 0.03)
+	handle.mesh = handle_mesh
+
+	var handle_mat := StandardMaterial3D.new()
+	handle_mat.albedo_color = Color(0.4, 0.3, 0.2)  # Dark wood
+	handle.material_override = handle_mat
+	handle.position = Vector3(0, 0, 0)
+
+	machete_model.add_child(handle)
+
+	# Guard (small crosspiece)
+	var guard := MeshInstance3D.new()
+	guard.name = "Guard"
+	var guard_mesh := BoxMesh.new()
+	guard_mesh.size = Vector3(0.06, 0.02, 0.04)
+	guard.mesh = guard_mesh
+
+	var guard_mat := StandardMaterial3D.new()
+	guard_mat.albedo_color = Color(0.35, 0.35, 0.38)
+	guard_mat.metallic = 0.6
+	guard.material_override = guard_mat
+	guard.position = Vector3(0, 0.1, 0)
+
+	machete_model.add_child(guard)
+
+	# Blade (long, slightly curved looking via offset)
+	var blade := MeshInstance3D.new()
+	blade.name = "Blade"
+	var blade_mesh := BoxMesh.new()
+	blade_mesh.size = Vector3(0.03, 0.4, 0.08)  # Long, flat blade
+	blade.mesh = blade_mesh
+
+	var blade_mat := StandardMaterial3D.new()
+	blade_mat.albedo_color = Color(0.6, 0.6, 0.62)
+	blade_mat.metallic = 0.8
+	blade_mat.roughness = 0.2
+	blade.material_override = blade_mat
+	blade.position = Vector3(0, 0.31, 0.01)  # Slightly offset for curved look
+
+	machete_model.add_child(blade)
+
+	# Sharp edge (thinner strip on one side)
+	var edge := MeshInstance3D.new()
+	edge.name = "Edge"
+	var edge_mesh := BoxMesh.new()
+	edge_mesh.size = Vector3(0.02, 0.38, 0.01)
+	edge.mesh = edge_mesh
+
+	var edge_mat := StandardMaterial3D.new()
+	edge_mat.albedo_color = Color(0.75, 0.75, 0.78)
+	edge_mat.metallic = 0.9
+	edge_mat.roughness = 0.1
+	edge.material_override = edge_mat
+	edge.position = Vector3(0, 0.31, 0.045)
+
+	machete_model.add_child(edge)
+
+	# Position: held in right hand, angled for slashing
+	machete_model.position = MACHETE_REST_POSITION
+	machete_model.rotation_degrees = MACHETE_REST_ROTATION
+
+	# Attach to camera
+	if player:
+		var camera: Camera3D = player.get_node_or_null("Camera3D")
+		if camera:
+			camera.add_child(machete_model)
+
+
+func _remove_machete() -> void:
+	if machete_model:
+		machete_model.queue_free()
+		machete_model = null
 
 
 func _create_fishing_rod() -> void:

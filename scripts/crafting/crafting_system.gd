@@ -201,6 +201,24 @@ func _load_recipes() -> void:
 			"description": "A strong metal axe. Very efficient!",
 			"requires_bench": true,
 			"min_camp_level": 3
+		},
+		"machete": {
+			"name": "Machete",
+			"inputs": {"metal_ingot": 2, "branch": 1},
+			"output_type": "machete",
+			"output_amount": 1,
+			"description": "A blade for clearing dense vegetation.",
+			"requires_bench": true,
+			"min_camp_level": 2
+		},
+		"lantern": {
+			"name": "Lantern",
+			"inputs": {"metal_ingot": 2, "crystal": 1},
+			"output_type": "lantern",
+			"output_amount": 1,
+			"description": "A bright, long-lasting light source.",
+			"requires_bench": true,
+			"min_camp_level": 3
 		}
 	}
 

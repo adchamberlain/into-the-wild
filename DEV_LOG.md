@@ -1627,11 +1627,99 @@ Added to `_create_snare_trap()`:
 
 ---
 
+## Session 14: Environmental Puzzles & Caves
+
+### Overview
+
+Implemented a major exploration progression system with two components:
+1. **Environmental Obstacles** - Thorny bushes that gate areas in HILLS/ROCKY regions
+2. **Cave System** - Explorable underground areas with unique resources and darkness mechanics
+
+### New Files Created
+
+| File | Purpose |
+|------|---------|
+| `scripts/world/obstacle_thorns.gd` | Thorny bush obstacle that blocks paths, requires machete to clear (3 chops) |
+| `scripts/world/cave_entrance.gd` | Cave entrance point in ROCKY regions, requires light source to enter |
+| `scripts/core/cave_transition.gd` | Autoload singleton managing cave scene transitions, stores return position |
+| `scripts/caves/cave_interior_manager.gd` | Cave interior mechanics: darkness overlay, light detection, damage system |
+| `scripts/resources/crystal_node.gd` | Glowing cave crystal, hand-gatherable, provides ambient light |
+| `scripts/resources/rare_ore_node.gd` | Valuable ore deposit with golden emissive veins, yields rare_ore + crystal |
+| `scenes/caves/cave_interior_small.tscn` | Small cave scene with terrain, resources, exit area, darkness overlay |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/player/equipment.gd` | Added machete (slot 20) and lantern (slot 21) tools with visuals and swing animations |
+| `scripts/crafting/crafting_system.gd` | Added machete recipe (2 metal_ingot + 1 branch, Level 2) and lantern recipe (2 metal_ingot + 1 crystal, Level 3) |
+| `scripts/world/chunk_manager.gd` | Added obstacles/cave_entrances arrays, spawning logic in HILLS/ROCKY regions, visual spawning when chunks load |
+| `scripts/core/save_load.gd` | Added obstacle cleared states, cave resource states, current_cave_id persistence |
+| `project.godot` | Registered CaveTransition autoload |
+
+### Feature Details
+
+#### Thorny Bushes (Obstacles)
+- Spawn in HILLS and ROCKY regions (5 per world)
+- Minimum 40 units from spawn, 30 units apart
+- Require machete to clear (3 effective chops)
+- Visual: Dense green/brown tangled brambles using BoxMeshes
+- State persisted in save files
+
+#### Machete Tool
+- Craftable at Level 2 workbench: 2 metal_ingot + 1 branch
+- Durability: 200 uses
+- Uses axe swing animation pattern
+- Works on both resource nodes and obstacles
+
+#### Cave Entrances
+- Spawn in ROCKY regions only (4 per world)
+- Minimum 80 units from spawn, 60 units apart
+- Require torch or lantern equipped to enter
+- Visual: Rocky arch with dark opening
+- Connects to cave interior via CaveTransition autoload
+
+#### Cave Interior System
+- Separate scene architecture (teleport in/out)
+- Darkness overlay (95% opacity when no light)
+- Light source detection every 0.5 seconds
+- Damage system: After 60s in darkness, 2 HP every 10 seconds
+- Exit area triggers return to overworld at saved position
+
+#### Cave Resources
+- **Crystals**: Hand-gatherable, emit blue-purple glow (OmniLight3D), resource_type="crystal"
+- **Rare Ore**: Requires pickaxe (5 chops), golden emissive veins, yields rare_ore + crystal secondary
+
+#### Lantern Tool
+- Craftable at Level 3 workbench: 2 metal_ingot + 1 crystal
+- 2x brighter than torch (energy 16.0 vs 8.0)
+- 2x longer range (30.0 vs 15.0)
+- Placeable like torch
+
+### Progression Flow
+
+| Camp Level | New Access |
+|------------|------------|
+| Level 1 | Basic exploration, blocked by thorns |
+| Level 2 | Smithing → metal_ingot → machete (clear thorns) |
+| Level 3 | Cave crystals → lantern (extended cave exploration) |
+
+### Technical Notes
+
+- CaveTransition autoload manages scene changes with fade effects
+- Placeholder behavior when cave scene files don't exist
+- Equipment._use_tool() extended to detect "obstacle" group in addition to "resource_node"
+- Cave scenes use WorldEnvironment with dark ambient lighting
+- Obstacle/cave states stored in save data under `obstacles` and `cave_resources` keys
+
+---
+
 ## Next Session
 
 ### Planned Tasks
 1. Optional: DualSense haptics and adaptive triggers
-2. Cave entrances in rocky regions (deferred)
+2. Test and polish cave system integration
+3. Add sound effects for thorns clearing and cave ambience
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

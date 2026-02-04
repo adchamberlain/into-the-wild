@@ -1,0 +1,140 @@
+[gd_scene load_steps=15 format=3 uid="uid://bx87hjvnr68dv"]
+
+[ext_resource type="Script" path="res://scripts/caves/cave_interior_manager.gd" id="1_cave_mgr"]
+[ext_resource type="Script" path="res://scripts/resources/crystal_node.gd" id="2_crystal"]
+[ext_resource type="Script" path="res://scripts/resources/rare_ore_node.gd" id="3_rare_ore"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_cave"]
+sky_top_color = Color(0.01, 0.01, 0.02, 1)
+sky_horizon_color = Color(0.02, 0.02, 0.03, 1)
+ground_bottom_color = Color(0.01, 0.01, 0.01, 1)
+ground_horizon_color = Color(0.02, 0.02, 0.02, 1)
+
+[sub_resource type="Sky" id="Sky_cave"]
+sky_material = SubResource("ProceduralSkyMaterial_cave")
+
+[sub_resource type="Environment" id="Environment_cave"]
+background_mode = 2
+sky = SubResource("Sky_cave")
+ambient_light_source = 1
+ambient_light_color = Color(0.05, 0.05, 0.08, 1)
+ambient_light_energy = 0.1
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
+size = Vector3(30, 1, 40)
+
+[sub_resource type="BoxMesh" id="BoxMesh_floor"]
+size = Vector3(30, 1, 40)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rock"]
+albedo_color = Color(0.2, 0.18, 0.16, 1)
+roughness = 0.95
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_exit"]
+size = Vector3(4, 4, 2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall"]
+size = Vector3(1, 8, 40)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ceiling"]
+size = Vector3(30, 1, 40)
+
+[sub_resource type="BoxMesh" id="BoxMesh_back_wall"]
+size = Vector3(30, 8, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ceiling"]
+albedo_color = Color(0.15, 0.14, 0.13, 1)
+roughness = 0.98
+
+[node name="CaveInterior" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_cave")
+
+[node name="CaveInteriorManager" type="Node" parent="."]
+script = ExtResource("1_cave_mgr")
+
+[node name="DarknessOverlay" type="CanvasLayer" parent="."]
+layer = 50
+
+[node name="ColorRect" type="ColorRect" parent="DarknessOverlay"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.95)
+
+[node name="Terrain" type="StaticBody3D" parent="."]
+
+[node name="FloorCollision" type="CollisionShape3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+shape = SubResource("BoxShape3D_floor")
+
+[node name="FloorMesh" type="MeshInstance3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+mesh = SubResource("BoxMesh_floor")
+surface_material_override/0 = SubResource("StandardMaterial3D_rock")
+
+[node name="LeftWall" type="MeshInstance3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 4, 0)
+mesh = SubResource("BoxMesh_wall")
+surface_material_override/0 = SubResource("StandardMaterial3D_rock")
+
+[node name="LeftWallCollision" type="CollisionShape3D" parent="Terrain/LeftWall"]
+shape = SubResource("BoxShape3D_floor")
+disabled = true
+
+[node name="RightWall" type="MeshInstance3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 4, 0)
+mesh = SubResource("BoxMesh_wall")
+surface_material_override/0 = SubResource("StandardMaterial3D_rock")
+
+[node name="BackWall" type="MeshInstance3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, -20)
+mesh = SubResource("BoxMesh_back_wall")
+surface_material_override/0 = SubResource("StandardMaterial3D_rock")
+
+[node name="Ceiling" type="MeshInstance3D" parent="Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 0)
+mesh = SubResource("BoxMesh_ceiling")
+surface_material_override/0 = SubResource("StandardMaterial3D_ceiling")
+
+[node name="ExitArea" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 19)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ExitArea"]
+shape = SubResource("BoxShape3D_exit")
+
+[node name="ExitLight" type="OmniLight3D" parent="ExitArea"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1)
+light_color = Color(0.8, 0.85, 0.9, 1)
+light_energy = 2.0
+omni_range = 10.0
+
+[node name="Resources" type="Node3D" parent="."]
+
+[node name="Crystal1" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, -10)
+script = ExtResource("2_crystal")
+
+[node name="Crystal2" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, -15)
+script = ExtResource("2_crystal")
+
+[node name="Crystal3" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, 5)
+script = ExtResource("2_crystal")
+
+[node name="RareOre1" type="StaticBody3D" parent="Resources"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, -12)
+script = ExtResource("3_rare_ore")
+
+[node name="PlayerSpawn" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 15)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.707107, -0.5, 0.5, 0, 0.707107, 0.707107, -0.707107, -0.5, 0.5, 0, 10, 15)
+light_color = Color(0.3, 0.35, 0.4, 1)
+light_energy = 0.3
+shadow_enabled = true

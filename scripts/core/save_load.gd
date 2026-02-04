@@ -373,6 +373,15 @@ func _collect_save_data() -> Dictionary:
 		data["world_seed"] = chunk_manager.get_world_seed()
 		print("[SaveLoad] Saved world seed: %d" % data["world_seed"])
 
+	# Obstacle states (cleared thorns)
+	if chunk_manager and chunk_manager.has_method("get_obstacles_save_data"):
+		data["obstacles"] = chunk_manager.get_obstacles_save_data()
+
+	# Cave state (if player is in a cave)
+	var cave_transition: Node = get_node_or_null("/root/CaveTransition")
+	if cave_transition and cave_transition.has_method("get_save_data"):
+		data["cave"] = cave_transition.get_save_data()
+
 	return data
 
 
@@ -510,6 +519,16 @@ func _apply_save_data(data: Dictionary) -> void:
 		_apply_player_data(data["player"])
 	elif data.has("player"):
 		push_error("[SaveLoad] Cannot apply player data - player is null!")
+
+	# Obstacle states (cleared thorns)
+	if data.has("obstacles") and chunk_manager and chunk_manager.has_method("load_obstacles_save_data"):
+		chunk_manager.load_obstacles_save_data(data["obstacles"])
+
+	# Cave state
+	if data.has("cave"):
+		var cave_transition: Node = get_node_or_null("/root/CaveTransition")
+		if cave_transition and cave_transition.has_method("load_save_data"):
+			cave_transition.load_save_data(data["cave"])
 
 	# Post-load: Verify crafting flags based on inventory (for backward compatibility)
 	_verify_crafting_flags_from_inventory()
