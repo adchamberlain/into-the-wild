@@ -68,10 +68,10 @@ func _create_ui() -> void:
 	# Artwork container (centered in screen)
 	artwork_container = Control.new()
 	artwork_container.set_anchors_preset(Control.PRESET_CENTER)
-	artwork_container.offset_left = -100
-	artwork_container.offset_right = 100
-	artwork_container.offset_top = -100
-	artwork_container.offset_bottom = 100
+	artwork_container.offset_left = -150
+	artwork_container.offset_right = 150
+	artwork_container.offset_top = -150
+	artwork_container.offset_bottom = 150
 	root_control.add_child(artwork_container)
 
 	# Progress label at bottom (centered horizontally, 85% from top)
@@ -123,57 +123,57 @@ func _show_artwork(index: int) -> void:
 
 func _create_campfire() -> Control:
 	var container := Control.new()
-	container.custom_minimum_size = Vector2(200, 200)
+	container.custom_minimum_size = Vector2(300, 300)
 
 	# Fire glow (background)
 	var glow := ColorRect.new()
 	glow.color = Color(1.0, 0.4, 0.1, 0.3)
-	glow.size = Vector2(120, 100)
-	glow.position = Vector2(40, 50)
+	glow.size = Vector2(180, 150)
+	glow.position = Vector2(60, 75)
 	container.add_child(glow)
 
 	# Log 1 (brown rectangle, angled)
 	var log1 := ColorRect.new()
 	log1.color = Color(0.4, 0.25, 0.1)
-	log1.size = Vector2(100, 20)
-	log1.position = Vector2(50, 160)
+	log1.size = Vector2(150, 30)
+	log1.position = Vector2(75, 240)
 	log1.rotation = -0.2
 	container.add_child(log1)
 
 	# Log 2 (crossing)
 	var log2 := ColorRect.new()
 	log2.color = Color(0.35, 0.22, 0.08)
-	log2.size = Vector2(100, 18)
-	log2.position = Vector2(50, 155)
+	log2.size = Vector2(150, 27)
+	log2.position = Vector2(75, 232)
 	log2.rotation = 0.25
 	container.add_child(log2)
 
 	# Fire base (orange)
 	var fire_base := ColorRect.new()
 	fire_base.color = Color(1.0, 0.5, 0.0)
-	fire_base.size = Vector2(60, 50)
-	fire_base.position = Vector2(70, 110)
+	fire_base.size = Vector2(90, 75)
+	fire_base.position = Vector2(105, 165)
 	container.add_child(fire_base)
 
 	# Fire middle (yellow-orange)
 	var fire_mid := ColorRect.new()
 	fire_mid.color = Color(1.0, 0.7, 0.1)
-	fire_mid.size = Vector2(45, 55)
-	fire_mid.position = Vector2(77, 70)
+	fire_mid.size = Vector2(68, 82)
+	fire_mid.position = Vector2(116, 105)
 	container.add_child(fire_mid)
 
 	# Fire top (yellow)
 	var fire_top := ColorRect.new()
 	fire_top.color = Color(1.0, 0.9, 0.3)
-	fire_top.size = Vector2(25, 40)
-	fire_top.position = Vector2(87, 50)
+	fire_top.size = Vector2(38, 60)
+	fire_top.position = Vector2(131, 75)
 	container.add_child(fire_top)
 
 	# Flame tip
 	var flame_tip := ColorRect.new()
 	flame_tip.color = Color(1.0, 1.0, 0.6)
-	flame_tip.size = Vector2(12, 25)
-	flame_tip.position = Vector2(94, 35)
+	flame_tip.size = Vector2(18, 38)
+	flame_tip.position = Vector2(141, 52)
 	container.add_child(flame_tip)
 
 	return container
@@ -181,48 +181,48 @@ func _create_campfire() -> Control:
 
 func _create_axe() -> Control:
 	var container := Control.new()
-	container.custom_minimum_size = Vector2(200, 200)
+	container.custom_minimum_size = Vector2(300, 300)
 
 	# Handle (wooden stick)
 	var handle := ColorRect.new()
 	handle.color = Color(0.5, 0.35, 0.2)
-	handle.size = Vector2(20, 140)
-	handle.position = Vector2(90, 50)
+	handle.size = Vector2(30, 210)
+	handle.position = Vector2(135, 75)
 	container.add_child(handle)
 
 	# Handle detail (darker stripe)
 	var handle_detail := ColorRect.new()
 	handle_detail.color = Color(0.4, 0.28, 0.15)
-	handle_detail.size = Vector2(6, 140)
-	handle_detail.position = Vector2(97, 50)
+	handle_detail.size = Vector2(9, 210)
+	handle_detail.position = Vector2(146, 75)
 	container.add_child(handle_detail)
 
 	# Axe head back (darker metal)
 	var head_back := ColorRect.new()
 	head_back.color = Color(0.4, 0.4, 0.42)
-	head_back.size = Vector2(50, 35)
-	head_back.position = Vector2(100, 50)
+	head_back.size = Vector2(75, 52)
+	head_back.position = Vector2(150, 75)
 	container.add_child(head_back)
 
 	# Axe head front (lighter metal)
 	var head_front := ColorRect.new()
 	head_front.color = Color(0.55, 0.55, 0.58)
-	head_front.size = Vector2(45, 30)
-	head_front.position = Vector2(105, 53)
+	head_front.size = Vector2(68, 45)
+	head_front.position = Vector2(158, 80)
 	container.add_child(head_front)
 
 	# Blade edge (shiny)
 	var blade := ColorRect.new()
 	blade.color = Color(0.75, 0.75, 0.8)
-	blade.size = Vector2(8, 28)
-	blade.position = Vector2(145, 54)
+	blade.size = Vector2(12, 42)
+	blade.position = Vector2(218, 81)
 	container.add_child(blade)
 
 	# Binding
 	var binding := ColorRect.new()
 	binding.color = Color(0.45, 0.35, 0.25)
-	binding.size = Vector2(26, 15)
-	binding.position = Vector2(87, 80)
+	binding.size = Vector2(39, 22)
+	binding.position = Vector2(130, 120)
 	container.add_child(binding)
 
 	return container
@@ -230,62 +230,62 @@ func _create_axe() -> Control:
 
 func _create_fishing_rod() -> Control:
 	var container := Control.new()
-	container.custom_minimum_size = Vector2(200, 200)
+	container.custom_minimum_size = Vector2(300, 300)
 
 	# Rod handle (cork color)
 	var grip := ColorRect.new()
 	grip.color = Color(0.65, 0.5, 0.35)
-	grip.size = Vector2(18, 50)
-	grip.position = Vector2(40, 140)
+	grip.size = Vector2(27, 75)
+	grip.position = Vector2(60, 210)
 	container.add_child(grip)
 
 	# Reel seat
 	var reel := ColorRect.new()
 	reel.color = Color(0.25, 0.25, 0.25)
-	reel.size = Vector2(14, 20)
-	reel.position = Vector2(42, 125)
+	reel.size = Vector2(21, 30)
+	reel.position = Vector2(63, 188)
 	container.add_child(reel)
 
 	# Rod body
 	var rod := ColorRect.new()
 	rod.color = Color(0.4, 0.3, 0.2)
-	rod.size = Vector2(10, 100)
-	rod.position = Vector2(44, 30)
+	rod.size = Vector2(15, 150)
+	rod.position = Vector2(66, 45)
 	container.add_child(rod)
 
 	# Rod tip
 	var tip := ColorRect.new()
 	tip.color = Color(0.35, 0.28, 0.18)
-	tip.size = Vector2(6, 30)
-	tip.position = Vector2(46, 5)
+	tip.size = Vector2(9, 45)
+	tip.position = Vector2(69, 8)
 	container.add_child(tip)
 
 	# Fishing line
 	var line := ColorRect.new()
 	line.color = Color(0.8, 0.8, 0.8, 0.7)
-	line.size = Vector2(2, 80)
-	line.position = Vector2(48, 5)
+	line.size = Vector2(3, 120)
+	line.position = Vector2(72, 8)
 	line.rotation = 0.4
 	container.add_child(line)
 
 	# Hook
 	var hook := ColorRect.new()
 	hook.color = Color(0.6, 0.6, 0.62)
-	hook.size = Vector2(8, 15)
-	hook.position = Vector2(95, 65)
+	hook.size = Vector2(12, 22)
+	hook.position = Vector2(142, 98)
 	container.add_child(hook)
 
 	# Fish!
 	var fish_body := ColorRect.new()
 	fish_body.color = Color(0.5, 0.6, 0.7)
-	fish_body.size = Vector2(45, 20)
-	fish_body.position = Vector2(110, 80)
+	fish_body.size = Vector2(68, 30)
+	fish_body.position = Vector2(165, 120)
 	container.add_child(fish_body)
 
 	var fish_tail := ColorRect.new()
 	fish_tail.color = Color(0.45, 0.55, 0.65)
-	fish_tail.size = Vector2(15, 25)
-	fish_tail.position = Vector2(150, 77)
+	fish_tail.size = Vector2(22, 38)
+	fish_tail.position = Vector2(225, 116)
 	container.add_child(fish_tail)
 
 	return container
@@ -293,55 +293,55 @@ func _create_fishing_rod() -> Control:
 
 func _create_tent() -> Control:
 	var container := Control.new()
-	container.custom_minimum_size = Vector2(200, 200)
+	container.custom_minimum_size = Vector2(300, 300)
 
 	# Ground
 	var ground := ColorRect.new()
 	ground.color = Color(0.3, 0.25, 0.15)
-	ground.size = Vector2(200, 20)
-	ground.position = Vector2(0, 170)
+	ground.size = Vector2(300, 30)
+	ground.position = Vector2(0, 255)
 	container.add_child(ground)
 
 	# Tent back (darker)
 	var tent_back := ColorRect.new()
 	tent_back.color = Color(0.35, 0.45, 0.3)
-	tent_back.size = Vector2(140, 100)
-	tent_back.position = Vector2(30, 70)
+	tent_back.size = Vector2(210, 150)
+	tent_back.position = Vector2(45, 105)
 	container.add_child(tent_back)
 
 	# Tent front left
 	var tent_left := ColorRect.new()
 	tent_left.color = Color(0.4, 0.55, 0.35)
-	tent_left.size = Vector2(70, 100)
-	tent_left.position = Vector2(30, 70)
+	tent_left.size = Vector2(105, 150)
+	tent_left.position = Vector2(45, 105)
 	container.add_child(tent_left)
 
 	# Tent front right
 	var tent_right := ColorRect.new()
 	tent_right.color = Color(0.45, 0.6, 0.4)
-	tent_right.size = Vector2(70, 100)
-	tent_right.position = Vector2(100, 70)
+	tent_right.size = Vector2(105, 150)
+	tent_right.position = Vector2(150, 105)
 	container.add_child(tent_right)
 
 	# Tent peak
 	var peak := ColorRect.new()
 	peak.color = Color(0.5, 0.65, 0.45)
-	peak.size = Vector2(30, 20)
-	peak.position = Vector2(85, 55)
+	peak.size = Vector2(45, 30)
+	peak.position = Vector2(128, 82)
 	container.add_child(peak)
 
 	# Tent opening (dark)
 	var opening := ColorRect.new()
 	opening.color = Color(0.1, 0.1, 0.12)
-	opening.size = Vector2(35, 60)
-	opening.position = Vector2(82, 110)
+	opening.size = Vector2(52, 90)
+	opening.position = Vector2(123, 165)
 	container.add_child(opening)
 
 	# Pole
 	var pole := ColorRect.new()
 	pole.color = Color(0.5, 0.4, 0.3)
-	pole.size = Vector2(6, 120)
-	pole.position = Vector2(97, 50)
+	pole.size = Vector2(9, 180)
+	pole.position = Vector2(146, 75)
 	container.add_child(pole)
 
 	return container
@@ -349,48 +349,48 @@ func _create_tent() -> Control:
 
 func _create_tree() -> Control:
 	var container := Control.new()
-	container.custom_minimum_size = Vector2(200, 200)
+	container.custom_minimum_size = Vector2(300, 300)
 
 	# Trunk
 	var trunk := ColorRect.new()
 	trunk.color = Color(0.4, 0.28, 0.15)
-	trunk.size = Vector2(30, 80)
-	trunk.position = Vector2(85, 120)
+	trunk.size = Vector2(45, 120)
+	trunk.position = Vector2(128, 180)
 	container.add_child(trunk)
 
 	# Trunk detail
 	var trunk_detail := ColorRect.new()
 	trunk_detail.color = Color(0.35, 0.24, 0.12)
-	trunk_detail.size = Vector2(8, 80)
-	trunk_detail.position = Vector2(95, 120)
+	trunk_detail.size = Vector2(12, 120)
+	trunk_detail.position = Vector2(143, 180)
 	container.add_child(trunk_detail)
 
 	# Foliage bottom (largest)
 	var leaves1 := ColorRect.new()
 	leaves1.color = Color(0.2, 0.45, 0.2)
-	leaves1.size = Vector2(100, 50)
-	leaves1.position = Vector2(50, 85)
+	leaves1.size = Vector2(150, 75)
+	leaves1.position = Vector2(75, 128)
 	container.add_child(leaves1)
 
 	# Foliage middle
 	var leaves2 := ColorRect.new()
 	leaves2.color = Color(0.25, 0.5, 0.25)
-	leaves2.size = Vector2(80, 45)
-	leaves2.position = Vector2(60, 50)
+	leaves2.size = Vector2(120, 68)
+	leaves2.position = Vector2(90, 75)
 	container.add_child(leaves2)
 
 	# Foliage top
 	var leaves3 := ColorRect.new()
 	leaves3.color = Color(0.3, 0.55, 0.3)
-	leaves3.size = Vector2(55, 40)
-	leaves3.position = Vector2(72, 20)
+	leaves3.size = Vector2(82, 60)
+	leaves3.position = Vector2(108, 30)
 	container.add_child(leaves3)
 
 	# Tree top
 	var leaves4 := ColorRect.new()
 	leaves4.color = Color(0.35, 0.6, 0.35)
-	leaves4.size = Vector2(25, 25)
-	leaves4.position = Vector2(87, 5)
+	leaves4.size = Vector2(38, 38)
+	leaves4.position = Vector2(131, 8)
 	container.add_child(leaves4)
 
 	return container
