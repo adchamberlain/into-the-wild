@@ -15,6 +15,34 @@ var chop_progress: float = 0.0
 # Visual nodes
 var thorn_meshes: Array[MeshInstance3D] = []
 
+# Shared materials (static to avoid shader compilation per instance)
+static var _base_mat: StandardMaterial3D = null
+static var _thorn_mat: StandardMaterial3D = null
+static var _spike_mat: StandardMaterial3D = null
+
+
+static func _get_base_material() -> StandardMaterial3D:
+	if not _base_mat:
+		_base_mat = StandardMaterial3D.new()
+		_base_mat.albedo_color = Color(0.25, 0.35, 0.15)  # Dark green
+		_base_mat.roughness = 0.9
+	return _base_mat
+
+
+static func _get_thorn_material() -> StandardMaterial3D:
+	if not _thorn_mat:
+		_thorn_mat = StandardMaterial3D.new()
+		_thorn_mat.albedo_color = Color(0.35, 0.25, 0.15)  # Brown
+		_thorn_mat.roughness = 0.9
+	return _thorn_mat
+
+
+static func _get_spike_material() -> StandardMaterial3D:
+	if not _spike_mat:
+		_spike_mat = StandardMaterial3D.new()
+		_spike_mat.albedo_color = Color(0.4, 0.3, 0.2)
+	return _spike_mat
+
 
 func _ready() -> void:
 	add_to_group("interactable")
@@ -33,73 +61,44 @@ func _setup_visuals() -> void:
 	collision.position = Vector3(0, 1.5, 0)
 	add_child(collision)
 
-	# Create tangled bramble visuals using multiple overlapping boxes
-	var base_color := Color(0.25, 0.35, 0.15)  # Dark green
-	var thorn_color := Color(0.35, 0.25, 0.15)  # Brown
+	# Get shared materials (avoids shader compilation per obstacle)
+	var base_mat: StandardMaterial3D = _get_base_material()
+	var thorn_mat: StandardMaterial3D = _get_thorn_material()
 
-	# Main bramble clusters - create a dense wall
+	# Simplified bramble clusters - fewer meshes for performance
 	var rng := RandomNumberGenerator.new()
 	rng.seed = int(global_position.x * 1000 + global_position.z * 100)
 
-	for i in range(12):
+	# 6 larger clusters instead of 20 small ones
+	for i in range(6):
 		var cluster := MeshInstance3D.new()
 		var mesh := BoxMesh.new()
 
-		# Varied sizes for organic look
-		var size_x: float = rng.randf_range(1.0, 2.5)
-		var size_y: float = rng.randf_range(1.5, 3.0)
-		var size_z: float = rng.randf_range(0.8, 1.8)
+		# Larger sizes to cover the same area with fewer meshes
+		var size_x: float = rng.randf_range(2.0, 3.5)
+		var size_y: float = rng.randf_range(2.0, 3.5)
+		var size_z: float = rng.randf_range(1.5, 2.5)
 		mesh.size = Vector3(size_x, size_y, size_z)
 		cluster.mesh = mesh
 
-		# Random position within obstacle footprint
-		var pos_x: float = rng.randf_range(-3.0, 3.0)
-		var pos_z: float = rng.randf_range(-1.5, 1.5)
-		var pos_y: float = size_y / 2.0 + rng.randf_range(-0.2, 0.3)
+		# Position in a row to block the path
+		var pos_x: float = (i - 2.5) * 2.5 + rng.randf_range(-0.5, 0.5)
+		var pos_z: float = rng.randf_range(-0.8, 0.8)
+		var pos_y: float = size_y / 2.0 + rng.randf_range(-0.1, 0.2)
 		cluster.position = Vector3(pos_x, pos_y, pos_z)
 
 		# Slight rotation for variety
 		cluster.rotation_degrees = Vector3(
-			rng.randf_range(-15, 15),
-			rng.randf_range(-30, 30),
-			rng.randf_range(-10, 10)
+			rng.randf_range(-10, 10),
+			rng.randf_range(-20, 20),
+			rng.randf_range(-8, 8)
 		)
 
-		# Material - alternate between green brambles and brown thorns
-		var mat := StandardMaterial3D.new()
-		if i % 3 == 0:
-			mat.albedo_color = thorn_color
-		else:
-			mat.albedo_color = base_color
-		mat.roughness = 0.9
-		cluster.material_override = mat
+		# Alternate materials
+		cluster.material_override = thorn_mat if i % 2 == 0 else base_mat
 
 		add_child(cluster)
 		thorn_meshes.append(cluster)
-
-	# Add some thorn spikes sticking out
-	for i in range(8):
-		var spike := MeshInstance3D.new()
-		var spike_mesh := BoxMesh.new()
-		spike_mesh.size = Vector3(0.1, 0.4, 0.1)
-		spike.mesh = spike_mesh
-
-		var pos_x: float = rng.randf_range(-3.5, 3.5)
-		var pos_z: float = rng.randf_range(-2.0, 2.0)
-		var pos_y: float = rng.randf_range(0.5, 2.5)
-		spike.position = Vector3(pos_x, pos_y, pos_z)
-		spike.rotation_degrees = Vector3(
-			rng.randf_range(-45, 45),
-			rng.randf_range(0, 360),
-			rng.randf_range(-45, 45)
-		)
-
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(0.4, 0.3, 0.2)
-		spike.material_override = mat
-
-		add_child(spike)
-		thorn_meshes.append(spike)
 
 
 ## Get interaction text for HUD prompt.

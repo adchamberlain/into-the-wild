@@ -57,14 +57,14 @@ var river_fishing_pool_spacing: float = 40.0  # Distance between fishing pools
 var obstacles: Array[Dictionary] = []
 var obstacle_count: int = 5  # Target number of thorn obstacles
 var obstacle_min_spacing: float = 30.0  # Min distance between obstacles
-var obstacle_spawn_min_distance: float = 40.0  # Min distance from spawn
+var obstacle_spawn_min_distance: float = 100.0  # Min distance from spawn (outside initial chunks)
 
 # Cave entrance settings
 # Each: {center: Vector2, cave_id: int, cave_type: String}
 var cave_entrances: Array[Dictionary] = []
 var cave_count: int = 4  # Target number of cave entrances
 var cave_min_spacing: float = 60.0  # Min distance between caves
-var cave_spawn_min_distance: float = 80.0  # Min distance from spawn
+var cave_spawn_min_distance: float = 110.0  # Min distance from spawn (outside initial chunks)
 
 # Region-specific pond sizes {radius_min, radius_max, depth}
 var region_pond_params: Dictionary = {

@@ -1,6 +1,7 @@
-[gd_scene load_steps=21 format=3 uid="uid://main001"]
+[gd_scene load_steps=22 format=3 uid="uid://main001"]
 
 [ext_resource type="PackedScene" uid="uid://world001" path="res://scenes/world/world.tscn" id="1_world"]
+[ext_resource type="Script" path="res://scripts/ui/loading_screen.gd" id="23_loading"]
 [ext_resource type="PackedScene" uid="uid://player001" path="res://scenes/player/player.tscn" id="2_player"]
 [ext_resource type="Script" path="res://scripts/world/time_manager.gd" id="3_time"]
 [ext_resource type="Script" path="res://scripts/world/environment_manager.gd" id="4_env"]
@@ -58,6 +59,9 @@ albedo_color = Color(0.5, 0.5, 0.5, 1)
 
 
 [node name="Main" type="Node3D"]
+
+[node name="LoadingScreen" type="CanvasLayer" parent="."]
+script = ExtResource("23_loading")
 
 [node name="TimeManager" type="Node" parent="."]
 script = ExtResource("3_time")

@@ -1714,6 +1714,66 @@ Implemented a major exploration progression system with two components:
 
 ---
 
+## Session 46 - Performance Fixes & Loading Screen (2026-02-04)
+
+### Performance Optimizations
+
+**Shader Compilation Stuttering**: Fixed severe stuttering/freezing caused by creating new materials per obstacle/cave instance.
+
+**Obstacle Thorns** (`scripts/world/obstacle_thorns.gd`):
+- Reduced from 20 meshes to 6 larger clusters
+- Implemented static shared materials (`_get_base_material()`, `_get_thorn_material()`, `_get_spike_material()`)
+- Materials created once and reused across all thorn instances
+
+**Cave Entrances** (`scripts/world/cave_entrance.gd`):
+- Fixed see-through doorway issue - now includes mountain rock mass behind entrance
+- Reduced from 12+ meshes to 5 larger meshes
+- Implemented static shared materials (`_get_rock_material()`, `_get_dark_material()`)
+- Added proper collision for mountain structure
+
+**Spawn Distance Adjustments** (`scripts/world/chunk_manager.gd`):
+- Increased `obstacle_spawn_min_distance` from 40 to 100 units
+- Increased `cave_spawn_min_distance` from 80 to 110 units
+- Pushes heavy objects outside initial chunk load radius (~96 units)
+- Reduces startup jitter from material creation
+
+### Loading Screen
+
+**New Visual Loading Screen** (`scripts/ui/loading_screen.gd`):
+- Displays while world initializes to hide remaining startup jitter
+- Shows cycling camping-related artwork using ColorRect primitives:
+  - Campfire with logs and layered flames
+  - Axe with handle and metal head
+  - Fishing rod with line and caught fish
+  - Tent with ground, walls, and opening
+  - Tree with trunk and layered foliage
+- Artwork cycles every 1.5 seconds with fade transitions
+- Monitors `chunk_manager.get_pending_load_count()` for load completion
+- Minimum 2.5 second display time for smooth experience
+- Fades out gracefully when ready
+
+**Integration**:
+- Added LoadingScreen node to `scenes/main.tscn`
+- Renders on CanvasLayer 100 (above all other UI)
+- Uses project's SF Mono font for consistent styling
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `scripts/ui/loading_screen.gd` | Visual loading screen with camping artwork |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/obstacle_thorns.gd` | Static shared materials, reduced mesh count |
+| `scripts/world/cave_entrance.gd` | Mountain structure, static shared materials, reduced mesh count |
+| `scripts/world/chunk_manager.gd` | Increased spawn distances for obstacles and caves |
+| `scenes/main.tscn` | Added LoadingScreen node |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
