@@ -16,6 +16,13 @@ var darkness_mesh: MeshInstance3D = null
 static var _rock_mat: StandardMaterial3D = null
 static var _dark_mat: StandardMaterial3D = null
 
+# Shared meshes (static to avoid mesh creation per instance)
+static var _main_mass_mesh: BoxMesh = null
+static var _peak_mesh: BoxMesh = null
+static var _front_side_mesh: BoxMesh = null
+static var _front_top_mesh: BoxMesh = null
+static var _dark_mesh: BoxMesh = null
+
 
 static func _get_rock_material() -> StandardMaterial3D:
 	if not _rock_mat:
@@ -33,6 +40,41 @@ static func _get_dark_material() -> StandardMaterial3D:
 	return _dark_mat
 
 
+static func _get_main_mass_mesh() -> BoxMesh:
+	if not _main_mass_mesh:
+		_main_mass_mesh = BoxMesh.new()
+		_main_mass_mesh.size = Vector3(14.0, 12.0, 12.0)
+	return _main_mass_mesh
+
+
+static func _get_peak_mesh() -> BoxMesh:
+	if not _peak_mesh:
+		_peak_mesh = BoxMesh.new()
+		_peak_mesh.size = Vector3(8.0, 6.0, 8.0)
+	return _peak_mesh
+
+
+static func _get_front_side_mesh() -> BoxMesh:
+	if not _front_side_mesh:
+		_front_side_mesh = BoxMesh.new()
+		_front_side_mesh.size = Vector3(4.5, 8.0, 4.0)
+	return _front_side_mesh
+
+
+static func _get_front_top_mesh() -> BoxMesh:
+	if not _front_top_mesh:
+		_front_top_mesh = BoxMesh.new()
+		_front_top_mesh.size = Vector3(10.0, 4.0, 4.0)
+	return _front_top_mesh
+
+
+static func _get_dark_mesh() -> BoxMesh:
+	if not _dark_mesh:
+		_dark_mesh = BoxMesh.new()
+		_dark_mesh.size = Vector3(4.5, 5.0, 0.5)
+	return _dark_mesh
+
+
 func _ready() -> void:
 	add_to_group("interactable")
 	add_to_group("cave_entrance")
@@ -42,40 +84,49 @@ func _ready() -> void:
 
 
 func _setup_visuals() -> void:
-	# Get shared materials (avoids shader compilation per cave)
+	# Get shared materials and meshes (avoids shader compilation and mesh creation per cave)
 	var rock_mat: StandardMaterial3D = _get_rock_material()
 	var dark_mat: StandardMaterial3D = _get_dark_material()
 
-	# Create a rock mound/mountain that the cave goes into
-	# Simplified version with fewer meshes for performance
+	# Create a rock mound/mountain using shared meshes
 	# The entrance faces +Z direction (player approaches from +Z)
 
-	# Main rock mass - the mountain body (single large mesh)
-	var main_mass := _create_rock_mesh(Vector3(14.0, 12.0, 12.0), rock_mat)
+	# Main rock mass - the mountain body
+	var main_mass := MeshInstance3D.new()
+	main_mass.mesh = _get_main_mass_mesh()
+	main_mass.material_override = rock_mat
 	main_mass.position = Vector3(0, 6.0, -4.0)
 	add_child(main_mass)
 	arch_meshes.append(main_mass)
 
 	# Upper peak for mountain shape
-	var peak := _create_rock_mesh(Vector3(8.0, 6.0, 8.0), rock_mat)
+	var peak := MeshInstance3D.new()
+	peak.mesh = _get_peak_mesh()
+	peak.material_override = rock_mat
 	peak.position = Vector3(0, 13.0, -3.0)
 	peak.rotation_degrees = Vector3(8, 15, 5)
 	add_child(peak)
 	arch_meshes.append(peak)
 
 	# Front face with entrance carved out (left and right of opening)
-	var front_left := _create_rock_mesh(Vector3(4.5, 8.0, 4.0), rock_mat)
+	var front_left := MeshInstance3D.new()
+	front_left.mesh = _get_front_side_mesh()
+	front_left.material_override = rock_mat
 	front_left.position = Vector3(-4.75, 4.0, 1.0)
 	add_child(front_left)
 	arch_meshes.append(front_left)
 
-	var front_right := _create_rock_mesh(Vector3(4.5, 8.0, 4.0), rock_mat)
+	var front_right := MeshInstance3D.new()
+	front_right.mesh = _get_front_side_mesh()
+	front_right.material_override = rock_mat
 	front_right.position = Vector3(4.75, 4.0, 1.0)
 	add_child(front_right)
 	arch_meshes.append(front_right)
 
 	# Above entrance
-	var front_top := _create_rock_mesh(Vector3(10.0, 4.0, 4.0), rock_mat)
+	var front_top := MeshInstance3D.new()
+	front_top.mesh = _get_front_top_mesh()
+	front_top.material_override = rock_mat
 	front_top.position = Vector3(0, 9.0, 1.0)
 	add_child(front_top)
 	arch_meshes.append(front_top)
@@ -99,30 +150,12 @@ func _setup_visuals() -> void:
 	# Dark opening (the cave mouth) - positioned at front
 	darkness_mesh = MeshInstance3D.new()
 	darkness_mesh.name = "DarkOpening"
-	var dark_mesh := BoxMesh.new()
-	dark_mesh.size = Vector3(4.5, 5.0, 0.5)
-	darkness_mesh.mesh = dark_mesh
+	darkness_mesh.mesh = _get_dark_mesh()
 	darkness_mesh.material_override = dark_mat
 	darkness_mesh.position = Vector3(0, 2.5, 1.5)
-
 	add_child(darkness_mesh)
 
-	# Add glow around entrance to make it visible
-	var glow_light := OmniLight3D.new()
-	glow_light.light_color = Color(0.3, 0.25, 0.2)
-	glow_light.light_energy = 0.5
-	glow_light.omni_range = 8.0
-	glow_light.position = Vector3(0, 3.0, 4.0)
-	add_child(glow_light)
-
-
-func _create_rock_mesh(size: Vector3, mat: StandardMaterial3D) -> MeshInstance3D:
-	var mesh_inst := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = size
-	mesh_inst.mesh = box
-	mesh_inst.material_override = mat
-	return mesh_inst
+	# NOTE: Removed OmniLight3D for performance - caves are visible via dark opening contrast
 
 
 ## Get interaction text for HUD prompt.
