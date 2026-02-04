@@ -38,12 +38,32 @@ func _ready() -> void:
 
 
 func _create_ui() -> void:
-	# Dark background with slight gradient feel
+	# Get viewport size for proper sizing (with fallback for safety)
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	if viewport_size.x < 100 or viewport_size.y < 100:
+		viewport_size = Vector2(1920, 1080)  # Fallback to common resolution
+
+	# Dark background that covers entire screen
 	background = ColorRect.new()
 	background.color = Color(0.06, 0.07, 0.1, 1.0)
-	background.anchors_preset = Control.PRESET_FULL_RECT
+	background.position = Vector2.ZERO
+	background.size = viewport_size
+	# Use anchors to stretch with window
+	background.anchor_left = 0.0
+	background.anchor_top = 0.0
+	background.anchor_right = 1.0
+	background.anchor_bottom = 1.0
+	background.offset_left = 0
+	background.offset_top = 0
+	background.offset_right = 0
+	background.offset_bottom = 0
 	background.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(background)
+
+	# Connect to viewport size changes to keep background covering full screen
+	get_viewport().size_changed.connect(_on_viewport_size_changed)
+	# Also call once deferred to ensure proper sizing after scene is fully loaded
+	call_deferred("_on_viewport_size_changed")
 
 	# Game title at top
 	title_label = Label.new()
@@ -455,3 +475,9 @@ func _on_fade_complete() -> void:
 func skip_loading() -> void:
 	if is_loading:
 		_finish_loading()
+
+
+func _on_viewport_size_changed() -> void:
+	if background and is_instance_valid(background):
+		var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+		background.size = viewport_size
