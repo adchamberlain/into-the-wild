@@ -64,22 +64,17 @@ func generate() -> void:
 	if is_generated:
 		return
 
-	# Generate terrain mesh immediately (required for visuals)
+	# Generate terrain mesh and collision immediately (required for player to walk)
 	_generate_terrain_mesh()
+	_generate_collision_from_mesh()  # Single trimesh shape - much faster than 256 boxes
 
-	# Defer collision and all spawning to spread work across frames
-	call_deferred("_deferred_generate_collision")
+	# Defer spawning to spread work across frames
 	call_deferred("_spawn_chunk_trees")
 	call_deferred("_deferred_spawn_resources")
 	call_deferred("_deferred_spawn_decorations")
 	call_deferred("_deferred_spawn_animals")
 
 	is_generated = true
-
-
-func _deferred_generate_collision() -> void:
-	# Generate collision shape from mesh (much faster than 256 individual boxes)
-	_generate_collision_from_mesh()
 
 
 func _deferred_spawn_resources() -> void:
