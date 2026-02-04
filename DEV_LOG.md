@@ -1544,6 +1544,89 @@ Added missing preserved and cooked food values:
 
 ---
 
+## Session 45 - Trap UX Improvements (2026-02-04)
+
+**Enhanced snare trap user experience** with visual state changes, HUD notifications, and catch alerts.
+
+### Visual State Changes
+
+Traps now visually reflect their current state, making it easy to check traps at a glance:
+
+**Empty State (default)**:
+- Snare loop open and flat on ground
+- Trigger stick upright
+- No bait or animal visible
+
+**Baited State**:
+- Visible bait mesh based on bait type:
+  - Berry: Red sphere on trigger plate
+  - Mushroom: Brown cap with light stem
+  - Herb: Green rectangular bundle
+- Trigger stick still upright, snare loop open
+
+**Caught State**:
+- Trigger stick fallen/horizontal (trap sprung)
+- Snare loop contracted/raised (tightened)
+- Caught animal visible:
+  - **Rabbit**: Brown body with head, ears, and tail
+  - **Bird**: Grey-blue body with folded wings + scattered feathers
+
+### HUD Notifications
+
+Replaced console-only messages with proper in-game notifications:
+
+| Action | Notification | Color |
+|--------|--------------|-------|
+| Bait trap | "Trap baited with Berry" | Green |
+| Check baited trap | "Trap is baited with berry. Waiting..." | Yellow |
+| No bait available | "Need bait: berry, mushroom, or herb" | Orange |
+| Trap catches animal | "A trap caught a Rabbit!" | Bright green |
+| Collect catch | "Collected Rabbit: +2 Raw Meat, +1 Hide" | Green |
+
+Collection shows combined loot in a single notification to avoid overlapping messages.
+
+### Catch Alert System
+
+When a trap catches something, players are now notified even when elsewhere:
+
+1. **Audio cue**: "trap_snap" sound effect plays (added to SFXManager)
+2. **HUD notification**: "A trap caught a Rabbit!" appears with bright green color
+
+This ensures players know to check their traps without constantly walking back.
+
+### Save/Load Support
+
+Trap state now persists correctly across save/load:
+- Saves: `is_baited`, `bait_type`, `has_catch`, `catch_type`, `catch_loot`, `check_timer`
+- Visuals restored via `call_deferred("_update_visuals")` after loading
+
+### New Visual Elements in Placement System
+
+Added to `_create_snare_trap()`:
+- `SnareLoopOpen` / `SnareLoopClosed` meshes
+- `TriggerUpright` / `TriggerFallen` meshes
+- `BaitBerry`, `BaitMushroom`, `BaitHerb` meshes
+- `CaughtRabbit` node (body, head, ears)
+- `CaughtBird` node (body, wings, scattered feathers)
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/campsite/structure_snare_trap.gd` | Complete rewrite with visual state management, HUD notifications, catch alerts, save/load |
+| `scripts/campsite/placement_system.gd` | Added visual state meshes to `_create_snare_trap()` |
+| `scripts/core/sfx_manager.gd` | Added "trap_snap" sound path and cooldown |
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `assets/audio/sfx/traps/` | Directory for trap sound effects |
+
+**Note**: `trap_snap.mp3` audio file needs to be added for the sound effect to play.
+
+---
+
 ## Next Session
 
 ### Planned Tasks

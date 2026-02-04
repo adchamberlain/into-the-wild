@@ -1783,23 +1783,229 @@ func _create_snare_trap() -> StaticBody3D:
 	crossbar.material_override = wood_mat
 	trap.add_child(crossbar)
 
-	# Snare loop (simplified as a torus-like shape made of boxes)
-	var loop_base: MeshInstance3D = MeshInstance3D.new()
+	# Snare loop - open state (visible when empty or baited)
+	var loop_open: MeshInstance3D = MeshInstance3D.new()
+	loop_open.name = "SnareLoopOpen"
 	var loop_mesh: BoxMesh = BoxMesh.new()
 	loop_mesh.size = Vector3(0.4, 0.03, 0.4)
-	loop_base.mesh = loop_mesh
-	loop_base.position = Vector3(0, 0.02, 0.1)
-	loop_base.material_override = rope_mat
-	trap.add_child(loop_base)
+	loop_open.mesh = loop_mesh
+	loop_open.position = Vector3(0, 0.02, 0.1)
+	loop_open.material_override = rope_mat
+	trap.add_child(loop_open)
 
-	# Trigger stick
-	var trigger: MeshInstance3D = MeshInstance3D.new()
+	# Snare loop - closed/tightened state (visible when caught)
+	var loop_closed: MeshInstance3D = MeshInstance3D.new()
+	loop_closed.name = "SnareLoopClosed"
+	var loop_closed_mesh: BoxMesh = BoxMesh.new()
+	loop_closed_mesh.size = Vector3(0.15, 0.03, 0.15)
+	loop_closed.mesh = loop_closed_mesh
+	loop_closed.position = Vector3(0, 0.15, 0.1)
+	loop_closed.material_override = rope_mat
+	loop_closed.visible = false
+	trap.add_child(loop_closed)
+
+	# Trigger stick - upright (visible when not sprung)
+	var trigger_upright: MeshInstance3D = MeshInstance3D.new()
+	trigger_upright.name = "TriggerUpright"
 	var trigger_mesh: BoxMesh = BoxMesh.new()
 	trigger_mesh.size = Vector3(0.04, 0.2, 0.04)
-	trigger.mesh = trigger_mesh
-	trigger.position = Vector3(0, 0.1, 0.1)
-	trigger.material_override = wood_mat
-	trap.add_child(trigger)
+	trigger_upright.mesh = trigger_mesh
+	trigger_upright.position = Vector3(0, 0.1, 0.1)
+	trigger_upright.material_override = wood_mat
+	trap.add_child(trigger_upright)
+
+	# Trigger stick - fallen (visible when sprung/caught)
+	var trigger_fallen: MeshInstance3D = MeshInstance3D.new()
+	trigger_fallen.name = "TriggerFallen"
+	var trigger_fallen_mesh: BoxMesh = BoxMesh.new()
+	trigger_fallen_mesh.size = Vector3(0.04, 0.2, 0.04)
+	trigger_fallen.mesh = trigger_fallen_mesh
+	trigger_fallen.position = Vector3(0, 0.03, 0.2)
+	trigger_fallen.rotation_degrees.x = -80
+	trigger_fallen.material_override = wood_mat
+	trigger_fallen.visible = false
+	trap.add_child(trigger_fallen)
+
+	# === BAIT VISUALS (initially hidden) ===
+
+	# Berry bait
+	var berry_mat: StandardMaterial3D = StandardMaterial3D.new()
+	berry_mat.albedo_color = Color(0.8, 0.2, 0.3)  # Red berry color
+
+	var bait_berry: MeshInstance3D = MeshInstance3D.new()
+	bait_berry.name = "BaitBerry"
+	var berry_mesh: SphereMesh = SphereMesh.new()
+	berry_mesh.radius = 0.06
+	berry_mesh.height = 0.12
+	bait_berry.mesh = berry_mesh
+	bait_berry.position = Vector3(0, 0.08, 0.1)
+	bait_berry.material_override = berry_mat
+	bait_berry.visible = false
+	trap.add_child(bait_berry)
+
+	# Mushroom bait
+	var mushroom_cap_mat: StandardMaterial3D = StandardMaterial3D.new()
+	mushroom_cap_mat.albedo_color = Color(0.7, 0.5, 0.3)  # Brown cap
+	var mushroom_stem_mat: StandardMaterial3D = StandardMaterial3D.new()
+	mushroom_stem_mat.albedo_color = Color(0.9, 0.85, 0.75)  # Light stem
+
+	var bait_mushroom: Node3D = Node3D.new()
+	bait_mushroom.name = "BaitMushroom"
+	bait_mushroom.position = Vector3(0, 0, 0.1)
+	bait_mushroom.visible = false
+
+	var mushroom_stem: MeshInstance3D = MeshInstance3D.new()
+	var stem_mesh: CylinderMesh = CylinderMesh.new()
+	stem_mesh.top_radius = 0.02
+	stem_mesh.bottom_radius = 0.025
+	stem_mesh.height = 0.06
+	mushroom_stem.mesh = stem_mesh
+	mushroom_stem.position = Vector3(0, 0.03, 0)
+	mushroom_stem.material_override = mushroom_stem_mat
+	bait_mushroom.add_child(mushroom_stem)
+
+	var mushroom_cap: MeshInstance3D = MeshInstance3D.new()
+	var cap_mesh: CylinderMesh = CylinderMesh.new()
+	cap_mesh.top_radius = 0.01
+	cap_mesh.bottom_radius = 0.05
+	cap_mesh.height = 0.04
+	mushroom_cap.mesh = cap_mesh
+	mushroom_cap.position = Vector3(0, 0.08, 0)
+	mushroom_cap.material_override = mushroom_cap_mat
+	bait_mushroom.add_child(mushroom_cap)
+
+	trap.add_child(bait_mushroom)
+
+	# Herb bait
+	var herb_mat: StandardMaterial3D = StandardMaterial3D.new()
+	herb_mat.albedo_color = Color(0.3, 0.6, 0.25)  # Green herb color
+
+	var bait_herb: MeshInstance3D = MeshInstance3D.new()
+	bait_herb.name = "BaitHerb"
+	var herb_mesh: BoxMesh = BoxMesh.new()
+	herb_mesh.size = Vector3(0.08, 0.04, 0.06)
+	bait_herb.mesh = herb_mesh
+	bait_herb.position = Vector3(0, 0.05, 0.1)
+	bait_herb.material_override = herb_mat
+	bait_herb.visible = false
+	trap.add_child(bait_herb)
+
+	# === CAUGHT ANIMAL VISUALS (initially hidden) ===
+
+	# Rabbit (simple body shape)
+	var rabbit_mat: StandardMaterial3D = StandardMaterial3D.new()
+	rabbit_mat.albedo_color = Color(0.6, 0.5, 0.4)  # Brown/grey fur
+
+	var caught_rabbit: Node3D = Node3D.new()
+	caught_rabbit.name = "CaughtRabbit"
+	caught_rabbit.position = Vector3(0, 0.1, 0.1)
+	caught_rabbit.visible = false
+
+	# Rabbit body
+	var rabbit_body: MeshInstance3D = MeshInstance3D.new()
+	var body_mesh: SphereMesh = SphereMesh.new()
+	body_mesh.radius = 0.1
+	body_mesh.height = 0.15
+	rabbit_body.mesh = body_mesh
+	rabbit_body.rotation_degrees.x = 90
+	rabbit_body.material_override = rabbit_mat
+	caught_rabbit.add_child(rabbit_body)
+
+	# Rabbit head
+	var rabbit_head: MeshInstance3D = MeshInstance3D.new()
+	var head_mesh: SphereMesh = SphereMesh.new()
+	head_mesh.radius = 0.06
+	head_mesh.height = 0.1
+	rabbit_head.mesh = head_mesh
+	rabbit_head.position = Vector3(0, 0.02, 0.12)
+	rabbit_head.material_override = rabbit_mat
+	caught_rabbit.add_child(rabbit_head)
+
+	# Rabbit ears
+	var ear_mesh: BoxMesh = BoxMesh.new()
+	ear_mesh.size = Vector3(0.02, 0.08, 0.015)
+
+	var rabbit_ear1: MeshInstance3D = MeshInstance3D.new()
+	rabbit_ear1.mesh = ear_mesh
+	rabbit_ear1.position = Vector3(-0.025, 0.08, 0.12)
+	rabbit_ear1.rotation_degrees.z = 10
+	rabbit_ear1.material_override = rabbit_mat
+	caught_rabbit.add_child(rabbit_ear1)
+
+	var rabbit_ear2: MeshInstance3D = MeshInstance3D.new()
+	rabbit_ear2.mesh = ear_mesh
+	rabbit_ear2.position = Vector3(0.025, 0.08, 0.12)
+	rabbit_ear2.rotation_degrees.z = -10
+	rabbit_ear2.material_override = rabbit_mat
+	caught_rabbit.add_child(rabbit_ear2)
+
+	trap.add_child(caught_rabbit)
+
+	# Bird (simple shape with wings)
+	var bird_body_mat: StandardMaterial3D = StandardMaterial3D.new()
+	bird_body_mat.albedo_color = Color(0.45, 0.35, 0.3)  # Brown bird
+	var bird_wing_mat: StandardMaterial3D = StandardMaterial3D.new()
+	bird_wing_mat.albedo_color = Color(0.35, 0.28, 0.22)  # Darker wings
+
+	var caught_bird: Node3D = Node3D.new()
+	caught_bird.name = "CaughtBird"
+	caught_bird.position = Vector3(0, 0.08, 0.1)
+	caught_bird.visible = false
+
+	# Bird body
+	var bird_body: MeshInstance3D = MeshInstance3D.new()
+	var bird_body_mesh: SphereMesh = SphereMesh.new()
+	bird_body_mesh.radius = 0.07
+	bird_body_mesh.height = 0.12
+	bird_body.mesh = bird_body_mesh
+	bird_body.rotation_degrees.x = 70
+	bird_body.material_override = bird_body_mat
+	caught_bird.add_child(bird_body)
+
+	# Bird head
+	var bird_head: MeshInstance3D = MeshInstance3D.new()
+	var bird_head_mesh: SphereMesh = SphereMesh.new()
+	bird_head_mesh.radius = 0.04
+	bird_head_mesh.height = 0.06
+	bird_head.mesh = bird_head_mesh
+	bird_head.position = Vector3(0, 0.04, 0.08)
+	bird_head.material_override = bird_body_mat
+	caught_bird.add_child(bird_head)
+
+	# Bird wings (folded, lying on ground)
+	var wing_mesh: BoxMesh = BoxMesh.new()
+	wing_mesh.size = Vector3(0.12, 0.01, 0.08)
+
+	var bird_wing1: MeshInstance3D = MeshInstance3D.new()
+	bird_wing1.mesh = wing_mesh
+	bird_wing1.position = Vector3(-0.08, -0.02, 0)
+	bird_wing1.rotation_degrees.z = 20
+	bird_wing1.material_override = bird_wing_mat
+	caught_bird.add_child(bird_wing1)
+
+	var bird_wing2: MeshInstance3D = MeshInstance3D.new()
+	bird_wing2.mesh = wing_mesh
+	bird_wing2.position = Vector3(0.08, -0.02, 0)
+	bird_wing2.rotation_degrees.z = -20
+	bird_wing2.material_override = bird_wing_mat
+	caught_bird.add_child(bird_wing2)
+
+	# Scattered feathers (for visual interest)
+	var feather_mat: StandardMaterial3D = StandardMaterial3D.new()
+	feather_mat.albedo_color = Color(0.5, 0.4, 0.35)
+
+	var feather_mesh: BoxMesh = BoxMesh.new()
+	feather_mesh.size = Vector3(0.04, 0.005, 0.015)
+
+	for i: int in range(3):
+		var feather: MeshInstance3D = MeshInstance3D.new()
+		feather.mesh = feather_mesh
+		feather.position = Vector3(randf_range(-0.2, 0.2), 0.01, randf_range(-0.1, 0.2))
+		feather.rotation_degrees.y = randf_range(0, 360)
+		feather.material_override = feather_mat
+		caught_bird.add_child(feather)
+
+	trap.add_child(caught_bird)
 
 	return trap
 
