@@ -625,8 +625,7 @@ func _calculate_side_ao_bottom(x: float, z: float, height: float, face_normal: V
 
 
 func _generate_collision_from_mesh() -> void:
-	# Use box collision for each cell - required for CharacterBody3D movement
-	# ConcavePolygonShape3D doesn't work well with move_and_slide()
+	# Use HeightMapShape3D - single efficient shape instead of 256 boxes
 	terrain_collision = StaticBody3D.new()
 	terrain_collision.name = "TerrainCollision"
 
@@ -637,35 +636,52 @@ func _generate_collision_from_mesh() -> void:
 	var chunk_world_x: float = chunk_coord.x * chunk_world_size
 	var chunk_world_z: float = chunk_coord.y * chunk_world_size
 
-	# Create a box collision for each terrain cell
-	# Use height cache if available, otherwise call get_height_at
-	for cz in range(chunk_size_cells):
-		for cx in range(chunk_size_cells):
-			var center_x: float = chunk_world_x + cx * cell_size + cell_size / 2.0
-			var center_z: float = chunk_world_z + cz * cell_size + cell_size / 2.0
+	# HeightMapShape3D requires (width+1) x (depth+1) points for width x depth cells
+	var map_width: int = chunk_size_cells + 1
+	var map_depth: int = chunk_size_cells + 1
 
-			# Use cached height if available
+	# Build height data array (row-major: z * width + x)
+	var map_data: PackedFloat32Array = PackedFloat32Array()
+	map_data.resize(map_width * map_depth)
+
+	for z in range(map_depth):
+		for x in range(map_width):
+			var world_x: float = chunk_world_x + x * cell_size
+			var world_z: float = chunk_world_z + z * cell_size
+
+			# Use cached height if available (cache includes border, so offset by 1)
 			var height: float
-			if _height_cache.size() > 0:
-				height = _height_cache[cz + 1][cx + 1]
+			if _height_cache.size() > 0 and x < _height_cache_size - 1 and z < _height_cache_size - 1:
+				# Map from vertex position to cache position
+				# Cache was built for cell centers, but we need vertex corners
+				# Use nearest cell center height
+				var cache_x: int = x + 1 if x < chunk_size_cells else x
+				var cache_z: int = z + 1 if z < chunk_size_cells else z
+				height = _height_cache[cache_z][cache_x]
 			else:
-				height = chunk_manager.get_height_at(center_x, center_z)
+				height = chunk_manager.get_height_at(world_x, world_z)
 
-			# Create box from y=height going down to y=-10
-			var box_bottom: float = -10.0
-			var box_height: float = height - box_bottom
-			if box_height <= 0:
-				continue
+			map_data[z * map_width + x] = height
 
-			var collision_shape: CollisionShape3D = CollisionShape3D.new()
-			var box: BoxShape3D = BoxShape3D.new()
-			box.size = Vector3(cell_size, box_height, cell_size)
+	# Create the heightmap shape
+	var heightmap: HeightMapShape3D = HeightMapShape3D.new()
+	heightmap.map_width = map_width
+	heightmap.map_depth = map_depth
+	heightmap.map_data = map_data
 
-			collision_shape.shape = box
-			collision_shape.position = Vector3(center_x, height - box_height / 2.0, center_z)
+	var collision_shape: CollisionShape3D = CollisionShape3D.new()
+	collision_shape.shape = heightmap
 
-			terrain_collision.add_child(collision_shape)
+	# Position the collision shape - HeightMapShape3D is centered at origin
+	# and scaled by 1 unit per sample, so we need to scale and position it
+	collision_shape.scale = Vector3(cell_size, 1.0, cell_size)
+	collision_shape.position = Vector3(
+		chunk_world_x + chunk_world_size / 2.0,
+		0.0,
+		chunk_world_z + chunk_world_size / 2.0
+	)
 
+	terrain_collision.add_child(collision_shape)
 	add_child(terrain_collision)
 
 	# Clear height cache to free memory (no longer needed after collision generated)
