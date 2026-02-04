@@ -46,16 +46,17 @@ func _ready() -> void:
 	# Unique seed per animal for varied behavior
 	rng.seed = hash(global_position) + randi()
 
+	# Create mesh container for rotation BEFORE any awaits
+	# (so _process() doesn't get a null mesh_container)
+	mesh_container = Node3D.new()
+	mesh_container.name = "MeshContainer"
+	add_child(mesh_container)
+
 	# Find player, chunk manager, and SFX manager (cache for performance)
 	await get_tree().process_frame
 	player = get_tree().get_first_node_in_group("player")
 	chunk_manager = get_tree().get_first_node_in_group("chunk_manager")
 	sfx_manager = get_node_or_null("/root/SFXManager")
-
-	# Create mesh container for rotation
-	mesh_container = Node3D.new()
-	mesh_container.name = "MeshContainer"
-	add_child(mesh_container)
 
 	# Build the animal mesh (override in subclass)
 	_build_mesh()
