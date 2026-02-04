@@ -186,11 +186,12 @@ func _add_top_face_cached(st: SurfaceTool, x: float, z: float, size: float, heig
 		clamp(grass_color.b + variation * 0.3, grass_color.b - 0.07, grass_color.b + 0.07)
 	)
 
-	# Calculate vertex AO using cached heights (offset by 1 for border)
+	# Calculate vertex AO using cached heights
+	# Each corner samples its 3 adjacent neighbors for occlusion
 	var ao0: float = _calculate_vertex_ao_cached(cx, cz, height, -1, -1)  # NW corner
-	var ao1: float = _calculate_vertex_ao_cached(cx + 1, cz, height, 1, -1)  # NE corner
-	var ao2: float = _calculate_vertex_ao_cached(cx + 1, cz + 1, height, 1, 1)  # SE corner
-	var ao3: float = _calculate_vertex_ao_cached(cx, cz + 1, height, -1, 1)  # SW corner
+	var ao1: float = _calculate_vertex_ao_cached(cx, cz, height, 1, -1)   # NE corner
+	var ao2: float = _calculate_vertex_ao_cached(cx, cz, height, 1, 1)    # SE corner
+	var ao3: float = _calculate_vertex_ao_cached(cx, cz, height, -1, 1)   # SW corner
 
 	# Apply AO to colors
 	var color0: Color = cell_grass * ao0
