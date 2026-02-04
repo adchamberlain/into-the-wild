@@ -66,7 +66,7 @@ func generate() -> void:
 
 	# Generate terrain mesh and collision immediately (required for player to walk)
 	_generate_terrain_mesh()
-	_generate_collision_from_mesh()  # Single trimesh shape - much faster than 256 boxes
+	_generate_collision_from_mesh()  # Uses height cache from mesh generation
 
 	# Defer spawning to spread work across frames
 	call_deferred("_spawn_chunk_trees")
@@ -147,9 +147,7 @@ func _generate_terrain_mesh() -> void:
 	terrain_mesh.mesh = mesh
 	terrain_mesh.material_override = chunk_manager.get_terrain_material()
 	add_child(terrain_mesh)
-
-	# Clear height cache to free memory
-	_height_cache.clear()
+	# NOTE: Don't clear height cache here - collision generation needs it
 
 
 func _add_top_face_cached(st: SurfaceTool, x: float, z: float, size: float, height: float, cx: int, cz: int) -> void:
@@ -627,26 +625,54 @@ func _calculate_side_ao_bottom(x: float, z: float, height: float, face_normal: V
 
 
 func _generate_collision_from_mesh() -> void:
-	# Generate collision from the mesh - much faster than 256 individual boxes
-	# Uses ConcavePolygonShape3D which matches the terrain mesh exactly
-	if not terrain_mesh or not terrain_mesh.mesh:
-		return
-
+	# Use box collision for each cell - required for CharacterBody3D movement
+	# ConcavePolygonShape3D doesn't work well with move_and_slide()
 	terrain_collision = StaticBody3D.new()
 	terrain_collision.name = "TerrainCollision"
 
-	var collision_shape: CollisionShape3D = CollisionShape3D.new()
+	var cell_size: float = chunk_manager.cell_size
+	var chunk_size_cells: int = chunk_manager.chunk_size_cells
+	var chunk_world_size: float = chunk_size_cells * cell_size
 
-	# Create collision from the mesh faces
-	var shape: ConcavePolygonShape3D = terrain_mesh.mesh.create_trimesh_shape()
-	collision_shape.shape = shape
+	var chunk_world_x: float = chunk_coord.x * chunk_world_size
+	var chunk_world_z: float = chunk_coord.y * chunk_world_size
 
-	terrain_collision.add_child(collision_shape)
+	# Create a box collision for each terrain cell
+	# Use height cache if available, otherwise call get_height_at
+	for cz in range(chunk_size_cells):
+		for cx in range(chunk_size_cells):
+			var center_x: float = chunk_world_x + cx * cell_size + cell_size / 2.0
+			var center_z: float = chunk_world_z + cz * cell_size + cell_size / 2.0
+
+			# Use cached height if available
+			var height: float
+			if _height_cache.size() > 0:
+				height = _height_cache[cz + 1][cx + 1]
+			else:
+				height = chunk_manager.get_height_at(center_x, center_z)
+
+			# Create box from y=height going down to y=-10
+			var box_bottom: float = -10.0
+			var box_height: float = height - box_bottom
+			if box_height <= 0:
+				continue
+
+			var collision_shape: CollisionShape3D = CollisionShape3D.new()
+			var box: BoxShape3D = BoxShape3D.new()
+			box.size = Vector3(cell_size, box_height, cell_size)
+
+			collision_shape.shape = box
+			collision_shape.position = Vector3(center_x, height - box_height / 2.0, center_z)
+
+			terrain_collision.add_child(collision_shape)
+
 	add_child(terrain_collision)
+
+	# Clear height cache to free memory (no longer needed after collision generated)
+	_height_cache.clear()
 
 
 func _generate_collision() -> void:
-	# Legacy function - now calls the optimized version
 	_generate_collision_from_mesh()
 
 
