@@ -27,8 +27,10 @@ static var _dark_mesh: BoxMesh = null
 static func _get_rock_material() -> StandardMaterial3D:
 	if not _rock_mat:
 		_rock_mat = StandardMaterial3D.new()
-		_rock_mat.albedo_color = Color(0.4, 0.38, 0.35)
+		# Match ROCKY region terrain colors for visual consistency
+		_rock_mat.albedo_color = Color(0.45, 0.42, 0.38)  # ROCKY grass color
 		_rock_mat.roughness = 0.95
+		_rock_mat.vertex_color_use_as_albedo = true  # Allow vertex color tinting
 	return _rock_mat
 
 
@@ -83,26 +85,44 @@ func _ready() -> void:
 	call_deferred("_setup_visuals")
 
 
+func _create_tinted_rock_material(tint: float) -> StandardMaterial3D:
+	## Create a slightly tinted version of the rock material for visual variation
+	var mat: StandardMaterial3D = StandardMaterial3D.new()
+	var base_color: Color = Color(0.45, 0.42, 0.38)  # ROCKY terrain color
+	# Apply tint variation (-0.05 to +0.05 range)
+	mat.albedo_color = Color(
+		clamp(base_color.r + tint, 0.3, 0.5),
+		clamp(base_color.g + tint * 0.8, 0.3, 0.5),
+		clamp(base_color.b + tint * 0.6, 0.3, 0.45)
+	)
+	mat.roughness = 0.95
+	return mat
+
+
 func _setup_visuals() -> void:
-	# Get shared materials and meshes (avoids shader compilation and mesh creation per cave)
-	var rock_mat: StandardMaterial3D = _get_rock_material()
+	# Get shared meshes (avoids mesh creation per cave)
 	var dark_mat: StandardMaterial3D = _get_dark_material()
+
+	# Create varied materials for each piece - breaks up the uniform look
+	# Use deterministic tints based on cave_id for consistency
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = cave_id * 12345
 
 	# Create a rock mound/mountain using shared meshes
 	# The entrance faces +Z direction (player approaches from +Z)
 
-	# Main rock mass - the mountain body
+	# Main rock mass - the mountain body (slightly darker base)
 	var main_mass := MeshInstance3D.new()
 	main_mass.mesh = _get_main_mass_mesh()
-	main_mass.material_override = rock_mat
+	main_mass.material_override = _create_tinted_rock_material(rng.randf_range(-0.04, -0.02))
 	main_mass.position = Vector3(0, 6.0, -4.0)
 	add_child(main_mass)
 	arch_meshes.append(main_mass)
 
-	# Upper peak for mountain shape
+	# Upper peak for mountain shape (lighter, catching light)
 	var peak := MeshInstance3D.new()
 	peak.mesh = _get_peak_mesh()
-	peak.material_override = rock_mat
+	peak.material_override = _create_tinted_rock_material(rng.randf_range(0.02, 0.05))
 	peak.position = Vector3(0, 13.0, -3.0)
 	peak.rotation_degrees = Vector3(8, 15, 5)
 	add_child(peak)
@@ -111,22 +131,22 @@ func _setup_visuals() -> void:
 	# Front face with entrance carved out (left and right of opening)
 	var front_left := MeshInstance3D.new()
 	front_left.mesh = _get_front_side_mesh()
-	front_left.material_override = rock_mat
+	front_left.material_override = _create_tinted_rock_material(rng.randf_range(-0.02, 0.02))
 	front_left.position = Vector3(-4.75, 4.0, 1.0)
 	add_child(front_left)
 	arch_meshes.append(front_left)
 
 	var front_right := MeshInstance3D.new()
 	front_right.mesh = _get_front_side_mesh()
-	front_right.material_override = rock_mat
+	front_right.material_override = _create_tinted_rock_material(rng.randf_range(-0.02, 0.02))
 	front_right.position = Vector3(4.75, 4.0, 1.0)
 	add_child(front_right)
 	arch_meshes.append(front_right)
 
-	# Above entrance
+	# Above entrance (slightly different tone)
 	var front_top := MeshInstance3D.new()
 	front_top.mesh = _get_front_top_mesh()
-	front_top.material_override = rock_mat
+	front_top.material_override = _create_tinted_rock_material(rng.randf_range(-0.01, 0.03))
 	front_top.position = Vector3(0, 9.0, 1.0)
 	add_child(front_top)
 	arch_meshes.append(front_top)

@@ -1985,6 +1985,72 @@ New resource exclusive to high-altitude areas, providing both healing and hunger
 
 ---
 
+## Session 17 - River End Bug Fix & Chunk Boundary Collision Fix (2026-02-04)
+
+### Problem 1: River Endpoints
+
+At river endpoints, two issues were observed:
+1. Water didn't visually extend to the terrain edge
+2. Player fell through "solid-looking" blocks at river ends
+
+**Root Cause:** Mismatch between water mesh taper and terrain carving. Water mesh tapers to 10% width at ends, but terrain carving used full width, creating invisible "holes".
+
+**Fix:** Modified `_get_river_info_at()` to include taper calculation matching the water mesh.
+
+### Problem 2: Falling Through Terrain at Chunk Boundaries
+
+Player fell through terrain at chunk edges (specifically at position ~94.7, -158.6).
+
+**Root Cause:** Cache indexing bug in collision heightmap generation at chunk edges:
+- Height cache was built for cell centers: `chunk_world_x + (cx-1)*3 + 1.5`
+- Collision vertices at edges (x=16) sample: `chunk_world_x + 16*3 = chunk_world_x + 48`
+- Cache index 16 holds height for position 46.5, not 48.0
+- These snap to **different cells**, causing height mismatches at chunk boundaries
+- Where chunks meet, collision surfaces had different heights, creating gaps players could fall through
+
+**Fix:** Changed condition for cache usage from `x < _height_cache_size - 1` to `x < chunk_size_cells`. Edge vertices (x=16 or z=16) now always use `get_height_at()` directly for correct chunk boundary alignment.
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/chunk_manager.gd` | Updated `_get_river_info_at()` with taper calculation, added `_point_to_segment_distance_with_t()` helper function |
+| `scripts/world/terrain_chunk.gd` | Fixed collision heightmap edge vertex heights - edge vertices now use direct `get_height_at()` instead of cache |
+
+### Technical Details
+
+**River taper fix:**
+- `path_position` calculated from segment index + parametric t value
+- Taper applied when `path_position < 8` (start) or `path_position > path_length - 8` (end)
+- Taper formula: `min_width_factor + (1 - min_width_factor) * t²` where t is distance from end
+
+**Chunk boundary fix:**
+- Interior vertices (x < 16 AND z < 16): Use cache with offset `[z+1][x+1]`
+- Edge vertices (x >= 16 OR z >= 16): Use `get_height_at(world_x, world_z)` directly
+- This ensures adjacent chunks have matching collision heights at boundaries
+
+### Problem 3: Cave Entrance Visual Mismatch
+
+Large gray untextured rectangular block visible in MOUNTAIN regions looked disconnected from terrain.
+
+**Root Cause:** Cave entrance used a uniform flat `StandardMaterial3D` with color `Color(0.4, 0.38, 0.35)` that didn't match the terrain's varied vertex-colored appearance.
+
+**Fix:** Updated `cave_entrance.gd`:
+- Changed base rock color to match ROCKY terrain: `Color(0.45, 0.42, 0.38)`
+- Added `_create_tinted_rock_material()` function that creates color variations
+- Each mesh piece (main mass, peak, front pieces) now gets a slightly different tint
+- Tints are deterministic based on `cave_id` for consistency
+
+### Files Modified (Session 17 continued)
+
+| File | Changes |
+|------|---------|
+| `scripts/world/chunk_manager.gd` | River taper fix |
+| `scripts/world/terrain_chunk.gd` | Chunk boundary collision fix |
+| `scripts/world/cave_entrance.gd` | Updated rock colors to match terrain, added per-piece color variation |
+
+---
+
 ## Next Session
 
 ### Planned Tasks

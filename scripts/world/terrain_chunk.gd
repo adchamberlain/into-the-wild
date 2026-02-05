@@ -649,16 +649,17 @@ func _generate_collision_from_mesh() -> void:
 			var world_x: float = chunk_world_x + x * cell_size
 			var world_z: float = chunk_world_z + z * cell_size
 
-			# Use cached height if available (cache includes border, so offset by 1)
+			# Use cached height for interior vertices, direct calculation for edges
+			# Edge vertices (x=chunk_size_cells or z=chunk_size_cells) must use get_height_at()
+			# to ensure correct heights at chunk boundaries (cache has wrong positions for edges)
 			var height: float
-			if _height_cache.size() > 0 and x < _height_cache_size - 1 and z < _height_cache_size - 1:
-				# Map from vertex position to cache position
-				# Cache was built for cell centers, but we need vertex corners
-				# Use nearest cell center height
-				var cache_x: int = x + 1 if x < chunk_size_cells else x
-				var cache_z: int = z + 1 if z < chunk_size_cells else z
+			if _height_cache.size() > 0 and x < chunk_size_cells and z < chunk_size_cells:
+				# Interior vertex - use cache (offset by 1 for border)
+				var cache_x: int = x + 1
+				var cache_z: int = z + 1
 				height = _height_cache[cache_z][cache_x]
 			else:
+				# Edge vertex - always use direct calculation for correct chunk boundary heights
 				height = chunk_manager.get_height_at(world_x, world_z)
 
 			map_data[z * map_width + x] = height

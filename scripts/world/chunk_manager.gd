@@ -1177,6 +1177,7 @@ func get_height_at(x: float, z: float) -> float:
 
 func _get_river_info_at(x: float, z: float, river: Dictionary) -> Dictionary:
 	## Get information about whether a point is in a river and how far from center
+	## Now includes taper at river ends to match visual water mesh
 	var pos: Vector2 = Vector2(x, z)
 	var path: Array = river["path"]
 	var base_width: float = river["width"]
@@ -1184,21 +1185,54 @@ func _get_river_info_at(x: float, z: float, river: Dictionary) -> Dictionary:
 
 	var min_dist: float = INF
 	var effective_width: float = base_width
+	var closest_segment: int = -1
+	var closest_t: float = 0.0  # Parametric position along closest segment
 
-	# Check distance to each segment
+	# Check distance to each segment and track which is closest
 	for i in range(path.size() - 1):
 		var a: Vector2 = path[i]
 		var b: Vector2 = path[i + 1]
-		var dist: float = _point_to_segment_distance(pos, a, b)
+		var dist_info: Dictionary = _point_to_segment_distance_with_t(pos, a, b)
+		var dist: float = dist_info["distance"]
 
 		if dist < min_dist:
 			min_dist = dist
+			closest_segment = i
+			closest_t = dist_info["t"]
 
-			# Check if near a fishing pool (wider section)
-			for pool_pos in fishing_pools:
-				if pos.distance_to(pool_pos) < river_fishing_pool_spacing * 0.5:
-					effective_width = river_fishing_pool_width
-					break
+	# Safety check - if no segments found, return not in river
+	if closest_segment < 0:
+		return {"in_river": false, "distance": INF, "width": base_width}
+
+	# Calculate effective path position (0 to path.size()-1 as float)
+	var path_position: float = float(closest_segment) + closest_t
+	var path_length: float = float(path.size() - 1)
+
+	# Taper settings - must match water mesh rendering
+	var taper_points: int = 8  # Number of waypoints to taper over
+	var min_width_factor: float = 0.1  # Minimum width as fraction of full width
+
+	# Calculate taper factor based on position along river
+	var taper: float = 1.0
+	if path_position < taper_points:
+		# Taper at start - use smooth easing (quadratic ease-in)
+		var t: float = path_position / float(taper_points)
+		taper = min_width_factor + (1.0 - min_width_factor) * (t * t)
+	elif path_position > path_length - taper_points:
+		# Taper at end - use smooth easing
+		var dist_from_end: float = path_length - path_position
+		var t: float = dist_from_end / float(taper_points)
+		taper = min_width_factor + (1.0 - min_width_factor) * (t * t)
+
+	# Apply taper to width
+	effective_width = base_width * taper
+
+	# Check if near a fishing pool (wider section) - only if not heavily tapered
+	if taper > 0.5:
+		for pool_pos in fishing_pools:
+			if pos.distance_to(pool_pos) < river_fishing_pool_spacing * 0.5:
+				effective_width = max(effective_width, river_fishing_pool_width * taper)
+				break
 
 	var in_river: bool = min_dist < effective_width / 2.0
 
@@ -1223,6 +1257,22 @@ func _point_to_segment_distance(p: Vector2, a: Vector2, b: Vector2) -> float:
 	var closest: Vector2 = a + ab * t
 
 	return p.distance_to(closest)
+
+
+func _point_to_segment_distance_with_t(p: Vector2, a: Vector2, b: Vector2) -> Dictionary:
+	## Calculate distance and parametric position (t) from point p to line segment ab
+	var ab: Vector2 = b - a
+	var ap: Vector2 = p - a
+
+	var ab_len_sq: float = ab.length_squared()
+	if ab_len_sq == 0:
+		return {"distance": ap.length(), "t": 0.0}
+
+	# Project p onto the line, clamped to segment
+	var t: float = clamp(ap.dot(ab) / ab_len_sq, 0.0, 1.0)
+	var closest: Vector2 = a + ab * t
+
+	return {"distance": p.distance_to(closest), "t": t}
 
 
 func _world_to_chunk(world_pos: Vector3) -> Vector2i:
