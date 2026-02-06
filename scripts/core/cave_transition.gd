@@ -9,6 +9,9 @@ signal transition_completed()
 # State tracking
 var return_position: Vector3 = Vector3.ZERO
 var return_rotation: float = 0.0
+var cave_entrance_position: Vector3 = Vector3.ZERO
+var cave_entrance_rotation_y: float = 0.0
+var overworld_seed: int = 0
 var current_cave_id: int = -1
 var current_cave_type: String = ""
 var is_in_cave: bool = false
@@ -50,18 +53,26 @@ func _create_fade_overlay() -> void:
 
 
 ## Enter a cave from the overworld.
-func enter_cave(cave_id: int, cave_type: String, player: Node) -> void:
+func enter_cave(cave_id: int, cave_type: String, player: Node, entrance_pos: Vector3 = Vector3.ZERO, entrance_rot_y: float = 0.0) -> void:
 	if is_in_cave:
 		print("[CaveTransition] Already in a cave!")
 		return
 
 	print("[CaveTransition] Entering %s cave #%d" % [cave_type, cave_id])
 
-	# Store return position
+	# Store return position (player pos as fallback) and cave entrance position
 	return_position = player.global_position
 	return_rotation = player.rotation.y
+	cave_entrance_position = entrance_pos
+	cave_entrance_rotation_y = entrance_rot_y
 	current_cave_id = cave_id
 	current_cave_type = cave_type
+
+	# Store the overworld seed so we can restore it when exiting the cave
+	var chunk_manager: Node = get_tree().current_scene.get_node_or_null("World/Terrain")
+	if chunk_manager and "noise_seed" in chunk_manager:
+		overworld_seed = chunk_manager.noise_seed
+		print("[CaveTransition] Stored overworld seed: %d" % overworld_seed)
 
 	# Check if cave scene exists
 	var scene_path: String = CAVE_SCENES.get(cave_type, "")
@@ -228,6 +239,10 @@ func _return_to_overworld() -> void:
 	if game_state:
 		game_state.pending_cave_autosave = true
 		game_state.skip_player_data_on_load = true
+		# Restore the overworld seed so ChunkManager generates the same world
+		if overworld_seed != 0:
+			game_state.set_pending_world_seed(overworld_seed)
+			print("[CaveTransition] Restoring overworld seed: %d" % overworld_seed)
 		print("[CaveTransition] Set pending cave autosave load for world state restore")
 
 	var error: Error = tree.change_scene_to_file(main_scene_path)
@@ -259,6 +274,9 @@ func _restore_player_position() -> void:
 	# Calculate safe spawn position: in front of cave entrance, on top of terrain
 	var safe_pos: Vector3 = _get_safe_return_position()
 
+	# Face the player away from the cave entrance (+Z direction of entrance)
+	var exit_rotation: float = cave_entrance_rotation_y if cave_entrance_position != Vector3.ZERO else return_rotation
+
 	if stored_player:
 		# Replace the fresh player from main.tscn with our preserved one
 		# (keeps cave-gained inventory/stats intact)
@@ -268,16 +286,16 @@ func _restore_player_position() -> void:
 			fresh_player.queue_free()
 
 		stored_player.global_position = safe_pos
-		stored_player.rotation.y = return_rotation
+		stored_player.rotation.y = exit_rotation
 		main_root.add_child(stored_player)
-		print("[CaveTransition] Preserved player restored at %s" % stored_player.global_position)
+		print("[CaveTransition] Preserved player restored at %s facing away from cave" % stored_player.global_position)
 		stored_player = null
 	else:
 		# Fallback: just reposition existing player
 		var player: Node = tree.get_first_node_in_group("player")
 		if player:
 			player.global_position = safe_pos
-			player.rotation.y = return_rotation
+			player.rotation.y = exit_rotation
 			print("[CaveTransition] Player position restored")
 
 	if stored_hud:
@@ -303,20 +321,29 @@ func _restore_player_position() -> void:
 
 
 func _get_safe_return_position() -> Vector3:
-	## Calculate a safe position above terrain for returning from cave.
-	## Uses ChunkManager.get_height_at() to find the actual terrain height,
-	## then places the player well above it to avoid spawning under terrain.
-	var pos: Vector3 = return_position
+	## Place the player right in front of the cave entrance, facing away.
+	## The cave entrance faces +Z in local space, so we offset in its forward
+	## direction to place the player outside the mouth.
+	var pos: Vector3
+
+	if cave_entrance_position != Vector3.ZERO:
+		# Calculate the cave entrance's forward direction (+Z in local space)
+		var forward: Vector3 = Vector3(sin(cave_entrance_rotation_y), 0, cos(cave_entrance_rotation_y))
+		# Place player 5 units in front of the cave mouth
+		pos = cave_entrance_position + forward * 5.0
+		print("[CaveTransition] Spawning in front of cave entrance at (%.1f, %.1f, %.1f)" % [pos.x, pos.y, pos.z])
+	else:
+		# Fallback to stored player position
+		pos = return_position
+		print("[CaveTransition] No cave entrance pos stored, using return_position")
 
 	# Query ChunkManager for the real terrain height at this position
 	var chunk_manager: Node = get_tree().current_scene.get_node_or_null("World/Terrain")
 	if chunk_manager and chunk_manager.has_method("get_height_at"):
 		var terrain_y: float = chunk_manager.get_height_at(pos.x, pos.z)
-		# Place player 1.5 units above terrain (enough clearance to not clip)
 		pos.y = terrain_y + 1.5
 		print("[CaveTransition] Terrain height at return pos: %.1f, placing player at y=%.1f" % [terrain_y, pos.y])
 	else:
-		# Fallback: use stored position + generous offset
 		pos.y = return_position.y + 3.0
 		print("[CaveTransition] No ChunkManager found, using fallback y=%.1f" % pos.y)
 
@@ -372,7 +399,10 @@ func get_save_data() -> Dictionary:
 		"current_cave_id": current_cave_id,
 		"current_cave_type": current_cave_type,
 		"return_position": {"x": return_position.x, "y": return_position.y, "z": return_position.z},
-		"return_rotation": return_rotation
+		"return_rotation": return_rotation,
+		"cave_entrance_position": {"x": cave_entrance_position.x, "y": cave_entrance_position.y, "z": cave_entrance_position.z},
+		"cave_entrance_rotation_y": cave_entrance_rotation_y,
+		"overworld_seed": overworld_seed
 	}
 
 
@@ -389,3 +419,12 @@ func load_save_data(data: Dictionary) -> void:
 		pos.get("z", 0.0)
 	)
 	return_rotation = data.get("return_rotation", 0.0)
+
+	var epos: Dictionary = data.get("cave_entrance_position", {})
+	cave_entrance_position = Vector3(
+		epos.get("x", 0.0),
+		epos.get("y", 0.0),
+		epos.get("z", 0.0)
+	)
+	cave_entrance_rotation_y = data.get("cave_entrance_rotation_y", 0.0)
+	overworld_seed = data.get("overworld_seed", 0)

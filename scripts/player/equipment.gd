@@ -1267,7 +1267,15 @@ func _place_item() -> bool:
 	if not player or not inventory:
 		return false
 
-	# Delegate to PlacementSystem for all placeable items
+	# Torch: instant placement without preview mode
+	if equipped_item == "torch":
+		if placement_system and placement_system.has_method("place_torch_instant"):
+			if placement_system.place_torch_instant():
+				unequip()
+				return true
+		return false
+
+	# Delegate to PlacementSystem for all other placeable items
 	if placement_system and placement_system.has_method("start_placement"):
 		var success: bool = placement_system.start_placement(equipped_item)
 		if success:

@@ -166,6 +166,67 @@ func start_placement(item_type: String) -> bool:
 	return true
 
 
+## Instantly place a torch without preview mode.
+## Returns true if placement succeeded.
+func place_torch_instant() -> bool:
+	if not player or not camera or not inventory:
+		return false
+
+	if not inventory.has_item("torch"):
+		return false
+
+	# Calculate position 3m in front of player (same as _update_preview_position)
+	var forward: Vector3 = -camera.global_transform.basis.z
+	forward.y = 0
+	forward = forward.normalized()
+
+	var target_pos: Vector3 = player.global_position + forward * placement_distance
+
+	# Snap to grid
+	target_pos.x = round(target_pos.x / grid_size) * grid_size
+	target_pos.z = round(target_pos.z / grid_size) * grid_size
+
+	# Get terrain height, sink slightly to prevent floating seam
+	target_pos.y = _get_ground_height(target_pos.x, target_pos.z) - 0.04
+
+	# Create the torch structure
+	var structure: Node3D = _create_placed_torch()
+	if not structure:
+		print("[PlacementSystem] Failed to create torch")
+		return false
+
+	# Position and orient toward player
+	structure.global_position = target_pos
+	var look_target: Vector3 = Vector3(player.global_position.x, target_pos.y, player.global_position.z)
+	if target_pos.distance_squared_to(look_target) > 0.001:
+		structure.look_at(look_target, Vector3.UP)
+		structure.rotate_y(PI)
+
+	# Add to Structures container
+	var structures_container: Node = player.get_parent().get_node_or_null("Structures")
+	if structures_container:
+		structures_container.add_child(structure)
+	else:
+		player.get_parent().add_child(structure)
+
+	# Activate the torch
+	if structure.has_method("on_placed"):
+		structure.on_placed()
+
+	# Consume from inventory
+	inventory.remove_item("torch", 1)
+
+	# Register with campsite manager
+	if campsite_manager and campsite_manager.has_method("register_structure"):
+		campsite_manager.register_structure(structure, "placed_torch")
+
+	# SFX and signal
+	SFXManager.play_sfx("place_confirm")
+	placement_confirmed.emit("placed_torch", target_pos)
+	print("[PlacementSystem] Instantly placed torch at %s" % target_pos)
+	return true
+
+
 ## Cancel placement mode.
 func cancel_placement() -> void:
 	if not is_placing:

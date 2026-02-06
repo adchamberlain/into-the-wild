@@ -93,6 +93,8 @@ func _check_pending_load() -> void:
 		# Wait for terrain to be ready (chunk_manager needs time to initialize)
 		# Wait multiple frames to ensure all nodes are ready
 		for i: int in range(3):
+			if not is_inside_tree():
+				return
 			await get_tree().process_frame
 
 		# Re-acquire references in case they weren't available initially
@@ -747,7 +749,11 @@ func _apply_campsite_data(data: Dictionary) -> void:
 	campsite_manager.structure_counts.clear()
 
 	# Wait a frame for cleanup
+	if not is_inside_tree():
+		return
 	await get_tree().process_frame
+	if not is_inside_tree():
+		return
 
 	# Recreate structures
 	if data.has("structures"):

@@ -265,7 +265,7 @@ func _enter_cave(player: Node) -> void:
 	print("[CaveEntrance] Entering %s cave #%d" % [cave_type, cave_id])
 	var cave_transition: Node = get_node_or_null("/root/CaveTransition")
 	if cave_transition and cave_transition.has_method("enter_cave"):
-		cave_transition.enter_cave(cave_id, cave_type, player)
+		cave_transition.enter_cave(cave_id, cave_type, player, global_position, rotation.y)
 		entered.emit(cave_id)
 	else:
 		_show_notification("Entering %s cave..." % cave_type, Color(0.7, 0.7, 0.9))

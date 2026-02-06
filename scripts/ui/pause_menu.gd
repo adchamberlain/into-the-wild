@@ -39,19 +39,8 @@ func _ready() -> void:
 	# This node must process even when the tree is paused
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
-	# Get save_load reference
-	if save_load_path:
-		save_load = get_node_or_null(save_load_path)
-	if not save_load:
-		# Try to find it in the scene
-		var root: Node = get_tree().root
-		if root.has_node("Main/SaveLoad"):
-			save_load = root.get_node("Main/SaveLoad")
-
-	# Get config menu reference
-	var root: Node = get_tree().root
-	if root.has_node("Main/ConfigMenu"):
-		config_menu = root.get_node("Main/ConfigMenu")
+	# Resolve references
+	_resolve_references()
 
 	# Start hidden
 	panel.visible = false
@@ -71,6 +60,25 @@ func _ready() -> void:
 
 	# Create slot selection panel
 	_create_slot_panel()
+
+
+func _enter_tree() -> void:
+	# Re-resolve references when re-added to the tree (e.g., after cave transitions
+	# preserve and re-add this node — _ready() only runs once).
+	call_deferred("_resolve_references")
+
+
+func _resolve_references() -> void:
+	if save_load_path:
+		save_load = get_node_or_null(save_load_path)
+	if not save_load:
+		var root: Node = get_tree().root
+		if root.has_node("Main/SaveLoad"):
+			save_load = root.get_node("Main/SaveLoad")
+
+	var root: Node = get_tree().root
+	if root.has_node("Main/ConfigMenu"):
+		config_menu = root.get_node("Main/ConfigMenu")
 
 
 func _input(event: InputEvent) -> void:

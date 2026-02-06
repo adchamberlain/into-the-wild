@@ -2907,6 +2907,35 @@ Completely replaced the massive mound design with a minimal rock archway:
 
 ---
 
+## Session - Torch Instant Placement Refactor
+
+### Features Implemented
+
+**Instant torch placement** - Torches now place instantly with one button press instead of entering a preview placement mode:
+
+1. **`place_torch_instant()` in PlacementSystem** - New function that calculates position 3m in front of player, snaps to grid, gets ground height, creates and places torch in one step. No preview, no confirmation needed.
+
+2. **Interact button (E/L2) places torches** - When pressing interact with no target and a torch equipped, the torch is instantly placed on the ground ahead of the player.
+
+3. **Use equipped (R/R2) also places torches** - The `_place_item()` function in Equipment now short-circuits to instant placement for torches, keeping R/R2 as a working alternative.
+
+4. **Updated HUD hints** - Equipped torch display now shows `[E place, Q unequip]` (keyboard) or `[L2 place, ○ unequip]` (controller) instead of the old R/R2 hint.
+
+5. **Removed Move option for torches** - Placed torches no longer show `[M] Move` in the interaction prompt. They only show `[E] Pick Up Torch`.
+
+6. **Blocked move action for torches** - Pressing M while looking at a placed torch does nothing (defensive guard in `_try_move_structure()`).
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/campsite/placement_system.gd` | Added `place_torch_instant()` function for one-step torch placement |
+| `scripts/player/player_controller.gd` | `_try_interact()` places torch when no target; `_try_move_structure()` blocks torch moves |
+| `scripts/player/equipment.gd` | `_place_item()` routes torch to instant placement instead of preview mode |
+| `scripts/ui/hud.gd` | Torch shows interact key hint; placed torches excluded from Move prompt |
+
+---
+
 ## Next Session
 
 ### Planned Tasks

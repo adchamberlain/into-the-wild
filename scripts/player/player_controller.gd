@@ -373,6 +373,10 @@ func _update_interaction_target() -> void:
 		if collider and collider.is_in_group("interactable"):
 			new_target = collider
 
+	# Clear stale reference to freed node (e.g., after cave transition)
+	if current_interaction_target and not is_instance_valid(current_interaction_target):
+		current_interaction_target = null
+
 	# Only emit signals if target changed
 	if new_target != current_interaction_target:
 		current_interaction_target = new_target
@@ -396,6 +400,13 @@ func _try_interact() -> void:
 		if current_interaction_target:
 			var interaction_text: String = _get_interaction_text(current_interaction_target)
 			interaction_target_changed.emit(current_interaction_target, interaction_text)
+	else:
+		# No interaction target - try instant torch placement if torch is equipped
+		if equipment and equipment.get_equipped() == "torch":
+			var placement_system: Node = get_node_or_null("PlacementSystem")
+			if placement_system and placement_system.has_method("place_torch_instant"):
+				if placement_system.place_torch_instant():
+					equipment.unequip()
 
 
 func get_inventory() -> Inventory:
@@ -489,6 +500,9 @@ func _try_use_equipped() -> void:
 func _try_move_structure() -> void:
 	# Check if we're looking at a structure
 	if current_interaction_target and current_interaction_target.is_in_group("structure"):
+		# Torches can only be picked up, not moved
+		if current_interaction_target.get("structure_type") == "placed_torch":
+			return
 		var placement_system: Node = get_node_or_null("PlacementSystem")
 		if placement_system and placement_system.has_method("start_move"):
 			placement_system.start_move(current_interaction_target)

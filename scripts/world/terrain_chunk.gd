@@ -859,7 +859,11 @@ func _generate_box_collision_batched() -> void:
 		rows_this_batch += 1
 		if rows_this_batch >= COLLISION_ROWS_PER_BATCH:
 			rows_this_batch = 0
+			if not is_inside_tree():
+				return
 			await get_tree().process_frame
+			if not is_inside_tree():
+				return
 
 
 func _spawn_chunk_trees() -> void:
@@ -986,7 +990,11 @@ func _spawn_chunk_trees() -> void:
 				trees_spawned_this_batch += 1
 				if trees_spawned_this_batch >= TREES_PER_BATCH:
 					trees_spawned_this_batch = 0
+					if not is_inside_tree():
+						return
 					await get_tree().process_frame
+					if not is_inside_tree():
+						return
 
 			z += tree_grid_size
 		x += tree_grid_size
@@ -1146,7 +1154,11 @@ func _spawn_chunk_resources() -> void:
 				resources_spawned_this_batch += 1
 				if resources_spawned_this_batch >= RESOURCES_PER_BATCH:
 					resources_spawned_this_batch = 0
+					if not is_inside_tree():
+						return
 					await get_tree().process_frame
+					if not is_inside_tree():
+						return
 
 			z += resource_grid_size
 		x += resource_grid_size
@@ -1247,7 +1259,11 @@ func _spawn_chunk_decorations() -> void:
 			decorations_spawned_this_batch += 1
 			if decorations_spawned_this_batch >= DECORATIONS_PER_BATCH:
 				decorations_spawned_this_batch = 0
+				if not is_inside_tree():
+					return
 				await get_tree().process_frame
+				if not is_inside_tree():
+					return
 
 		attempts += 1
 
@@ -1287,7 +1303,11 @@ func _spawn_chunk_decorations() -> void:
 			decorations_spawned_this_batch += 1
 			if decorations_spawned_this_batch >= DECORATIONS_PER_BATCH:
 				decorations_spawned_this_batch = 0
+				if not is_inside_tree():
+					return
 				await get_tree().process_frame
+				if not is_inside_tree():
+					return
 
 		attempts += 1
 

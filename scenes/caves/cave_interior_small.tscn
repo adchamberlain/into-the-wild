@@ -1,21 +1,12 @@
-[gd_scene load_steps=15 format=3 uid="uid://bx87hjvnr68dv"]
+[gd_scene load_steps=13 format=3 uid="uid://bx87hjvnr68dv"]
 
 [ext_resource type="Script" path="res://scripts/caves/cave_interior_manager.gd" id="1_cave_mgr"]
 [ext_resource type="Script" path="res://scripts/resources/crystal_node.gd" id="2_crystal"]
 [ext_resource type="Script" path="res://scripts/resources/rare_ore_node.gd" id="3_rare_ore"]
 
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_cave"]
-sky_top_color = Color(0.01, 0.01, 0.02, 1)
-sky_horizon_color = Color(0.02, 0.02, 0.03, 1)
-ground_bottom_color = Color(0.01, 0.01, 0.01, 1)
-ground_horizon_color = Color(0.02, 0.02, 0.02, 1)
-
-[sub_resource type="Sky" id="Sky_cave"]
-sky_material = SubResource("ProceduralSkyMaterial_cave")
-
 [sub_resource type="Environment" id="Environment_cave"]
-background_mode = 2
-sky = SubResource("Sky_cave")
+background_mode = 1
+background_color = Color(0.01, 0.01, 0.02, 1)
 ambient_light_source = 1
 ambient_light_color = Color(0.05, 0.05, 0.08, 1)
 ambient_light_energy = 0.1

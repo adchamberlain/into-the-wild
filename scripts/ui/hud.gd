@@ -218,10 +218,12 @@ func _on_interaction_target_changed(target: Node, interaction_text: String) -> v
 
 	if interaction_prompt:
 		var prompt_text: String = _get_interact_prompt() + " " + interaction_text
-		# Add move hint if target is a structure
+		# Add move hint if target is a structure (except torches - pick up only)
 		if target and target.is_in_group("structure"):
-			var move_key: String = _get_button_prompt("move_structure")
-			prompt_text += "  [%s] Move" % move_key
+			var is_torch: bool = target.get("structure_type") == "placed_torch"
+			if not is_torch:
+				var move_key: String = _get_button_prompt("move_structure")
+				prompt_text += "  [%s] Move" % move_key
 		interaction_prompt.text = prompt_text
 	if interaction_prompt_panel:
 		interaction_prompt_panel.visible = true
@@ -287,7 +289,10 @@ func _update_equipped_display() -> void:
 		var use_key: String = _get_button_prompt("use_equipped")
 		var unequip_key: String = _get_button_prompt("unequip")
 
-		if StructureData.is_placeable_item(equipped_type):
+		if equipped_type == "torch":
+			var interact_key: String = _get_button_prompt("interact")
+			equipped_label.text += " [%s place, %s unequip]" % [interact_key, unequip_key]
+		elif StructureData.is_placeable_item(equipped_type):
 			equipped_label.text += " [%s place, %s unequip]" % [use_key, unequip_key]
 		elif equipped_type == "fishing_rod":
 			# Fishing is done by interacting with fishing spots, not use_equipped
