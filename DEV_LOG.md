@@ -2489,12 +2489,17 @@ Removed from player_controller.gd:
 
 ## Next Session
 
+### Known Issues
+- **Grappling hook is broken** - Currently not working correctly, needs debugging and fixing
+- **Gameplay stuttering** - Still experiencing stuttering during gameplay, likely from chunk loading with 256 BoxShape3D per chunk. Must completely eliminate this.
+
 ### Planned Tasks
-1. Add camera collision to prevent clipping into terrain
-2. Remove debug grappling hook code
-3. Add grappling hook sound effect audio files
-4. Test and polish cave system integration
-5. Test BoxShape3D collision thoroughly at terrain transitions
+1. **Fix grappling hook** - Debug and repair grappling hook functionality
+2. Add camera collision to prevent clipping into terrain
+3. Remove debug grappling hook code (auto-gives hook on spawn)
+4. Add grappling hook sound effect audio files
+5. Test and polish cave system integration
+6. Test BoxShape3D collision thoroughly at terrain transitions
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.
