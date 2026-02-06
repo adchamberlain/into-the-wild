@@ -115,8 +115,6 @@ func _ready() -> void:
 	# Initialize fall-through protection with spawn position
 	call_deferred("_init_safe_position")
 
-	# DEBUG: Give player grappling hook for testing
-	call_deferred("_debug_give_grappling_hook")
 
 
 func _init_safe_position() -> void:
@@ -586,12 +584,6 @@ func _get_surface_type() -> String:
 	# Default to grass for forest, plains, meadow
 	return "grass"
 
-
-## DEBUG: Give player grappling hook for testing.
-func _debug_give_grappling_hook() -> void:
-	if inventory:
-		inventory.add_item("grappling_hook", 1)
-		print("[DEBUG] Gave player grappling hook for testing")
 
 
 ## Check if any UI menu is open and blocking player input.
