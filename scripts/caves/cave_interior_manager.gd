@@ -92,6 +92,10 @@ func _check_player_light() -> void:
 		var item_data: Dictionary = equipment.EQUIPPABLE_ITEMS.get(equipped, {})
 		has_light = item_data.get("has_light", false)
 
+	# Also check for placed light sources (torches, campfires) in the scene
+	if not has_light:
+		has_light = _has_placed_light_nearby()
+
 	# Update darkness state
 	var was_dark: bool = is_dark
 	is_dark = not has_light
@@ -152,6 +156,19 @@ func _exit_cave() -> void:
 		# Fallback: just change scene directly
 		await get_tree().create_timer(0.5).timeout
 		get_tree().change_scene_to_file("res://scenes/main.tscn")
+
+
+func _has_placed_light_nearby() -> bool:
+	## Check if any placed light sources (torches, campfires) exist in the cave scene.
+	var scene_root: Node = get_parent()
+	if not scene_root:
+		return false
+	for node in scene_root.get_children():
+		if node is StaticBody3D:
+			var light: OmniLight3D = node.get_node_or_null("TorchLight")
+			if light and light.light_energy > 0.0:
+				return true
+	return false
 
 
 func _get_player_equipment(player_node: Node) -> Equipment:

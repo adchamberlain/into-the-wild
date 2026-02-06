@@ -2848,6 +2848,43 @@ Replaced 2 solid boxes (which blocked the entrance and let player walk on top) w
 
 ---
 
+## Session 23 - Cave Interior Bug Fixes (2026-02-06)
+
+### Overview
+Fixed four bugs with cave interiors: entrance interaction triggering from wrong positions, placed torches not emitting light, HUD/menus invisible in darkness, and pause menu not working.
+
+### Bug 1: Cave entrance interaction while facing a wall
+**Problem**: "Enter Cave" prompt appeared when near the entrance but facing a wall, not the opening.
+**Fix**: Added facing direction check to `_is_near_cave_mouth()`. Now uses dot product between player's forward vector and direction to entrance center. Requires `dot > 0.3` (~73 degrees of facing), so the player must be roughly looking toward the entrance.
+
+### Bug 2: Placed torch doesn't emit light in cave
+**Problem**: Placing a torch unequips it. CaveInteriorManager only checked equipped items for light, so it applied the 95% opacity darkness overlay, hiding the 3D torch light.
+**Fix**: Added `_has_placed_light_nearby()` to CaveInteriorManager that scans scene children for StaticBody3D nodes with a "TorchLight" OmniLight3D child. If any placed torch exists, the cave is considered lit.
+
+### Bug 3: HUD/menus invisible in cave darkness
+**Problem**: DarknessOverlay CanvasLayer at layer 50 covered the HUD (default layer 1). Unequipping a torch made everything black including inventory, equipment, and crafting menus.
+**Fix**: Set HUD CanvasLayer to layer 60 (above darkness overlay). PauseMenu was already at layer 100.
+
+### Bug 4: Cannot pause inside cave
+**Problem**: PauseMenu is part of main.tscn and gets destroyed during cave scene transition. ESC key did nothing in caves.
+**Fix**: Preserve PauseMenu across cave transitions alongside Player and HUD. Added `stored_pause_menu` to CaveTransition autoload, with store/restore logic in both `_load_cave_scene()` and `_return_to_overworld()`.
+
+### Bug 5: Placed torches lost on save/load
+**Problem**: `_create_structure_programmatically()` in save_load.gd had no case for "placed_torch", so placed torches weren't recreated when loading a save.
+**Fix**: Added `_create_placed_torch()` function to save_load.gd matching the placement_system version (handle, wrap, flame, inner flame, OmniLight3D with flicker).
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/cave_entrance.gd` | Facing direction check in `_is_near_cave_mouth()` |
+| `scripts/caves/cave_interior_manager.gd` | `_has_placed_light_nearby()` for placed torch detection |
+| `scenes/ui/hud.tscn` | CanvasLayer layer set to 60 |
+| `scripts/core/cave_transition.gd` | PauseMenu store/restore across transitions |
+| `scripts/core/save_load.gd` | `_create_placed_torch()` for save/load persistence |
+
+---
+
 ## Next Session
 
 ### Planned Tasks

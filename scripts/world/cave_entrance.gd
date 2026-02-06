@@ -252,13 +252,20 @@ func _setup_visuals() -> void:
 	arch_meshes.append(inner_dark)
 
 
-## Check if a player is near the cave mouth opening (not the side walls).
+## Check if a player is near the cave mouth opening AND facing it.
 ## The dark opening is at local +Z side, centered at ground level.
 func _is_near_cave_mouth(player_node: Node3D) -> bool:
 	var local_pos: Vector3 = to_local(player_node.global_position)
 	var horizontal_dist: float = abs(local_pos.x)
-	# Tight zone: within 2.5 units horizontally, in front of mouth (z 0.5-4.0), below top (y < 4.0)
-	return horizontal_dist < 2.5 and local_pos.z > 0.5 and local_pos.z < 4.0 and local_pos.y < 4.0
+	# Must be within 2.5 units horizontally, in front of mouth (z 0.5-4.0), below top (y < 4.0)
+	if horizontal_dist > 2.5 or local_pos.z < 0.5 or local_pos.z > 4.0 or local_pos.y > 4.0:
+		return false
+
+	# Must be roughly facing the entrance (looking toward -Z in local space)
+	var player_forward: Vector3 = -player_node.global_transform.basis.z.normalized()
+	var to_entrance: Vector3 = (global_position - player_node.global_position).normalized()
+	var dot: float = player_forward.dot(to_entrance)
+	return dot > 0.3  # Within ~73 degrees of facing the entrance
 
 
 ## Get interaction text for HUD prompt.

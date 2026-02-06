@@ -824,6 +824,8 @@ func _create_structure_programmatically(structure_type: String) -> Node3D:
 			return _create_canvas_tent()
 		"cabin":
 			return _create_cabin()
+		"placed_torch":
+			return _create_placed_torch()
 	return null
 
 
@@ -2471,3 +2473,83 @@ func _create_cabin_kitchen() -> StaticBody3D:
 	kitchen.add_child(collision)
 
 	return kitchen
+
+
+func _create_placed_torch() -> StaticBody3D:
+	var torch: StaticBody3D = StaticBody3D.new()
+	torch.name = "PlacedTorch"
+	torch.set_script(load("res://scripts/campsite/structure_placed_torch.gd"))
+
+	var wood_mat: StandardMaterial3D = StandardMaterial3D.new()
+	wood_mat.albedo_color = Color(0.45, 0.32, 0.18)
+
+	var wrap_mat: StandardMaterial3D = StandardMaterial3D.new()
+	wrap_mat.albedo_color = Color(0.6, 0.55, 0.4)
+
+	var fire_mat: StandardMaterial3D = StandardMaterial3D.new()
+	fire_mat.albedo_color = Color(1.0, 0.6, 0.2)
+	fire_mat.emission_enabled = true
+	fire_mat.emission = Color(1.0, 0.5, 0.1)
+	fire_mat.emission_energy_multiplier = 2.0
+
+	# Collision
+	var collision: CollisionShape3D = CollisionShape3D.new()
+	var box_shape: BoxShape3D = BoxShape3D.new()
+	box_shape.size = Vector3(0.15, 1.0, 0.15)
+	collision.shape = box_shape
+	collision.position.y = 0.5
+	torch.add_child(collision)
+
+	# Wooden handle
+	var handle: MeshInstance3D = MeshInstance3D.new()
+	var handle_mesh: BoxMesh = BoxMesh.new()
+	handle_mesh.size = Vector3(0.08, 0.8, 0.08)
+	handle.mesh = handle_mesh
+	handle.position = Vector3(0, 0.4, 0)
+	handle.material_override = wood_mat
+	torch.add_child(handle)
+
+	# Cloth wrap at top
+	var wrap: MeshInstance3D = MeshInstance3D.new()
+	var wrap_mesh: BoxMesh = BoxMesh.new()
+	wrap_mesh.size = Vector3(0.12, 0.15, 0.12)
+	wrap.mesh = wrap_mesh
+	wrap.position = Vector3(0, 0.85, 0)
+	wrap.material_override = wrap_mat
+	torch.add_child(wrap)
+
+	# Fire visual
+	var flame: MeshInstance3D = MeshInstance3D.new()
+	flame.name = "Flame"
+	var flame_mesh: BoxMesh = BoxMesh.new()
+	flame_mesh.size = Vector3(0.1, 0.25, 0.1)
+	flame.mesh = flame_mesh
+	flame.position = Vector3(0, 1.05, 0)
+	flame.material_override = fire_mat
+	torch.add_child(flame)
+
+	# Inner flame
+	var inner_flame: MeshInstance3D = MeshInstance3D.new()
+	var inner_mesh: BoxMesh = BoxMesh.new()
+	inner_mesh.size = Vector3(0.06, 0.18, 0.06)
+	inner_flame.mesh = inner_mesh
+	inner_flame.position = Vector3(0, 1.08, 0)
+	var inner_mat: StandardMaterial3D = StandardMaterial3D.new()
+	inner_mat.albedo_color = Color(1.0, 0.9, 0.5)
+	inner_mat.emission_enabled = true
+	inner_mat.emission = Color(1.0, 0.8, 0.3)
+	inner_mat.emission_energy_multiplier = 3.0
+	inner_flame.material_override = inner_mat
+	torch.add_child(inner_flame)
+
+	# Light source
+	var light: OmniLight3D = OmniLight3D.new()
+	light.name = "TorchLight"
+	light.light_color = Color(1.0, 0.8, 0.4)
+	light.light_energy = 8.0
+	light.omni_range = 15.0
+	light.shadow_enabled = true
+	light.position = Vector3(0, 1.0, 0)
+	torch.add_child(light)
+
+	return torch

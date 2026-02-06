@@ -13,9 +13,10 @@ var current_cave_id: int = -1
 var current_cave_type: String = ""
 var is_in_cave: bool = false
 
-# Player and HUD preserved across scene transitions
+# Player, HUD, and PauseMenu preserved across scene transitions
 var stored_player: Node = null
 var stored_hud: Node = null
+var stored_pause_menu: Node = null
 
 # Transition settings
 var fade_duration: float = 0.5
@@ -112,7 +113,13 @@ func _load_cave_scene(cave_id: int, cave_type: String, scene_path: String) -> vo
 			stored_hud = hud
 			print("[CaveTransition] HUD preserved for cave transition")
 
-	# Change scene (player/HUD won't be freed since they're no longer in the tree)
+		var pause_menu: Node = main_root.get_node_or_null("PauseMenu")
+		if pause_menu:
+			pause_menu.get_parent().remove_child(pause_menu)
+			stored_pause_menu = pause_menu
+			print("[CaveTransition] PauseMenu preserved for cave transition")
+
+	# Change scene (player/HUD/PauseMenu won't be freed since they're no longer in the tree)
 	var error: Error = tree.change_scene_to_packed(cave_scene)
 	if error != OK:
 		print("[CaveTransition] Failed to change scene: %d" % error)
@@ -144,6 +151,11 @@ func _load_cave_scene(cave_id: int, cave_type: String, scene_path: String) -> vo
 			cave_root.add_child(stored_hud)
 			print("[CaveTransition] HUD added to cave scene")
 			stored_hud = null
+
+		if stored_pause_menu:
+			cave_root.add_child(stored_pause_menu)
+			print("[CaveTransition] PauseMenu added to cave scene")
+			stored_pause_menu = null
 	else:
 		print("[CaveTransition] ERROR: cave scene not ready")
 		if stored_player:
@@ -152,6 +164,9 @@ func _load_cave_scene(cave_id: int, cave_type: String, scene_path: String) -> vo
 		if stored_hud:
 			stored_hud.queue_free()
 			stored_hud = null
+		if stored_pause_menu:
+			stored_pause_menu.queue_free()
+			stored_pause_menu = null
 
 	_fade_back()
 
@@ -198,6 +213,12 @@ func _return_to_overworld() -> void:
 			hud.get_parent().remove_child(hud)
 			stored_hud = hud
 			print("[CaveTransition] HUD preserved for overworld return")
+
+		var pause_menu: Node = cave_root.get_node_or_null("PauseMenu")
+		if pause_menu:
+			pause_menu.get_parent().remove_child(pause_menu)
+			stored_pause_menu = pause_menu
+			print("[CaveTransition] PauseMenu preserved for overworld return")
 
 	# Tell SaveLoad to load the cave autosave (temp file, not a user slot)
 	# when the main scene initializes. This restores world state (campsite level,
@@ -266,6 +287,16 @@ func _restore_player_position() -> void:
 		main_root.add_child(stored_hud)
 		print("[CaveTransition] Preserved HUD restored")
 		stored_hud = null
+
+	if stored_pause_menu:
+		var fresh_pause: Node = main_root.get_node_or_null("PauseMenu")
+		if fresh_pause:
+			fresh_pause.get_parent().remove_child(fresh_pause)
+			fresh_pause.queue_free()
+
+		main_root.add_child(stored_pause_menu)
+		print("[CaveTransition] Preserved PauseMenu restored")
+		stored_pause_menu = null
 
 
 ## Placeholder cave effect when scene doesn't exist yet.
