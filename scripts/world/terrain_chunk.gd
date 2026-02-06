@@ -65,18 +65,34 @@ const TREES_PER_BATCH: int = 6  # Trees are expensive (collision, etc.)
 const RESOURCES_PER_BATCH: int = 10
 const DECORATIONS_PER_BATCH: int = 15
 const MESH_ROWS_PER_BATCH: int = 6  # Terrain mesh rows per frame
-# Note: Box collision runs synchronously (not batched) - must be ready before player arrives
+const COLLISION_ROWS_PER_BATCH: int = 4  # Collision rows per frame (64 shapes/frame, completes in 4 frames)
+
+# Debug performance flag (set by chunk_manager)
+var debug_performance: bool = false
 
 
-func generate() -> void:
+func generate(sync_collision: bool = true) -> void:
 	if is_generated:
 		return
+
+	var t0: int = Time.get_ticks_msec()
 
 	# Phase 1: Build height cache (fast, needed for collision)
 	_build_height_cache()
 
-	# Phase 2: Generate collision immediately (player needs to walk)
-	_generate_collision_from_mesh()
+	var t1: int = Time.get_ticks_msec()
+
+	# Phase 2: Generate collision (sync for player's chunk, batched for distant chunks)
+	_generate_collision_from_mesh(sync_collision)
+
+	var t2: int = Time.get_ticks_msec()
+	if debug_performance:
+		print("[TerrainChunk %s] height_cache=%dms collision(%s)=%dms" % [
+			str(chunk_coord),
+			t1 - t0,
+			"sync" if sync_collision else "async",
+			t2 - t1
+		])
 
 	# Phase 3: Start async terrain mesh + spawning pipeline
 	_generate_terrain_async()
@@ -642,15 +658,16 @@ func _calculate_side_ao_bottom(x: float, z: float, height: float, face_normal: V
 	return clamp(ao, 0.55, 0.95)
 
 
-func _generate_collision_from_mesh() -> void:
+func _generate_collision_from_mesh(sync: bool = true) -> void:
 	terrain_collision = StaticBody3D.new()
 	terrain_collision.name = "TerrainCollision"
 	add_child(terrain_collision)
 
-	# Start async box collision generation (Minecraft-style per-cell AABB)
-	# This creates BoxShape3D for each cell, which exactly matches the visual terrain
-	# Unlike HeightMapShape3D which interpolates and causes fall-through
-	_generate_box_collision()
+	# Minecraft-style per-cell AABB collision matching visual terrain exactly
+	if sync:
+		_generate_box_collision()
+	else:
+		_generate_box_collision_batched()
 
 
 func _generate_box_collision() -> void:
@@ -699,6 +716,51 @@ func _generate_box_collision() -> void:
 
 			terrain_collision.add_child(collision_shape)
 
+
+func _generate_box_collision_batched() -> void:
+	## Batched version of _generate_box_collision() - spreads work across multiple frames.
+	## Used for distant chunks where collision isn't needed immediately.
+	var cell_size: float = chunk_manager.cell_size
+	var chunk_size_cells: int = chunk_manager.chunk_size_cells
+	var chunk_world_x: float = chunk_coord.x * chunk_size_cells * cell_size
+	var chunk_world_z: float = chunk_coord.y * chunk_size_cells * cell_size
+
+	var rows_this_batch: int = 0
+
+	for cz in range(chunk_size_cells):
+		# Safety: if chunk was unloaded while we're still generating, stop
+		if _height_cache.is_empty() or not is_instance_valid(terrain_collision):
+			return
+
+		for cx in range(chunk_size_cells):
+			var height: float = _height_cache[cz + 1][cx + 1]
+
+			var box_height: float
+			var box_y_center: float
+
+			if height < 0:
+				box_height = max(abs(height), 0.5)
+				box_y_center = -box_height / 2.0
+			else:
+				box_height = max(height, 0.5)
+				box_y_center = box_height / 2.0
+
+			var world_x: float = chunk_world_x + cx * cell_size + cell_size / 2.0
+			var world_z: float = chunk_world_z + cz * cell_size + cell_size / 2.0
+
+			var box: BoxShape3D = BoxShape3D.new()
+			box.size = Vector3(cell_size, box_height, cell_size)
+
+			var collision_shape: CollisionShape3D = CollisionShape3D.new()
+			collision_shape.shape = box
+			collision_shape.position = Vector3(world_x, box_y_center, world_z)
+
+			terrain_collision.add_child(collision_shape)
+
+		rows_this_batch += 1
+		if rows_this_batch >= COLLISION_ROWS_PER_BATCH:
+			rows_this_batch = 0
+			await get_tree().process_frame
 
 
 func _spawn_chunk_trees() -> void:

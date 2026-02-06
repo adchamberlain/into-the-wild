@@ -2487,11 +2487,49 @@ Removed from player_controller.gd:
 
 ---
 
+## Session - Fix Performance Stuttering: Batched Collision + Debug Logging (2026-02-05)
+
+### Problem
+Every few seconds, the game stuttered. Root cause: `_generate_box_collision()` in `terrain_chunk.gd` ran **synchronously**, creating 256 `CollisionShape3D` + `BoxShape3D` objects with 256 `add_child()` calls in a single frame. This happened every time the player crossed a chunk boundary.
+
+### Changes
+
+**Batched Collision Generation** (`terrain_chunk.gd`):
+- Added `COLLISION_ROWS_PER_BATCH: int = 4` constant - yields every 4 rows (64 shapes/frame, completes in 4 frames)
+- Added `_generate_box_collision_batched()` async function with safety checks for early chunk unload
+- Modified `generate()` to accept `sync_collision: bool` parameter
+- Modified `_generate_collision_from_mesh()` to call sync or batched version
+- Player's current chunk always gets sync collision (no fall-through risk)
+- Distant chunks (distance 1-2) batch collision across ~4 frames
+
+**Performance Debug Logging** (`chunk_manager.gd`):
+- Added `@export var debug_performance: bool = true` flag
+- `_load_chunk()`: prints chunk coord, elapsed ms, and whether sync collision was used
+- `_process_chunk_queues()`: prints queue sizes when processing
+- `_process()`: warns when chunk manager work exceeds 8ms frame budget
+
+**Debug Timing** (`terrain_chunk.gd`):
+- `generate()`: times `_build_height_cache()` and collision generation separately
+- `debug_performance` flag passed from chunk_manager to each terrain_chunk
+
+**Distance-Based Sync** (`chunk_manager.gd`):
+- `_load_chunk()` calculates whether chunk is the player's current chunk
+- Passes `sync_collision = (chunk_coord == player_chunk)` to `chunk.generate()`
+- No-player fallback sets `last_player_chunk` for consistent behavior
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/terrain_chunk.gd` | Batched collision, debug timing, `COLLISION_ROWS_PER_BATCH` constant, `debug_performance` var |
+| `scripts/world/chunk_manager.gd` | Performance logging, `debug_performance` export, pass sync_collision flag to chunks |
+
+---
+
 ## Next Session
 
 ### Known Issues
 - **Grappling hook is broken** - Currently not working correctly, needs debugging and fixing
-- **Gameplay stuttering** - Still experiencing stuttering during gameplay, likely from chunk loading with 256 BoxShape3D per chunk. Must completely eliminate this.
 
 ### Planned Tasks
 1. **Fix grappling hook** - Debug and repair grappling hook functionality
@@ -2500,6 +2538,7 @@ Removed from player_controller.gd:
 4. Add grappling hook sound effect audio files
 5. Test and polish cave system integration
 6. Test BoxShape3D collision thoroughly at terrain transitions
+7. Disable `debug_performance` logging once stuttering is confirmed fixed
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.
