@@ -9,6 +9,13 @@ var has_pending_seed: bool = false
 # Save slot to load after scene reload (0 = none)
 var pending_load_slot: int = 0
 
+# When true, pending load skips player data restoration (cave exit preserves
+# the player's current inventory/stats so they keep cave-gained items)
+var skip_player_data_on_load: bool = false
+
+# When true, load the cave autosave (separate temp file, not a user slot)
+var pending_cave_autosave: bool = false
+
 
 ## Set a world seed to be used when the main scene next loads.
 func set_pending_world_seed(seed_value: int) -> void:

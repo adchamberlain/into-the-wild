@@ -13,6 +13,10 @@ var current_cave_id: int = -1
 var current_cave_type: String = ""
 var is_in_cave: bool = false
 
+# Player and HUD preserved across scene transitions
+var stored_player: Node = null
+var stored_hud: Node = null
+
 # Transition settings
 var fade_duration: float = 0.5
 
@@ -81,14 +85,34 @@ func _load_cave_scene(cave_id: int, cave_type: String, scene_path: String) -> vo
 		_fade_back()
 		return
 
-	# Get current scene tree
 	var tree: SceneTree = get_tree()
-	var current_scene: Node = tree.current_scene
 
-	# Store reference to main scene for returning
-	# Note: The main scene will be freed, but we can recreate it
+	var main_root: Node = tree.current_scene
 
-	# Change scene
+	# Auto-save to a temporary file BEFORE removing anything so SaveLoad reads
+	# correct state. This does NOT touch the player's save slots.
+	if main_root:
+		var save_load: Node = main_root.get_node_or_null("SaveLoad")
+		if save_load and save_load.has_method("save_cave_autosave"):
+			save_load.save_cave_autosave()
+			print("[CaveTransition] Cave autosave created")
+
+	# Remove player and HUD from current scene before scene change so they
+	# aren't freed. This preserves inventory, stats, equipment, and UI state.
+	var player: Node = tree.get_first_node_in_group("player")
+	if player:
+		player.get_parent().remove_child(player)
+		stored_player = player
+		print("[CaveTransition] Player preserved for cave transition")
+
+	if main_root:
+		var hud: Node = main_root.get_node_or_null("HUD")
+		if hud:
+			hud.get_parent().remove_child(hud)
+			stored_hud = hud
+			print("[CaveTransition] HUD preserved for cave transition")
+
+	# Change scene (player/HUD won't be freed since they're no longer in the tree)
 	var error: Error = tree.change_scene_to_packed(cave_scene)
 	if error != OK:
 		print("[CaveTransition] Failed to change scene: %d" % error)
@@ -98,9 +122,37 @@ func _load_cave_scene(cave_id: int, cave_type: String, scene_path: String) -> vo
 	is_in_cave = true
 	cave_entered.emit(cave_id, cave_type)
 
-	# Fade back in after scene loads
+	# Wait for cave scene to fully load (change_scene_to_packed is deferred,
+	# needs two frames for current_scene to be valid)
 	await tree.process_frame
 	await tree.process_frame
+
+	# Add preserved player and HUD to cave scene
+	var cave_root: Node = tree.current_scene
+	if cave_root:
+		if stored_player:
+			var spawn: Marker3D = cave_root.get_node_or_null("PlayerSpawn") as Marker3D
+			if spawn:
+				stored_player.global_position = spawn.global_position
+			else:
+				stored_player.global_position = Vector3(0, 1, 15)
+			cave_root.add_child(stored_player)
+			print("[CaveTransition] Player added to cave at %s" % stored_player.global_position)
+			stored_player = null
+
+		if stored_hud:
+			cave_root.add_child(stored_hud)
+			print("[CaveTransition] HUD added to cave scene")
+			stored_hud = null
+	else:
+		print("[CaveTransition] ERROR: cave scene not ready")
+		if stored_player:
+			stored_player.queue_free()
+			stored_player = null
+		if stored_hud:
+			stored_hud.queue_free()
+			stored_hud = null
+
 	_fade_back()
 
 
@@ -129,9 +181,33 @@ func exit_cave() -> void:
 
 
 func _return_to_overworld() -> void:
-	# Load main scene
 	var main_scene_path: String = "res://scenes/main.tscn"
 	var tree: SceneTree = get_tree()
+
+	# Remove player and HUD from cave scene to preserve state
+	var player: Node = tree.get_first_node_in_group("player")
+	if player:
+		player.get_parent().remove_child(player)
+		stored_player = player
+		print("[CaveTransition] Player preserved for overworld return")
+
+	var cave_root: Node = tree.current_scene
+	if cave_root:
+		var hud: Node = cave_root.get_node_or_null("HUD")
+		if hud:
+			hud.get_parent().remove_child(hud)
+			stored_hud = hud
+			print("[CaveTransition] HUD preserved for overworld return")
+
+	# Tell SaveLoad to load the cave autosave (temp file, not a user slot)
+	# when the main scene initializes. This restores world state (campsite level,
+	# structures, time, weather) while skipping player data so the preserved
+	# player keeps any items gained in the cave.
+	var game_state: Node = get_node_or_null("/root/GameState")
+	if game_state:
+		game_state.pending_cave_autosave = true
+		game_state.skip_player_data_on_load = true
+		print("[CaveTransition] Set pending cave autosave load for world state restore")
 
 	var error: Error = tree.change_scene_to_file(main_scene_path)
 	if error != OK:
@@ -145,7 +221,7 @@ func _return_to_overworld() -> void:
 
 	cave_exited.emit()
 
-	# Wait for scene to load, then restore player position
+	# Wait for scene to load, then restore player
 	await tree.process_frame
 	await tree.process_frame
 	_restore_player_position()
@@ -153,12 +229,43 @@ func _return_to_overworld() -> void:
 
 
 func _restore_player_position() -> void:
-	# Find player in new scene and restore position
-	var player: Node = get_tree().get_first_node_in_group("player")
-	if player:
-		player.global_position = return_position + Vector3(0, 0.5, 0)  # Slight offset to avoid clipping
-		player.rotation.y = return_rotation
-		print("[CaveTransition] Player position restored")
+	var tree: SceneTree = get_tree()
+	var main_root: Node = tree.current_scene
+	if not main_root:
+		print("[CaveTransition] ERROR: main scene not ready")
+		return
+
+	if stored_player:
+		# Replace the fresh player from main.tscn with our preserved one
+		# (keeps cave-gained inventory/stats intact)
+		var fresh_player: Node = tree.get_first_node_in_group("player")
+		if fresh_player:
+			fresh_player.get_parent().remove_child(fresh_player)
+			fresh_player.queue_free()
+
+		stored_player.global_position = return_position + Vector3(0, 0.5, 0)
+		stored_player.rotation.y = return_rotation
+		main_root.add_child(stored_player)
+		print("[CaveTransition] Preserved player restored at %s" % stored_player.global_position)
+		stored_player = null
+	else:
+		# Fallback: just reposition existing player
+		var player: Node = tree.get_first_node_in_group("player")
+		if player:
+			player.global_position = return_position + Vector3(0, 0.5, 0)
+			player.rotation.y = return_rotation
+			print("[CaveTransition] Player position restored")
+
+	if stored_hud:
+		# Replace the fresh HUD from main.tscn with our preserved one
+		var fresh_hud: Node = main_root.get_node_or_null("HUD")
+		if fresh_hud:
+			fresh_hud.get_parent().remove_child(fresh_hud)
+			fresh_hud.queue_free()
+
+		main_root.add_child(stored_hud)
+		print("[CaveTransition] Preserved HUD restored")
+		stored_hud = null
 
 
 ## Placeholder cave effect when scene doesn't exist yet.

@@ -64,7 +64,7 @@ var obstacle_spawn_min_distance: float = 100.0  # Min distance from spawn (outsi
 var cave_entrances: Array[Dictionary] = []
 var cave_count: int = 2  # Target number of cave entrances (reduced for performance)
 var cave_min_spacing: float = 60.0  # Min distance between caves
-var cave_spawn_min_distance: float = 110.0  # Min distance from spawn (outside initial chunks)
+var cave_spawn_min_distance: float = 85.0  # Min distance from spawn
 
 # Region-specific pond sizes {radius_min, radius_max, depth}
 var region_pond_params: Dictionary = {
@@ -820,9 +820,9 @@ func _generate_cave_entrances() -> void:
 		if candidate.length() < cave_spawn_min_distance:
 			continue
 
-		# Caves only in ROCKY regions
+		# Caves in ROCKY or HILLS regions (terrain flattening makes them walkable)
 		var region: RegionType = get_region_at(candidate.x, candidate.y)
-		if region != RegionType.ROCKY:
+		if region != RegionType.ROCKY and region != RegionType.HILLS:
 			continue
 
 		# Check distance from existing caves
@@ -1114,6 +1114,18 @@ func get_height_at(x: float, z: float) -> float:
 	if distance_from_center < flatten_radius:
 		return 0.0
 
+	# Flatten terrain around cave entrances for walkable approach
+	var cave_flat_inner: float = 8.0  # Flat platform radius
+	var cave_flat_outer: float = 12.0  # Ramp falloff radius
+	var cave_platform_height: float = 2.0  # Low walkable platform height
+	for cave in cave_entrances:
+		var cave_center: Vector2 = cave["center"]
+		var dist_to_cave: float = Vector2(snapped_x - cave_center.x, snapped_z - cave_center.y).length()
+		if dist_to_cave < cave_flat_inner:
+			return cave_platform_height
+		elif dist_to_cave < cave_flat_outer:
+			break  # In falloff zone - let terrain compute, ramp applied at end
+
 	# Check all water bodies (ponds and lakes) for terrain depression
 	for body in water_bodies:
 		var body_center: Vector2 = body["center"]
@@ -1264,6 +1276,15 @@ func get_height_at(x: float, z: float) -> float:
 		t = clamp(t, 0.0, 1.0)
 		t = floor(t * 4.0) / 4.0
 		height *= t
+
+	# Gradual ramp from cave platform to natural terrain
+	for cave in cave_entrances:
+		var cave_center: Vector2 = cave["center"]
+		var dist_to_cave: float = Vector2(snapped_x - cave_center.x, snapped_z - cave_center.y).length()
+		if dist_to_cave >= cave_flat_inner and dist_to_cave < cave_flat_outer:
+			var t: float = (dist_to_cave - cave_flat_inner) / (cave_flat_outer - cave_flat_inner)
+			t = clamp(t, 0.0, 1.0)
+			height = cave_platform_height + (height - cave_platform_height) * t
 
 	return height
 

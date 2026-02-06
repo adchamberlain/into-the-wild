@@ -2715,16 +2715,145 @@ Even after the collision box fix, structures still appeared to float slightly ab
 
 ---
 
-## Next Session
+## Session 55 - Cave Crash Fix & Water Collision Fix (2026-02-06)
 
-### Known Issues
-- None critical
+### Cave Entry Crash Fix
+
+**Bug**: Entering a cave crashed with "Cannot call method 'get_first_node_in_group' on a null value."
+
+**Root Cause**: `change_scene_to_packed()` destroyed the entire main scene including the player node. The cave scene had a `PlayerSpawn` marker but no code to instantiate a player. `CaveInteriorManager` tried to find the player via `get_first_node_in_group("player")` and got null, then crashed calling methods on it.
+
+**Fix**: Reparent the player node across scene transitions instead of letting it be destroyed:
+- Before entering cave: remove player from main scene, store reference on the CaveTransition autoload
+- After cave scene loads: add preserved player at `PlayerSpawn` position
+- Before exiting cave: remove player from cave scene, store reference
+- After main scene loads: replace the fresh player from `main.tscn` with the preserved one
+
+This preserves all player state (inventory, stats, equipment) across both transitions without needing serialization.
+
+### Water Collision Fix
+
+**Bug**: Player walked on top of water instead of sinking in and swimming.
+
+**Root Cause**: Water cells (negative terrain height) created a solid collision box filling the entire water volume from pond floor to y=0. For a pond with depth -2.5, the box extended from y=-2.5 to y=0, creating an invisible platform at the water surface. The player stood on this collision and never dropped below `water_surface_y` (0.15), so the swimming condition `global_position.y < water_surface_y` was never true.
+
+**Fix**: Changed water cell collision from a solid volume-filling box to a thin 0.5-unit slab at the pond floor only. For depth -2.5, the slab sits at y=-2.5 to y=-2.0. Now the player falls through the water surface, the Area3D triggers `is_in_water`, and swimming activates properly. Applied to both sync and batched collision generation.
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/core/cave_transition.gd` | Player reparenting across scene transitions (stored_player var, updated _load_cave_scene, _return_to_overworld, _restore_player_position) |
+| `scripts/world/terrain_chunk.gd` | Water cell collision: thin floor slab instead of solid volume (both _generate_box_collision and _generate_box_collision_batched) |
+
+---
+
+### Rope Ladder Placement Fix
+
+**Bug**: Rope ladders couldn't be placed near 2-block high obstacles. The preview would turn red (invalid) or the ladder height would be miscalculated.
+
+**Root Causes** (three interrelated problems):
+
+1. **Preview landed on top of cliff**: The grid-snapped preview position used `_get_ground_height()` which could return the cliff top, not the base. Cliff detection then ran from on top of the cliff where there's no cliff face ahead → validation failed.
+
+2. **Single-height cliff detection**: `_has_cliff_face()` cast one ray at y+1.0, which could miss short (2-block) cliffs depending on exact positioning.
+
+3. **Gaps in height sampling**: `_calculate_cliff_height()` sampled at irregular intervals `[1, 2, 3, 4, 5, 6, 8, 10, 12, 15]` with gaps that could miscalculate short cliffs. The horizontal ray reach of 2.0 units was also too short.
+
+**Fixes**:
+1. **Preview base snapping**: For rope ladders, compare the preview ground height with the player's ground height. If the preview is >0.5 units higher (on top of the cliff), snap the preview down to the player's ground level.
+2. **Multi-height cliff detection**: `_has_cliff_face()` now checks at three heights (0.3, 0.8, 1.5) to catch both short and tall cliffs.
+3. **Consistent height sampling**: `_calculate_cliff_height()` now uses uniform 1.0-unit steps from 1 to 15, and extended horizontal ray reach from 2.0 to 3.0 units.
+4. **Multi-height cliff snapping**: `_snap_to_cliff_face()` now tries three heights (0.5, 1.0, 1.5) to find the cliff face.
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/campsite/placement_system.gd` | Rope ladder preview base-snapping, multi-height cliff detection, consistent height sampling, multi-height cliff snapping |
+
+---
+
+### Cave System Polish (3 fixes)
+
+**Bug 1: Interaction from side walls** - Player could trigger "Enter Cave" from anywhere they could raycast to the rock mass collision, even the side walls.
+
+**Fix**: Added `_is_near_cave_mouth()` check in `cave_entrance.gd`. Uses `to_local()` to convert the player position to the entrance's local space and checks they're in front of the dark opening (within 4 units horizontal, between z=0 and z=8). Both `interact()` and `get_interaction_text()` now return empty/false when the player isn't near the mouth.
+
+**Bug 2: No HUD in cave scene** - The cave interior had no HUD, so the player couldn't see inventory, equipment, stats, or interaction prompts.
+
+**Fix**: The HUD is now reparented alongside the player during cave transitions. On cave entry, both Player and HUD are removed from the main scene before `change_scene_to_packed()`, then added to the cave scene. On cave exit, both are removed from cave and restored to the main scene, replacing the fresh instances from `main.tscn`. The HUD's existing signal connections to the player's child nodes (Inventory, Equipment, PlayerStats) remain valid since both nodes are preserved.
+
+**Bug 3: Exiting cave reset all game state** - Loading a fresh `main.tscn` on exit reset campsite level, structures, time, weather, etc.
+
+**Fix**: Three-part solution:
+1. **Auto-save on entry**: Before entering cave, `save_game()` is called to capture all world state
+2. **Pending load on exit**: `GameState.set_pending_load_slot(1)` triggers SaveLoad's `_check_pending_load()` in the fresh main scene, which restores campsite level, structures, time, weather, etc.
+3. **Skip player data**: `GameState.skip_player_data_on_load` flag tells SaveLoad to skip player data restoration so the preserved player keeps any items gained in the cave
+
+**Also fixed**: `_load_cave_scene()` null crash - added second `await process_frame` before accessing `tree.current_scene` (Godot's `change_scene_to_packed()` is deferred).
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/core/cave_transition.gd` | HUD reparenting, cave autosave before entry, pending autosave load on exit, null safety |
+| `scripts/world/cave_entrance.gd` | `_is_near_cave_mouth()` proximity check for interaction |
+| `scripts/core/game_state.gd` | Added `skip_player_data_on_load` and `pending_cave_autosave` flags |
+| `scripts/core/save_load.gd` | `save_cave_autosave()` / `load_cave_autosave()` using temp file, skip player data flag in `_apply_save_data()` |
+
+---
+
+## Session 22 - Cave Entrance Redesign (2026-02-06)
+
+### Overview
+Complete redesign of cave entrances to be low-profile hillside mounds instead of giant rectangular blocks. Added terrain flattening around caves so players can walk to the entrance on foot without a rope ladder. Fixed collision to prevent falling through the top and walking through walls, while leaving an open gap for the entrance mouth.
+
+### Terrain Flattening (`chunk_manager.gd`)
+- Added cave position terrain flattening in `get_height_at()`, similar to existing spawn flattening
+- **Inner radius (8 units)**: Flat platform at height 2.0 around each cave center
+- **Outer falloff (8-12 units)**: Smooth ramp from platform height to natural terrain height
+- Creates a walkable approach from any direction, even on steep ROCKY/HILLS terrain
+
+### Cave Spawn Rules (`chunk_manager.gd`)
+- Caves now spawn in both ROCKY and HILLS regions (was ROCKY-only) - terrain flattening makes both walkable
+- Reduced `cave_spawn_min_distance` from 110 to 85 units so caves are reachable sooner
+
+### New Cave Visual (`cave_entrance.gd`)
+- **Low-profile mound**: Main body is 12x6x10 (was 14x12x12), total height ~8 units (was ~16)
+- **Shoulder pieces**: Two boxes flanking the entrance, angled outward for natural rock look
+- **Cap/peak**: Small angled box on top instead of a towering peak
+- **Dark opening**: 4x4 at ground level (y=2.0), easily visible and walkable into
+- Kept decorative boulders, stalactites, moss patches (rescaled to fit lower profile)
+- Updated all shared static meshes to new sizes
+
+### Collision with Entrance Gap
+Replaced 2 solid boxes (which blocked the entrance and let player walk on top) with 4 pieces:
+- **Back mass**: Behind the entrance opening
+- **Left/Right walls**: Flanking the 4-unit entrance gap
+- **Top cap**: Above the entrance opening
+- 4-unit-wide x 4-unit-tall gap at center front allows walking in
+
+### Tighter Interaction Zone
+- Horizontal distance reduced from 4.0 to 2.5 units
+- Z range tightened from (0, 8) to (0.5, 4.0)
+- Added vertical check: `y < 4.0` prevents triggering from on top of cave
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/chunk_manager.gd` | Cave terrain flattening in `get_height_at()`, HILLS region allowed in `_generate_cave_entrances()`, reduced `cave_spawn_min_distance` to 85 |
+| `scripts/world/cave_entrance.gd` | Complete visual redesign as low-profile mound, collision with entrance gap, tighter `_is_near_cave_mouth()` |
+
+---
+
+## Next Session
 
 ### Planned Tasks
 1. Add camera collision to prevent clipping into terrain
 2. Add grappling hook sound effect audio files
-3. Test and polish cave system integration
-4. Disable `debug_performance` logging once stuttering is confirmed fixed
+3. Disable `debug_performance` logging once stuttering is confirmed fixed
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

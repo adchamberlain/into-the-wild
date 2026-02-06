@@ -788,10 +788,11 @@ func _generate_box_collision() -> void:
 			var box_y_center: float
 
 			if height < 0:
-				# Water cell: create thin collision at water bottom
-				# The water bottom is at height (negative), box extends down from y=0
-				box_height = max(abs(height), 0.5)
-				box_y_center = -box_height / 2.0  # Center is below y=0
+				# Water cell: thin collision slab at pond floor only.
+				# No collision at water surface so the player falls through
+				# and triggers swimming via Area3D detection.
+				box_height = 0.5
+				box_y_center = height + box_height / 2.0  # Sits at the pond floor
 			else:
 				# Normal terrain: box TOP at terrain height, extending downward
 				# Minimum thickness of 0.5 ensures reliable collision
@@ -835,8 +836,9 @@ func _generate_box_collision_batched() -> void:
 			var box_y_center: float
 
 			if height < 0:
-				box_height = max(abs(height), 0.5)
-				box_y_center = -box_height / 2.0
+				# Water cell: thin slab at pond floor only (matches sync version)
+				box_height = 0.5
+				box_y_center = height + box_height / 2.0
 			else:
 				# Normal terrain: box TOP at terrain height, extending downward
 				box_height = max(height, 0.5)

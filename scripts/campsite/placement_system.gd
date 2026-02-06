@@ -314,17 +314,22 @@ func _has_cliff_face(pos: Vector3) -> bool:
 	forward_dir.y = 0
 	forward_dir = forward_dir.normalized()
 
-	# Raycast forward to find cliff face
-	var ray_origin: Vector3 = pos - forward_dir * 0.5 + Vector3(0, 1.0, 0)
-	var ray_end: Vector3 = pos + forward_dir * 3.0 + Vector3(0, 1.0, 0)
+	# Check at multiple heights to detect both short (2-block) and tall cliffs.
+	# A single ray at y+1.0 can miss short obstacles entirely.
+	for check_height: float in [0.3, 0.8, 1.5]:
+		var ray_origin: Vector3 = pos - forward_dir * 0.5 + Vector3(0, check_height, 0)
+		var ray_end: Vector3 = pos + forward_dir * 3.0 + Vector3(0, check_height, 0)
 
-	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.new()
-	query.from = ray_origin
-	query.to = ray_end
-	query.collision_mask = 1  # Terrain layer
+		var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.new()
+		query.from = ray_origin
+		query.to = ray_end
+		query.collision_mask = 1  # Terrain layer
 
-	var result: Dictionary = space_state.intersect_ray(query)
-	return not result.is_empty()
+		var result: Dictionary = space_state.intersect_ray(query)
+		if not result.is_empty():
+			return true
+
+	return false
 
 
 ## Snap a position to the nearest cliff face in the given direction.
@@ -337,23 +342,24 @@ func _snap_to_cliff_face(pos: Vector3, forward_dir: Vector3) -> Vector3:
 	if not space_state:
 		return pos
 
-	# Raycast forward from the position to find the cliff face
-	# Start slightly behind the placement position and cast forward
-	var ray_origin: Vector3 = pos - forward_dir * 1.0 + Vector3(0, 1.0, 0)  # Slightly back and up
-	var ray_end: Vector3 = pos + forward_dir * 5.0 + Vector3(0, 1.0, 0)  # Forward up to 5 units
+	# Raycast forward from the position to find the cliff face.
+	# Try multiple heights to handle both short (2-block) and tall cliffs.
+	for check_height: float in [0.5, 1.0, 1.5]:
+		var ray_origin: Vector3 = pos - forward_dir * 1.0 + Vector3(0, check_height, 0)
+		var ray_end: Vector3 = pos + forward_dir * 5.0 + Vector3(0, check_height, 0)
 
-	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.new()
-	query.from = ray_origin
-	query.to = ray_end
-	query.collision_mask = 1  # Terrain layer
+		var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.new()
+		query.from = ray_origin
+		query.to = ray_end
+		query.collision_mask = 1  # Terrain layer
 
-	var result: Dictionary = space_state.intersect_ray(query)
-	if result:
-		# Found cliff face - position ladder right against it (with small offset)
-		var cliff_pos: Vector3 = result.position
-		var snapped_pos: Vector3 = cliff_pos - forward_dir * 0.15  # Small offset from cliff
-		snapped_pos.y = pos.y  # Keep original ground height
-		return snapped_pos
+		var result: Dictionary = space_state.intersect_ray(query)
+		if result:
+			# Found cliff face - position ladder right against it (with small offset)
+			var cliff_pos: Vector3 = result.position
+			var snapped_pos: Vector3 = cliff_pos - forward_dir * 0.15  # Small offset from cliff
+			snapped_pos.y = pos.y  # Keep original ground height
+			return snapped_pos
 
 	# No cliff found, return original position
 	return pos
@@ -381,14 +387,17 @@ func _calculate_cliff_height(pos: Vector3, forward_dir: Vector3) -> float:
 	var ray_origin: Vector3 = Vector3(check_pos.x, base_height + 0.5, check_pos.z)
 	var ray_end: Vector3 = Vector3(check_pos.x, base_height + 20.0, check_pos.z)
 
-	# First, check if there's terrain directly behind/above by raycasting horizontally into the cliff at various heights
+	# Check if there's terrain directly behind/above by raycasting horizontally
+	# into the cliff at regular 1-unit intervals (no gaps that miss short cliffs).
 	var cliff_top_height: float = base_height
 
-	# Sample heights going up to find where the cliff ends
-	for test_height: float in [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0, 12.0, 15.0]:
+	# Sample every 1.0 unit up to 15 units - consistent spacing ensures
+	# 2-block and other short cliffs aren't missed by sampling gaps.
+	var test_height: float = 1.0
+	while test_height <= 15.0:
 		var test_y: float = base_height + test_height
 		var horizontal_origin: Vector3 = Vector3(pos.x - forward_dir.x * 0.5, test_y, pos.z - forward_dir.z * 0.5)
-		var horizontal_end: Vector3 = Vector3(pos.x + forward_dir.x * 2.0, test_y, pos.z + forward_dir.z * 2.0)
+		var horizontal_end: Vector3 = Vector3(pos.x + forward_dir.x * 3.0, test_y, pos.z + forward_dir.z * 3.0)
 
 		var h_query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.new()
 		h_query.from = horizontal_origin
@@ -402,6 +411,8 @@ func _calculate_cliff_height(pos: Vector3, forward_dir: Vector3) -> float:
 		else:
 			# No terrain at this height - we've found the top
 			break
+
+		test_height += 1.0
 
 	# Calculate ladder height (from base to just above cliff top)
 	var ladder_height: float = cliff_top_height - base_height + 1.0  # +1 to reach over the top
@@ -438,6 +449,13 @@ func _update_preview_position(delta: float) -> void:
 	# Get terrain height at this position using raycast
 	# Sink slightly into ground (-0.04) to prevent visual floating seam
 	target_pos.y = _get_ground_height(target_pos.x, target_pos.z) - 0.04
+
+	# Rope ladders must be placed at the cliff BASE, not on top.
+	# If the preview ground is higher than the player's ground, snap down to the lower height.
+	if current_structure_type == "rope_ladder":
+		var player_ground_y: float = _get_ground_height(player.global_position.x, player.global_position.z)
+		if target_pos.y > player_ground_y + 0.5:
+			target_pos.y = player_ground_y - 0.04
 
 	preview_instance.global_position = target_pos
 
