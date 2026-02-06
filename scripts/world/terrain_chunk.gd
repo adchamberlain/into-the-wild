@@ -64,56 +64,121 @@ func setup(coord: Vector2i, manager: Node) -> void:
 const TREES_PER_BATCH: int = 6  # Trees are expensive (collision, etc.)
 const RESOURCES_PER_BATCH: int = 10
 const DECORATIONS_PER_BATCH: int = 15
-const MESH_ROWS_PER_BATCH: int = 6  # Terrain mesh rows per frame
+const MESH_ROWS_PER_BATCH: int = 2  # Terrain mesh rows per frame (reduced from 6 to ~8ms/batch)
 const COLLISION_ROWS_PER_BATCH: int = 4  # Collision rows per frame (64 shapes/frame, completes in 4 frames)
+const HEIGHTCACHE_ROWS_PER_BATCH: int = 4  # Height cache rows per frame (~72 get_height_at calls/batch)
 
-# Debug performance flag (set by chunk_manager)
-var debug_performance: bool = false
+# Concurrency slot tracking
+var _holds_generation_slot: bool = false
 
 
 func generate(sync_collision: bool = true) -> void:
 	if is_generated:
 		return
+	is_generated = true  # Set early to prevent re-entry
 
-	var t0: int = Time.get_ticks_msec()
-
-	# Phase 1: Build height cache (fast, needed for collision)
-	_build_height_cache()
-
-	var t1: int = Time.get_ticks_msec()
-
-	# Phase 2: Generate collision (sync for player's chunk, batched for distant chunks)
-	_generate_collision_from_mesh(sync_collision)
-
-	var t2: int = Time.get_ticks_msec()
-	if debug_performance:
-		print("[TerrainChunk %s] height_cache=%dms collision(%s)=%dms" % [
-			str(chunk_coord),
-			t1 - t0,
-			"sync" if sync_collision else "async",
-			t2 - t1
-		])
-
-	# Phase 3: Start async terrain mesh + spawning pipeline
-	_generate_terrain_async()
-
-	is_generated = true
+	if sync_collision:
+		# Player's chunk: fully synchronous height cache + collision
+		_build_height_cache()
+		_generate_collision_from_mesh(true)
+		# Fire-and-forget async mesh + spawning (no slot needed for player chunk)
+		_generate_terrain_async()
+	else:
+		# Distant chunks: full async pipeline with concurrency limiting
+		_generate_async_full()
 
 
-func _generate_terrain_async() -> void:
-	## Async pipeline: mesh generation spread across frames, then spawning
-	await _generate_terrain_mesh_batched()
+func _generate_async_full() -> void:
+	## Full async pipeline with concurrency slot management.
+	## Waits for a slot, then runs height cache + collision + mesh in batches.
+	## Releases slot before lighter spawning work.
 
-	# Chain to tree spawning after mesh is complete
+	# Wait for a generation slot
+	while chunk_manager._active_heavy_generations >= chunk_manager.MAX_CONCURRENT_HEAVY_GENERATIONS:
+		await chunk_manager.heavy_generation_slot_available
+		if not is_inside_tree():
+			return
+
+	# Acquire slot
+	chunk_manager._active_heavy_generations += 1
+	_holds_generation_slot = true
+
+	# Batched height cache (~5 frames)
+	await _build_height_cache_batched()
+	if not is_inside_tree():
+		_release_generation_slot()
+		return
+
+	# Start batched collision (fire-and-forget coroutine)
+	_generate_collision_from_mesh(false)
+
+	# Separate collision start from mesh start
 	await get_tree().process_frame
+	if not is_inside_tree():
+		_release_generation_slot()
+		return
+
+	# Batched mesh generation (~8 frames)
+	await _generate_terrain_mesh_batched()
+	if not is_inside_tree():
+		_release_generation_slot()
+		return
+
+	# Release slot before lighter spawning work
+	_release_generation_slot()
+
+	# Continue with spawning (no slot needed - these are lightweight)
+	await get_tree().process_frame
+	if not is_inside_tree():
+		return
 	await _spawn_chunk_trees()
 
+	if not is_inside_tree():
+		return
 	await get_tree().process_frame
 	await _spawn_chunk_resources()
 
+	if not is_inside_tree():
+		return
 	await get_tree().process_frame
 	await _spawn_chunk_decorations()
 
+	if not is_inside_tree():
+		return
+	await get_tree().process_frame
+	_spawn_chunk_animals()
+
+
+func _release_generation_slot() -> void:
+	if _holds_generation_slot:
+		chunk_manager._active_heavy_generations -= 1
+		_holds_generation_slot = false
+		chunk_manager.heavy_generation_slot_available.emit()
+
+
+func _generate_terrain_async() -> void:
+	## Async pipeline for player chunk: mesh generation spread across frames, then spawning.
+	## No slot management needed - player chunk runs without concurrency limits.
+	await _generate_terrain_mesh_batched()
+
+	# Chain to tree spawning after mesh is complete
+	if not is_inside_tree():
+		return
+	await get_tree().process_frame
+	await _spawn_chunk_trees()
+
+	if not is_inside_tree():
+		return
+	await get_tree().process_frame
+	await _spawn_chunk_resources()
+
+	if not is_inside_tree():
+		return
+	await get_tree().process_frame
+	await _spawn_chunk_decorations()
+
+	if not is_inside_tree():
+		return
 	await get_tree().process_frame
 	_spawn_chunk_animals()
 
@@ -124,8 +189,8 @@ var _height_cache_size: int = 0
 
 
 func _build_height_cache() -> void:
-	## Pre-compute and cache all heights for this chunk.
-	## This is fast and needed before collision can be generated.
+	## Pre-compute and cache all heights for this chunk (synchronous).
+	## Used for player's chunk where we need immediate collision.
 	var cell_size: float = chunk_manager.cell_size
 	var chunk_size_cells: int = chunk_manager.chunk_size_cells
 	var chunk_world_x: float = chunk_coord.x * chunk_size_cells * cell_size
@@ -140,6 +205,34 @@ func _build_height_cache() -> void:
 			var world_x: float = chunk_world_x + ((cx - 1) * cell_size) + cell_size / 2.0
 			var world_z: float = chunk_world_z + ((cz - 1) * cell_size) + cell_size / 2.0
 			_height_cache[cz][cx] = chunk_manager.get_height_at(world_x, world_z)
+
+
+func _build_height_cache_batched() -> void:
+	## Batched version of _build_height_cache() - yields every HEIGHTCACHE_ROWS_PER_BATCH rows.
+	## Each batch: 4 rows x 18 cols = 72 get_height_at() calls (~3.8ms).
+	var cell_size: float = chunk_manager.cell_size
+	var chunk_size_cells: int = chunk_manager.chunk_size_cells
+	var chunk_world_x: float = chunk_coord.x * chunk_size_cells * cell_size
+	var chunk_world_z: float = chunk_coord.y * chunk_size_cells * cell_size
+
+	_height_cache_size = chunk_size_cells + 2  # +2 for border cells
+	_height_cache.resize(_height_cache_size)
+
+	var rows_this_batch: int = 0
+	for cz in range(_height_cache_size):
+		_height_cache[cz] = []
+		_height_cache[cz].resize(_height_cache_size)
+		for cx in range(_height_cache_size):
+			var world_x: float = chunk_world_x + ((cx - 1) * cell_size) + cell_size / 2.0
+			var world_z: float = chunk_world_z + ((cz - 1) * cell_size) + cell_size / 2.0
+			_height_cache[cz][cx] = chunk_manager.get_height_at(world_x, world_z)
+
+		rows_this_batch += 1
+		if rows_this_batch >= HEIGHTCACHE_ROWS_PER_BATCH:
+			rows_this_batch = 0
+			await get_tree().process_frame
+			if not is_inside_tree():
+				return
 
 
 func _generate_terrain_mesh_batched() -> void:
@@ -174,6 +267,8 @@ func _generate_terrain_mesh_batched() -> void:
 		if rows_this_batch >= MESH_ROWS_PER_BATCH:
 			rows_this_batch = 0
 			await get_tree().process_frame
+			if not is_inside_tree():
+				return
 
 	var mesh: ArrayMesh = surface_tool.commit()
 
@@ -1364,6 +1459,9 @@ func _spawn_bird(pos: Vector3) -> void:
 
 
 func unload() -> void:
+	# Release generation slot if held (prevents deadlock on mid-generation unload)
+	_release_generation_slot()
+
 	# Clear height cache first - this signals async box collision to stop if still running
 	_height_cache.clear()
 

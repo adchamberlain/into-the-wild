@@ -60,6 +60,16 @@ Rivers and other water features must stay 40+ units away from spawn to keep the 
 - Red: `Color(1, 0.5, 0.5, 1)` for warnings/negative
 - Grey: `Color(0.6-0.7, 0.6-0.7, 0.6-0.7, 1)` for hints/secondary
 
+### Chunk Generation Performance
+
+Chunk generation has three expensive operations that **must be batched** across frames for distant chunks to avoid stuttering:
+
+1. **Height cache** (`_build_height_cache`): 324 `get_height_at()` calls, each doing water body loops, river checks, and multi-noise sampling. Costs 17-30ms synchronous. Batched version yields every 4 rows (~3.8ms/batch).
+2. **Mesh generation** (`_generate_terrain_mesh_batched`): Must use small batch sizes (`MESH_ROWS_PER_BATCH = 2`, ~8ms/batch). Larger values (e.g., 6) cause 24ms+ spikes.
+3. **Collision generation** (`_generate_box_collision_batched`): 256 BoxShape3D nodes. Batched at 4 rows/frame.
+
+**Concurrency limiting** is critical: `MAX_CONCURRENT_HEAVY_GENERATIONS = 2` in `chunk_manager.gd` prevents multiple chunks' coroutines from overlapping in the same frame. Without this, 7 new chunks at a boundary crossing compound to 30-55ms/frame. The player's chunk always runs synchronously (height cache + collision) to prevent fall-through.
+
 ### Current Phase
 
 See the bottom of `DEV_LOG.md` for the current development phase and planned tasks.

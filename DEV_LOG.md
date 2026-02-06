@@ -2526,6 +2526,49 @@ Every few seconds, the game stuttered. Root cause: `_generate_box_collision()` i
 
 ---
 
+## Session - Fix Performance Stuttering Phase 2: Batch Height Cache + Limit Concurrency (2026-02-05)
+
+### Problem
+Phase 1 (collision batching) eliminated collision spikes, but chunks still caused **30-55ms frame spikes**. Debug logging revealed two remaining bottlenecks:
+- `_build_height_cache()`: **17-30ms** synchronous (324 `get_height_at()` calls with water body loops, river checks, multi-noise sampling)
+- First mesh batch: **~24ms** because `MESH_ROWS_PER_BATCH=6` was too large
+- Coroutine accumulation: multiple chunks' async batches overlapping in the same frame
+
+### Changes
+
+**Batched Height Cache** (`terrain_chunk.gd`):
+- Added `HEIGHTCACHE_ROWS_PER_BATCH: int = 4` constant
+- Added `_build_height_cache_batched()` - yields every 4 rows (72 `get_height_at()` calls per batch, ~3.8ms each)
+- Sync version kept for player's chunk (needs immediate collision)
+
+**Reduced Mesh Batch Size** (`terrain_chunk.gd`):
+- Changed `MESH_ROWS_PER_BATCH` from 6 to **2** (~8ms per batch instead of ~24ms)
+- Added `is_inside_tree()` safety check after mesh batch yields
+
+**Concurrency Limiting** (`chunk_manager.gd` + `terrain_chunk.gd`):
+- Added `MAX_CONCURRENT_HEAVY_GENERATIONS: int = 2` and `_active_heavy_generations` counter to chunk_manager
+- Added `heavy_generation_slot_available` signal for slot release notification
+- Chunks wait for a slot before starting heavy async work (height cache + mesh)
+- Slots released before lighter spawning work (trees, resources, decorations)
+
+**Restructured `generate()`** (`terrain_chunk.gd`):
+- Player chunk: sync height cache + sync collision + fire-and-forget async mesh/spawning (unchanged behavior)
+- Distant chunks: `_generate_async_full()` manages full pipeline with slot acquisition/release
+- `is_generated` set early to prevent re-entry
+- `is_inside_tree()` checks after every yield for safe cleanup
+
+**Unload Safety** (`terrain_chunk.gd`):
+- `unload()` calls `_release_generation_slot()` to prevent deadlock on mid-generation unload
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/terrain_chunk.gd` | Batched height cache, reduced mesh batch size, `_generate_async_full()`, slot management, unload cleanup |
+| `scripts/world/chunk_manager.gd` | Concurrency tracking vars/signal (`MAX_CONCURRENT_HEAVY_GENERATIONS`, `_active_heavy_generations`, `heavy_generation_slot_available`) |
+
+---
+
 ## Next Session
 
 ### Known Issues

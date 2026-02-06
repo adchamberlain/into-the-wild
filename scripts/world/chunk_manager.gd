@@ -189,13 +189,18 @@ var spawned_cave_indices: Array[int] = []  # Track which cave entrances have bee
 var terrain_material: StandardMaterial3D
 
 # Chunk tracking
+signal heavy_generation_slot_available
+
 var loaded_chunks: Dictionary = {}  # Vector2i -> TerrainChunk
+
+# Concurrency limiting - prevents coroutine accumulation across chunks
+const MAX_CONCURRENT_HEAVY_GENERATIONS: int = 2
+var _active_heavy_generations: int = 0
 var player: Node3D
 var last_player_chunk: Vector2i = Vector2i(999999, 999999)  # Invalid initial value
 
 # Performance settings
 @export var chunks_per_frame: int = 1  # How many chunks to generate per frame
-@export var debug_performance: bool = true  # Print chunk load timing to console
 var chunks_to_load: Array[Vector2i] = []
 var chunks_to_unload: Array[Vector2i] = []
 
@@ -229,8 +234,6 @@ func _process(_delta: float) -> void:
 	if not player:
 		return
 
-	var frame_start: int = Time.get_ticks_msec()
-
 	# Check if player moved to a new chunk
 	var player_chunk: Vector2i = _world_to_chunk(player.global_position)
 	if player_chunk != last_player_chunk:
@@ -240,11 +243,6 @@ func _process(_delta: float) -> void:
 	# Process chunk loading/unloading queue (skip if nothing to do)
 	if not chunks_to_load.is_empty() or not chunks_to_unload.is_empty():
 		_process_chunk_queues()
-
-	if debug_performance:
-		var frame_elapsed: int = Time.get_ticks_msec() - frame_start
-		if frame_elapsed > 8:
-			print("[ChunkManager] _process took %dms (>8ms budget)" % frame_elapsed)
 
 
 func _setup_noise() -> void:
@@ -1411,9 +1409,6 @@ func _load_chunks_around(center_chunk: Vector2i) -> void:
 
 
 func _process_chunk_queues() -> void:
-	if debug_performance and (not chunks_to_load.is_empty() or not chunks_to_unload.is_empty()):
-		print("[ChunkManager] Queue: %d to load, %d to unload" % [chunks_to_load.size(), chunks_to_unload.size()])
-
 	# Unload chunks first (frees memory)
 	var unloaded: int = 0
 	while not chunks_to_unload.is_empty() and unloaded < chunks_per_frame:
@@ -1433,26 +1428,17 @@ func _load_chunk(chunk_coord: Vector2i) -> void:
 	if loaded_chunks.has(chunk_coord):
 		return
 
-	var t_start: int = Time.get_ticks_msec()
-
 	# Determine if player is standing on this chunk (needs sync collision)
 	var player_chunk: Vector2i = last_player_chunk
 	var is_player_chunk: bool = (chunk_coord == player_chunk)
 
 	var chunk: TerrainChunk = TerrainChunk.new()
 	chunk.setup(chunk_coord, self)
-	chunk.debug_performance = debug_performance
 	chunk.name = "Chunk_%d_%d" % [chunk_coord.x, chunk_coord.y]
 	add_child(chunk)
 	chunk.generate(is_player_chunk)
 
 	loaded_chunks[chunk_coord] = chunk
-
-	if debug_performance:
-		var t_elapsed: int = Time.get_ticks_msec() - t_start
-		print("[ChunkManager] Loaded chunk %s in %dms (sync_collision=%s)" % [
-			str(chunk_coord), t_elapsed, str(is_player_chunk)
-		])
 
 	# Spawn fishing spots for any water bodies in this chunk
 	var chunk_world_size: float = chunk_size_cells * cell_size
