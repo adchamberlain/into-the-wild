@@ -35,7 +35,6 @@ func _setup_references() -> void:
 	if canvas:
 		darkness_overlay = canvas.get_node_or_null("ColorRect")
 
-	# If not found directly, search children
 	if not darkness_overlay:
 		var parent: Node = get_parent()
 		for child in parent.get_children():
@@ -51,6 +50,11 @@ func _setup_references() -> void:
 	exit_area = get_node_or_null("../ExitArea")
 	if exit_area:
 		exit_area.body_entered.connect(_on_exit_area_entered)
+
+	# Build natural rock formations around the exit
+	_build_exit_formation()
+	# Add rock detail along the cave walls
+	_build_wall_details()
 
 	# Initial state
 	_update_darkness_state()
@@ -156,6 +160,167 @@ func _exit_cave() -> void:
 		# Fallback: just change scene directly
 		await get_tree().create_timer(0.5).timeout
 		get_tree().change_scene_to_file("res://scenes/main.tscn")
+
+
+func _make_rock_mat(r: float, g: float, b: float) -> StandardMaterial3D:
+	var mat: StandardMaterial3D = StandardMaterial3D.new()
+	mat.albedo_color = Color(r, g, b)
+	mat.roughness = 0.95
+	return mat
+
+
+func _add_rock_to(parent: Node3D, pos: Vector3, size: Vector3, rot: Vector3, color: Color) -> void:
+	var mesh_inst := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = size
+	mesh_inst.mesh = box
+	mesh_inst.material_override = _make_rock_mat(color.r, color.g, color.b)
+	mesh_inst.position = pos
+	mesh_inst.rotation_degrees = rot
+	parent.add_child(mesh_inst)
+
+
+func _add_collision_to(parent: StaticBody3D, pos: Vector3, size: Vector3) -> void:
+	var col := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = size
+	col.shape = shape
+	col.position = pos
+	parent.add_child(col)
+
+
+func _build_exit_formation() -> void:
+	## Build a natural rock wall at the +Z end of the cave with an opening
+	## for the exit. The cave is 30 wide (x=-15 to +15), 8 tall, exit at z=20.
+	var terrain: StaticBody3D = get_node_or_null("../Terrain") as StaticBody3D
+	if not terrain:
+		return
+
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 7777
+
+	var exit_z: float = 20.0
+	var base_color := Color(0.20, 0.18, 0.16)  # Match cave wall color
+
+	# -- Left wall section (x=-15 to x=-2.5) --
+	_add_rock_to(terrain, Vector3(-8.5, 4.0, exit_z), Vector3(13.0, 8.0, 1.0), Vector3.ZERO, base_color)
+	# -- Right wall section (x=+2.5 to x=+15) --
+	_add_rock_to(terrain, Vector3(8.5, 4.0, exit_z), Vector3(13.0, 8.0, 1.0), Vector3.ZERO, base_color)
+	# -- Top section above opening (x=-2.5 to x=+2.5, y=4.5 to y=8) --
+	_add_rock_to(terrain, Vector3(0, 6.25, exit_z), Vector3(5.0, 3.5, 1.0), Vector3.ZERO, base_color)
+
+	# Collision for the wall sections
+	_add_collision_to(terrain, Vector3(-8.5, 4.0, exit_z), Vector3(13.0, 8.0, 1.0))
+	_add_collision_to(terrain, Vector3(8.5, 4.0, exit_z), Vector3(13.0, 8.0, 1.0))
+	_add_collision_to(terrain, Vector3(0, 6.25, exit_z), Vector3(5.0, 3.5, 1.0))
+
+	# -- Rock formations framing the 5x4.5 opening --
+	# Opening goes from x=-2.5 to x=+2.5, y=0 to y=4.5
+
+	# Left pillar rocks (stacked irregular blocks)
+	var lc := Color(base_color.r + 0.03, base_color.g + 0.02, base_color.b + 0.01)
+	_add_rock_to(terrain, Vector3(-2.8, 1.2, exit_z + 0.3), Vector3(1.8, 2.4, 1.5),
+		Vector3(0, rng.randf_range(-4, 4), rng.randf_range(-3, 3)), lc)
+	_add_rock_to(terrain, Vector3(-2.5, 3.2, exit_z + 0.2), Vector3(1.4, 1.6, 1.2),
+		Vector3(rng.randf_range(-3, 3), rng.randf_range(-5, 5), rng.randf_range(-3, 3)),
+		Color(lc.r + 0.02, lc.g + 0.01, lc.b))
+
+	# Right pillar rocks
+	var rc := Color(base_color.r + 0.02, base_color.g + 0.01, base_color.b + 0.02)
+	_add_rock_to(terrain, Vector3(2.8, 1.0, exit_z + 0.3), Vector3(1.6, 2.0, 1.5),
+		Vector3(0, rng.randf_range(-4, 4), rng.randf_range(-3, 3)), rc)
+	_add_rock_to(terrain, Vector3(2.6, 3.0, exit_z + 0.2), Vector3(1.3, 1.4, 1.2),
+		Vector3(rng.randf_range(-3, 3), rng.randf_range(-5, 5), rng.randf_range(-3, 3)),
+		Color(rc.r + 0.02, rc.g + 0.01, rc.b))
+
+	# Top rocks spanning the opening (lintel)
+	_add_rock_to(terrain, Vector3(0, 4.8, exit_z + 0.3), Vector3(4.5, 1.2, 1.8),
+		Vector3(rng.randf_range(-3, 3), 0, rng.randf_range(-2, 2)),
+		Color(base_color.r + 0.04, base_color.g + 0.03, base_color.b + 0.02))
+	# Cap rock
+	_add_rock_to(terrain, Vector3(rng.randf_range(-0.3, 0.3), 5.6, exit_z + 0.1),
+		Vector3(3.0, 0.8, 1.4),
+		Vector3(rng.randf_range(-4, 4), rng.randf_range(-5, 5), rng.randf_range(-3, 3)),
+		Color(base_color.r + 0.05, base_color.g + 0.04, base_color.b + 0.03))
+
+	# Overhang jutting inward
+	_add_rock_to(terrain, Vector3(0, 4.3, exit_z - 0.8), Vector3(3.0, 0.6, 1.5),
+		Vector3(-10, 0, rng.randf_range(-3, 3)),
+		Color(base_color.r + 0.02, base_color.g + 0.02, base_color.b + 0.01))
+
+	# Rubble at the base of the exit
+	_add_rock_to(terrain, Vector3(-1.8, 0.3, exit_z + 0.5), Vector3(1.2, 0.6, 0.8),
+		Vector3(rng.randf_range(-5, 5), rng.randf_range(0, 20), 0),
+		Color(base_color.r + 0.01, base_color.g, base_color.b))
+	_add_rock_to(terrain, Vector3(2.0, 0.25, exit_z + 0.3), Vector3(1.0, 0.5, 0.7),
+		Vector3(rng.randf_range(-5, 5), rng.randf_range(0, 25), 0),
+		Color(base_color.r, base_color.g + 0.01, base_color.b))
+
+	# Stalactites hanging from the top of the opening
+	for i: int in range(3):
+		var s_h: float = rng.randf_range(0.3, 0.8)
+		_add_rock_to(terrain,
+			Vector3(rng.randf_range(-1.2, 1.2), 4.5 - s_h * 0.5, exit_z - rng.randf_range(0.0, 0.5)),
+			Vector3(0.15, s_h, 0.15),
+			Vector3(rng.randf_range(-5, 5), 0, rng.randf_range(-5, 5)),
+			Color(0.18, 0.16, 0.14))
+
+
+func _build_wall_details() -> void:
+	## Add irregular rock formations along the cave walls to break up flat surfaces.
+	var terrain: StaticBody3D = get_node_or_null("../Terrain") as StaticBody3D
+	if not terrain:
+		return
+
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 8888
+	var base := Color(0.22, 0.20, 0.17)
+
+	# Rock outcrops along left wall (x ~ -14)
+	for i: int in range(6):
+		var z_pos: float = rng.randf_range(-18.0, 18.0)
+		var y_pos: float = rng.randf_range(0.5, 5.0)
+		var w: float = rng.randf_range(1.0, 2.5)
+		var h: float = rng.randf_range(1.0, 3.0)
+		var d: float = rng.randf_range(0.8, 2.0)
+		var tint: float = rng.randf_range(-0.03, 0.03)
+		_add_rock_to(terrain,
+			Vector3(-14.0 + rng.randf_range(0.0, 0.5), y_pos, z_pos),
+			Vector3(w, h, d),
+			Vector3(rng.randf_range(-5, 5), rng.randf_range(-5, 5), rng.randf_range(-3, 3)),
+			Color(base.r + tint, base.g + tint * 0.8, base.b + tint * 0.6))
+
+	# Rock outcrops along right wall (x ~ +14)
+	for i: int in range(6):
+		var z_pos: float = rng.randf_range(-18.0, 18.0)
+		var y_pos: float = rng.randf_range(0.5, 5.0)
+		var w: float = rng.randf_range(1.0, 2.5)
+		var h: float = rng.randf_range(1.0, 3.0)
+		var d: float = rng.randf_range(0.8, 2.0)
+		var tint: float = rng.randf_range(-0.03, 0.03)
+		_add_rock_to(terrain,
+			Vector3(14.0 - rng.randf_range(0.0, 0.5), y_pos, z_pos),
+			Vector3(w, h, d),
+			Vector3(rng.randf_range(-5, 5), rng.randf_range(-5, 5), rng.randf_range(-3, 3)),
+			Color(base.r + tint, base.g + tint * 0.8, base.b + tint * 0.6))
+
+	# Floor rocks/rubble scattered around
+	for i: int in range(8):
+		var bsize: float = rng.randf_range(0.3, 0.9)
+		_add_rock_to(terrain,
+			Vector3(rng.randf_range(-12.0, 12.0), bsize * 0.25, rng.randf_range(-18.0, 16.0)),
+			Vector3(bsize, bsize * 0.5, bsize * 0.7),
+			Vector3(rng.randf_range(-8, 8), rng.randf_range(0, 45), rng.randf_range(-5, 5)),
+			Color(base.r + rng.randf_range(-0.03, 0.03), base.g + rng.randf_range(-0.02, 0.02), base.b))
+
+	# Ceiling stalactites
+	for i: int in range(6):
+		var s_h: float = rng.randf_range(0.4, 1.5)
+		_add_rock_to(terrain,
+			Vector3(rng.randf_range(-10.0, 10.0), 7.5 - s_h * 0.5, rng.randf_range(-15.0, 15.0)),
+			Vector3(rng.randf_range(0.15, 0.3), s_h, rng.randf_range(0.15, 0.3)),
+			Vector3(rng.randf_range(-5, 5), 0, rng.randf_range(-5, 5)),
+			Color(0.17, 0.15, 0.13))
 
 
 func _has_placed_light_nearby() -> bool:
