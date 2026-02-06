@@ -2610,6 +2610,63 @@ Fixed a bug where using the grappling hook would pull the player through terrain
 
 ---
 
+## Session 20 - Complete Visual Art Overhaul (2026-02-05)
+
+Rebuilt all 3D object artwork across the entire game to match the rich, layered art style of the loading screen. The loading screen uses multi-component ColorRect layering with color gradations, texture details, highlights/shadows, and small accent elements. Applied this same philosophy to all 3D objects using layered BoxMeshes with varied materials.
+
+### Design Philosophy
+- **Multiple color shades** per object (base + dark + light + highlight) instead of single flat colors
+- **Layered meshes** building up complex forms from simple primitives
+- **Texture simulation** via overlapping darker/lighter strips (bark, grain, stone cracks)
+- **Detail elements** that add richness (sparks, tools, lashing, flowers, eyes, berries)
+- **Environmental context** (lily pads on ponds, moss on caves, mulch in gardens)
+
+### Objects Rebuilt
+
+**Campsite Structures** (save_load.gd):
+- **Fire Pit**: 8 individual colored stones in ring, crossed logs with bark texture, layered fire (embers → deep orange → yellow → white tip), hot core, rising sparks, ground glow
+- **Basic Shelter**: Canvas with seam lines and shadow underside, bark-textured poles with lashing at joints, front support sticks, leaf bed with scattered patches
+- **Storage Container**: Plank grain lines, metal corner bands and reinforcements, handle with brackets, front latch, lid highlight
+- **Crafting Bench**: Wood grain lines, edge banding, cross-braces, hammer and knife on surface, wear marks
+- **Drying Rack**: Bark-detailed posts with forked tops, lashing at joints, hanging meat strips and herb bundles, cord details
+- **Herb Garden**: Plank borders with corner posts, furrow rows in soil, 8 varied herb types with leaf clusters, flowers on select plants, mulch chips
+- **Canvas Tent**: Two-tone panels (shadow/light sides), seam lines, front flaps showing dark interior, bark-detailed ridge pole, guy ropes, tent stakes, ground cloth
+- **Cabin Bed**: Headboard with vertical slats and cap, footboard, side rails, sheet layer, blanket with fold and wrinkle lines, pillow with indent
+- **Cabin Kitchen**: Cabinet door lines with handles, stone block lines, hearth with layered fire, cooking pot with handle, wall shelf with brackets, jars/bowls, knife
+
+**Creatures**:
+- **Bird**: Warm breast patch, lighter belly, darker crown, white eye rings with black pupils, two-tone beak (upper/lower mandible), wing tips and wing bars, tail tip, feet with toes
+- **Rabbit**: Darker spine ridge, lighter belly, puffy cheeks, pink nose, eyes with pupils, whiskers, pink inner ears, front/hind paws, fluffy tail with transparency overlay, haunches
+
+**Resource Nodes**:
+- **Crystal Node**: Rock base cluster, tall central spire with bright tip, internal refraction streaks, 4 varied secondary crystals (different materials), 5 scattered ground shards
+- **Rare Ore**: Multi-rock composite shape (3 overlapping rocks + base), crack fissures, 6 gold veins (varied brightness), gold nugget spots on surface
+- **Fishing Spot**: Deeper water center, 8 varied shore rocks with highlights, lily pads with flower, cattail reeds at edges, richer water material
+- **Fish**: Olive-green back, pale belly, silvery side stripe, head with eyes, dorsal fin, forked tail, pectoral fins, body spots/markings
+
+**Equipment**:
+- **Grappling Hook**: Detailed hub with top cap, rope attachment ring, rope end, prong shafts with hook tips and barbs, multi-material metalwork (dark/light/highlight)
+
+**World Objects**:
+- **Cave Entrance**: Rock ledge overhang, scattered boulders, stalactites, moss patches, deeper darkness interior
+- **Thorns**: Leaf clusters, protruding thorn spikes, dark berries, tangled vine/branch details
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/core/save_load.gd` | Rebuilt all 10 structure creation functions with detailed multi-mesh artwork |
+| `scripts/creatures/ambient_bird.gd` | Rebuilt `_build_mesh()` with 20+ component detailed bird |
+| `scripts/creatures/ambient_rabbit.gd` | Rebuilt `_build_mesh()` with 25+ component detailed rabbit |
+| `scripts/resources/crystal_node.gd` | Rebuilt `_setup_crystal_visual()` with rock base, multi-shard crystals |
+| `scripts/resources/rare_ore_node.gd` | Rebuilt `_setup_ore_visual()` with composite rock, cracks, gold nuggets |
+| `scripts/resources/fishing_spot.gd` | Rebuilt `_create_pond_mesh()` with shore rocks, lily pads, reeds; rebuilt `_create_fish_mesh()` with detailed anatomy |
+| `scripts/player/grappling_hook.gd` | Rebuilt hook visual with hub, cap, ring, detailed prongs with barbs |
+| `scripts/world/cave_entrance.gd` | Added ledge, boulders, stalactites, moss, deeper darkness |
+| `scripts/world/obstacle_thorns.gd` | Added leaf clusters, thorn spikes, berries, tangled vines |
+
+---
+
 ## Next Session
 
 ### Known Issues
@@ -2617,11 +2674,10 @@ Fixed a bug where using the grappling hook would pull the player through terrain
 
 ### Planned Tasks
 1. Add camera collision to prevent clipping into terrain
-2. Remove debug grappling hook code (auto-gives hook on spawn)
-3. Add grappling hook sound effect audio files
-4. Test and polish cave system integration
-5. Test BoxShape3D collision thoroughly at terrain transitions
-6. Disable `debug_performance` logging once stuttering is confirmed fixed
+2. Add grappling hook sound effect audio files
+3. Test and polish cave system integration
+4. Test BoxShape3D collision thoroughly at terrain transitions
+5. Disable `debug_performance` logging once stuttering is confirmed fixed
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

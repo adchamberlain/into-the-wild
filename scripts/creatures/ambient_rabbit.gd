@@ -39,44 +39,155 @@ func _ready() -> void:
 
 
 func _build_mesh() -> void:
-	# Body - slightly elongated box
+	# Materials
+	var body_mat: StandardMaterial3D = StandardMaterial3D.new()
+	body_mat.albedo_color = body_color
+
+	var body_dark_mat: StandardMaterial3D = StandardMaterial3D.new()
+	body_dark_mat.albedo_color = Color(body_color.r - 0.08, body_color.g - 0.08, body_color.b - 0.06)
+
+	var belly_mat: StandardMaterial3D = StandardMaterial3D.new()
+	belly_mat.albedo_color = Color(0.78, 0.72, 0.65)  # Lighter belly
+
+	var ear_mat: StandardMaterial3D = StandardMaterial3D.new()
+	ear_mat.albedo_color = body_color
+
+	var ear_inner_mat: StandardMaterial3D = StandardMaterial3D.new()
+	ear_inner_mat.albedo_color = ear_inner_color
+
+	var nose_mat: StandardMaterial3D = StandardMaterial3D.new()
+	nose_mat.albedo_color = Color(0.75, 0.50, 0.50)  # Pink nose
+
+	var eye_mat: StandardMaterial3D = StandardMaterial3D.new()
+	eye_mat.albedo_color = Color(0.08, 0.06, 0.05)
+
+	var eye_shine_mat: StandardMaterial3D = StandardMaterial3D.new()
+	eye_shine_mat.albedo_color = Color(0.85, 0.82, 0.78)
+
+	var whisker_mat: StandardMaterial3D = StandardMaterial3D.new()
+	whisker_mat.albedo_color = Color(0.75, 0.72, 0.68)
+
+	var tail_mat: StandardMaterial3D = StandardMaterial3D.new()
+	tail_mat.albedo_color = Color(0.92, 0.90, 0.87)
+
+	var paw_mat: StandardMaterial3D = StandardMaterial3D.new()
+	paw_mat.albedo_color = Color(0.65, 0.55, 0.48)
+
+	# Body - main shape
 	body_mesh = MeshInstance3D.new()
 	var body_box: BoxMesh = BoxMesh.new()
 	body_box.size = Vector3(0.3, 0.25, 0.45)
 	body_mesh.mesh = body_box
 	body_mesh.position = Vector3(0, 0.15, 0)
-
-	var body_mat: StandardMaterial3D = StandardMaterial3D.new()
-	body_mat.albedo_color = body_color
 	body_mesh.material_override = body_mat
 	mesh_container.add_child(body_mesh)
 
-	# Head - smaller box attached to front
+	# Back (darker ridge along spine)
+	var back: MeshInstance3D = MeshInstance3D.new()
+	var back_box: BoxMesh = BoxMesh.new()
+	back_box.size = Vector3(0.18, 0.04, 0.38)
+	back.mesh = back_box
+	back.position = Vector3(0, 0.28, -0.02)
+	back.material_override = body_dark_mat
+	mesh_container.add_child(back)
+
+	# Belly (lighter underside)
+	var belly: MeshInstance3D = MeshInstance3D.new()
+	var belly_box: BoxMesh = BoxMesh.new()
+	belly_box.size = Vector3(0.22, 0.04, 0.35)
+	belly.mesh = belly_box
+	belly.position = Vector3(0, 0.04, 0)
+	belly.material_override = belly_mat
+	mesh_container.add_child(belly)
+
+	# Haunches (larger rear section)
+	var haunch: MeshInstance3D = MeshInstance3D.new()
+	var h_box: BoxMesh = BoxMesh.new()
+	h_box.size = Vector3(0.28, 0.22, 0.18)
+	haunch.mesh = h_box
+	haunch.position = Vector3(0, 0.16, -0.14)
+	haunch.material_override = body_mat
+	mesh_container.add_child(haunch)
+
+	# Head
 	var head_mesh: MeshInstance3D = MeshInstance3D.new()
 	var head_box: BoxMesh = BoxMesh.new()
 	head_box.size = Vector3(0.22, 0.2, 0.22)
 	head_mesh.mesh = head_box
 	head_mesh.position = Vector3(0, 0.22, 0.25)
-
-	var head_mat: StandardMaterial3D = StandardMaterial3D.new()
-	head_mat.albedo_color = body_color
-	head_mesh.material_override = head_mat
+	head_mesh.material_override = body_mat
 	mesh_container.add_child(head_mesh)
 
-	# Left ear
-	ear_left = MeshInstance3D.new()
+	# Cheeks (slightly puffed)
+	for side: float in [-1.0, 1.0]:
+		var cheek: MeshInstance3D = MeshInstance3D.new()
+		var ch_box: BoxMesh = BoxMesh.new()
+		ch_box.size = Vector3(0.06, 0.10, 0.10)
+		cheek.mesh = ch_box
+		cheek.position = Vector3(side * 0.12, 0.18, 0.27)
+		cheek.material_override = belly_mat
+		mesh_container.add_child(cheek)
+
+	# Nose (pink)
+	var nose: MeshInstance3D = MeshInstance3D.new()
+	var nose_box: BoxMesh = BoxMesh.new()
+	nose_box.size = Vector3(0.05, 0.04, 0.03)
+	nose.mesh = nose_box
+	nose.position = Vector3(0, 0.22, 0.36)
+	nose.material_override = nose_mat
+	mesh_container.add_child(nose)
+
+	# Eyes (on sides of head)
+	for side: float in [-1.0, 1.0]:
+		var eye_white: MeshInstance3D = MeshInstance3D.new()
+		var ew_box: BoxMesh = BoxMesh.new()
+		ew_box.size = Vector3(0.03, 0.04, 0.04)
+		eye_white.mesh = ew_box
+		eye_white.position = Vector3(side * 0.11, 0.26, 0.30)
+		eye_white.material_override = eye_shine_mat
+		mesh_container.add_child(eye_white)
+
+		var pupil: MeshInstance3D = MeshInstance3D.new()
+		var p_box: BoxMesh = BoxMesh.new()
+		p_box.size = Vector3(0.02, 0.03, 0.03)
+		pupil.mesh = p_box
+		pupil.position = Vector3(side * 0.115, 0.26, 0.31)
+		pupil.material_override = eye_mat
+		mesh_container.add_child(pupil)
+
+	# Whiskers (tiny horizontal lines)
+	for side: float in [-1.0, 1.0]:
+		for wi: int in range(2):
+			var whisker: MeshInstance3D = MeshInstance3D.new()
+			var w_box: BoxMesh = BoxMesh.new()
+			w_box.size = Vector3(0.10, 0.008, 0.008)
+			whisker.mesh = w_box
+			whisker.position = Vector3(side * 0.14, 0.20 + wi * 0.03, 0.30)
+			whisker.rotation.z = side * deg_to_rad(5 + wi * 8)
+			whisker.material_override = whisker_mat
+			mesh_container.add_child(whisker)
+
+	# Ears (with inner pink)
 	var ear_box: BoxMesh = BoxMesh.new()
 	ear_box.size = Vector3(0.06, 0.2, 0.04)
+	var ear_inner_box: BoxMesh = BoxMesh.new()
+	ear_inner_box.size = Vector3(0.035, 0.16, 0.02)
+
+	ear_left = MeshInstance3D.new()
 	ear_left.mesh = ear_box
 	ear_left.position = Vector3(-0.06, 0.42, 0.25)
 	ear_left.rotation.z = deg_to_rad(-10)
-
-	var ear_mat: StandardMaterial3D = StandardMaterial3D.new()
-	ear_mat.albedo_color = body_color
 	ear_left.material_override = ear_mat
 	mesh_container.add_child(ear_left)
 
-	# Right ear
+	# Left ear inner pink
+	var ear_l_inner: MeshInstance3D = MeshInstance3D.new()
+	ear_l_inner.mesh = ear_inner_box
+	ear_l_inner.position = Vector3(-0.06, 0.43, 0.26)
+	ear_l_inner.rotation.z = deg_to_rad(-10)
+	ear_l_inner.material_override = ear_inner_mat
+	mesh_container.add_child(ear_l_inner)
+
 	ear_right = MeshInstance3D.new()
 	ear_right.mesh = ear_box
 	ear_right.position = Vector3(0.06, 0.42, 0.25)
@@ -84,17 +195,63 @@ func _build_mesh() -> void:
 	ear_right.material_override = ear_mat
 	mesh_container.add_child(ear_right)
 
-	# Tail - small white puff
+	# Right ear inner pink
+	var ear_r_inner: MeshInstance3D = MeshInstance3D.new()
+	ear_r_inner.mesh = ear_inner_box
+	ear_r_inner.position = Vector3(0.06, 0.43, 0.26)
+	ear_r_inner.rotation.z = deg_to_rad(10)
+	ear_r_inner.material_override = ear_inner_mat
+	mesh_container.add_child(ear_r_inner)
+
+	# Front paws
+	for side: float in [-0.08, 0.08]:
+		var paw: MeshInstance3D = MeshInstance3D.new()
+		var pw_box: BoxMesh = BoxMesh.new()
+		pw_box.size = Vector3(0.06, 0.08, 0.08)
+		paw.mesh = pw_box
+		paw.position = Vector3(side, 0.04, 0.16)
+		paw.material_override = paw_mat
+		mesh_container.add_child(paw)
+
+	# Hind legs (larger, crouched position)
+	for side: float in [-0.10, 0.10]:
+		var hind: MeshInstance3D = MeshInstance3D.new()
+		var hl_box: BoxMesh = BoxMesh.new()
+		hl_box.size = Vector3(0.08, 0.14, 0.12)
+		hind.mesh = hl_box
+		hind.position = Vector3(side, 0.08, -0.16)
+		hind.material_override = body_mat
+		mesh_container.add_child(hind)
+
+		# Hind paw
+		var hpaw: MeshInstance3D = MeshInstance3D.new()
+		var hp_box: BoxMesh = BoxMesh.new()
+		hp_box.size = Vector3(0.06, 0.04, 0.12)
+		hpaw.mesh = hp_box
+		hpaw.position = Vector3(side, 0.02, -0.14)
+		hpaw.material_override = paw_mat
+		mesh_container.add_child(hpaw)
+
+	# Tail - fluffy white puff
 	tail_mesh = MeshInstance3D.new()
 	var tail_box: BoxMesh = BoxMesh.new()
-	tail_box.size = Vector3(0.12, 0.12, 0.1)
+	tail_box.size = Vector3(0.10, 0.10, 0.08)
 	tail_mesh.mesh = tail_box
-	tail_mesh.position = Vector3(0, 0.18, -0.25)
-
-	var tail_mat: StandardMaterial3D = StandardMaterial3D.new()
-	tail_mat.albedo_color = Color(0.9, 0.88, 0.85)  # Off-white
+	tail_mesh.position = Vector3(0, 0.20, -0.24)
 	tail_mesh.material_override = tail_mat
 	mesh_container.add_child(tail_mesh)
+
+	# Tail fluff (slightly larger, transparent overlay)
+	var fluff: MeshInstance3D = MeshInstance3D.new()
+	var fl_box: BoxMesh = BoxMesh.new()
+	fl_box.size = Vector3(0.12, 0.12, 0.10)
+	fluff.mesh = fl_box
+	fluff.position = Vector3(0, 0.20, -0.24)
+	var fluff_mat: StandardMaterial3D = StandardMaterial3D.new()
+	fluff_mat.albedo_color = Color(0.95, 0.93, 0.90, 0.5)
+	fluff_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	fluff.material_override = fluff_mat
+	mesh_container.add_child(fluff)
 
 
 func _process(delta: float) -> void:

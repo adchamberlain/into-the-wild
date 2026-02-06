@@ -770,29 +770,267 @@ func _create_fire_pit() -> StaticBody3D:
 	collision.position.y = 0.2
 	fire_pit.add_child(collision)
 
-	var rocks: MeshInstance3D = MeshInstance3D.new()
-	var rocks_box: BoxMesh = BoxMesh.new()
-	rocks_box.size = Vector3(1.2, 0.3, 1.2)
-	rocks.mesh = rocks_box
-	rocks.position.y = 0.15
-	var rock_mat: StandardMaterial3D = StandardMaterial3D.new()
-	rock_mat.albedo_color = Color(0.4, 0.4, 0.4)
-	rocks.material_override = rock_mat
-	fire_pit.add_child(rocks)
+	# --- Stone ring: 8 individual stones arranged in a circle ---
+	var stone_colors: Array[Color] = [
+		Color(0.38, 0.36, 0.33), Color(0.42, 0.40, 0.36),
+		Color(0.35, 0.33, 0.30), Color(0.40, 0.38, 0.35),
+		Color(0.36, 0.34, 0.31), Color(0.44, 0.42, 0.38),
+		Color(0.33, 0.31, 0.28), Color(0.39, 0.37, 0.34)
+	]
+	for i: int in range(8):
+		var stone: MeshInstance3D = MeshInstance3D.new()
+		var stone_mesh: BoxMesh = BoxMesh.new()
+		var sw: float = 0.25 + (i % 3) * 0.05
+		var sh: float = 0.15 + (i % 2) * 0.04
+		var sd: float = 0.22 + (i % 3) * 0.03
+		stone_mesh.size = Vector3(sw, sh, sd)
+		stone.mesh = stone_mesh
+		var angle: float = i * TAU / 8.0
+		stone.position = Vector3(cos(angle) * 0.52, sh / 2.0, sin(angle) * 0.52)
+		stone.rotation.y = angle + 0.3
+		var s_mat: StandardMaterial3D = StandardMaterial3D.new()
+		s_mat.albedo_color = stone_colors[i]
+		s_mat.roughness = 0.95
+		stone.material_override = s_mat
+		fire_pit.add_child(stone)
 
-	var fire_mesh: MeshInstance3D = MeshInstance3D.new()
-	fire_mesh.name = "FireMesh"
-	var fire_box: BoxMesh = BoxMesh.new()
-	fire_box.size = Vector3(0.5, 0.7, 0.5)
-	fire_mesh.mesh = fire_box
-	fire_mesh.position.y = 0.5
-	var fire_mat: StandardMaterial3D = StandardMaterial3D.new()
-	fire_mat.albedo_color = Color(1.0, 0.5, 0.1)
-	fire_mat.emission_enabled = true
-	fire_mat.emission = Color(1.0, 0.4, 0.0)
-	fire_mat.emission_energy_multiplier = 2.0
-	fire_mesh.material_override = fire_mat
-	fire_pit.add_child(fire_mesh)
+	# Stone highlights (lighter tops)
+	for i: int in range(4):
+		var highlight: MeshInstance3D = MeshInstance3D.new()
+		var h_mesh: BoxMesh = BoxMesh.new()
+		h_mesh.size = Vector3(0.18, 0.03, 0.15)
+		highlight.mesh = h_mesh
+		var angle: float = i * TAU / 4.0 + 0.4
+		highlight.position = Vector3(cos(angle) * 0.50, 0.18, sin(angle) * 0.50)
+		highlight.rotation.y = angle
+		var h_mat: StandardMaterial3D = StandardMaterial3D.new()
+		h_mat.albedo_color = Color(0.50, 0.48, 0.44, 0.6)
+		h_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		highlight.material_override = h_mat
+		fire_pit.add_child(highlight)
+
+	# --- Crossed logs with bark texture ---
+	var bark_mat: StandardMaterial3D = StandardMaterial3D.new()
+	bark_mat.albedo_color = Color(0.38, 0.24, 0.12)
+	bark_mat.roughness = 0.92
+
+	var bark_dark_mat: StandardMaterial3D = StandardMaterial3D.new()
+	bark_dark_mat.albedo_color = Color(0.30, 0.18, 0.08)
+	bark_dark_mat.roughness = 0.92
+
+	# Log 1
+	var log1: MeshInstance3D = MeshInstance3D.new()
+	var log1_mesh: BoxMesh = BoxMesh.new()
+	log1_mesh.size = Vector3(0.9, 0.12, 0.13)
+	log1.mesh = log1_mesh
+	log1.position = Vector3(0, 0.12, 0)
+	log1.rotation.y = -0.2
+	log1.material_override = bark_mat
+	fire_pit.add_child(log1)
+
+	# Log 1 bark stripe
+	var log1_stripe: MeshInstance3D = MeshInstance3D.new()
+	var stripe_mesh: BoxMesh = BoxMesh.new()
+	stripe_mesh.size = Vector3(0.88, 0.04, 0.14)
+	log1_stripe.mesh = stripe_mesh
+	log1_stripe.position = Vector3(0, 0.14, 0)
+	log1_stripe.rotation.y = -0.2
+	log1_stripe.material_override = bark_dark_mat
+	fire_pit.add_child(log1_stripe)
+
+	# Log 2 (crossed)
+	var log2: MeshInstance3D = MeshInstance3D.new()
+	var log2_mesh: BoxMesh = BoxMesh.new()
+	log2_mesh.size = Vector3(0.85, 0.11, 0.12)
+	log2.mesh = log2_mesh
+	log2.position = Vector3(0, 0.16, 0)
+	log2.rotation.y = 0.9
+	log2.material_override = bark_mat
+	fire_pit.add_child(log2)
+
+	# Log ends (lighter cross-sections)
+	var end_mat: StandardMaterial3D = StandardMaterial3D.new()
+	end_mat.albedo_color = Color(0.55, 0.42, 0.28)
+	for j: int in range(4):
+		var log_end: MeshInstance3D = MeshInstance3D.new()
+		var end_mesh: BoxMesh = BoxMesh.new()
+		end_mesh.size = Vector3(0.12, 0.12, 0.04)
+		log_end.mesh = end_mesh
+		var ex: float = [-0.44, 0.44, -0.38, 0.38][j]
+		var ez: float = [0.09, -0.09, -0.32, 0.32][j]
+		log_end.position = Vector3(ex, 0.14, ez)
+		log_end.rotation.y = [0.0, 0.0, 0.9, 0.9][j]
+		log_end.material_override = end_mat
+		fire_pit.add_child(log_end)
+
+	# Charred center
+	var char_mat: StandardMaterial3D = StandardMaterial3D.new()
+	char_mat.albedo_color = Color(0.08, 0.06, 0.04)
+	var charred: MeshInstance3D = MeshInstance3D.new()
+	var char_mesh: BoxMesh = BoxMesh.new()
+	char_mesh.size = Vector3(0.35, 0.04, 0.35)
+	charred.mesh = char_mesh
+	charred.position = Vector3(0, 0.06, 0)
+	charred.material_override = char_mat
+	fire_pit.add_child(charred)
+
+	# --- Layered fire (embers -> deep orange -> orange -> yellow -> white tip) ---
+	# Embers at base
+	var ember_mat: StandardMaterial3D = StandardMaterial3D.new()
+	ember_mat.albedo_color = Color(0.7, 0.15, 0.0)
+	ember_mat.emission_enabled = true
+	ember_mat.emission = Color(0.7, 0.12, 0.0)
+	ember_mat.emission_energy_multiplier = 1.5
+	var embers: MeshInstance3D = MeshInstance3D.new()
+	var ember_mesh: BoxMesh = BoxMesh.new()
+	ember_mesh.size = Vector3(0.4, 0.08, 0.4)
+	embers.mesh = ember_mesh
+	embers.position = Vector3(0, 0.22, 0)
+	embers.material_override = ember_mat
+	fire_pit.add_child(embers)
+
+	# Hot coals
+	var coal_mat: StandardMaterial3D = StandardMaterial3D.new()
+	coal_mat.albedo_color = Color(0.9, 0.25, 0.0)
+	coal_mat.emission_enabled = true
+	coal_mat.emission = Color(0.85, 0.2, 0.0)
+	coal_mat.emission_energy_multiplier = 2.0
+	var coals: MeshInstance3D = MeshInstance3D.new()
+	var coal_mesh: BoxMesh = BoxMesh.new()
+	coal_mesh.size = Vector3(0.3, 0.06, 0.3)
+	coals.mesh = coal_mesh
+	coals.position = Vector3(0, 0.27, 0)
+	coals.material_override = coal_mat
+	fire_pit.add_child(coals)
+
+	# Base flame - wide, deep orange
+	var base_flame_mat: StandardMaterial3D = StandardMaterial3D.new()
+	base_flame_mat.albedo_color = Color(1.0, 0.35, 0.0)
+	base_flame_mat.emission_enabled = true
+	base_flame_mat.emission = Color(0.95, 0.3, 0.0)
+	base_flame_mat.emission_energy_multiplier = 2.5
+	var base_flame: MeshInstance3D = MeshInstance3D.new()
+	base_flame.name = "FireMesh"
+	var bf_mesh: BoxMesh = BoxMesh.new()
+	bf_mesh.size = Vector3(0.35, 0.25, 0.3)
+	base_flame.mesh = bf_mesh
+	base_flame.position = Vector3(0, 0.42, 0)
+	base_flame.material_override = base_flame_mat
+	fire_pit.add_child(base_flame)
+
+	# Left tongue
+	var tongue_mat: StandardMaterial3D = StandardMaterial3D.new()
+	tongue_mat.albedo_color = Color(0.95, 0.4, 0.0)
+	tongue_mat.emission_enabled = true
+	tongue_mat.emission = Color(0.9, 0.35, 0.0)
+	tongue_mat.emission_energy_multiplier = 2.0
+	var l_tongue: MeshInstance3D = MeshInstance3D.new()
+	var lt_mesh: BoxMesh = BoxMesh.new()
+	lt_mesh.size = Vector3(0.12, 0.2, 0.1)
+	l_tongue.mesh = lt_mesh
+	l_tongue.position = Vector3(-0.15, 0.40, 0.05)
+	l_tongue.material_override = tongue_mat
+	fire_pit.add_child(l_tongue)
+
+	# Right tongue
+	var r_tongue: MeshInstance3D = MeshInstance3D.new()
+	var rt_mesh: BoxMesh = BoxMesh.new()
+	rt_mesh.size = Vector3(0.1, 0.18, 0.12)
+	r_tongue.mesh = rt_mesh
+	r_tongue.position = Vector3(0.14, 0.42, -0.06)
+	r_tongue.material_override = tongue_mat
+	fire_pit.add_child(r_tongue)
+
+	# Mid flame - bright orange
+	var mid_mat: StandardMaterial3D = StandardMaterial3D.new()
+	mid_mat.albedo_color = Color(1.0, 0.55, 0.05)
+	mid_mat.emission_enabled = true
+	mid_mat.emission = Color(1.0, 0.5, 0.0)
+	mid_mat.emission_energy_multiplier = 3.0
+	var mid_flame: MeshInstance3D = MeshInstance3D.new()
+	var mf_mesh: BoxMesh = BoxMesh.new()
+	mf_mesh.size = Vector3(0.25, 0.2, 0.2)
+	mid_flame.mesh = mf_mesh
+	mid_flame.position = Vector3(0, 0.58, 0)
+	mid_flame.material_override = mid_mat
+	fire_pit.add_child(mid_flame)
+
+	# Upper flame - yellow-orange
+	var upper_mat: StandardMaterial3D = StandardMaterial3D.new()
+	upper_mat.albedo_color = Color(1.0, 0.7, 0.15)
+	upper_mat.emission_enabled = true
+	upper_mat.emission = Color(1.0, 0.65, 0.1)
+	upper_mat.emission_energy_multiplier = 3.0
+	var upper_flame: MeshInstance3D = MeshInstance3D.new()
+	var uf_mesh: BoxMesh = BoxMesh.new()
+	uf_mesh.size = Vector3(0.18, 0.18, 0.15)
+	upper_flame.mesh = uf_mesh
+	upper_flame.position = Vector3(0, 0.72, 0)
+	upper_flame.material_override = upper_mat
+	fire_pit.add_child(upper_flame)
+
+	# Flame tip - bright yellow
+	var tip_mat: StandardMaterial3D = StandardMaterial3D.new()
+	tip_mat.albedo_color = Color(1.0, 0.85, 0.3)
+	tip_mat.emission_enabled = true
+	tip_mat.emission = Color(1.0, 0.8, 0.2)
+	tip_mat.emission_energy_multiplier = 3.5
+	var tip_flame: MeshInstance3D = MeshInstance3D.new()
+	var tf_mesh: BoxMesh = BoxMesh.new()
+	tf_mesh.size = Vector3(0.1, 0.14, 0.08)
+	tip_flame.mesh = tf_mesh
+	tip_flame.position = Vector3(0, 0.86, 0)
+	tip_flame.material_override = tip_mat
+	fire_pit.add_child(tip_flame)
+
+	# Hot core - white-yellow glow at center
+	var core_mat: StandardMaterial3D = StandardMaterial3D.new()
+	core_mat.albedo_color = Color(1.0, 0.95, 0.7, 0.85)
+	core_mat.emission_enabled = true
+	core_mat.emission = Color(1.0, 0.9, 0.6)
+	core_mat.emission_energy_multiplier = 4.0
+	core_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	var core: MeshInstance3D = MeshInstance3D.new()
+	var core_mesh: BoxMesh = BoxMesh.new()
+	core_mesh.size = Vector3(0.12, 0.15, 0.12)
+	core.mesh = core_mesh
+	core.position = Vector3(0, 0.45, 0)
+	core.material_override = core_mat
+	fire_pit.add_child(core)
+
+	# Rising sparks
+	var spark_mat: StandardMaterial3D = StandardMaterial3D.new()
+	spark_mat.albedo_color = Color(1.0, 0.8, 0.3)
+	spark_mat.emission_enabled = true
+	spark_mat.emission = Color(1.0, 0.75, 0.2)
+	spark_mat.emission_energy_multiplier = 3.0
+	for i: int in range(5):
+		var spark: MeshInstance3D = MeshInstance3D.new()
+		var sp_mesh: BoxMesh = BoxMesh.new()
+		sp_mesh.size = Vector3(0.03, 0.03, 0.03)
+		spark.mesh = sp_mesh
+		spark.position = Vector3(
+			(i - 2) * 0.08 + (i % 2) * 0.04,
+			1.0 + i * 0.08,
+			(i % 3 - 1) * 0.05
+		)
+		spark.material_override = spark_mat
+		fire_pit.add_child(spark)
+
+	# Fire glow background (soft orange aura on ground)
+	var glow_mat: StandardMaterial3D = StandardMaterial3D.new()
+	glow_mat.albedo_color = Color(1.0, 0.4, 0.1, 0.15)
+	glow_mat.emission_enabled = true
+	glow_mat.emission = Color(1.0, 0.35, 0.05)
+	glow_mat.emission_energy_multiplier = 1.0
+	glow_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	var glow: MeshInstance3D = MeshInstance3D.new()
+	var glow_mesh: BoxMesh = BoxMesh.new()
+	glow_mesh.size = Vector3(1.5, 0.02, 1.5)
+	glow.mesh = glow_mesh
+	glow.position = Vector3(0, 0.02, 0)
+	glow.material_override = glow_mat
+	fire_pit.add_child(glow)
 
 	var light: OmniLight3D = OmniLight3D.new()
 	light.name = "FireLight"
@@ -817,8 +1055,23 @@ func _create_basic_shelter() -> StaticBody3D:
 	collision.position.y = 0.75
 	shelter.add_child(collision)
 
+	# Wood materials with variation
 	var wood_mat: StandardMaterial3D = StandardMaterial3D.new()
-	wood_mat.albedo_color = Color(0.55, 0.35, 0.2)
+	wood_mat.albedo_color = Color(0.50, 0.33, 0.18)
+	wood_mat.roughness = 0.92
+
+	var wood_dark_mat: StandardMaterial3D = StandardMaterial3D.new()
+	wood_dark_mat.albedo_color = Color(0.40, 0.26, 0.13)
+	wood_dark_mat.roughness = 0.92
+
+	var wood_light_mat: StandardMaterial3D = StandardMaterial3D.new()
+	wood_light_mat.albedo_color = Color(0.58, 0.40, 0.24)
+	wood_light_mat.roughness = 0.90
+
+	# Canvas cover - main panel
+	var canvas_mat: StandardMaterial3D = StandardMaterial3D.new()
+	canvas_mat.albedo_color = Color(0.62, 0.57, 0.42)
+	canvas_mat.roughness = 0.85
 
 	var cover: MeshInstance3D = MeshInstance3D.new()
 	var cover_mesh: BoxMesh = BoxMesh.new()
@@ -826,11 +1079,35 @@ func _create_basic_shelter() -> StaticBody3D:
 	cover.mesh = cover_mesh
 	cover.position = Vector3(0, 0.9, 0)
 	cover.rotation.x = 0.5
-	var canvas_mat: StandardMaterial3D = StandardMaterial3D.new()
-	canvas_mat.albedo_color = Color(0.6, 0.55, 0.4)
 	cover.material_override = canvas_mat
 	shelter.add_child(cover)
 
+	# Canvas shadow underside
+	var canvas_shadow_mat: StandardMaterial3D = StandardMaterial3D.new()
+	canvas_shadow_mat.albedo_color = Color(0.48, 0.44, 0.32)
+	var cover_under: MeshInstance3D = MeshInstance3D.new()
+	var cu_mesh: BoxMesh = BoxMesh.new()
+	cu_mesh.size = Vector3(2.3, 0.02, 2.1)
+	cover_under.mesh = cu_mesh
+	cover_under.position = Vector3(0, 0.87, 0)
+	cover_under.rotation.x = 0.5
+	cover_under.material_override = canvas_shadow_mat
+	shelter.add_child(cover_under)
+
+	# Canvas seam lines (stitching detail)
+	var seam_mat: StandardMaterial3D = StandardMaterial3D.new()
+	seam_mat.albedo_color = Color(0.52, 0.48, 0.35)
+	for i: int in range(3):
+		var seam: MeshInstance3D = MeshInstance3D.new()
+		var seam_mesh: BoxMesh = BoxMesh.new()
+		seam_mesh.size = Vector3(2.3, 0.015, 0.03)
+		seam.mesh = seam_mesh
+		seam.position = Vector3(0, 0.92, -0.6 + i * 0.6)
+		seam.rotation.x = 0.5
+		seam.material_override = seam_mat
+		shelter.add_child(seam)
+
+	# Frame beams (back and front)
 	var frame_mesh: BoxMesh = BoxMesh.new()
 	frame_mesh.size = Vector3(2.5, 0.1, 0.1)
 
@@ -846,6 +1123,7 @@ func _create_basic_shelter() -> StaticBody3D:
 	frame_front.material_override = wood_mat
 	shelter.add_child(frame_front)
 
+	# Support poles with bark detail
 	var pole_mesh: BoxMesh = BoxMesh.new()
 	pole_mesh.size = Vector3(0.1, 1.5, 0.1)
 
@@ -860,6 +1138,63 @@ func _create_basic_shelter() -> StaticBody3D:
 	pole_right.position = Vector3(1.1, 0.75, -0.8)
 	pole_right.material_override = wood_mat
 	shelter.add_child(pole_right)
+
+	# Bark texture strips on poles
+	var bark_strip_mesh: BoxMesh = BoxMesh.new()
+	bark_strip_mesh.size = Vector3(0.04, 1.48, 0.11)
+	for side_x: float in [-1.1, 1.1]:
+		var strip: MeshInstance3D = MeshInstance3D.new()
+		strip.mesh = bark_strip_mesh
+		strip.position = Vector3(side_x + 0.02, 0.75, -0.8)
+		strip.material_override = wood_dark_mat
+		shelter.add_child(strip)
+
+	# Lashing at pole-beam joints (rope wraps)
+	var lash_mat: StandardMaterial3D = StandardMaterial3D.new()
+	lash_mat.albedo_color = Color(0.55, 0.48, 0.35)
+	var lash_mesh: BoxMesh = BoxMesh.new()
+	lash_mesh.size = Vector3(0.16, 0.08, 0.16)
+	for side_x: float in [-1.1, 1.1]:
+		var lash: MeshInstance3D = MeshInstance3D.new()
+		lash.mesh = lash_mesh
+		lash.position = Vector3(side_x, 1.5, -0.8)
+		lash.material_override = lash_mat
+		shelter.add_child(lash)
+
+	# Front low support sticks (forked)
+	var stick_mesh: BoxMesh = BoxMesh.new()
+	stick_mesh.size = Vector3(0.06, 0.6, 0.06)
+	for side_x: float in [-1.1, 1.1]:
+		var stick: MeshInstance3D = MeshInstance3D.new()
+		stick.mesh = stick_mesh
+		stick.position = Vector3(side_x, 0.3, 1.0)
+		stick.rotation.z = 0.05 if side_x < 0 else -0.05
+		stick.material_override = wood_dark_mat
+		shelter.add_child(stick)
+
+	# Ground leaf bed (inside shelter)
+	var leaf_mat: StandardMaterial3D = StandardMaterial3D.new()
+	leaf_mat.albedo_color = Color(0.35, 0.28, 0.15)
+	var leaf_bed: MeshInstance3D = MeshInstance3D.new()
+	var lb_mesh: BoxMesh = BoxMesh.new()
+	lb_mesh.size = Vector3(1.6, 0.06, 1.4)
+	leaf_bed.mesh = lb_mesh
+	leaf_bed.position = Vector3(0, 0.03, -0.1)
+	leaf_bed.material_override = leaf_mat
+	shelter.add_child(leaf_bed)
+
+	# Scattered leaf patches
+	var leaf_green_mat: StandardMaterial3D = StandardMaterial3D.new()
+	leaf_green_mat.albedo_color = Color(0.28, 0.35, 0.18)
+	for i: int in range(4):
+		var patch: MeshInstance3D = MeshInstance3D.new()
+		var p_mesh: BoxMesh = BoxMesh.new()
+		p_mesh.size = Vector3(0.4, 0.03, 0.3)
+		patch.mesh = p_mesh
+		patch.position = Vector3(-0.5 + i * 0.35, 0.05, -0.3 + (i % 2) * 0.3)
+		patch.rotation.y = i * 0.7
+		patch.material_override = leaf_green_mat if i % 2 == 0 else leaf_mat
+		shelter.add_child(patch)
 
 	var area: Area3D = Area3D.new()
 	area.name = "ProtectionArea"
@@ -886,25 +1221,118 @@ func _create_storage_container() -> StaticBody3D:
 	collision.position.y = 0.3
 	storage.add_child(collision)
 
-	var box_inst: MeshInstance3D = MeshInstance3D.new()
-	var box_mesh: BoxMesh = BoxMesh.new()
-	box_mesh.size = Vector3(1.0, 0.6, 0.6)
-	box_inst.mesh = box_mesh
-	box_inst.position.y = 0.3
+	# Materials
 	var wood_mat: StandardMaterial3D = StandardMaterial3D.new()
-	wood_mat.albedo_color = Color(0.6, 0.4, 0.25)
+	wood_mat.albedo_color = Color(0.58, 0.40, 0.24)
+	wood_mat.roughness = 0.88
+
+	var wood_dark_mat: StandardMaterial3D = StandardMaterial3D.new()
+	wood_dark_mat.albedo_color = Color(0.45, 0.30, 0.16)
+	wood_dark_mat.roughness = 0.90
+
+	var wood_light_mat: StandardMaterial3D = StandardMaterial3D.new()
+	wood_light_mat.albedo_color = Color(0.65, 0.48, 0.30)
+	wood_light_mat.roughness = 0.85
+
+	var metal_mat: StandardMaterial3D = StandardMaterial3D.new()
+	metal_mat.albedo_color = Color(0.30, 0.28, 0.26)
+	metal_mat.metallic = 0.6
+	metal_mat.roughness = 0.55
+
+	# Box body
+	var box_inst: MeshInstance3D = MeshInstance3D.new()
+	var bm: BoxMesh = BoxMesh.new()
+	bm.size = Vector3(1.0, 0.6, 0.6)
+	box_inst.mesh = bm
+	box_inst.position.y = 0.3
 	box_inst.material_override = wood_mat
 	storage.add_child(box_inst)
 
+	# Plank lines (vertical grain on front)
+	for i: int in range(5):
+		var plank: MeshInstance3D = MeshInstance3D.new()
+		var pm: BoxMesh = BoxMesh.new()
+		pm.size = Vector3(0.015, 0.56, 0.61)
+		plank.mesh = pm
+		plank.position = Vector3(-0.4 + i * 0.2, 0.3, 0)
+		plank.material_override = wood_dark_mat
+		storage.add_child(plank)
+
+	# Side plank lines
+	for i: int in range(3):
+		var s_plank: MeshInstance3D = MeshInstance3D.new()
+		var sp_m: BoxMesh = BoxMesh.new()
+		sp_m.size = Vector3(1.01, 0.56, 0.015)
+		s_plank.mesh = sp_m
+		s_plank.position = Vector3(0, 0.3, -0.2 + i * 0.2)
+		s_plank.material_override = wood_dark_mat
+		storage.add_child(s_plank)
+
+	# Metal corner bands
+	var band_mesh_h: BoxMesh = BoxMesh.new()
+	band_mesh_h.size = Vector3(1.04, 0.04, 0.64)
+	for y_pos: float in [0.04, 0.58]:
+		var band: MeshInstance3D = MeshInstance3D.new()
+		band.mesh = band_mesh_h
+		band.position = Vector3(0, y_pos, 0)
+		band.material_override = metal_mat
+		storage.add_child(band)
+
+	# Metal side bands (vertical reinforcements)
+	var band_mesh_v: BoxMesh = BoxMesh.new()
+	band_mesh_v.size = Vector3(0.04, 0.60, 0.64)
+	for x_pos: float in [-0.50, 0.50]:
+		var vband: MeshInstance3D = MeshInstance3D.new()
+		vband.mesh = band_mesh_v
+		vband.position = Vector3(x_pos, 0.3, 0)
+		vband.material_override = metal_mat
+		storage.add_child(vband)
+
+	# Lid
 	var lid: MeshInstance3D = MeshInstance3D.new()
 	var lid_mesh: BoxMesh = BoxMesh.new()
-	lid_mesh.size = Vector3(1.02, 0.08, 0.62)
+	lid_mesh.size = Vector3(1.04, 0.08, 0.64)
 	lid.mesh = lid_mesh
 	lid.position.y = 0.64
-	var lid_mat: StandardMaterial3D = StandardMaterial3D.new()
-	lid_mat.albedo_color = Color(0.5, 0.35, 0.2)
-	lid.material_override = lid_mat
+	lid.material_override = wood_dark_mat
 	storage.add_child(lid)
+
+	# Lid edge highlight
+	var lid_top: MeshInstance3D = MeshInstance3D.new()
+	var lt_m: BoxMesh = BoxMesh.new()
+	lt_m.size = Vector3(0.96, 0.02, 0.56)
+	lid_top.mesh = lt_m
+	lid_top.position.y = 0.69
+	lid_top.material_override = wood_light_mat
+	storage.add_child(lid_top)
+
+	# Handle on front
+	var handle_base: MeshInstance3D = MeshInstance3D.new()
+	var hb_m: BoxMesh = BoxMesh.new()
+	hb_m.size = Vector3(0.2, 0.04, 0.04)
+	handle_base.mesh = hb_m
+	handle_base.position = Vector3(0, 0.40, 0.32)
+	handle_base.material_override = metal_mat
+	storage.add_child(handle_base)
+
+	# Handle brackets
+	for hx: float in [-0.08, 0.08]:
+		var bracket: MeshInstance3D = MeshInstance3D.new()
+		var br_m: BoxMesh = BoxMesh.new()
+		br_m.size = Vector3(0.03, 0.06, 0.03)
+		bracket.mesh = br_m
+		bracket.position = Vector3(hx, 0.38, 0.32)
+		bracket.material_override = metal_mat
+		storage.add_child(bracket)
+
+	# Latch on front
+	var latch: MeshInstance3D = MeshInstance3D.new()
+	var la_m: BoxMesh = BoxMesh.new()
+	la_m.size = Vector3(0.08, 0.10, 0.02)
+	latch.mesh = la_m
+	latch.position = Vector3(0, 0.60, 0.32)
+	latch.material_override = metal_mat
+	storage.add_child(latch)
 
 	return storage
 
@@ -921,12 +1349,29 @@ func _create_crafting_bench() -> StaticBody3D:
 	collision.position.y = 0.4
 	bench.add_child(collision)
 
+	# Materials with variation
 	var wood_mat: StandardMaterial3D = StandardMaterial3D.new()
-	wood_mat.albedo_color = Color(0.5, 0.35, 0.2)
+	wood_mat.albedo_color = Color(0.52, 0.37, 0.22)
+	wood_mat.roughness = 0.88
+
+	var wood_dark_mat: StandardMaterial3D = StandardMaterial3D.new()
+	wood_dark_mat.albedo_color = Color(0.40, 0.26, 0.14)
+	wood_dark_mat.roughness = 0.90
+
+	var wood_light_mat: StandardMaterial3D = StandardMaterial3D.new()
+	wood_light_mat.albedo_color = Color(0.60, 0.45, 0.28)
+	wood_light_mat.roughness = 0.85
 
 	var leg_mat: StandardMaterial3D = StandardMaterial3D.new()
-	leg_mat.albedo_color = Color(0.4, 0.28, 0.15)
+	leg_mat.albedo_color = Color(0.42, 0.28, 0.15)
+	leg_mat.roughness = 0.92
 
+	var metal_mat: StandardMaterial3D = StandardMaterial3D.new()
+	metal_mat.albedo_color = Color(0.35, 0.33, 0.30)
+	metal_mat.metallic = 0.5
+	metal_mat.roughness = 0.6
+
+	# Thick tabletop
 	var top: MeshInstance3D = MeshInstance3D.new()
 	var top_mesh: BoxMesh = BoxMesh.new()
 	top_mesh.size = Vector3(1.2, 0.1, 0.8)
@@ -935,32 +1380,120 @@ func _create_crafting_bench() -> StaticBody3D:
 	top.material_override = wood_mat
 	bench.add_child(top)
 
+	# Wood grain lines on tabletop
+	for i: int in range(4):
+		var grain: MeshInstance3D = MeshInstance3D.new()
+		var g_mesh: BoxMesh = BoxMesh.new()
+		g_mesh.size = Vector3(1.18, 0.012, 0.03)
+		grain.mesh = g_mesh
+		grain.position = Vector3(0, 0.806, -0.25 + i * 0.18)
+		grain.material_override = wood_dark_mat
+		bench.add_child(grain)
+
+	# Edge banding (slightly darker lip around tabletop)
+	var edge_mat: StandardMaterial3D = StandardMaterial3D.new()
+	edge_mat.albedo_color = Color(0.45, 0.30, 0.17)
+	# Front edge
+	var front_edge: MeshInstance3D = MeshInstance3D.new()
+	var fe_mesh: BoxMesh = BoxMesh.new()
+	fe_mesh.size = Vector3(1.22, 0.1, 0.03)
+	front_edge.mesh = fe_mesh
+	front_edge.position = Vector3(0, 0.75, 0.41)
+	front_edge.material_override = edge_mat
+	bench.add_child(front_edge)
+	# Back edge
+	var back_edge: MeshInstance3D = MeshInstance3D.new()
+	back_edge.mesh = fe_mesh
+	back_edge.position = Vector3(0, 0.75, -0.41)
+	back_edge.material_override = edge_mat
+	bench.add_child(back_edge)
+
+	# Table legs with slight taper
 	var leg_mesh: BoxMesh = BoxMesh.new()
 	leg_mesh.size = Vector3(0.1, 0.65, 0.1)
 
-	var leg1: MeshInstance3D = MeshInstance3D.new()
-	leg1.mesh = leg_mesh
-	leg1.position = Vector3(-0.5, 0.325, -0.3)
-	leg1.material_override = leg_mat
-	bench.add_child(leg1)
+	var leg_positions: Array[Vector3] = [
+		Vector3(-0.5, 0.325, -0.3), Vector3(0.5, 0.325, -0.3),
+		Vector3(-0.5, 0.325, 0.3), Vector3(0.5, 0.325, 0.3)
+	]
+	for pos: Vector3 in leg_positions:
+		var leg: MeshInstance3D = MeshInstance3D.new()
+		leg.mesh = leg_mesh
+		leg.position = pos
+		leg.material_override = leg_mat
+		bench.add_child(leg)
 
-	var leg2: MeshInstance3D = MeshInstance3D.new()
-	leg2.mesh = leg_mesh
-	leg2.position = Vector3(0.5, 0.325, -0.3)
-	leg2.material_override = leg_mat
-	bench.add_child(leg2)
+	# Cross-braces for stability
+	var brace_mesh: BoxMesh = BoxMesh.new()
+	brace_mesh.size = Vector3(0.9, 0.05, 0.06)
+	# Front brace
+	var f_brace: MeshInstance3D = MeshInstance3D.new()
+	f_brace.mesh = brace_mesh
+	f_brace.position = Vector3(0, 0.2, 0.3)
+	f_brace.material_override = wood_dark_mat
+	bench.add_child(f_brace)
+	# Back brace
+	var b_brace: MeshInstance3D = MeshInstance3D.new()
+	b_brace.mesh = brace_mesh
+	b_brace.position = Vector3(0, 0.2, -0.3)
+	b_brace.material_override = wood_dark_mat
+	bench.add_child(b_brace)
 
-	var leg3: MeshInstance3D = MeshInstance3D.new()
-	leg3.mesh = leg_mesh
-	leg3.position = Vector3(-0.5, 0.325, 0.3)
-	leg3.material_override = leg_mat
-	bench.add_child(leg3)
+	# Side brace
+	var s_brace_mesh: BoxMesh = BoxMesh.new()
+	s_brace_mesh.size = Vector3(0.06, 0.05, 0.5)
+	var side_brace: MeshInstance3D = MeshInstance3D.new()
+	side_brace.mesh = s_brace_mesh
+	side_brace.position = Vector3(0, 0.35, 0)
+	side_brace.material_override = wood_dark_mat
+	bench.add_child(side_brace)
 
-	var leg4: MeshInstance3D = MeshInstance3D.new()
-	leg4.mesh = leg_mesh
-	leg4.position = Vector3(0.5, 0.325, 0.3)
-	leg4.material_override = leg_mat
-	bench.add_child(leg4)
+	# Tools on surface: small hammer head
+	var hammer_head: MeshInstance3D = MeshInstance3D.new()
+	var hh_mesh: BoxMesh = BoxMesh.new()
+	hh_mesh.size = Vector3(0.06, 0.04, 0.12)
+	hammer_head.mesh = hh_mesh
+	hammer_head.position = Vector3(-0.35, 0.82, 0.1)
+	hammer_head.material_override = metal_mat
+	bench.add_child(hammer_head)
+	# Hammer handle
+	var hammer_handle: MeshInstance3D = MeshInstance3D.new()
+	var hh2_mesh: BoxMesh = BoxMesh.new()
+	hh2_mesh.size = Vector3(0.03, 0.03, 0.2)
+	hammer_handle.mesh = hh2_mesh
+	hammer_handle.position = Vector3(-0.35, 0.82, 0.22)
+	hammer_handle.material_override = wood_light_mat
+	bench.add_child(hammer_handle)
+
+	# Small knife on surface
+	var knife_blade: MeshInstance3D = MeshInstance3D.new()
+	var kb_mesh: BoxMesh = BoxMesh.new()
+	kb_mesh.size = Vector3(0.15, 0.01, 0.03)
+	knife_blade.mesh = kb_mesh
+	knife_blade.position = Vector3(0.3, 0.812, -0.15)
+	knife_blade.rotation.y = 0.3
+	knife_blade.material_override = metal_mat
+	bench.add_child(knife_blade)
+	var knife_grip: MeshInstance3D = MeshInstance3D.new()
+	var kg_mesh: BoxMesh = BoxMesh.new()
+	kg_mesh.size = Vector3(0.08, 0.02, 0.04)
+	knife_grip.mesh = kg_mesh
+	knife_grip.position = Vector3(0.38, 0.815, -0.14)
+	knife_grip.rotation.y = 0.3
+	knife_grip.material_override = wood_dark_mat
+	bench.add_child(knife_grip)
+
+	# Wear marks on tabletop (lighter scratched areas)
+	var wear_mat: StandardMaterial3D = StandardMaterial3D.new()
+	wear_mat.albedo_color = Color(0.58, 0.44, 0.28, 0.4)
+	wear_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	var wear: MeshInstance3D = MeshInstance3D.new()
+	var w_mesh: BoxMesh = BoxMesh.new()
+	w_mesh.size = Vector3(0.4, 0.012, 0.3)
+	wear.mesh = w_mesh
+	wear.position = Vector3(0, 0.808, 0.05)
+	wear.material_override = wear_mat
+	bench.add_child(wear)
 
 	return bench
 
@@ -970,8 +1503,24 @@ func _create_drying_rack() -> StaticBody3D:
 	rack.name = "DryingRack"
 	rack.set_script(load("res://scripts/campsite/structure_drying_rack.gd"))
 
+	# Materials
 	var wood_mat: StandardMaterial3D = StandardMaterial3D.new()
-	wood_mat.albedo_color = Color(0.5, 0.35, 0.2)
+	wood_mat.albedo_color = Color(0.50, 0.35, 0.20)
+	wood_mat.roughness = 0.90
+
+	var wood_dark_mat: StandardMaterial3D = StandardMaterial3D.new()
+	wood_dark_mat.albedo_color = Color(0.38, 0.25, 0.13)
+	wood_dark_mat.roughness = 0.92
+
+	var rope_mat: StandardMaterial3D = StandardMaterial3D.new()
+	rope_mat.albedo_color = Color(0.55, 0.48, 0.35)
+	rope_mat.roughness = 0.85
+
+	var meat_mat: StandardMaterial3D = StandardMaterial3D.new()
+	meat_mat.albedo_color = Color(0.55, 0.28, 0.22)
+
+	var herb_mat: StandardMaterial3D = StandardMaterial3D.new()
+	herb_mat.albedo_color = Color(0.30, 0.45, 0.22)
 
 	var collision: CollisionShape3D = CollisionShape3D.new()
 	var box_shape: BoxShape3D = BoxShape3D.new()
@@ -980,30 +1529,95 @@ func _create_drying_rack() -> StaticBody3D:
 	collision.position.y = 0.6
 	rack.add_child(collision)
 
+	# Posts with bark texture
 	var post_mesh: BoxMesh = BoxMesh.new()
 	post_mesh.size = Vector3(0.1, 1.2, 0.1)
+	var bark_mesh: BoxMesh = BoxMesh.new()
+	bark_mesh.size = Vector3(0.04, 1.18, 0.11)
 
-	var post_left: MeshInstance3D = MeshInstance3D.new()
-	post_left.mesh = post_mesh
-	post_left.position = Vector3(-0.6, 0.6, 0)
-	post_left.material_override = wood_mat
-	rack.add_child(post_left)
+	for side_x: float in [-0.6, 0.6]:
+		var post: MeshInstance3D = MeshInstance3D.new()
+		post.mesh = post_mesh
+		post.position = Vector3(side_x, 0.6, 0)
+		post.material_override = wood_mat
+		rack.add_child(post)
+		# Bark detail
+		var bark: MeshInstance3D = MeshInstance3D.new()
+		bark.mesh = bark_mesh
+		bark.position = Vector3(side_x + 0.02, 0.6, 0)
+		bark.material_override = wood_dark_mat
+		rack.add_child(bark)
 
-	var post_right: MeshInstance3D = MeshInstance3D.new()
-	post_right.mesh = post_mesh
-	post_right.position = Vector3(0.6, 0.6, 0)
-	post_right.material_override = wood_mat
-	rack.add_child(post_right)
+	# Forked tops on posts (Y-shape support)
+	var fork_mesh: BoxMesh = BoxMesh.new()
+	fork_mesh.size = Vector3(0.06, 0.15, 0.04)
+	for side_x: float in [-0.6, 0.6]:
+		for fork_off: float in [-0.06, 0.06]:
+			var fork: MeshInstance3D = MeshInstance3D.new()
+			fork.mesh = fork_mesh
+			fork.position = Vector3(side_x + fork_off, 1.25, 0)
+			fork.rotation.z = fork_off * 5.0
+			fork.material_override = wood_mat
+			rack.add_child(fork)
 
+	# Horizontal bars with notch detail
 	var bar_mesh: BoxMesh = BoxMesh.new()
-	bar_mesh.size = Vector3(1.2, 0.06, 0.06)
+	bar_mesh.size = Vector3(1.3, 0.06, 0.06)
 
 	for i: int in range(3):
+		var bar_y: float = 0.4 + i * 0.35
 		var bar: MeshInstance3D = MeshInstance3D.new()
 		bar.mesh = bar_mesh
-		bar.position = Vector3(0, 0.4 + i * 0.35, 0)
+		bar.position = Vector3(0, bar_y, 0)
 		bar.material_override = wood_mat
 		rack.add_child(bar)
+
+	# Lashing at bar-post joints
+	var lash_mesh: BoxMesh = BoxMesh.new()
+	lash_mesh.size = Vector3(0.14, 0.04, 0.14)
+	for i: int in range(3):
+		for side_x: float in [-0.6, 0.6]:
+			var lash: MeshInstance3D = MeshInstance3D.new()
+			lash.mesh = lash_mesh
+			lash.position = Vector3(side_x, 0.4 + i * 0.35, 0)
+			lash.material_override = rope_mat
+			rack.add_child(lash)
+
+	# Hanging items: strips of meat/fish and herb bundles
+	var strip_mesh: BoxMesh = BoxMesh.new()
+	strip_mesh.size = Vector3(0.08, 0.18, 0.03)
+	var herb_bundle_mesh: BoxMesh = BoxMesh.new()
+	herb_bundle_mesh.size = Vector3(0.06, 0.14, 0.06)
+
+	# Items on top bar
+	for i: int in range(4):
+		var item: MeshInstance3D = MeshInstance3D.new()
+		if i % 2 == 0:
+			item.mesh = strip_mesh
+			item.material_override = meat_mat
+		else:
+			item.mesh = herb_bundle_mesh
+			item.material_override = herb_mat
+		item.position = Vector3(-0.35 + i * 0.25, 1.0, 0)
+		rack.add_child(item)
+
+	# Items on middle bar
+	for i: int in range(3):
+		var item: MeshInstance3D = MeshInstance3D.new()
+		item.mesh = strip_mesh
+		item.material_override = meat_mat if i != 1 else herb_mat
+		item.position = Vector3(-0.25 + i * 0.25, 0.58, 0)
+		rack.add_child(item)
+
+	# Hanging cord details (small vertical ropes)
+	var cord_mesh: BoxMesh = BoxMesh.new()
+	cord_mesh.size = Vector3(0.015, 0.08, 0.015)
+	for i: int in range(5):
+		var cord: MeshInstance3D = MeshInstance3D.new()
+		cord.mesh = cord_mesh
+		cord.position = Vector3(-0.4 + i * 0.2, 1.06, 0)
+		cord.material_override = rope_mat
+		rack.add_child(cord)
 
 	return rack
 
@@ -1013,14 +1627,41 @@ func _create_herb_garden() -> StaticBody3D:
 	garden.name = "HerbGarden"
 	garden.set_script(load("res://scripts/campsite/structure_garden.gd"))
 
+	# Materials
 	var wood_mat: StandardMaterial3D = StandardMaterial3D.new()
-	wood_mat.albedo_color = Color(0.5, 0.35, 0.2)
+	wood_mat.albedo_color = Color(0.50, 0.35, 0.20)
+	wood_mat.roughness = 0.90
+
+	var wood_dark_mat: StandardMaterial3D = StandardMaterial3D.new()
+	wood_dark_mat.albedo_color = Color(0.40, 0.27, 0.14)
+	wood_dark_mat.roughness = 0.92
 
 	var dirt_mat: StandardMaterial3D = StandardMaterial3D.new()
-	dirt_mat.albedo_color = Color(0.4, 0.28, 0.18)
+	dirt_mat.albedo_color = Color(0.38, 0.26, 0.16)
+	dirt_mat.roughness = 0.95
 
-	var plant_mat: StandardMaterial3D = StandardMaterial3D.new()
-	plant_mat.albedo_color = Color(0.25, 0.55, 0.2)
+	var dirt_dark_mat: StandardMaterial3D = StandardMaterial3D.new()
+	dirt_dark_mat.albedo_color = Color(0.30, 0.20, 0.12)
+	dirt_dark_mat.roughness = 0.95
+
+	# Plant colors - varied greens for different herbs
+	var herb_green: StandardMaterial3D = StandardMaterial3D.new()
+	herb_green.albedo_color = Color(0.25, 0.55, 0.20)
+
+	var herb_dark_green: StandardMaterial3D = StandardMaterial3D.new()
+	herb_dark_green.albedo_color = Color(0.18, 0.42, 0.15)
+
+	var herb_light_green: StandardMaterial3D = StandardMaterial3D.new()
+	herb_light_green.albedo_color = Color(0.35, 0.62, 0.28)
+
+	var herb_sage: StandardMaterial3D = StandardMaterial3D.new()
+	herb_sage.albedo_color = Color(0.40, 0.52, 0.38)
+
+	var flower_mat: StandardMaterial3D = StandardMaterial3D.new()
+	flower_mat.albedo_color = Color(0.75, 0.55, 0.80)
+
+	var flower_yellow_mat: StandardMaterial3D = StandardMaterial3D.new()
+	flower_yellow_mat.albedo_color = Color(0.90, 0.80, 0.30)
 
 	var collision: CollisionShape3D = CollisionShape3D.new()
 	var box_shape: BoxShape3D = BoxShape3D.new()
@@ -1029,36 +1670,49 @@ func _create_herb_garden() -> StaticBody3D:
 	collision.position.y = 0.2
 	garden.add_child(collision)
 
+	# Wooden border with plank detail
 	var border_mesh: BoxMesh = BoxMesh.new()
 	border_mesh.size = Vector3(2.0, 0.3, 0.1)
-
-	var border_front: MeshInstance3D = MeshInstance3D.new()
-	border_front.mesh = border_mesh
-	border_front.position = Vector3(0, 0.15, 0.7)
-	border_front.material_override = wood_mat
-	garden.add_child(border_front)
-
-	var border_back: MeshInstance3D = MeshInstance3D.new()
-	border_back.mesh = border_mesh
-	border_back.position = Vector3(0, 0.15, -0.7)
-	border_back.material_override = wood_mat
-	garden.add_child(border_back)
-
 	var side_mesh: BoxMesh = BoxMesh.new()
 	side_mesh.size = Vector3(0.1, 0.3, 1.5)
 
-	var border_left: MeshInstance3D = MeshInstance3D.new()
-	border_left.mesh = side_mesh
-	border_left.position = Vector3(-0.95, 0.15, 0)
-	border_left.material_override = wood_mat
-	garden.add_child(border_left)
+	# Front/back borders with nail detail
+	for z_pos: float in [0.7, -0.7]:
+		var border: MeshInstance3D = MeshInstance3D.new()
+		border.mesh = border_mesh
+		border.position = Vector3(0, 0.15, z_pos)
+		border.material_override = wood_mat
+		garden.add_child(border)
+		# Plank lines
+		for i: int in range(3):
+			var p_line: MeshInstance3D = MeshInstance3D.new()
+			var pl_m: BoxMesh = BoxMesh.new()
+			pl_m.size = Vector3(0.015, 0.28, 0.101)
+			p_line.mesh = pl_m
+			p_line.position = Vector3(-0.5 + i * 0.5, 0.15, z_pos)
+			p_line.material_override = wood_dark_mat
+			garden.add_child(p_line)
 
-	var border_right: MeshInstance3D = MeshInstance3D.new()
-	border_right.mesh = side_mesh
-	border_right.position = Vector3(0.95, 0.15, 0)
-	border_right.material_override = wood_mat
-	garden.add_child(border_right)
+	# Side borders
+	for x_pos: float in [-0.95, 0.95]:
+		var side: MeshInstance3D = MeshInstance3D.new()
+		side.mesh = side_mesh
+		side.position = Vector3(x_pos, 0.15, 0)
+		side.material_override = wood_mat
+		garden.add_child(side)
 
+	# Corner posts (slightly taller)
+	var corner_mesh: BoxMesh = BoxMesh.new()
+	corner_mesh.size = Vector3(0.08, 0.36, 0.08)
+	for cx: float in [-0.95, 0.95]:
+		for cz: float in [-0.7, 0.7]:
+			var corner: MeshInstance3D = MeshInstance3D.new()
+			corner.mesh = corner_mesh
+			corner.position = Vector3(cx, 0.18, cz)
+			corner.material_override = wood_dark_mat
+			garden.add_child(corner)
+
+	# Dirt bed with texture
 	var dirt: MeshInstance3D = MeshInstance3D.new()
 	var dirt_mesh: BoxMesh = BoxMesh.new()
 	dirt_mesh.size = Vector3(1.8, 0.2, 1.3)
@@ -1067,16 +1721,70 @@ func _create_herb_garden() -> StaticBody3D:
 	dirt.material_override = dirt_mat
 	garden.add_child(dirt)
 
-	var plant_mesh: BoxMesh = BoxMesh.new()
-	plant_mesh.size = Vector3(0.25, 0.3, 0.25)
+	# Furrow rows (darker dirt lines)
+	for i: int in range(3):
+		var furrow: MeshInstance3D = MeshInstance3D.new()
+		var f_mesh: BoxMesh = BoxMesh.new()
+		f_mesh.size = Vector3(1.7, 0.015, 0.06)
+		furrow.mesh = f_mesh
+		furrow.position = Vector3(0, 0.21, -0.4 + i * 0.4)
+		furrow.material_override = dirt_dark_mat
+		garden.add_child(furrow)
+
+	# Plants - 8 varied herb types in 2x4 grid
+	var herb_materials: Array = [herb_green, herb_dark_green, herb_light_green, herb_sage,
+		herb_green, herb_light_green, herb_dark_green, herb_sage]
 
 	for row: int in range(2):
 		for col: int in range(4):
+			var idx: int = row * 4 + col
+			var px: float = -0.6 + col * 0.4
+			var pz: float = -0.3 + row * 0.6
+
+			# Main plant body (varied heights)
 			var plant: MeshInstance3D = MeshInstance3D.new()
-			plant.mesh = plant_mesh
-			plant.position = Vector3(-0.6 + col * 0.4, 0.35, -0.3 + row * 0.6)
-			plant.material_override = plant_mat
+			var p_mesh: BoxMesh = BoxMesh.new()
+			var height: float = 0.22 + (idx % 3) * 0.06
+			p_mesh.size = Vector3(0.2, height, 0.2)
+			plant.mesh = p_mesh
+			plant.position = Vector3(px, 0.2 + height / 2.0, pz)
+			plant.material_override = herb_materials[idx]
 			garden.add_child(plant)
+
+			# Leaf clusters (smaller boxes around main plant)
+			for leaf_i: int in range(3):
+				var leaf: MeshInstance3D = MeshInstance3D.new()
+				var l_mesh: BoxMesh = BoxMesh.new()
+				l_mesh.size = Vector3(0.1, 0.08, 0.1)
+				leaf.mesh = l_mesh
+				var lx: float = px + [-0.1, 0.1, 0.0][leaf_i]
+				var lz: float = pz + [0.05, -0.05, 0.1][leaf_i]
+				leaf.position = Vector3(lx, 0.28 + leaf_i * 0.04, lz)
+				leaf.material_override = herb_materials[idx]
+				garden.add_child(leaf)
+
+			# Some plants get flowers (small colored dots on top)
+			if idx == 2 or idx == 5:
+				var flower: MeshInstance3D = MeshInstance3D.new()
+				var fl_mesh: BoxMesh = BoxMesh.new()
+				fl_mesh.size = Vector3(0.06, 0.06, 0.06)
+				flower.mesh = fl_mesh
+				flower.position = Vector3(px, 0.2 + height + 0.05, pz)
+				flower.material_override = flower_mat if idx == 2 else flower_yellow_mat
+				garden.add_child(flower)
+
+	# Mulch/bark chips scattered on soil
+	var mulch_mat: StandardMaterial3D = StandardMaterial3D.new()
+	mulch_mat.albedo_color = Color(0.42, 0.30, 0.18)
+	for i: int in range(6):
+		var mulch: MeshInstance3D = MeshInstance3D.new()
+		var m_mesh: BoxMesh = BoxMesh.new()
+		m_mesh.size = Vector3(0.08, 0.02, 0.05)
+		mulch.mesh = m_mesh
+		mulch.position = Vector3(-0.7 + i * 0.28, 0.21, 0.15 - (i % 2) * 0.3)
+		mulch.rotation.y = i * 0.8
+		mulch.material_override = mulch_mat
+		garden.add_child(mulch)
 
 	return garden
 
@@ -1086,11 +1794,29 @@ func _create_canvas_tent() -> StaticBody3D:
 	tent.name = "CanvasTent"
 	tent.set_script(load("res://scripts/campsite/structure_canvas_tent.gd"))
 
+	# Materials
 	var canvas_mat: StandardMaterial3D = StandardMaterial3D.new()
-	canvas_mat.albedo_color = Color(0.75, 0.68, 0.55)
+	canvas_mat.albedo_color = Color(0.72, 0.66, 0.52)
+	canvas_mat.roughness = 0.85
+
+	var canvas_shadow_mat: StandardMaterial3D = StandardMaterial3D.new()
+	canvas_shadow_mat.albedo_color = Color(0.60, 0.55, 0.42)
+
+	var canvas_light_mat: StandardMaterial3D = StandardMaterial3D.new()
+	canvas_light_mat.albedo_color = Color(0.78, 0.72, 0.58)
 
 	var wood_mat: StandardMaterial3D = StandardMaterial3D.new()
-	wood_mat.albedo_color = Color(0.5, 0.35, 0.2)
+	wood_mat.albedo_color = Color(0.50, 0.35, 0.20)
+	wood_mat.roughness = 0.90
+
+	var wood_dark_mat: StandardMaterial3D = StandardMaterial3D.new()
+	wood_dark_mat.albedo_color = Color(0.38, 0.25, 0.13)
+
+	var rope_mat: StandardMaterial3D = StandardMaterial3D.new()
+	rope_mat.albedo_color = Color(0.55, 0.48, 0.35)
+
+	var interior_mat: StandardMaterial3D = StandardMaterial3D.new()
+	interior_mat.albedo_color = Color(0.08, 0.07, 0.06)
 
 	var collision: CollisionShape3D = CollisionShape3D.new()
 	var box_shape: BoxShape3D = BoxShape3D.new()
@@ -1099,23 +1825,46 @@ func _create_canvas_tent() -> StaticBody3D:
 	collision.position.y = 0.05
 	tent.add_child(collision)
 
+	# Canvas panels (A-frame)
 	var panel_mesh: BoxMesh = BoxMesh.new()
 	panel_mesh.size = Vector3(3.0, 0.05, 2.0)
 
+	# Left panel (slightly darker - shadow side)
 	var panel_left: MeshInstance3D = MeshInstance3D.new()
 	panel_left.mesh = panel_mesh
 	panel_left.position = Vector3(-0.7, 1.2, 0)
 	panel_left.rotation_degrees.z = 45
-	panel_left.material_override = canvas_mat
+	panel_left.material_override = canvas_shadow_mat
 	tent.add_child(panel_left)
 
+	# Right panel (lighter - catching light)
 	var panel_right: MeshInstance3D = MeshInstance3D.new()
 	panel_right.mesh = panel_mesh
 	panel_right.position = Vector3(0.7, 1.2, 0)
 	panel_right.rotation_degrees.z = -45
-	panel_right.material_override = canvas_mat
+	panel_right.material_override = canvas_light_mat
 	tent.add_child(panel_right)
 
+	# Canvas seam lines on panels
+	var seam_mesh: BoxMesh = BoxMesh.new()
+	seam_mesh.size = Vector3(2.9, 0.015, 0.03)
+	for i: int in range(3):
+		# Left panel seams
+		var seam_l: MeshInstance3D = MeshInstance3D.new()
+		seam_l.mesh = seam_mesh
+		seam_l.position = Vector3(-0.7, 1.22, -0.5 + i * 0.5)
+		seam_l.rotation_degrees.z = 45
+		seam_l.material_override = canvas_mat
+		tent.add_child(seam_l)
+		# Right panel seams
+		var seam_r: MeshInstance3D = MeshInstance3D.new()
+		seam_r.mesh = seam_mesh
+		seam_r.position = Vector3(0.7, 1.22, -0.5 + i * 0.5)
+		seam_r.rotation_degrees.z = -45
+		seam_r.material_override = canvas_mat
+		tent.add_child(seam_r)
+
+	# Back wall
 	var back_mesh: BoxMesh = BoxMesh.new()
 	back_mesh.size = Vector3(2.0, 1.8, 0.05)
 	var back: MeshInstance3D = MeshInstance3D.new()
@@ -1124,13 +1873,93 @@ func _create_canvas_tent() -> StaticBody3D:
 	back.material_override = canvas_mat
 	tent.add_child(back)
 
+	# Front opening flaps
+	var flap_mesh: BoxMesh = BoxMesh.new()
+	flap_mesh.size = Vector3(0.4, 1.6, 0.04)
+	# Left flap (slightly open/angled)
+	var flap_l: MeshInstance3D = MeshInstance3D.new()
+	flap_l.mesh = flap_mesh
+	flap_l.position = Vector3(-0.5, 0.85, 0.97)
+	flap_l.rotation.y = -0.2
+	flap_l.material_override = canvas_shadow_mat
+	tent.add_child(flap_l)
+	# Right flap
+	var flap_r: MeshInstance3D = MeshInstance3D.new()
+	flap_r.mesh = flap_mesh
+	flap_r.position = Vector3(0.5, 0.85, 0.97)
+	flap_r.rotation.y = 0.2
+	flap_r.material_override = canvas_light_mat
+	tent.add_child(flap_r)
+
+	# Dark interior visible through opening
+	var interior: MeshInstance3D = MeshInstance3D.new()
+	var int_mesh: BoxMesh = BoxMesh.new()
+	int_mesh.size = Vector3(0.8, 1.4, 0.02)
+	interior.mesh = int_mesh
+	interior.position = Vector3(0, 0.8, 0.90)
+	interior.material_override = interior_mat
+	tent.add_child(interior)
+
+	# Ridge pole
 	var ridge: MeshInstance3D = MeshInstance3D.new()
 	var ridge_mesh: BoxMesh = BoxMesh.new()
-	ridge_mesh.size = Vector3(0.08, 0.08, 2.1)
+	ridge_mesh.size = Vector3(0.08, 0.08, 2.3)
 	ridge.mesh = ridge_mesh
 	ridge.position = Vector3(0, 1.8, 0)
 	ridge.material_override = wood_mat
 	tent.add_child(ridge)
+
+	# Ridge pole bark detail
+	var ridge_bark: MeshInstance3D = MeshInstance3D.new()
+	var rb_mesh: BoxMesh = BoxMesh.new()
+	rb_mesh.size = Vector3(0.03, 0.085, 2.28)
+	ridge_bark.mesh = rb_mesh
+	ridge_bark.position = Vector3(0.02, 1.8, 0)
+	ridge_bark.material_override = wood_dark_mat
+	tent.add_child(ridge_bark)
+
+	# Support poles at front (visible through opening)
+	var front_pole_mesh: BoxMesh = BoxMesh.new()
+	front_pole_mesh.size = Vector3(0.07, 1.8, 0.07)
+	for fp_x: float in [-0.9, 0.9]:
+		var fp: MeshInstance3D = MeshInstance3D.new()
+		fp.mesh = front_pole_mesh
+		fp.position = Vector3(fp_x, 0.9, 0.95)
+		fp.material_override = wood_mat
+		tent.add_child(fp)
+
+	# Guy ropes (angled lines from ridge to ground)
+	var guy_mesh: BoxMesh = BoxMesh.new()
+	guy_mesh.size = Vector3(0.02, 1.2, 0.02)
+	for side_x: float in [-1.8, 1.8]:
+		var guy: MeshInstance3D = MeshInstance3D.new()
+		guy.mesh = guy_mesh
+		guy.position = Vector3(side_x * 0.6, 1.0, 0)
+		guy.rotation.z = 0.6 if side_x < 0 else -0.6
+		guy.material_override = rope_mat
+		tent.add_child(guy)
+
+	# Tent stakes
+	var stake_mesh: BoxMesh = BoxMesh.new()
+	stake_mesh.size = Vector3(0.04, 0.2, 0.04)
+	for sx: float in [-1.6, 1.6]:
+		var stake: MeshInstance3D = MeshInstance3D.new()
+		stake.mesh = stake_mesh
+		stake.position = Vector3(sx, 0.08, 0)
+		stake.rotation.z = 0.3 if sx < 0 else -0.3
+		stake.material_override = wood_dark_mat
+		tent.add_child(stake)
+
+	# Ground cloth visible at entrance
+	var ground_mat: StandardMaterial3D = StandardMaterial3D.new()
+	ground_mat.albedo_color = Color(0.48, 0.44, 0.36)
+	var ground_cloth: MeshInstance3D = MeshInstance3D.new()
+	var gc_mesh: BoxMesh = BoxMesh.new()
+	gc_mesh.size = Vector3(1.6, 0.02, 1.8)
+	ground_cloth.mesh = gc_mesh
+	ground_cloth.position = Vector3(0, 0.01, 0)
+	ground_cloth.material_override = ground_mat
+	tent.add_child(ground_cloth)
 
 	var area: Area3D = Area3D.new()
 	area.name = "ProtectionArea"
@@ -1384,41 +2213,146 @@ func _create_cabin_bed() -> StaticBody3D:
 	bed.name = "CabinBed"
 	bed.set_script(load("res://scripts/campsite/cabin_bed.gd"))
 
+	# Materials
 	var frame_mat: StandardMaterial3D = StandardMaterial3D.new()
-	frame_mat.albedo_color = Color(0.45, 0.32, 0.2)
+	frame_mat.albedo_color = Color(0.45, 0.32, 0.20)
+	frame_mat.roughness = 0.88
+
+	var frame_dark_mat: StandardMaterial3D = StandardMaterial3D.new()
+	frame_dark_mat.albedo_color = Color(0.36, 0.24, 0.14)
+	frame_dark_mat.roughness = 0.90
+
+	var frame_light_mat: StandardMaterial3D = StandardMaterial3D.new()
+	frame_light_mat.albedo_color = Color(0.52, 0.38, 0.24)
 
 	var blanket_mat: StandardMaterial3D = StandardMaterial3D.new()
-	blanket_mat.albedo_color = Color(0.3, 0.45, 0.6)  # Blue blanket
+	blanket_mat.albedo_color = Color(0.28, 0.42, 0.58)
+
+	var blanket_dark_mat: StandardMaterial3D = StandardMaterial3D.new()
+	blanket_dark_mat.albedo_color = Color(0.22, 0.35, 0.50)
+
+	var blanket_fold_mat: StandardMaterial3D = StandardMaterial3D.new()
+	blanket_fold_mat.albedo_color = Color(0.32, 0.48, 0.62)
+
+	var sheet_mat: StandardMaterial3D = StandardMaterial3D.new()
+	sheet_mat.albedo_color = Color(0.88, 0.85, 0.78)
 
 	var pillow_mat: StandardMaterial3D = StandardMaterial3D.new()
-	pillow_mat.albedo_color = Color(0.9, 0.88, 0.82)  # White pillow
+	pillow_mat.albedo_color = Color(0.92, 0.90, 0.84)
 
-	# Bed frame
+	var pillow_shadow_mat: StandardMaterial3D = StandardMaterial3D.new()
+	pillow_shadow_mat.albedo_color = Color(0.82, 0.80, 0.74)
+
+	# Bed frame base
 	var frame: MeshInstance3D = MeshInstance3D.new()
 	var frame_mesh: BoxMesh = BoxMesh.new()
-	frame_mesh.size = Vector3(1.8, 0.3, 1.0)
+	frame_mesh.size = Vector3(1.8, 0.25, 1.0)
 	frame.mesh = frame_mesh
-	frame.position.y = 0.15
+	frame.position.y = 0.125
 	frame.material_override = frame_mat
 	bed.add_child(frame)
 
-	# Mattress/blanket
+	# Headboard (tall back panel)
+	var headboard: MeshInstance3D = MeshInstance3D.new()
+	var hb_mesh: BoxMesh = BoxMesh.new()
+	hb_mesh.size = Vector3(0.08, 0.6, 1.0)
+	headboard.mesh = hb_mesh
+	headboard.position = Vector3(-0.86, 0.42, 0)
+	headboard.material_override = frame_dark_mat
+	bed.add_child(headboard)
+
+	# Headboard cap (decorative top)
+	var hb_cap: MeshInstance3D = MeshInstance3D.new()
+	var hbc_mesh: BoxMesh = BoxMesh.new()
+	hbc_mesh.size = Vector3(0.10, 0.04, 1.04)
+	hb_cap.mesh = hbc_mesh
+	hb_cap.position = Vector3(-0.86, 0.74, 0)
+	hb_cap.material_override = frame_light_mat
+	bed.add_child(hb_cap)
+
+	# Headboard vertical slats
+	for i: int in range(4):
+		var slat: MeshInstance3D = MeshInstance3D.new()
+		var sl_mesh: BoxMesh = BoxMesh.new()
+		sl_mesh.size = Vector3(0.085, 0.58, 0.06)
+		slat.mesh = sl_mesh
+		slat.position = Vector3(-0.86, 0.42, -0.32 + i * 0.22)
+		slat.material_override = frame_light_mat
+		bed.add_child(slat)
+
+	# Footboard (shorter)
+	var footboard: MeshInstance3D = MeshInstance3D.new()
+	var fb_mesh: BoxMesh = BoxMesh.new()
+	fb_mesh.size = Vector3(0.08, 0.38, 1.0)
+	footboard.mesh = fb_mesh
+	footboard.position = Vector3(0.86, 0.32, 0)
+	footboard.material_override = frame_dark_mat
+	bed.add_child(footboard)
+
+	# Side rails
+	var rail_mesh: BoxMesh = BoxMesh.new()
+	rail_mesh.size = Vector3(1.7, 0.06, 0.06)
+	for rz: float in [-0.47, 0.47]:
+		var rail: MeshInstance3D = MeshInstance3D.new()
+		rail.mesh = rail_mesh
+		rail.position = Vector3(0, 0.28, rz)
+		rail.material_override = frame_dark_mat
+		bed.add_child(rail)
+
+	# Sheet layer (white, visible at head)
+	var sheet: MeshInstance3D = MeshInstance3D.new()
+	var sh_mesh: BoxMesh = BoxMesh.new()
+	sh_mesh.size = Vector3(1.6, 0.04, 0.88)
+	sheet.mesh = sh_mesh
+	sheet.position = Vector3(0, 0.3, 0)
+	sheet.material_override = sheet_mat
+	bed.add_child(sheet)
+
+	# Blanket/bedspread (main covering)
 	var blanket: MeshInstance3D = MeshInstance3D.new()
 	var blanket_mesh: BoxMesh = BoxMesh.new()
-	blanket_mesh.size = Vector3(1.6, 0.15, 0.9)
+	blanket_mesh.size = Vector3(1.2, 0.12, 0.9)
 	blanket.mesh = blanket_mesh
-	blanket.position = Vector3(0, 0.375, 0)
+	blanket.position = Vector3(0.15, 0.36, 0)
 	blanket.material_override = blanket_mat
 	bed.add_child(blanket)
 
-	# Pillow
+	# Blanket fold at top (turned-down edge)
+	var fold: MeshInstance3D = MeshInstance3D.new()
+	var fold_mesh: BoxMesh = BoxMesh.new()
+	fold_mesh.size = Vector3(0.15, 0.14, 0.88)
+	fold.mesh = fold_mesh
+	fold.position = Vector3(-0.38, 0.37, 0)
+	fold.material_override = blanket_fold_mat
+	bed.add_child(fold)
+
+	# Blanket wrinkle lines
+	for i: int in range(3):
+		var wrinkle: MeshInstance3D = MeshInstance3D.new()
+		var wr_mesh: BoxMesh = BoxMesh.new()
+		wr_mesh.size = Vector3(1.1, 0.015, 0.04)
+		wrinkle.mesh = wr_mesh
+		wrinkle.position = Vector3(0.15, 0.425, -0.2 + i * 0.2)
+		wrinkle.material_override = blanket_dark_mat
+		bed.add_child(wrinkle)
+
+	# Pillow (with indent)
 	var pillow: MeshInstance3D = MeshInstance3D.new()
 	var pillow_mesh: BoxMesh = BoxMesh.new()
-	pillow_mesh.size = Vector3(0.5, 0.12, 0.35)
+	pillow_mesh.size = Vector3(0.45, 0.14, 0.38)
 	pillow.mesh = pillow_mesh
-	pillow.position = Vector3(-0.5, 0.5, 0)
+	pillow.position = Vector3(-0.58, 0.44, 0)
 	pillow.material_override = pillow_mat
 	bed.add_child(pillow)
+
+	# Pillow shadow/indent
+	var indent: MeshInstance3D = MeshInstance3D.new()
+	var ind_mesh: BoxMesh = BoxMesh.new()
+	ind_mesh.size = Vector3(0.25, 0.01, 0.2)
+	indent.mesh = ind_mesh
+	indent.position = Vector3(-0.58, 0.515, 0)
+	indent.material_override = pillow_shadow_mat
+	bed.add_child(indent)
 
 	# Collision for interaction
 	var collision: CollisionShape3D = CollisionShape3D.new()
@@ -1436,17 +2370,45 @@ func _create_cabin_kitchen() -> StaticBody3D:
 	kitchen.name = "CabinKitchen"
 	kitchen.set_script(load("res://scripts/campsite/cabin_kitchen.gd"))
 
+	# Materials
 	var wood_mat: StandardMaterial3D = StandardMaterial3D.new()
-	wood_mat.albedo_color = Color(0.5, 0.38, 0.25)
+	wood_mat.albedo_color = Color(0.50, 0.38, 0.25)
+	wood_mat.roughness = 0.88
+
+	var wood_dark_mat: StandardMaterial3D = StandardMaterial3D.new()
+	wood_dark_mat.albedo_color = Color(0.38, 0.26, 0.15)
+	wood_dark_mat.roughness = 0.90
 
 	var stone_mat: StandardMaterial3D = StandardMaterial3D.new()
-	stone_mat.albedo_color = Color(0.5, 0.5, 0.52)
+	stone_mat.albedo_color = Color(0.50, 0.50, 0.52)
+	stone_mat.roughness = 0.92
+
+	var stone_dark_mat: StandardMaterial3D = StandardMaterial3D.new()
+	stone_dark_mat.albedo_color = Color(0.40, 0.40, 0.42)
+	stone_dark_mat.roughness = 0.95
+
+	var metal_mat: StandardMaterial3D = StandardMaterial3D.new()
+	metal_mat.albedo_color = Color(0.30, 0.28, 0.26)
+	metal_mat.metallic = 0.6
+	metal_mat.roughness = 0.5
+
+	var ember_mat: StandardMaterial3D = StandardMaterial3D.new()
+	ember_mat.albedo_color = Color(0.8, 0.2, 0.0)
+	ember_mat.emission_enabled = true
+	ember_mat.emission = Color(0.7, 0.15, 0.0)
+	ember_mat.emission_energy_multiplier = 1.5
 
 	var fire_mat: StandardMaterial3D = StandardMaterial3D.new()
 	fire_mat.albedo_color = Color(1.0, 0.5, 0.1)
 	fire_mat.emission_enabled = true
 	fire_mat.emission = Color(1.0, 0.4, 0.0)
-	fire_mat.emission_energy_multiplier = 1.5
+	fire_mat.emission_energy_multiplier = 2.0
+
+	var fire_tip_mat: StandardMaterial3D = StandardMaterial3D.new()
+	fire_tip_mat.albedo_color = Color(1.0, 0.8, 0.3)
+	fire_tip_mat.emission_enabled = true
+	fire_tip_mat.emission = Color(1.0, 0.75, 0.2)
+	fire_tip_mat.emission_energy_multiplier = 2.5
 
 	# Counter/cabinet base
 	var counter: MeshInstance3D = MeshInstance3D.new()
@@ -1457,7 +2419,27 @@ func _create_cabin_kitchen() -> StaticBody3D:
 	counter.material_override = wood_mat
 	kitchen.add_child(counter)
 
-	# Stone cooking surface
+	# Cabinet door lines (panel detail)
+	for i: int in range(3):
+		var door_line: MeshInstance3D = MeshInstance3D.new()
+		var dl_mesh: BoxMesh = BoxMesh.new()
+		dl_mesh.size = Vector3(0.015, 0.7, 0.81)
+		door_line.mesh = dl_mesh
+		door_line.position = Vector3(-0.5 + i * 0.5, 0.4, 0)
+		door_line.material_override = wood_dark_mat
+		kitchen.add_child(door_line)
+
+	# Cabinet handles
+	for i: int in range(2):
+		var handle: MeshInstance3D = MeshInstance3D.new()
+		var h_mesh: BoxMesh = BoxMesh.new()
+		h_mesh.size = Vector3(0.03, 0.08, 0.03)
+		handle.mesh = h_mesh
+		handle.position = Vector3(-0.22 + i * 0.5, 0.45, 0.41)
+		handle.material_override = metal_mat
+		kitchen.add_child(handle)
+
+	# Stone cooking surface with individual stone blocks
 	var surface: MeshInstance3D = MeshInstance3D.new()
 	var surface_mesh: BoxMesh = BoxMesh.new()
 	surface_mesh.size = Vector3(1.5, 0.1, 0.8)
@@ -1466,14 +2448,124 @@ func _create_cabin_kitchen() -> StaticBody3D:
 	surface.material_override = stone_mat
 	kitchen.add_child(surface)
 
-	# Small cooking fire (always lit)
+	# Stone block lines on surface
+	for i: int in range(4):
+		var s_line: MeshInstance3D = MeshInstance3D.new()
+		var sl_mesh: BoxMesh = BoxMesh.new()
+		sl_mesh.size = Vector3(0.02, 0.101, 0.78)
+		s_line.mesh = sl_mesh
+		s_line.position = Vector3(-0.55 + i * 0.38, 0.85, 0)
+		s_line.material_override = stone_dark_mat
+		kitchen.add_child(s_line)
+
+	# Stone hearth/firebox (raised stone area for fire)
+	var hearth: MeshInstance3D = MeshInstance3D.new()
+	var h_mesh: BoxMesh = BoxMesh.new()
+	h_mesh.size = Vector3(0.5, 0.06, 0.5)
+	hearth.mesh = h_mesh
+	hearth.position = Vector3(0.4, 0.93, 0)
+	hearth.material_override = stone_dark_mat
+	kitchen.add_child(hearth)
+
+	# Layered cooking fire
+	# Embers
+	var fire_ember: MeshInstance3D = MeshInstance3D.new()
+	var fe_mesh: BoxMesh = BoxMesh.new()
+	fe_mesh.size = Vector3(0.28, 0.04, 0.28)
+	fire_ember.mesh = fe_mesh
+	fire_ember.position = Vector3(0.4, 0.97, 0)
+	fire_ember.material_override = ember_mat
+	kitchen.add_child(fire_ember)
+
+	# Main flame
 	var fire: MeshInstance3D = MeshInstance3D.new()
 	var fire_mesh: BoxMesh = BoxMesh.new()
-	fire_mesh.size = Vector3(0.3, 0.25, 0.3)
+	fire_mesh.size = Vector3(0.2, 0.18, 0.2)
 	fire.mesh = fire_mesh
-	fire.position = Vector3(0.4, 1.025, 0)
+	fire.position = Vector3(0.4, 1.06, 0)
 	fire.material_override = fire_mat
 	kitchen.add_child(fire)
+
+	# Flame tip
+	var fire_top: MeshInstance3D = MeshInstance3D.new()
+	var ft_mesh: BoxMesh = BoxMesh.new()
+	ft_mesh.size = Vector3(0.1, 0.12, 0.1)
+	fire_top.mesh = ft_mesh
+	fire_top.position = Vector3(0.4, 1.18, 0)
+	fire_top.material_override = fire_tip_mat
+	kitchen.add_child(fire_top)
+
+	# Cooking pot on the fire
+	var pot_mat: StandardMaterial3D = StandardMaterial3D.new()
+	pot_mat.albedo_color = Color(0.18, 0.18, 0.20)
+	pot_mat.metallic = 0.5
+	pot_mat.roughness = 0.6
+	var pot: MeshInstance3D = MeshInstance3D.new()
+	var pot_mesh: BoxMesh = BoxMesh.new()
+	pot_mesh.size = Vector3(0.22, 0.18, 0.22)
+	pot.mesh = pot_mesh
+	pot.position = Vector3(0.4, 1.05, 0)
+	pot.material_override = pot_mat
+	kitchen.add_child(pot)
+
+	# Pot handle (arching over)
+	var pot_handle: MeshInstance3D = MeshInstance3D.new()
+	var ph_mesh: BoxMesh = BoxMesh.new()
+	ph_mesh.size = Vector3(0.18, 0.02, 0.02)
+	pot_handle.mesh = ph_mesh
+	pot_handle.position = Vector3(0.4, 1.18, 0)
+	pot_handle.material_override = metal_mat
+	kitchen.add_child(pot_handle)
+
+	# Small shelf above counter
+	var shelf: MeshInstance3D = MeshInstance3D.new()
+	var sh_mesh: BoxMesh = BoxMesh.new()
+	sh_mesh.size = Vector3(0.8, 0.04, 0.25)
+	shelf.mesh = sh_mesh
+	shelf.position = Vector3(-0.3, 1.3, -0.28)
+	shelf.material_override = wood_dark_mat
+	kitchen.add_child(shelf)
+
+	# Shelf brackets
+	var bracket_mesh: BoxMesh = BoxMesh.new()
+	bracket_mesh.size = Vector3(0.04, 0.15, 0.04)
+	for bx: float in [-0.6, 0.0]:
+		var bracket: MeshInstance3D = MeshInstance3D.new()
+		bracket.mesh = bracket_mesh
+		bracket.position = Vector3(bx, 1.22, -0.28)
+		bracket.material_override = wood_dark_mat
+		kitchen.add_child(bracket)
+
+	# Items on shelf (small jars/bowls)
+	var jar_mat: StandardMaterial3D = StandardMaterial3D.new()
+	jar_mat.albedo_color = Color(0.55, 0.45, 0.35)
+	var jar: MeshInstance3D = MeshInstance3D.new()
+	var j_mesh: BoxMesh = BoxMesh.new()
+	j_mesh.size = Vector3(0.08, 0.12, 0.08)
+	jar.mesh = j_mesh
+	jar.position = Vector3(-0.5, 1.38, -0.28)
+	jar.material_override = jar_mat
+	kitchen.add_child(jar)
+
+	var bowl_mat: StandardMaterial3D = StandardMaterial3D.new()
+	bowl_mat.albedo_color = Color(0.50, 0.42, 0.30)
+	var bowl: MeshInstance3D = MeshInstance3D.new()
+	var b_mesh: BoxMesh = BoxMesh.new()
+	b_mesh.size = Vector3(0.12, 0.06, 0.12)
+	bowl.mesh = b_mesh
+	bowl.position = Vector3(-0.2, 1.35, -0.28)
+	bowl.material_override = bowl_mat
+	kitchen.add_child(bowl)
+
+	# Knife on counter surface
+	var knife_blade: MeshInstance3D = MeshInstance3D.new()
+	var kb_mesh: BoxMesh = BoxMesh.new()
+	kb_mesh.size = Vector3(0.12, 0.01, 0.025)
+	knife_blade.mesh = kb_mesh
+	knife_blade.position = Vector3(-0.3, 0.91, 0.15)
+	knife_blade.rotation.y = 0.4
+	knife_blade.material_override = metal_mat
+	kitchen.add_child(knife_blade)
 
 	# Light from fire
 	var light: OmniLight3D = OmniLight3D.new()

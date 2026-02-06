@@ -103,12 +103,10 @@ func _setup_visuals() -> void:
 	# Get shared meshes (avoids mesh creation per cave)
 	var dark_mat: StandardMaterial3D = _get_dark_material()
 
-	# Create varied materials for each piece - breaks up the uniform look
-	# Use deterministic tints based on cave_id for consistency
+	# Create varied materials for each piece
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = cave_id * 12345
 
-	# Create a rock mound/mountain using shared meshes
 	# The entrance faces +Z direction (player approaches from +Z)
 
 	# Main rock mass - the mountain body (slightly darker base)
@@ -151,6 +149,69 @@ func _setup_visuals() -> void:
 	add_child(front_top)
 	arch_meshes.append(front_top)
 
+	# Rock ledge above entrance (overhanging brow)
+	var ledge := MeshInstance3D.new()
+	var ledge_mesh := BoxMesh.new()
+	ledge_mesh.size = Vector3(6.0, 1.0, 2.0)
+	ledge.mesh = ledge_mesh
+	ledge.material_override = _create_tinted_rock_material(rng.randf_range(0.01, 0.04))
+	ledge.position = Vector3(0, 5.5, 2.5)
+	ledge.rotation_degrees.x = -8
+	add_child(ledge)
+	arch_meshes.append(ledge)
+
+	# Scattered boulders near entrance base
+	for i: int in range(4):
+		var boulder := MeshInstance3D.new()
+		var b_mesh := BoxMesh.new()
+		var bsize: float = rng.randf_range(0.8, 1.8)
+		b_mesh.size = Vector3(bsize, bsize * 0.7, bsize * 0.9)
+		boulder.mesh = b_mesh
+		boulder.material_override = _create_tinted_rock_material(rng.randf_range(-0.03, 0.03))
+		var bx: float = rng.randf_range(-5.0, 5.0)
+		var bz: float = rng.randf_range(2.5, 5.0)
+		boulder.position = Vector3(bx, bsize * 0.3, bz)
+		boulder.rotation_degrees = Vector3(rng.randf_range(-8, 8), rng.randf_range(0, 45), rng.randf_range(-5, 5))
+		add_child(boulder)
+		arch_meshes.append(boulder)
+
+	# Stalactites hanging above entrance
+	var stalac_mat := _create_tinted_rock_material(rng.randf_range(-0.02, 0.0))
+	for i: int in range(5):
+		var stalac := MeshInstance3D.new()
+		var s_mesh := BoxMesh.new()
+		var s_height: float = rng.randf_range(0.5, 1.5)
+		s_mesh.size = Vector3(0.3, s_height, 0.3)
+		stalac.mesh = s_mesh
+		stalac.material_override = stalac_mat
+		stalac.position = Vector3(
+			rng.randf_range(-2.0, 2.0),
+			5.5 - s_height / 2.0,
+			rng.randf_range(1.0, 2.0)
+		)
+		add_child(stalac)
+		arch_meshes.append(stalac)
+
+	# Moss patches on rocks (green-grey patches)
+	var moss_mat := StandardMaterial3D.new()
+	moss_mat.albedo_color = Color(0.28, 0.38, 0.22, 0.7)
+	moss_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	moss_mat.roughness = 0.95
+	for i: int in range(4):
+		var moss := MeshInstance3D.new()
+		var m_mesh := BoxMesh.new()
+		m_mesh.size = Vector3(rng.randf_range(1.0, 2.5), 0.05, rng.randf_range(0.8, 2.0))
+		moss.mesh = m_mesh
+		moss.material_override = moss_mat
+		moss.position = Vector3(
+			rng.randf_range(-5.0, 5.0),
+			rng.randf_range(0.5, 4.0),
+			rng.randf_range(-2.0, 2.0)
+		)
+		moss.rotation_degrees = Vector3(rng.randf_range(-15, 15), rng.randf_range(0, 90), 0)
+		add_child(moss)
+		arch_meshes.append(moss)
+
 	# Single collision shape for the entire mountain (simpler physics)
 	var mass_collision := CollisionShape3D.new()
 	var mass_shape := BoxShape3D.new()
@@ -174,6 +235,19 @@ func _setup_visuals() -> void:
 	darkness_mesh.material_override = dark_mat
 	darkness_mesh.position = Vector3(0, 2.5, 1.5)
 	add_child(darkness_mesh)
+
+	# Deeper darkness (interior fade)
+	var inner_dark := MeshInstance3D.new()
+	var id_mesh := BoxMesh.new()
+	id_mesh.size = Vector3(4.0, 4.5, 0.3)
+	inner_dark.mesh = id_mesh
+	var inner_mat := StandardMaterial3D.new()
+	inner_mat.albedo_color = Color(0.01, 0.01, 0.01)
+	inner_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	inner_dark.material_override = inner_mat
+	inner_dark.position = Vector3(0, 2.5, 0.8)
+	add_child(inner_dark)
+	arch_meshes.append(inner_dark)
 
 	# NOTE: Removed OmniLight3D for performance - caves are visible via dark opening contrast
 

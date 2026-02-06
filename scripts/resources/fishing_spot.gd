@@ -92,15 +92,132 @@ func _create_pond_mesh() -> void:
 	# Position at water surface level
 	water_mesh.position = Vector3(0, pond_height, 0)
 
-	# Semi-transparent water material (render both sides)
+	# Semi-transparent water material with richer color
 	var mat := StandardMaterial3D.new()
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.albedo_color = Color(0.2, 0.5, 0.65, 0.7)
-	mat.roughness = 0.1
+	mat.albedo_color = Color(0.15, 0.42, 0.55, 0.72)
+	mat.roughness = 0.05
+	mat.metallic = 0.1
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	water_mesh.material_override = mat
 
 	add_child(water_mesh)
+
+	# Deeper water center (darker patch beneath surface)
+	var deep_mesh := MeshInstance3D.new()
+	deep_mesh.name = "DeepWater"
+	var deep_plane := PlaneMesh.new()
+	deep_plane.size = Vector2(pond_width * 0.6, pond_depth * 0.6)
+	deep_mesh.mesh = deep_plane
+	deep_mesh.position = Vector3(0, pond_height - 0.01, 0)
+	var deep_mat := StandardMaterial3D.new()
+	deep_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	deep_mat.albedo_color = Color(0.08, 0.28, 0.38, 0.5)
+	deep_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	deep_mesh.material_override = deep_mat
+	add_child(deep_mesh)
+
+	# Shore rocks (8 rocks around edges with varied sizes and colors)
+	var rock_colors: Array[Color] = [
+		Color(0.42, 0.40, 0.36), Color(0.38, 0.36, 0.33),
+		Color(0.45, 0.42, 0.38), Color(0.35, 0.33, 0.30),
+		Color(0.40, 0.38, 0.35), Color(0.44, 0.41, 0.37),
+		Color(0.36, 0.34, 0.31), Color(0.41, 0.39, 0.36)
+	]
+	for i: int in range(8):
+		var rock := MeshInstance3D.new()
+		rock.name = "Rock%d" % i
+		var rock_size: float = randf_range(0.2, 0.45)
+		var rock_mesh := BoxMesh.new()
+		rock_mesh.size = Vector3(rock_size, rock_size * 0.6, rock_size * 0.8)
+		rock.mesh = rock_mesh
+		var rock_mat := StandardMaterial3D.new()
+		rock_mat.albedo_color = rock_colors[i]
+		rock_mat.roughness = 0.92
+		rock.material_override = rock_mat
+		var angle: float = i * TAU / 8.0 + randf_range(-0.3, 0.3)
+		var dist: float = max(pond_width, pond_depth) / 2.0 * 0.9
+		rock.position = Vector3(cos(angle) * dist, rock_size * 0.2, sin(angle) * dist)
+		rock.rotation.y = randf() * TAU
+		rock.rotation.x = randf_range(-0.15, 0.15)
+		add_child(rock)
+
+		# Rock highlight (lighter top face)
+		if i % 2 == 0:
+			var r_top := MeshInstance3D.new()
+			var rt_mesh := BoxMesh.new()
+			rt_mesh.size = Vector3(rock_size * 0.7, 0.03, rock_size * 0.6)
+			r_top.mesh = rt_mesh
+			r_top.position = rock.position + Vector3(0, rock_size * 0.35, 0)
+			var rt_mat := StandardMaterial3D.new()
+			rt_mat.albedo_color = Color(0.52, 0.50, 0.46, 0.5)
+			rt_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			r_top.material_override = rt_mat
+			add_child(r_top)
+
+	# Lily pads (flat green discs on water surface)
+	var lily_mat := StandardMaterial3D.new()
+	lily_mat.albedo_color = Color(0.22, 0.45, 0.20)
+	lily_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+
+	var lily_dark_mat := StandardMaterial3D.new()
+	lily_dark_mat.albedo_color = Color(0.16, 0.35, 0.14)
+	lily_dark_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+
+	for i: int in range(4):
+		var lily := MeshInstance3D.new()
+		var l_mesh := BoxMesh.new()
+		var lsize: float = randf_range(0.15, 0.3)
+		l_mesh.size = Vector3(lsize, 0.01, lsize)
+		lily.mesh = l_mesh
+		var l_angle: float = randf() * TAU
+		var l_dist: float = randf_range(0.3, 0.7) * min(pond_width, pond_depth) / 2.0
+		lily.position = Vector3(cos(l_angle) * l_dist, pond_height + 0.01, sin(l_angle) * l_dist)
+		lily.rotation.y = randf() * TAU
+		lily.material_override = lily_mat if i % 2 == 0 else lily_dark_mat
+		add_child(lily)
+
+		# Some lily pads get a tiny flower
+		if i == 1:
+			var flower := MeshInstance3D.new()
+			var fl_mesh := BoxMesh.new()
+			fl_mesh.size = Vector3(0.05, 0.04, 0.05)
+			flower.mesh = fl_mesh
+			flower.position = lily.position + Vector3(0.02, 0.03, 0.02)
+			var fl_mat := StandardMaterial3D.new()
+			fl_mat.albedo_color = Color(0.95, 0.85, 0.90)  # Pale pink
+			flower.material_override = fl_mat
+			add_child(flower)
+
+	# Reeds/cattails at edges (tall thin vertical boxes)
+	var reed_mat := StandardMaterial3D.new()
+	reed_mat.albedo_color = Color(0.35, 0.48, 0.25)
+
+	var cattail_mat := StandardMaterial3D.new()
+	cattail_mat.albedo_color = Color(0.40, 0.28, 0.18)
+
+	for i: int in range(6):
+		var reed := MeshInstance3D.new()
+		var r_mesh := BoxMesh.new()
+		var r_height: float = randf_range(0.4, 0.8)
+		r_mesh.size = Vector3(0.02, r_height, 0.02)
+		reed.mesh = r_mesh
+		var r_angle: float = TAU * 0.6 + i * 0.15 + randf_range(-0.1, 0.1)
+		var r_dist: float = max(pond_width, pond_depth) / 2.0 * 0.8
+		reed.position = Vector3(cos(r_angle) * r_dist, r_height / 2.0, sin(r_angle) * r_dist)
+		reed.rotation.z = randf_range(-0.1, 0.1)
+		reed.material_override = reed_mat
+		add_child(reed)
+
+		# Cattail top on some reeds
+		if i % 2 == 0:
+			var cattail := MeshInstance3D.new()
+			var ct_mesh := BoxMesh.new()
+			ct_mesh.size = Vector3(0.04, 0.08, 0.04)
+			cattail.mesh = ct_mesh
+			cattail.position = reed.position + Vector3(0, r_height / 2.0 + 0.02, 0)
+			cattail.material_override = cattail_mat
+			add_child(cattail)
 
 	# Create water area for swimming detection
 	_create_water_area()
@@ -204,29 +321,121 @@ func _create_swimming_fish() -> void:
 func _create_fish_mesh() -> Node3D:
 	var fish_root := Node3D.new()
 
-	# Fish body (blocky box)
+	# Materials
+	var body_mat := StandardMaterial3D.new()
+	body_mat.albedo_color = Color(0.45, 0.52, 0.42)  # Olive-green back
+
+	var belly_mat := StandardMaterial3D.new()
+	belly_mat.albedo_color = Color(0.72, 0.70, 0.58)  # Pale belly
+
+	var side_mat := StandardMaterial3D.new()
+	side_mat.albedo_color = Color(0.55, 0.58, 0.48)  # Silvery-green sides
+
+	var fin_mat := StandardMaterial3D.new()
+	fin_mat.albedo_color = Color(0.50, 0.55, 0.42, 0.8)
+	fin_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+
+	var eye_mat := StandardMaterial3D.new()
+	eye_mat.albedo_color = Color(0.08, 0.08, 0.06)
+
+	var spot_mat := StandardMaterial3D.new()
+	spot_mat.albedo_color = Color(0.60, 0.48, 0.35)  # Brown spots
+
+	# Fish body (main shape)
 	var body := MeshInstance3D.new()
 	body.name = "Body"
 	var body_mesh := BoxMesh.new()
-	body_mesh.size = Vector3(0.2, 0.08, 0.06)  # Long, flat, thin
+	body_mesh.size = Vector3(0.22, 0.08, 0.06)
 	body.mesh = body_mesh
-
-	var fish_mat := StandardMaterial3D.new()
-	fish_mat.albedo_color = Color(0.6, 0.55, 0.4)  # Brownish fish color
-	body.material_override = fish_mat
-
+	body.material_override = body_mat
 	fish_root.add_child(body)
 
-	# Tail fin (small box)
-	var tail := MeshInstance3D.new()
-	tail.name = "Tail"
-	var tail_mesh := BoxMesh.new()
-	tail_mesh.size = Vector3(0.04, 0.1, 0.02)
-	tail.mesh = tail_mesh
-	tail.position = Vector3(-0.12, 0, 0)
-	tail.material_override = fish_mat
+	# Belly (lighter underside)
+	var belly := MeshInstance3D.new()
+	var be_mesh := BoxMesh.new()
+	be_mesh.size = Vector3(0.18, 0.025, 0.055)
+	belly.mesh = be_mesh
+	belly.position = Vector3(0, -0.03, 0)
+	belly.material_override = belly_mat
+	fish_root.add_child(belly)
 
-	fish_root.add_child(tail)
+	# Silvery side stripe
+	var stripe := MeshInstance3D.new()
+	var st_mesh := BoxMesh.new()
+	st_mesh.size = Vector3(0.16, 0.02, 0.062)
+	stripe.mesh = st_mesh
+	stripe.position = Vector3(0, 0, 0)
+	stripe.material_override = side_mat
+	fish_root.add_child(stripe)
+
+	# Head (slightly wider front)
+	var head := MeshInstance3D.new()
+	var hd_mesh := BoxMesh.new()
+	hd_mesh.size = Vector3(0.06, 0.07, 0.055)
+	head.mesh = hd_mesh
+	head.position = Vector3(0.12, 0.005, 0)
+	head.material_override = body_mat
+	fish_root.add_child(head)
+
+	# Eyes
+	for side: float in [-1.0, 1.0]:
+		var eye := MeshInstance3D.new()
+		var eye_mesh := BoxMesh.new()
+		eye_mesh.size = Vector3(0.015, 0.015, 0.01)
+		eye.mesh = eye_mesh
+		eye.position = Vector3(0.13, 0.015, side * 0.03)
+		eye.material_override = eye_mat
+		fish_root.add_child(eye)
+
+	# Dorsal fin (top)
+	var dorsal := MeshInstance3D.new()
+	var df_mesh := BoxMesh.new()
+	df_mesh.size = Vector3(0.08, 0.04, 0.01)
+	dorsal.mesh = df_mesh
+	dorsal.position = Vector3(-0.02, 0.06, 0)
+	dorsal.material_override = fin_mat
+	fish_root.add_child(dorsal)
+
+	# Tail fin (forked V-shape from two boxes)
+	var tail_top := MeshInstance3D.new()
+	tail_top.name = "Tail"
+	var tt_mesh := BoxMesh.new()
+	tt_mesh.size = Vector3(0.04, 0.05, 0.015)
+	tail_top.mesh = tt_mesh
+	tail_top.position = Vector3(-0.13, 0.02, 0)
+	tail_top.rotation.z = 0.3
+	tail_top.material_override = fin_mat
+	fish_root.add_child(tail_top)
+
+	var tail_bot := MeshInstance3D.new()
+	var tb_mesh := BoxMesh.new()
+	tb_mesh.size = Vector3(0.04, 0.05, 0.015)
+	tail_bot.mesh = tb_mesh
+	tail_bot.position = Vector3(-0.13, -0.02, 0)
+	tail_bot.rotation.z = -0.3
+	tail_bot.material_override = fin_mat
+	fish_root.add_child(tail_bot)
+
+	# Pectoral fins (small side fins)
+	for side: float in [-1.0, 1.0]:
+		var pec := MeshInstance3D.new()
+		var pec_mesh := BoxMesh.new()
+		pec_mesh.size = Vector3(0.03, 0.01, 0.03)
+		pec.mesh = pec_mesh
+		pec.position = Vector3(0.06, -0.03, side * 0.035)
+		pec.rotation.x = side * 0.4
+		pec.material_override = fin_mat
+		fish_root.add_child(pec)
+
+	# Spots/markings on body
+	for i: int in range(3):
+		var spot := MeshInstance3D.new()
+		var sp_mesh := BoxMesh.new()
+		sp_mesh.size = Vector3(0.02, 0.02, 0.062)
+		spot.mesh = sp_mesh
+		spot.position = Vector3(-0.05 + i * 0.06, 0.01, 0)
+		spot.material_override = spot_mat
+		fish_root.add_child(spot)
 
 	return fish_root
 

@@ -64,41 +64,125 @@ func _setup_visuals() -> void:
 	# Get shared materials (avoids shader compilation per obstacle)
 	var base_mat: StandardMaterial3D = _get_base_material()
 	var thorn_mat: StandardMaterial3D = _get_thorn_material()
+	var spike_mat: StandardMaterial3D = _get_spike_material()
 
-	# Simplified bramble clusters - fewer meshes for performance
+	# Leaf material (lighter green)
+	var leaf_mat := StandardMaterial3D.new()
+	leaf_mat.albedo_color = Color(0.20, 0.38, 0.12)
+	leaf_mat.roughness = 0.85
+
+	# Berry material (dark red-purple)
+	var berry_mat := StandardMaterial3D.new()
+	berry_mat.albedo_color = Color(0.35, 0.10, 0.15)
+
 	var rng := RandomNumberGenerator.new()
 	rng.seed = int(global_position.x * 1000 + global_position.z * 100)
 
-	# 6 larger clusters instead of 20 small ones
-	for i in range(6):
+	# 6 main bramble clusters (keep performance-friendly count)
+	for i: int in range(6):
 		var cluster := MeshInstance3D.new()
 		var mesh := BoxMesh.new()
 
-		# Larger sizes to cover the same area with fewer meshes
 		var size_x: float = rng.randf_range(2.0, 3.5)
 		var size_y: float = rng.randf_range(2.0, 3.5)
 		var size_z: float = rng.randf_range(1.5, 2.5)
 		mesh.size = Vector3(size_x, size_y, size_z)
 		cluster.mesh = mesh
 
-		# Position in a row to block the path
 		var pos_x: float = (i - 2.5) * 2.5 + rng.randf_range(-0.5, 0.5)
 		var pos_z: float = rng.randf_range(-0.8, 0.8)
 		var pos_y: float = size_y / 2.0 + rng.randf_range(-0.1, 0.2)
 		cluster.position = Vector3(pos_x, pos_y, pos_z)
 
-		# Slight rotation for variety
 		cluster.rotation_degrees = Vector3(
 			rng.randf_range(-10, 10),
 			rng.randf_range(-20, 20),
 			rng.randf_range(-8, 8)
 		)
 
-		# Alternate materials
 		cluster.material_override = thorn_mat if i % 2 == 0 else base_mat
 
 		add_child(cluster)
 		thorn_meshes.append(cluster)
+
+		# Leaf clusters on each bramble (2-3 per cluster)
+		for j: int in range(rng.randi_range(2, 3)):
+			var leaf := MeshInstance3D.new()
+			var l_mesh := BoxMesh.new()
+			l_mesh.size = Vector3(
+				rng.randf_range(0.8, 1.5),
+				rng.randf_range(0.6, 1.2),
+				rng.randf_range(0.8, 1.3)
+			)
+			leaf.mesh = l_mesh
+			leaf.position = Vector3(
+				pos_x + rng.randf_range(-0.6, 0.6),
+				pos_y + rng.randf_range(-0.3, 0.5),
+				pos_z + rng.randf_range(-0.4, 0.4)
+			)
+			leaf.rotation_degrees = Vector3(
+				rng.randf_range(-15, 15),
+				rng.randf_range(-30, 30),
+				rng.randf_range(-10, 10)
+			)
+			leaf.material_override = leaf_mat if j % 2 == 0 else base_mat
+			add_child(leaf)
+			thorn_meshes.append(leaf)
+
+		# Thorn spikes protruding from each cluster
+		for j: int in range(rng.randi_range(3, 5)):
+			var spike := MeshInstance3D.new()
+			var sp_mesh := BoxMesh.new()
+			sp_mesh.size = Vector3(0.06, rng.randf_range(0.3, 0.6), 0.06)
+			spike.mesh = sp_mesh
+			spike.position = Vector3(
+				pos_x + rng.randf_range(-size_x / 2.0, size_x / 2.0),
+				pos_y + rng.randf_range(-0.2, size_y / 2.0),
+				pos_z + rng.randf_range(-size_z / 2.0, size_z / 2.0)
+			)
+			spike.rotation_degrees = Vector3(
+				rng.randf_range(-40, 40),
+				rng.randf_range(0, 360),
+				rng.randf_range(-40, 40)
+			)
+			spike.material_override = spike_mat
+			add_child(spike)
+			thorn_meshes.append(spike)
+
+	# Scattered berries (small dark orbs)
+	for i: int in range(8):
+		var berry := MeshInstance3D.new()
+		var b_mesh := BoxMesh.new()
+		b_mesh.size = Vector3(0.08, 0.08, 0.08)
+		berry.mesh = b_mesh
+		berry.position = Vector3(
+			rng.randf_range(-5.0, 5.0),
+			rng.randf_range(0.8, 2.5),
+			rng.randf_range(-1.0, 1.0)
+		)
+		berry.material_override = berry_mat
+		add_child(berry)
+		thorn_meshes.append(berry)
+
+	# Tangled vine/branch details weaving between clusters
+	for i: int in range(4):
+		var vine := MeshInstance3D.new()
+		var v_mesh := BoxMesh.new()
+		v_mesh.size = Vector3(rng.randf_range(2.0, 4.0), 0.08, 0.08)
+		vine.mesh = v_mesh
+		vine.position = Vector3(
+			rng.randf_range(-4.0, 4.0),
+			rng.randf_range(0.5, 2.0),
+			rng.randf_range(-0.5, 0.5)
+		)
+		vine.rotation_degrees = Vector3(
+			rng.randf_range(-15, 15),
+			rng.randf_range(-20, 20),
+			rng.randf_range(-10, 10)
+		)
+		vine.material_override = thorn_mat
+		add_child(vine)
+		thorn_meshes.append(vine)
 
 
 ## Get interaction text for HUD prompt.

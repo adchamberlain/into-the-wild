@@ -66,53 +66,134 @@ func _ready() -> void:
 
 
 func _build_mesh() -> void:
-	# Body - small elongated shape
+	# Materials
+	var body_mat: StandardMaterial3D = StandardMaterial3D.new()
+	body_mat.albedo_color = body_color
+
+	var breast_mat: StandardMaterial3D = StandardMaterial3D.new()
+	breast_mat.albedo_color = Color(0.60, 0.45, 0.38)  # Warm brownish breast
+
+	var belly_mat: StandardMaterial3D = StandardMaterial3D.new()
+	belly_mat.albedo_color = Color(0.72, 0.68, 0.62)  # Lighter belly
+
+	var wing_mat: StandardMaterial3D = StandardMaterial3D.new()
+	wing_mat.albedo_color = wing_color
+
+	var wing_tip_mat: StandardMaterial3D = StandardMaterial3D.new()
+	wing_tip_mat.albedo_color = Color(0.30, 0.35, 0.42)  # Darker wing tips
+
+	var tail_mat: StandardMaterial3D = StandardMaterial3D.new()
+	tail_mat.albedo_color = wing_color
+
+	var beak_mat: StandardMaterial3D = StandardMaterial3D.new()
+	beak_mat.albedo_color = beak_color
+
+	var eye_mat: StandardMaterial3D = StandardMaterial3D.new()
+	eye_mat.albedo_color = Color(0.05, 0.05, 0.05)
+
+	var eye_ring_mat: StandardMaterial3D = StandardMaterial3D.new()
+	eye_ring_mat.albedo_color = Color(0.9, 0.9, 0.85)
+
+	# Body - elongated main shape
 	body_mesh = MeshInstance3D.new()
 	var body_box: BoxMesh = BoxMesh.new()
 	body_box.size = Vector3(0.15, 0.12, 0.25)
 	body_mesh.mesh = body_box
 	body_mesh.position = Vector3(0, 0.08, 0)
-
-	var body_mat: StandardMaterial3D = StandardMaterial3D.new()
-	body_mat.albedo_color = body_color
 	body_mesh.material_override = body_mat
 	mesh_container.add_child(body_mesh)
 
-	# Head - small sphere-ish box
+	# Breast patch (warm color on front)
+	var breast: MeshInstance3D = MeshInstance3D.new()
+	var br_box: BoxMesh = BoxMesh.new()
+	br_box.size = Vector3(0.12, 0.09, 0.10)
+	breast.mesh = br_box
+	breast.position = Vector3(0, 0.06, 0.08)
+	breast.material_override = breast_mat
+	mesh_container.add_child(breast)
+
+	# Belly (lighter underside)
+	var belly: MeshInstance3D = MeshInstance3D.new()
+	var be_box: BoxMesh = BoxMesh.new()
+	be_box.size = Vector3(0.12, 0.03, 0.18)
+	belly.mesh = be_box
+	belly.position = Vector3(0, 0.02, 0.02)
+	belly.material_override = belly_mat
+	mesh_container.add_child(belly)
+
+	# Head
 	head_mesh = MeshInstance3D.new()
 	var head_box: BoxMesh = BoxMesh.new()
 	head_box.size = Vector3(0.12, 0.11, 0.12)
 	head_mesh.mesh = head_box
 	head_mesh.position = Vector3(0, 0.12, 0.15)
-
-	var head_mat: StandardMaterial3D = StandardMaterial3D.new()
-	head_mat.albedo_color = body_color
-	head_mesh.material_override = head_mat
+	head_mesh.material_override = body_mat
 	mesh_container.add_child(head_mesh)
 
-	# Beak - tiny triangular box
+	# Head cap (slightly darker crown)
+	var crown: MeshInstance3D = MeshInstance3D.new()
+	var cr_box: BoxMesh = BoxMesh.new()
+	cr_box.size = Vector3(0.10, 0.03, 0.10)
+	crown.mesh = cr_box
+	crown.position = Vector3(0, 0.17, 0.15)
+	crown.material_override = wing_mat
+	mesh_container.add_child(crown)
+
+	# Eyes (white ring + black pupil on each side)
+	for side: float in [-1.0, 1.0]:
+		var eye_white: MeshInstance3D = MeshInstance3D.new()
+		var ew_box: BoxMesh = BoxMesh.new()
+		ew_box.size = Vector3(0.025, 0.025, 0.025)
+		eye_white.mesh = ew_box
+		eye_white.position = Vector3(side * 0.062, 0.13, 0.19)
+		eye_white.material_override = eye_ring_mat
+		mesh_container.add_child(eye_white)
+
+		var eye_pupil: MeshInstance3D = MeshInstance3D.new()
+		var ep_box: BoxMesh = BoxMesh.new()
+		ep_box.size = Vector3(0.015, 0.015, 0.015)
+		eye_pupil.mesh = ep_box
+		eye_pupil.position = Vector3(side * 0.065, 0.13, 0.20)
+		eye_pupil.material_override = eye_mat
+		mesh_container.add_child(eye_pupil)
+
+	# Beak (two-tone: upper and lower mandible)
 	beak_mesh = MeshInstance3D.new()
 	var beak_box: BoxMesh = BoxMesh.new()
-	beak_box.size = Vector3(0.04, 0.03, 0.08)
+	beak_box.size = Vector3(0.04, 0.02, 0.08)
 	beak_mesh.mesh = beak_box
-	beak_mesh.position = Vector3(0, 0.10, 0.23)
-
-	var beak_mat: StandardMaterial3D = StandardMaterial3D.new()
-	beak_mat.albedo_color = beak_color
+	beak_mesh.position = Vector3(0, 0.11, 0.23)
 	beak_mesh.material_override = beak_mat
 	mesh_container.add_child(beak_mesh)
 
-	# Left wing
+	# Lower mandible (slightly darker)
+	var lower_beak: MeshInstance3D = MeshInstance3D.new()
+	var lb_box: BoxMesh = BoxMesh.new()
+	lb_box.size = Vector3(0.035, 0.015, 0.06)
+	lower_beak.mesh = lb_box
+	lower_beak.position = Vector3(0, 0.095, 0.22)
+	var lb_mat: StandardMaterial3D = StandardMaterial3D.new()
+	lb_mat.albedo_color = Color(0.65, 0.48, 0.25)
+	lower_beak.material_override = lb_mat
+	mesh_container.add_child(lower_beak)
+
+	# Left wing (with feather layers)
 	wing_left = MeshInstance3D.new()
 	var wing_box: BoxMesh = BoxMesh.new()
 	wing_box.size = Vector3(0.20, 0.02, 0.15)
 	wing_left.mesh = wing_box
 	wing_left.position = Vector3(-0.12, 0.10, 0)
-
-	var wing_mat: StandardMaterial3D = StandardMaterial3D.new()
-	wing_mat.albedo_color = wing_color
 	wing_left.material_override = wing_mat
 	mesh_container.add_child(wing_left)
+
+	# Left wing tip (darker)
+	var lwt: MeshInstance3D = MeshInstance3D.new()
+	var lwt_box: BoxMesh = BoxMesh.new()
+	lwt_box.size = Vector3(0.06, 0.015, 0.12)
+	lwt.mesh = lwt_box
+	lwt.position = Vector3(-0.20, 0.10, -0.01)
+	lwt.material_override = wing_tip_mat
+	mesh_container.add_child(lwt)
 
 	# Right wing
 	wing_right = MeshInstance3D.new()
@@ -121,17 +202,62 @@ func _build_mesh() -> void:
 	wing_right.material_override = wing_mat
 	mesh_container.add_child(wing_right)
 
-	# Tail - flat fan shape
+	# Right wing tip (darker)
+	var rwt: MeshInstance3D = MeshInstance3D.new()
+	rwt.mesh = lwt_box
+	rwt.position = Vector3(0.20, 0.10, -0.01)
+	rwt.material_override = wing_tip_mat
+	mesh_container.add_child(rwt)
+
+	# Wing bar (pale stripe across wing)
+	var wing_bar_mat: StandardMaterial3D = StandardMaterial3D.new()
+	wing_bar_mat.albedo_color = Color(0.58, 0.60, 0.62)
+	for side: float in [-0.12, 0.12]:
+		var bar: MeshInstance3D = MeshInstance3D.new()
+		var bar_box: BoxMesh = BoxMesh.new()
+		bar_box.size = Vector3(0.18, 0.022, 0.025)
+		bar.mesh = bar_box
+		bar.position = Vector3(side, 0.10, 0.03)
+		bar.material_override = wing_bar_mat
+		mesh_container.add_child(bar)
+
+	# Tail - fan shape with feather detail
 	tail_mesh = MeshInstance3D.new()
 	var tail_box: BoxMesh = BoxMesh.new()
 	tail_box.size = Vector3(0.10, 0.02, 0.12)
 	tail_mesh.mesh = tail_box
 	tail_mesh.position = Vector3(0, 0.06, -0.15)
-
-	var tail_mat: StandardMaterial3D = StandardMaterial3D.new()
-	tail_mat.albedo_color = wing_color
 	tail_mesh.material_override = tail_mat
 	mesh_container.add_child(tail_mesh)
+
+	# Tail tip (darker edge)
+	var tail_tip: MeshInstance3D = MeshInstance3D.new()
+	var tt_box: BoxMesh = BoxMesh.new()
+	tt_box.size = Vector3(0.08, 0.015, 0.03)
+	tail_tip.mesh = tt_box
+	tail_tip.position = Vector3(0, 0.06, -0.20)
+	tail_tip.material_override = wing_tip_mat
+	mesh_container.add_child(tail_tip)
+
+	# Feet (tiny legs when perched)
+	var foot_mat: StandardMaterial3D = StandardMaterial3D.new()
+	foot_mat.albedo_color = Color(0.55, 0.42, 0.30)
+	for side: float in [-0.04, 0.04]:
+		var leg: MeshInstance3D = MeshInstance3D.new()
+		var leg_box: BoxMesh = BoxMesh.new()
+		leg_box.size = Vector3(0.015, 0.05, 0.015)
+		leg.mesh = leg_box
+		leg.position = Vector3(side, -0.01, 0.02)
+		leg.material_override = foot_mat
+		mesh_container.add_child(leg)
+		# Toes
+		var toe: MeshInstance3D = MeshInstance3D.new()
+		var toe_box: BoxMesh = BoxMesh.new()
+		toe_box.size = Vector3(0.03, 0.01, 0.025)
+		toe.mesh = toe_box
+		toe.position = Vector3(side, -0.035, 0.02)
+		toe.material_override = foot_mat
+		mesh_container.add_child(toe)
 
 
 func _process(delta: float) -> void:

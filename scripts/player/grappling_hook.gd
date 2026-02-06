@@ -420,14 +420,15 @@ func _create_rope_visual(from: Vector3, to: Vector3) -> void:
 	rope_mesh.name = "GrappleRope"
 
 	var cylinder := CylinderMesh.new()
-	cylinder.top_radius = 0.03
-	cylinder.bottom_radius = 0.03
+	cylinder.top_radius = 0.035
+	cylinder.bottom_radius = 0.025  # Slight taper
 	cylinder.height = 1.0  # Will be scaled
 	rope_mesh.mesh = cylinder
 
+	# Braided rope material
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.6, 0.5, 0.35)  # Tan rope color
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = Color(0.58, 0.48, 0.32)
+	mat.roughness = 0.85
 	rope_mesh.material_override = mat
 
 	get_tree().current_scene.add_child(rope_mesh)
@@ -467,33 +468,92 @@ func _create_hook_visual(position: Vector3) -> void:
 	hook_mesh = Node3D.new()
 	hook_mesh.name = "GrappleHookAnchor"
 
-	# Simple hook shape
+	# Materials
+	var metal_mat := StandardMaterial3D.new()
+	metal_mat.albedo_color = Color(0.48, 0.48, 0.50)
+	metal_mat.metallic = 0.75
+	metal_mat.roughness = 0.4
+
+	var metal_dark_mat := StandardMaterial3D.new()
+	metal_dark_mat.albedo_color = Color(0.35, 0.35, 0.38)
+	metal_dark_mat.metallic = 0.7
+	metal_dark_mat.roughness = 0.5
+
+	var metal_highlight_mat := StandardMaterial3D.new()
+	metal_highlight_mat.albedo_color = Color(0.62, 0.62, 0.65)
+	metal_highlight_mat.metallic = 0.8
+	metal_highlight_mat.roughness = 0.3
+
+	var rope_end_mat := StandardMaterial3D.new()
+	rope_end_mat.albedo_color = Color(0.55, 0.46, 0.30)
+
+	# Hook head (central hub)
 	var hook_head := MeshInstance3D.new()
 	var head_mesh := BoxMesh.new()
-	head_mesh.size = Vector3(0.15, 0.1, 0.15)
+	head_mesh.size = Vector3(0.14, 0.08, 0.14)
 	hook_head.mesh = head_mesh
-
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.5, 0.5, 0.52)
-	mat.metallic = 0.7
-	hook_head.material_override = mat
-
+	hook_head.material_override = metal_mat
 	hook_mesh.add_child(hook_head)
 
-	# Prongs
+	# Hub top cap (slightly shinier)
+	var cap := MeshInstance3D.new()
+	var cap_mesh := BoxMesh.new()
+	cap_mesh.size = Vector3(0.10, 0.02, 0.10)
+	cap.mesh = cap_mesh
+	cap.position.y = 0.05
+	cap.material_override = metal_highlight_mat
+	hook_mesh.add_child(cap)
+
+	# Rope attachment ring at top
+	var ring := MeshInstance3D.new()
+	var ring_mesh := BoxMesh.new()
+	ring_mesh.size = Vector3(0.06, 0.04, 0.06)
+	ring.mesh = ring_mesh
+	ring.position.y = 0.08
+	ring.material_override = metal_dark_mat
+	hook_mesh.add_child(ring)
+
+	# Rope end (visible where rope attaches)
+	var rope_end := MeshInstance3D.new()
+	var re_mesh := BoxMesh.new()
+	re_mesh.size = Vector3(0.04, 0.06, 0.04)
+	rope_end.mesh = re_mesh
+	rope_end.position.y = 0.12
+	rope_end.material_override = rope_end_mat
+	hook_mesh.add_child(rope_end)
+
+	# 4 Prongs with curved tips (each prong: shaft + hook tip)
 	for i in range(4):
+		var angle: float = i * PI / 2
+
+		# Prong shaft (extends outward and down)
 		var prong := MeshInstance3D.new()
 		var prong_mesh := BoxMesh.new()
-		prong_mesh.size = Vector3(0.04, 0.12, 0.04)
+		prong_mesh.size = Vector3(0.035, 0.14, 0.035)
 		prong.mesh = prong_mesh
-		prong.material_override = mat
-
-		var angle: float = i * PI / 2
-		prong.position = Vector3(cos(angle) * 0.08, 0.06, sin(angle) * 0.08)
+		prong.material_override = metal_mat
+		prong.position = Vector3(cos(angle) * 0.08, 0.04, sin(angle) * 0.08)
 		prong.rotation.x = -0.5 if i % 2 == 0 else 0.5
 		prong.rotation.z = 0.5 if i < 2 else -0.5
-
 		hook_mesh.add_child(prong)
+
+		# Prong hook tip (small curved end - darker)
+		var tip := MeshInstance3D.new()
+		var tip_mesh := BoxMesh.new()
+		tip_mesh.size = Vector3(0.04, 0.04, 0.04)
+		tip.mesh = tip_mesh
+		tip.material_override = metal_highlight_mat
+		tip.position = Vector3(cos(angle) * 0.12, 0.12, sin(angle) * 0.12)
+		hook_mesh.add_child(tip)
+
+		# Prong barb (small triangle pointing back)
+		var barb := MeshInstance3D.new()
+		var barb_mesh := BoxMesh.new()
+		barb_mesh.size = Vector3(0.02, 0.03, 0.02)
+		barb.mesh = barb_mesh
+		barb.material_override = metal_dark_mat
+		barb.position = Vector3(cos(angle) * 0.10, 0.14, sin(angle) * 0.10)
+		hook_mesh.add_child(barb)
 
 	hook_mesh.global_position = position
 	get_tree().current_scene.add_child(hook_mesh)
