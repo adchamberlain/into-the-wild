@@ -33,6 +33,10 @@ const ARTWORK_SWITCH_TIME: float = 2.5
 # Animation
 var star_timer: float = 0.0
 
+# Artwork size constants
+const ART_W: int = 500
+const ART_H: int = 420
+
 
 func _ready() -> void:
 	layer = 100
@@ -107,43 +111,48 @@ func _create_ui() -> void:
 	top_line2.offset_right = -100
 	root_control.add_child(top_line2)
 
+	# Artwork area is centered between title bottom (322) and progress top (~965)
+	# Midpoint is ~644, which is 104px below screen center (540)
+	# We shift the artwork down by 100px from center
+	var v_shift: int = 100
+
 	# Artwork glow (behind frame)
 	artwork_glow = ColorRect.new()
-	artwork_glow.color = Color(1.0, 0.7, 0.3, 0.15)
+	artwork_glow.color = Color(1.0, 0.7, 0.3, 0.12)
 	artwork_glow.set_anchors_preset(Control.PRESET_CENTER)
-	artwork_glow.offset_left = -220
-	artwork_glow.offset_right = 220
-	artwork_glow.offset_top = -180
-	artwork_glow.offset_bottom = 180
+	artwork_glow.offset_left = -300
+	artwork_glow.offset_right = 300
+	artwork_glow.offset_top = -250 + v_shift
+	artwork_glow.offset_bottom = 250 + v_shift
 	root_control.add_child(artwork_glow)
 
 	# Artwork frame (border)
 	artwork_frame = ColorRect.new()
 	artwork_frame.color = Color(0.4, 0.35, 0.25, 0.8)
 	artwork_frame.set_anchors_preset(Control.PRESET_CENTER)
-	artwork_frame.offset_left = -205
-	artwork_frame.offset_right = 205
-	artwork_frame.offset_top = -165
-	artwork_frame.offset_bottom = 165
+	artwork_frame.offset_left = -270
+	artwork_frame.offset_right = 270
+	artwork_frame.offset_top = -225 + v_shift
+	artwork_frame.offset_bottom = 225 + v_shift
 	root_control.add_child(artwork_frame)
 
 	# Artwork background (inside frame)
 	var artwork_bg := ColorRect.new()
 	artwork_bg.color = Color(0.05, 0.06, 0.08, 1.0)
 	artwork_bg.set_anchors_preset(Control.PRESET_CENTER)
-	artwork_bg.offset_left = -195
-	artwork_bg.offset_right = 195
-	artwork_bg.offset_top = -155
-	artwork_bg.offset_bottom = 155
+	artwork_bg.offset_left = -260
+	artwork_bg.offset_right = 260
+	artwork_bg.offset_top = -215 + v_shift
+	artwork_bg.offset_bottom = 215 + v_shift
 	root_control.add_child(artwork_bg)
 
-	# Artwork container
+	# Artwork container (where art is drawn)
 	artwork_container = Control.new()
 	artwork_container.set_anchors_preset(Control.PRESET_CENTER)
-	artwork_container.offset_left = -175
-	artwork_container.offset_right = 175
-	artwork_container.offset_top = -135
-	artwork_container.offset_bottom = 135
+	artwork_container.offset_left = -ART_W / 2
+	artwork_container.offset_right = ART_W / 2
+	artwork_container.offset_top = -ART_H / 2 + v_shift
+	artwork_container.offset_bottom = ART_H / 2 + v_shift
 	root_control.add_child(artwork_container)
 
 	# Progress bar background
@@ -205,8 +214,8 @@ func _create_background_stars() -> void:
 		var pos_x: float = rng.randf_range(50, 1870)
 		var pos_y: float = rng.randf_range(50, 1030)
 
-		# Skip if too close to center
-		if abs(pos_x - 960) < 250 and abs(pos_y - 540) < 200:
+		# Skip if too close to center (enlarged for bigger artwork)
+		if abs(pos_x - 960) < 320 and abs(pos_y - 640) < 260:
 			pos_x = rng.randf_range(50, 300) if rng.randf() > 0.5 else rng.randf_range(1620, 1870)
 
 		star.position = Vector2(pos_x, pos_y)
@@ -231,390 +240,324 @@ func _show_artwork(index: int) -> void:
 			current_artwork = _create_tree()
 
 	if current_artwork:
-		# Center the artwork in the container
-		current_artwork.position = Vector2(25, 0)
+		current_artwork.position = Vector2(0, 0)
 		artwork_container.add_child(current_artwork)
 		current_artwork.modulate.a = 0.0
 		var tween: Tween = create_tween()
 		tween.tween_property(current_artwork, "modulate:a", 1.0, 0.4)
 
 
+# --- Helper to add a colored rect ---
+func _rect(parent: Control, x: float, y: float, w: float, h: float, color: Color, rot: float = 0.0) -> ColorRect:
+	var r := ColorRect.new()
+	r.color = color
+	r.size = Vector2(w, h)
+	r.position = Vector2(x, y)
+	if rot != 0.0:
+		r.rotation = rot
+	parent.add_child(r)
+	return r
+
+
 func _create_campfire() -> Control:
-	var container := Control.new()
-	container.custom_minimum_size = Vector2(300, 270)
+	var c := Control.new()
+	c.custom_minimum_size = Vector2(ART_W, ART_H)
 
-	# Larger fire glow
-	var glow := ColorRect.new()
-	glow.color = Color(1.0, 0.4, 0.1, 0.25)
-	glow.size = Vector2(200, 180)
-	glow.position = Vector2(50, 30)
-	container.add_child(glow)
+	# Fire glow (large soft area)
+	_rect(c, 100, 50, 300, 300, Color(1.0, 0.4, 0.1, 0.2))
 
-	# Stone ring (left)
-	var stone1 := ColorRect.new()
-	stone1.color = Color(0.35, 0.33, 0.3)
-	stone1.size = Vector2(35, 25)
-	stone1.position = Vector2(45, 210)
-	container.add_child(stone1)
+	# Stone ring - 6 stones around the fire base
+	_rect(c, 70, 340, 55, 40, Color(0.35, 0.33, 0.3))
+	_rect(c, 130, 355, 50, 35, Color(0.38, 0.36, 0.33))
+	_rect(c, 185, 355, 55, 35, Color(0.32, 0.3, 0.28))
+	_rect(c, 245, 355, 50, 35, Color(0.36, 0.34, 0.31))
+	_rect(c, 310, 340, 55, 40, Color(0.4, 0.38, 0.35))
+	_rect(c, 375, 350, 50, 35, Color(0.34, 0.32, 0.29))
 
-	# Stone ring (right)
-	var stone2 := ColorRect.new()
-	stone2.color = Color(0.4, 0.38, 0.35)
-	stone2.size = Vector2(35, 25)
-	stone2.position = Vector2(220, 210)
-	container.add_child(stone2)
+	# Crossed logs
+	_rect(c, 100, 345, 280, 35, Color(0.4, 0.25, 0.1), -0.12)
+	_rect(c, 110, 330, 270, 30, Color(0.35, 0.22, 0.08), 0.14)
 
-	# Log 1
-	var log1 := ColorRect.new()
-	log1.color = Color(0.4, 0.25, 0.1)
-	log1.size = Vector2(160, 28)
-	log1.position = Vector2(70, 215)
-	log1.rotation = -0.15
-	container.add_child(log1)
+	# Log ends (round cross-sections)
+	_rect(c, 80, 330, 35, 35, Color(0.5, 0.38, 0.22))
+	_rect(c, 380, 340, 35, 35, Color(0.48, 0.36, 0.2))
 
-	# Log 2
-	var log2 := ColorRect.new()
-	log2.color = Color(0.35, 0.22, 0.08)
-	log2.size = Vector2(160, 25)
-	log2.position = Vector2(70, 205)
-	log2.rotation = 0.18
-	container.add_child(log2)
+	# Fire - layered from wide base to narrow tip
+	# Embers at base
+	_rect(c, 150, 310, 180, 40, Color(0.7, 0.15, 0.0))
+	# Base flame - wide, deep orange-red
+	_rect(c, 140, 260, 200, 70, Color(0.9, 0.25, 0.0))
+	# Left tongue
+	_rect(c, 130, 220, 60, 80, Color(0.95, 0.35, 0.0))
+	# Right tongue
+	_rect(c, 290, 230, 55, 70, Color(0.92, 0.3, 0.0))
+	# Mid flame - bright orange
+	_rect(c, 165, 180, 150, 100, Color(1.0, 0.5, 0.0))
+	# Upper mid - yellow-orange
+	_rect(c, 180, 120, 120, 90, Color(1.0, 0.65, 0.1))
+	# Upper flame - bright yellow
+	_rect(c, 200, 70, 80, 80, Color(1.0, 0.8, 0.2))
+	# Flame tip - white-yellow
+	_rect(c, 215, 25, 50, 65, Color(1.0, 0.95, 0.5))
+	# Hot core
+	_rect(c, 205, 240, 70, 60, Color(1.0, 0.9, 0.6, 0.8))
 
-	# Fire layers
-	var fire_base := ColorRect.new()
-	fire_base.color = Color(0.9, 0.3, 0.0)
-	fire_base.size = Vector2(100, 70)
-	fire_base.position = Vector2(100, 150)
-	container.add_child(fire_base)
+	# Sparks rising
+	for i in range(8):
+		var sx: float = 210 + (i - 4) * 25 + (i % 3) * 10
+		var sy: float = 15 - i * 12
+		_rect(c, sx, sy, 5, 5, Color(1.0, 0.8, 0.3, 0.9 - i * 0.08))
 
-	var fire_mid := ColorRect.new()
-	fire_mid.color = Color(1.0, 0.5, 0.0)
-	fire_mid.size = Vector2(80, 80)
-	fire_mid.position = Vector2(110, 90)
-	container.add_child(fire_mid)
-
-	var fire_top := ColorRect.new()
-	fire_top.color = Color(1.0, 0.75, 0.2)
-	fire_top.size = Vector2(50, 70)
-	fire_top.position = Vector2(125, 50)
-	container.add_child(fire_top)
-
-	var flame_tip := ColorRect.new()
-	flame_tip.color = Color(1.0, 0.95, 0.5)
-	flame_tip.size = Vector2(25, 45)
-	flame_tip.position = Vector2(137, 20)
-	container.add_child(flame_tip)
-
-	# Sparks
-	for i in range(5):
-		var spark := ColorRect.new()
-		spark.color = Color(1.0, 0.8, 0.3, 0.8)
-		spark.size = Vector2(4, 4)
-		spark.position = Vector2(130 + (i - 2) * 20, 15 - i * 8)
-		container.add_child(spark)
-
-	return container
+	return c
 
 
 func _create_axe() -> Control:
-	var container := Control.new()
-	container.custom_minimum_size = Vector2(300, 270)
+	var c := Control.new()
+	c.custom_minimum_size = Vector2(ART_W, ART_H)
 
-	# Wood stump base
-	var stump := ColorRect.new()
-	stump.color = Color(0.45, 0.32, 0.18)
-	stump.size = Vector2(120, 60)
-	stump.position = Vector2(90, 200)
-	container.add_child(stump)
+	# Ground
+	_rect(c, 0, 385, ART_W, 35, Color(0.2, 0.16, 0.1))
 
-	var stump_top := ColorRect.new()
-	stump_top.color = Color(0.55, 0.4, 0.25)
-	stump_top.size = Vector2(120, 15)
-	stump_top.position = Vector2(90, 185)
-	container.add_child(stump_top)
+	# Wood stump - wide and solid
+	_rect(c, 140, 300, 220, 90, Color(0.42, 0.3, 0.16))
+	# Bark edges (darker sides)
+	_rect(c, 135, 295, 15, 95, Color(0.3, 0.2, 0.1))
+	_rect(c, 350, 295, 15, 95, Color(0.32, 0.22, 0.12))
+	# Stump top (cut surface - lighter)
+	_rect(c, 145, 280, 210, 25, Color(0.6, 0.48, 0.32))
+	# Tree rings on cut surface
+	_rect(c, 190, 285, 120, 14, Color(0.55, 0.42, 0.28))
+	_rect(c, 215, 287, 70, 10, Color(0.5, 0.38, 0.24))
+	_rect(c, 235, 289, 30, 6, Color(0.45, 0.34, 0.2))
 
-	# Handle
-	var handle := ColorRect.new()
-	handle.color = Color(0.5, 0.35, 0.2)
-	handle.size = Vector2(25, 180)
-	handle.position = Vector2(138, 30)
-	handle.rotation = 0.15
-	container.add_child(handle)
+	# A few wood chips on the ground
+	_rect(c, 120, 380, 18, 8, Color(0.55, 0.4, 0.22), 0.3)
+	_rect(c, 370, 375, 15, 7, Color(0.5, 0.38, 0.2), -0.5)
+	_rect(c, 310, 382, 12, 6, Color(0.52, 0.39, 0.21), 0.8)
 
-	var handle_detail := ColorRect.new()
-	handle_detail.color = Color(0.4, 0.28, 0.15)
-	handle_detail.size = Vector2(8, 180)
-	handle_detail.position = Vector2(150, 30)
-	handle_detail.rotation = 0.15
-	container.add_child(handle_detail)
+	# Axe handle - coming up from the stump, slight lean
+	# Main handle shaft
+	_rect(c, 232, 80, 28, 220, Color(0.52, 0.37, 0.22), 0.08)
+	# Wood grain line on handle
+	_rect(c, 243, 82, 8, 218, Color(0.42, 0.28, 0.15), 0.08)
+	# Grip wrapping at bottom of handle (leather strips)
+	_rect(c, 230, 240, 32, 12, Color(0.3, 0.2, 0.1), 0.08)
+	_rect(c, 230, 258, 32, 12, Color(0.28, 0.18, 0.09), 0.08)
+	_rect(c, 230, 276, 32, 10, Color(0.3, 0.2, 0.1), 0.08)
 
-	# Axe head
-	var head_back := ColorRect.new()
-	head_back.color = Color(0.35, 0.35, 0.38)
-	head_back.size = Vector2(70, 50)
-	head_back.position = Vector2(165, 25)
-	container.add_child(head_back)
+	# Axe head - wedge shape built from overlapping rects
+	# The head sits at the top of the handle, blade extends to the right
+	# Poll (back/hammer side of head - left of handle)
+	_rect(c, 195, 68, 45, 55, Color(0.32, 0.32, 0.36))
+	# Eye area (where handle passes through)
+	_rect(c, 228, 60, 40, 70, Color(0.35, 0.35, 0.38))
+	# Cheek - widens toward blade
+	_rect(c, 268, 52, 30, 86, Color(0.4, 0.4, 0.44))
+	# Cheek 2 - wider still
+	_rect(c, 298, 44, 28, 102, Color(0.45, 0.45, 0.5))
+	# Blade face
+	_rect(c, 326, 36, 22, 118, Color(0.55, 0.55, 0.6))
+	# Cutting edge - bright steel highlight
+	_rect(c, 348, 32, 10, 126, Color(0.78, 0.78, 0.85))
+	# Edge bevel highlight
+	_rect(c, 356, 36, 4, 118, Color(0.88, 0.88, 0.92))
 
-	var head_front := ColorRect.new()
-	head_front.color = Color(0.5, 0.5, 0.55)
-	head_front.size = Vector2(60, 42)
-	head_front.position = Vector2(175, 30)
-	container.add_child(head_front)
+	# Beard (lower curve of blade - extends below the cheek)
+	_rect(c, 308, 142, 40, 22, Color(0.5, 0.5, 0.55))
+	_rect(c, 338, 148, 18, 16, Color(0.65, 0.65, 0.72))
 
-	var blade := ColorRect.new()
-	blade.color = Color(0.75, 0.75, 0.8)
-	blade.size = Vector2(10, 40)
-	blade.position = Vector2(228, 31)
-	container.add_child(blade)
+	# Toe (upper curve of blade)
+	_rect(c, 308, 30, 40, 18, Color(0.5, 0.5, 0.55))
+	_rect(c, 338, 26, 18, 14, Color(0.65, 0.65, 0.72))
 
-	# Binding
-	var binding := ColorRect.new()
-	binding.color = Color(0.4, 0.3, 0.2)
-	binding.size = Vector2(35, 18)
-	binding.position = Vector2(142, 55)
-	binding.rotation = 0.15
-	container.add_child(binding)
+	# Head highlights and detail
+	_rect(c, 275, 58, 50, 6, Color(0.55, 0.55, 0.6, 0.5))
+	_rect(c, 240, 90, 80, 4, Color(0.3, 0.3, 0.34, 0.6))
 
-	return container
+	return c
 
 
 func _create_fishing_rod() -> Control:
-	var container := Control.new()
-	container.custom_minimum_size = Vector2(300, 270)
+	var c := Control.new()
+	c.custom_minimum_size = Vector2(ART_W, ART_H)
 
 	# Water at bottom
-	var water := ColorRect.new()
-	water.color = Color(0.2, 0.35, 0.5, 0.6)
-	water.size = Vector2(300, 50)
-	water.position = Vector2(0, 220)
-	container.add_child(water)
+	_rect(c, 0, 340, ART_W, 80, Color(0.15, 0.3, 0.45, 0.5))
+	# Water surface highlight
+	_rect(c, 0, 335, ART_W, 10, Color(0.25, 0.4, 0.55, 0.4))
+	# Deeper water
+	_rect(c, 0, 380, ART_W, 40, Color(0.1, 0.22, 0.35, 0.6))
 
-	# Rod
-	var grip := ColorRect.new()
-	grip.color = Color(0.6, 0.45, 0.3)
-	grip.size = Vector2(22, 65)
-	grip.position = Vector2(30, 180)
-	container.add_child(grip)
+	# Rod grip (cork)
+	_rect(c, 40, 280, 30, 100, Color(0.6, 0.48, 0.32))
+	_rect(c, 42, 290, 26, 15, Color(0.55, 0.42, 0.28))
+	_rect(c, 42, 320, 26, 15, Color(0.55, 0.42, 0.28))
+	_rect(c, 42, 350, 26, 15, Color(0.55, 0.42, 0.28))
 
-	var reel := ColorRect.new()
-	reel.color = Color(0.3, 0.3, 0.3)
-	reel.size = Vector2(18, 25)
-	reel.position = Vector2(32, 160)
-	container.add_child(reel)
+	# Reel seat
+	_rect(c, 44, 260, 24, 25, Color(0.25, 0.25, 0.28))
+	# Reel body
+	_rect(c, 35, 255, 18, 35, Color(0.35, 0.35, 0.38))
+	_rect(c, 30, 265, 10, 15, Color(0.4, 0.4, 0.42))
 
-	var rod := ColorRect.new()
-	rod.color = Color(0.4, 0.3, 0.2)
-	rod.size = Vector2(12, 140)
-	rod.position = Vector2(35, 25)
-	container.add_child(rod)
+	# Rod blank (tapers from thick to thin)
+	_rect(c, 48, 120, 16, 145, Color(0.4, 0.32, 0.22))
+	_rect(c, 50, 40, 12, 85, Color(0.38, 0.28, 0.18))
+	_rect(c, 52, 5, 8, 40, Color(0.35, 0.25, 0.15))
+	# Tip-top guide
+	_rect(c, 53, 0, 6, 8, Color(0.5, 0.5, 0.52))
 
-	var tip := ColorRect.new()
-	tip.color = Color(0.35, 0.25, 0.15)
-	tip.size = Vector2(6, 30)
-	tip.position = Vector2(38, 0)
-	container.add_child(tip)
+	# Line guides (small rings on rod)
+	_rect(c, 46, 130, 5, 5, Color(0.5, 0.5, 0.52))
+	_rect(c, 48, 200, 5, 5, Color(0.5, 0.5, 0.52))
 
-	# Line (curved appearance with multiple segments)
-	var line1 := ColorRect.new()
-	line1.color = Color(0.7, 0.7, 0.7, 0.6)
-	line1.size = Vector2(2, 80)
-	line1.position = Vector2(40, 5)
-	line1.rotation = 0.5
-	container.add_child(line1)
-
-	var line2 := ColorRect.new()
-	line2.color = Color(0.7, 0.7, 0.7, 0.6)
-	line2.size = Vector2(2, 60)
-	line2.position = Vector2(80, 65)
-	line2.rotation = 0.2
-	container.add_child(line2)
+	# Fishing line - multiple segments for curve
+	_rect(c, 55, 5, 2, 100, Color(0.7, 0.7, 0.7, 0.5), 0.45)
+	_rect(c, 98, 80, 2, 80, Color(0.7, 0.7, 0.7, 0.5), 0.3)
+	_rect(c, 128, 140, 2, 80, Color(0.7, 0.7, 0.7, 0.5), 0.15)
+	_rect(c, 142, 210, 2, 80, Color(0.7, 0.7, 0.7, 0.5), 0.05)
 
 	# Bobber
-	var bobber_white := ColorRect.new()
-	bobber_white.color = Color(0.9, 0.9, 0.9)
-	bobber_white.size = Vector2(14, 14)
-	bobber_white.position = Vector2(140, 195)
-	container.add_child(bobber_white)
+	_rect(c, 200, 305, 22, 22, Color(0.9, 0.9, 0.9))
+	_rect(c, 200, 288, 22, 20, Color(0.9, 0.15, 0.15))
+	# Bobber stem
+	_rect(c, 209, 280, 4, 10, Color(0.3, 0.3, 0.3))
 
-	var bobber_red := ColorRect.new()
-	bobber_red.color = Color(0.9, 0.2, 0.2)
-	bobber_red.size = Vector2(14, 10)
-	bobber_red.position = Vector2(140, 185)
-	container.add_child(bobber_red)
+	# Fish jumping out of water
+	_rect(c, 300, 240, 90, 40, Color(0.45, 0.55, 0.65), -0.35)
+	# Fish belly (lighter underside)
+	_rect(c, 310, 262, 70, 15, Color(0.65, 0.7, 0.75), -0.35)
+	# Fish tail
+	_rect(c, 385, 260, 30, 50, Color(0.4, 0.5, 0.6), -0.35)
+	# Fish eye
+	_rect(c, 310, 248, 8, 8, Color(0.1, 0.1, 0.1))
+	# Dorsal fin
+	_rect(c, 340, 232, 25, 14, Color(0.38, 0.48, 0.58), -0.35)
 
-	# Fish jumping
-	var fish := ColorRect.new()
-	fish.color = Color(0.45, 0.55, 0.65)
-	fish.size = Vector2(55, 25)
-	fish.position = Vector2(190, 150)
-	fish.rotation = -0.4
-	container.add_child(fish)
+	# Water splashes around fish
+	for i in range(6):
+		var sx: float = 310 + i * 18
+		var sy: float = 290 + (i % 3) * 8
+		_rect(c, sx, sy, 10, 10, Color(0.6, 0.72, 0.85, 0.7 - i * 0.06))
 
-	var fish_tail := ColorRect.new()
-	fish_tail.color = Color(0.4, 0.5, 0.6)
-	fish_tail.size = Vector2(18, 30)
-	fish_tail.position = Vector2(238, 158)
-	fish_tail.rotation = -0.4
-	container.add_child(fish_tail)
+	# Water ripples
+	_rect(c, 190, 338, 60, 3, Color(0.35, 0.5, 0.6, 0.4))
+	_rect(c, 300, 342, 80, 3, Color(0.35, 0.5, 0.6, 0.3))
 
-	# Water splashes
-	for i in range(4):
-		var splash := ColorRect.new()
-		splash.color = Color(0.6, 0.7, 0.85, 0.7)
-		splash.size = Vector2(8, 8)
-		splash.position = Vector2(195 + i * 12, 175 + (i % 2) * 5)
-		container.add_child(splash)
-
-	return container
+	return c
 
 
 func _create_tent() -> Control:
-	var container := Control.new()
-	container.custom_minimum_size = Vector2(300, 270)
+	var c := Control.new()
+	c.custom_minimum_size = Vector2(ART_W, ART_H)
+
+	# Night sky hint at top
+	_rect(c, 0, 0, ART_W, 100, Color(0.06, 0.07, 0.12))
+	# Moon
+	_rect(c, 400, 20, 30, 30, Color(0.9, 0.88, 0.75, 0.8))
+	_rect(c, 405, 18, 22, 22, Color(0.95, 0.93, 0.82, 0.6))
 
 	# Ground
-	var ground := ColorRect.new()
-	ground.color = Color(0.25, 0.2, 0.12)
-	ground.size = Vector2(300, 35)
-	ground.position = Vector2(0, 235)
-	container.add_child(ground)
+	_rect(c, 0, 365, ART_W, 55, Color(0.22, 0.18, 0.1))
+	# Grass layer
+	_rect(c, 0, 358, ART_W, 12, Color(0.2, 0.32, 0.15))
 
 	# Grass tufts
-	for i in range(8):
-		var grass := ColorRect.new()
-		grass.color = Color(0.25, 0.4, 0.2)
-		grass.size = Vector2(15, 12)
-		grass.position = Vector2(20 + i * 35, 228)
-		container.add_child(grass)
+	for i in range(14):
+		var gx: float = 10 + i * 35
+		_rect(c, gx, 348, 20, 16, Color(0.22 + (i % 3) * 0.03, 0.38 + (i % 2) * 0.05, 0.18))
 
-	# Tent body
-	var tent_back := ColorRect.new()
-	tent_back.color = Color(0.3, 0.42, 0.28)
-	tent_back.size = Vector2(200, 140)
-	tent_back.position = Vector2(50, 95)
-	container.add_child(tent_back)
+	# Tent body - A-frame style
+	# Back panel (shadow)
+	_rect(c, 80, 150, 340, 215, Color(0.25, 0.36, 0.22))
+	# Left panel (darker side)
+	_rect(c, 80, 150, 170, 215, Color(0.32, 0.45, 0.28))
+	# Right panel (lighter, catches light)
+	_rect(c, 250, 150, 170, 215, Color(0.38, 0.52, 0.34))
 
-	var tent_left := ColorRect.new()
-	tent_left.color = Color(0.38, 0.52, 0.35)
-	tent_left.size = Vector2(100, 140)
-	tent_left.position = Vector2(50, 95)
-	container.add_child(tent_left)
+	# Ridge/peak area
+	_rect(c, 200, 110, 100, 50, Color(0.42, 0.56, 0.38))
+	_rect(c, 225, 90, 50, 30, Color(0.45, 0.6, 0.4))
 
-	var tent_right := ColorRect.new()
-	tent_right.color = Color(0.42, 0.58, 0.38)
-	tent_right.size = Vector2(100, 140)
-	tent_right.position = Vector2(150, 95)
-	container.add_child(tent_right)
+	# Tent opening (dark interior)
+	_rect(c, 205, 235, 90, 130, Color(0.06, 0.06, 0.08))
+	# Opening flaps
+	_rect(c, 195, 230, 15, 135, Color(0.35, 0.48, 0.32))
+	_rect(c, 290, 230, 15, 135, Color(0.4, 0.54, 0.36))
 
-	# Peak
-	var peak := ColorRect.new()
-	peak.color = Color(0.48, 0.62, 0.42)
-	peak.size = Vector2(50, 35)
-	peak.position = Vector2(125, 65)
-	container.add_child(peak)
-
-	# Opening
-	var opening := ColorRect.new()
-	opening.color = Color(0.08, 0.08, 0.1)
-	opening.size = Vector2(50, 85)
-	opening.position = Vector2(125, 150)
-	container.add_child(opening)
-
-	# Pole
-	var pole := ColorRect.new()
-	pole.color = Color(0.5, 0.4, 0.3)
-	pole.size = Vector2(8, 175)
-	pole.position = Vector2(146, 60)
-	container.add_child(pole)
+	# Ridge pole
+	_rect(c, 245, 85, 10, 285, Color(0.5, 0.4, 0.3))
 
 	# Guy ropes
-	var rope1 := ColorRect.new()
-	rope1.color = Color(0.5, 0.45, 0.35, 0.7)
-	rope1.size = Vector2(2, 50)
-	rope1.position = Vector2(50, 95)
-	rope1.rotation = -0.6
-	container.add_child(rope1)
+	_rect(c, 80, 150, 3, 85, Color(0.5, 0.45, 0.35, 0.6), -0.7)
+	_rect(c, 420, 150, 3, 85, Color(0.5, 0.45, 0.35, 0.6), 0.7)
 
-	var rope2 := ColorRect.new()
-	rope2.color = Color(0.5, 0.45, 0.35, 0.7)
-	rope2.size = Vector2(2, 50)
-	rope2.position = Vector2(250, 95)
-	rope2.rotation = 0.6
-	container.add_child(rope2)
+	# Tent stakes
+	_rect(c, 42, 352, 6, 18, Color(0.5, 0.4, 0.3), -0.3)
+	_rect(c, 452, 352, 6, 18, Color(0.5, 0.4, 0.3), 0.3)
 
-	return container
+	# Small campfire glow nearby (right side)
+	_rect(c, 430, 330, 40, 30, Color(1.0, 0.4, 0.1, 0.3))
+	_rect(c, 438, 320, 24, 20, Color(1.0, 0.6, 0.15, 0.5))
+	_rect(c, 443, 310, 14, 15, Color(1.0, 0.85, 0.3, 0.6))
+
+	return c
 
 
 func _create_tree() -> Control:
-	var container := Control.new()
-	container.custom_minimum_size = Vector2(300, 270)
+	var c := Control.new()
+	c.custom_minimum_size = Vector2(ART_W, ART_H)
 
 	# Ground
-	var ground := ColorRect.new()
-	ground.color = Color(0.25, 0.2, 0.12)
-	ground.size = Vector2(300, 25)
-	ground.position = Vector2(0, 245)
-	container.add_child(ground)
+	_rect(c, 0, 385, ART_W, 35, Color(0.22, 0.18, 0.1))
+	_rect(c, 0, 378, ART_W, 12, Color(0.2, 0.3, 0.14))
 
-	# Trunk
-	var trunk := ColorRect.new()
-	trunk.color = Color(0.4, 0.28, 0.15)
-	trunk.size = Vector2(40, 110)
-	trunk.position = Vector2(130, 140)
-	container.add_child(trunk)
-
-	var trunk_detail := ColorRect.new()
-	trunk_detail.color = Color(0.35, 0.24, 0.12)
-	trunk_detail.size = Vector2(12, 110)
-	trunk_detail.position = Vector2(145, 140)
-	container.add_child(trunk_detail)
+	# Trunk - thick and textured
+	_rect(c, 215, 200, 60, 190, Color(0.4, 0.28, 0.15))
+	# Bark texture lines
+	_rect(c, 225, 205, 12, 185, Color(0.35, 0.24, 0.12))
+	_rect(c, 255, 210, 10, 180, Color(0.36, 0.25, 0.13))
+	# Bark highlight
+	_rect(c, 242, 200, 8, 190, Color(0.45, 0.33, 0.2, 0.5))
 
 	# Roots
-	var root1 := ColorRect.new()
-	root1.color = Color(0.38, 0.26, 0.14)
-	root1.size = Vector2(25, 15)
-	root1.position = Vector2(115, 240)
-	container.add_child(root1)
+	_rect(c, 190, 375, 40, 18, Color(0.38, 0.26, 0.14))
+	_rect(c, 260, 375, 45, 18, Color(0.36, 0.25, 0.13))
+	_rect(c, 175, 380, 20, 12, Color(0.35, 0.24, 0.12))
+	_rect(c, 295, 378, 22, 14, Color(0.37, 0.26, 0.14))
 
-	var root2 := ColorRect.new()
-	root2.color = Color(0.38, 0.26, 0.14)
-	root2.size = Vector2(25, 15)
-	root2.position = Vector2(160, 240)
-	container.add_child(root2)
+	# Foliage - build a large rounded canopy from overlapping rects
+	# Bottom layer (widest)
+	_rect(c, 80, 170, 330, 60, Color(0.15, 0.35, 0.15))
+	# Second layer
+	_rect(c, 95, 130, 300, 55, Color(0.18, 0.4, 0.18))
+	# Third layer
+	_rect(c, 110, 95, 270, 50, Color(0.2, 0.44, 0.2))
+	# Fourth layer
+	_rect(c, 130, 60, 230, 50, Color(0.24, 0.48, 0.24))
+	# Fifth layer
+	_rect(c, 155, 30, 180, 45, Color(0.28, 0.52, 0.28))
+	# Top layer
+	_rect(c, 185, 8, 120, 35, Color(0.32, 0.56, 0.32))
+	# Crown
+	_rect(c, 215, 0, 60, 20, Color(0.35, 0.6, 0.35))
 
-	# Foliage layers (larger, more detailed)
-	var leaves1 := ColorRect.new()
-	leaves1.color = Color(0.18, 0.4, 0.18)
-	leaves1.size = Vector2(160, 65)
-	leaves1.position = Vector2(70, 100)
-	container.add_child(leaves1)
+	# Highlight patches on foliage (sunlit side)
+	_rect(c, 290, 100, 70, 35, Color(0.3, 0.55, 0.3, 0.5))
+	_rect(c, 260, 50, 60, 30, Color(0.32, 0.56, 0.32, 0.4))
+	_rect(c, 310, 155, 55, 30, Color(0.28, 0.5, 0.28, 0.4))
 
-	var leaves2 := ColorRect.new()
-	leaves2.color = Color(0.22, 0.48, 0.22)
-	leaves2.size = Vector2(130, 60)
-	leaves2.position = Vector2(85, 55)
-	container.add_child(leaves2)
+	# Shadow patches (deeper green)
+	_rect(c, 110, 140, 60, 40, Color(0.12, 0.28, 0.12, 0.5))
+	_rect(c, 140, 80, 50, 30, Color(0.14, 0.3, 0.14, 0.4))
 
-	var leaves3 := ColorRect.new()
-	leaves3.color = Color(0.28, 0.52, 0.28)
-	leaves3.size = Vector2(90, 50)
-	leaves3.position = Vector2(105, 20)
-	container.add_child(leaves3)
+	# Bird on a branch
+	_rect(c, 365, 175, 20, 6, Color(0.38, 0.26, 0.14))  # Branch
+	_rect(c, 375, 162, 16, 14, Color(0.55, 0.35, 0.25))  # Body
+	_rect(c, 388, 159, 8, 8, Color(0.5, 0.32, 0.22))  # Head
+	_rect(c, 394, 162, 5, 3, Color(0.7, 0.5, 0.2))  # Beak
 
-	var leaves4 := ColorRect.new()
-	leaves4.color = Color(0.32, 0.58, 0.32)
-	leaves4.size = Vector2(45, 35)
-	leaves4.position = Vector2(127, 0)
-	container.add_child(leaves4)
-
-	# Small bird on branch
-	var bird := ColorRect.new()
-	bird.color = Color(0.5, 0.4, 0.35)
-	bird.size = Vector2(12, 10)
-	bird.position = Vector2(200, 108)
-	container.add_child(bird)
-
-	return container
+	return c
 
 
 func _process(delta: float) -> void:

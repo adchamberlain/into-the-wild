@@ -21,7 +21,7 @@ const EQUIPPABLE_ITEMS: Dictionary = {
 	},
 	"primitive_axe": {
 		"name": "Primitive Axe",
-		"slot": 14,
+		"slot": 22,
 		"has_light": false,
 		"tool_type": "axe",
 		"effectiveness": 0.5
@@ -147,7 +147,7 @@ const EQUIPPABLE_ITEMS: Dictionary = {
 	},
 	"grappling_hook": {
 		"name": "Grappling Hook",
-		"slot": 22,
+		"slot": 14,
 		"has_light": false,
 		"tool_type": "grappling_hook"
 	}
@@ -262,6 +262,10 @@ func _input(event: InputEvent) -> void:
 		_try_equip_slot(11)
 	elif event.physical_keycode == KEY_EQUAL:
 		_try_equip_slot(12)
+	elif event.physical_keycode == KEY_BRACKETLEFT:
+		_try_equip_slot(13)
+	elif event.physical_keycode == KEY_BRACKETRIGHT:
+		_try_equip_slot(14)
 
 
 ## Cycle through equipment slots (for controller L1/R1).

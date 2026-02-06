@@ -30,8 +30,8 @@ const EQUIPMENT_SLOTS: Array = [
 	{"key": "0", "type": "garden_plot_kit", "name": "Garden Plot Kit"},
 	{"key": "-", "type": "canvas_tent_kit", "name": "Canvas Tent Kit"},
 	{"key": "=", "type": "cabin_kit", "name": "Cabin Kit"},
-	{"key": "", "type": "rope_ladder_kit", "name": "Rope Ladder Kit"},
-	{"key": "", "type": "grappling_hook", "name": "Grappling Hook"},
+	{"key": "[", "type": "rope_ladder_kit", "name": "Rope Ladder Kit"},
+	{"key": "]", "type": "grappling_hook", "name": "Grappling Hook"},
 ]
 
 # Cached labels for each slot
