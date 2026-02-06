@@ -6,7 +6,7 @@ class_name StructureData
 const STRUCTURES: Dictionary = {
 	"fire_pit": {
 		"name": "Fire Pit",
-		"scene": "res://scenes/campsite/structures/fire_pit.tscn",
+		"scene": "",
 		"item_required": "campfire_kit",
 		"provides_warmth": true,
 		"provides_light": true,
@@ -16,7 +16,7 @@ const STRUCTURES: Dictionary = {
 	},
 	"basic_shelter": {
 		"name": "Basic Shelter",
-		"scene": "res://scenes/campsite/structures/basic_shelter.tscn",
+		"scene": "",
 		"item_required": "shelter_kit",
 		"provides_protection": true,
 		"protection_radius": 3.0,
@@ -25,7 +25,7 @@ const STRUCTURES: Dictionary = {
 	},
 	"storage_container": {
 		"name": "Storage Box",
-		"scene": "res://scenes/campsite/structures/storage_container.tscn",
+		"scene": "",
 		"item_required": "storage_box",
 		"has_inventory": true,
 		"inventory_slots": 20,
@@ -34,7 +34,7 @@ const STRUCTURES: Dictionary = {
 	},
 	"crafting_bench": {
 		"name": "Crafting Bench",
-		"scene": "res://scenes/campsite/structures/crafting_bench.tscn",
+		"scene": "",
 		"item_required": "crafting_bench_kit",
 		"category": "utility",
 		"footprint_radius": 0.7

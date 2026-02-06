@@ -793,9 +793,10 @@ func _generate_box_collision() -> void:
 				box_height = max(abs(height), 0.5)
 				box_y_center = -box_height / 2.0  # Center is below y=0
 			else:
-				# Normal terrain: box from y=0 up to terrain height
+				# Normal terrain: box TOP at terrain height, extending downward
+				# Minimum thickness of 0.5 ensures reliable collision
 				box_height = max(height, 0.5)
-				box_y_center = box_height / 2.0
+				box_y_center = height - box_height / 2.0
 
 			# Calculate world position (cell center)
 			var world_x: float = chunk_world_x + cx * cell_size + cell_size / 2.0
@@ -837,8 +838,9 @@ func _generate_box_collision_batched() -> void:
 				box_height = max(abs(height), 0.5)
 				box_y_center = -box_height / 2.0
 			else:
+				# Normal terrain: box TOP at terrain height, extending downward
 				box_height = max(height, 0.5)
-				box_y_center = box_height / 2.0
+				box_y_center = height - box_height / 2.0
 
 			var world_x: float = chunk_world_x + cx * cell_size + cell_size / 2.0
 			var world_z: float = chunk_world_z + cz * cell_size + cell_size / 2.0

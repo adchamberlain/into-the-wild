@@ -2667,6 +2667,49 @@ Rebuilt all 3D object artwork across the entire game to match the rich, layered 
 
 ---
 
+## Session 27 - Sync Placement System Art with Save/Load Art (2026-02-05)
+
+### Summary
+Fixed all campsite structures using outdated simple art when placed during gameplay. The detailed artwork that was added to `save_load.gd` (Session 26) was only used when loading saved games. The `placement_system.gd` still had the original basic single-box versions for all structures. Synced all 9 structure creation functions so placed structures match the detailed art.
+
+### Structures Updated in `placement_system.gd`
+- **Fire Pit**: Was grey box + orange box. Now has 8 individual stones, crossed logs with bark, charred center, 9-layer fire, sparks, glow
+- **Basic Shelter**: Was canvas + poles only. Now has canvas shadow underside, seam lines, bark strips, lashing, leaf bed
+- **Storage Container**: Was plain box + lid. Now has plank grain lines, metal corner bands, handle with brackets, latch
+- **Crafting Bench**: Was tabletop + 4 legs. Now has wood grain, edge banding, cross-braces, hammer + knife on surface, wear marks
+- **Drying Rack**: Was posts + uniform strips. Now has bark detail, forked tops, lashing, varied meat strips and herb bundles
+- **Herb Garden**: Was border + uniform green blocks. Now has plank detail, corner posts, furrows, 8 varied herb types, leaf clusters, flowers, mulch
+- **Canvas Tent**: Was panels + back wall + ridge. Now has light/shadow panel variation, seam lines, front flaps, dark interior, bark detail, guy ropes, stakes, ground cloth
+- **Cabin Bed**: Was frame + blanket + pillow. Now has headboard with slats, footboard, side rails, sheet layer, blanket fold + wrinkles, pillow indent
+- **Cabin Kitchen**: Was counter + stone + fire box. Now has cabinet door lines + handles, stone block lines, hearth, layered fire, cooking pot, shelf with items, knife
+
+### Bug Fix: Structures Floating Above Ground
+
+**Root cause**: Terrain collision boxes had a minimum height of 0.5 units, enforced via `max(height, 0.5)`. But the box was positioned from y=0 upward, putting the collision TOP at 0.5 even when the visual terrain was at y=0.0 (campsite area). The placement system raycast hit this collision surface, placing structures 0.5 units above the visible ground.
+
+**Fix**: Changed collision box positioning so the TOP always aligns with the visual terrain height. The minimum thickness is maintained by extending the box downward underground instead of upward above the surface. Applied to both `_generate_box_collision()` (sync) and `_generate_box_collision_batched()` (async) in terrain_chunk.gd.
+
+### Bug Fix: Save/Load Using Old Art from Stale Scene Files
+
+**Root cause**: `_recreate_structure()` in `save_load.gd` loads from `.tscn` scene files FIRST via `ResourceLoader.exists(scene_path)`, only falling back to programmatic creation if the scene doesn't exist. Four stale `.tscn` files contained the old simple art and were overriding the detailed programmatic code:
+- `scenes/campsite/structures/fire_pit.tscn`
+- `scenes/campsite/structures/basic_shelter.tscn`
+- `scenes/campsite/structures/crafting_bench.tscn`
+- `scenes/campsite/structures/storage_container.tscn`
+
+**Fix**: Deleted all 4 stale `.tscn` files and cleared their scene paths in `structure_data.gd`. Now all structures use the detailed programmatic `_create_structure_programmatically()` path.
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/campsite/placement_system.gd` | Replaced 9 `_create_*` functions with detailed art matching `save_load.gd` |
+| `scripts/world/terrain_chunk.gd` | Fixed collision box Y positioning so top matches visual terrain height |
+| `scripts/campsite/structure_data.gd` | Cleared scene paths for fire_pit, basic_shelter, storage_container, crafting_bench |
+| `scenes/campsite/structures/*.tscn` | Deleted 4 stale scene files (fire_pit, basic_shelter, crafting_bench, storage_container) |
+
+---
+
 ## Next Session
 
 ### Known Issues
