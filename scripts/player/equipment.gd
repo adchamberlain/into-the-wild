@@ -144,6 +144,12 @@ const EQUIPPABLE_ITEMS: Dictionary = {
 		"light_energy": 16.0,
 		"light_range": 30.0,
 		"placeable": true
+	},
+	"grappling_hook": {
+		"name": "Grappling Hook",
+		"slot": 22,
+		"has_light": false,
+		"tool_type": "grappling_hook"
 	}
 }
 
@@ -153,7 +159,8 @@ const TOOL_MAX_DURABILITY: Dictionary = {
 	"stone_axe": 150,
 	"metal_axe": 300,
 	"fishing_rod": 50,
-	"machete": 200
+	"machete": 200,
+	"grappling_hook": 100
 }
 
 # Current durability for each tool (item_type -> current durability)
@@ -349,6 +356,9 @@ func equip(item_type: String) -> bool:
 		_create_axe_model(item_type)
 	elif tool_type == "machete":
 		_create_machete_model()
+	elif tool_type == "grappling_hook":
+		_create_grappling_hook_model()
+		_ensure_grappling_hook_controller()
 
 	print("[Equipment] Equipped %s" % item_data.get("name", item_type))
 	item_equipped.emit(item_type)
@@ -367,6 +377,7 @@ func unequip() -> void:
 	_remove_stone_axe()
 	_remove_machete()
 	_remove_fishing_rod()
+	_remove_grappling_hook()
 
 	equipped_item = ""
 	print("[Equipment] Unequipped %s" % old_item)
@@ -388,6 +399,8 @@ func use_equipped() -> bool:
 		var tool_type: String = item_data.get("tool_type", "")
 		if tool_type == "fishing":
 			return _use_fishing_rod()
+		elif tool_type == "grappling_hook":
+			return _use_grappling_hook()
 		else:
 			return _use_tool()
 
@@ -434,6 +447,36 @@ func _use_tool() -> bool:
 			item_used.emit(equipped_item)
 			# Use durability on successful chop
 			use_durability(1)
+		return success
+
+	return false
+
+
+func _ensure_grappling_hook_controller() -> Node:
+	if not player:
+		return null
+
+	var grappling_hook: Node = player.get_node_or_null("GrapplingHook")
+	if not grappling_hook:
+		# Create grappling hook controller dynamically
+		grappling_hook = GrapplingHook.new()
+		grappling_hook.name = "GrapplingHook"
+		player.add_child(grappling_hook)
+		print("[Equipment] Created GrapplingHook controller")
+
+	return grappling_hook
+
+
+func _use_grappling_hook() -> bool:
+	var grappling_hook: Node = _ensure_grappling_hook_controller()
+	if not grappling_hook:
+		return false
+
+	# Try to grapple
+	if grappling_hook.has_method("try_grapple"):
+		var success: bool = grappling_hook.try_grapple()
+		if success:
+			item_used.emit(equipped_item)
 		return success
 
 	return false
@@ -1108,6 +1151,112 @@ func hide_fishing_line() -> void:
 		line_pivot.visible = false
 	is_line_cast = false
 	print("[Equipment] Fishing line retracted")
+
+
+# Grappling hook visual
+var grappling_hook_model: Node3D = null
+const GRAPPLING_HOOK_REST_POSITION: Vector3 = Vector3(0.3, -0.25, -0.6)
+const GRAPPLING_HOOK_REST_ROTATION: Vector3 = Vector3(15, -15, -20)
+
+
+func _create_grappling_hook_model() -> void:
+	if grappling_hook_model:
+		return
+
+	grappling_hook_model = Node3D.new()
+	grappling_hook_model.name = "GrapplingHookModel"
+
+	# Handle (wooden grip)
+	var handle := MeshInstance3D.new()
+	handle.name = "Handle"
+	var handle_mesh := BoxMesh.new()
+	handle_mesh.size = Vector3(0.04, 0.2, 0.04)
+	handle.mesh = handle_mesh
+
+	var handle_mat := StandardMaterial3D.new()
+	handle_mat.albedo_color = Color(0.45, 0.35, 0.2)  # Wood brown
+	handle.material_override = handle_mat
+	handle.position = Vector3(0, 0, 0)
+
+	grappling_hook_model.add_child(handle)
+
+	# Rope coil around handle
+	var coil := MeshInstance3D.new()
+	coil.name = "RopeCoil"
+	var coil_mesh := BoxMesh.new()
+	coil_mesh.size = Vector3(0.06, 0.08, 0.06)
+	coil.mesh = coil_mesh
+
+	var rope_mat := StandardMaterial3D.new()
+	rope_mat.albedo_color = Color(0.6, 0.5, 0.35)  # Tan rope color
+	coil.material_override = rope_mat
+	coil.position = Vector3(0, -0.06, 0)
+
+	grappling_hook_model.add_child(coil)
+
+	# Hook head (metal)
+	var hook_head := MeshInstance3D.new()
+	hook_head.name = "HookHead"
+	var head_mesh := BoxMesh.new()
+	head_mesh.size = Vector3(0.08, 0.06, 0.06)
+	hook_head.mesh = head_mesh
+
+	var metal_mat := StandardMaterial3D.new()
+	metal_mat.albedo_color = Color(0.5, 0.5, 0.52)
+	metal_mat.metallic = 0.7
+	metal_mat.roughness = 0.3
+	hook_head.material_override = metal_mat
+	hook_head.position = Vector3(0, 0.13, 0)
+
+	grappling_hook_model.add_child(hook_head)
+
+	# Hook prong 1
+	var prong1 := MeshInstance3D.new()
+	prong1.name = "Prong1"
+	var prong_mesh := BoxMesh.new()
+	prong_mesh.size = Vector3(0.02, 0.08, 0.02)
+	prong1.mesh = prong_mesh
+	prong1.material_override = metal_mat
+	prong1.position = Vector3(0.04, 0.17, 0)
+	prong1.rotation_degrees = Vector3(0, 0, -30)
+
+	grappling_hook_model.add_child(prong1)
+
+	# Hook prong 2
+	var prong2 := MeshInstance3D.new()
+	prong2.name = "Prong2"
+	prong2.mesh = prong_mesh
+	prong2.material_override = metal_mat
+	prong2.position = Vector3(-0.04, 0.17, 0)
+	prong2.rotation_degrees = Vector3(0, 0, 30)
+
+	grappling_hook_model.add_child(prong2)
+
+	# Hook prong 3 (front)
+	var prong3 := MeshInstance3D.new()
+	prong3.name = "Prong3"
+	prong3.mesh = prong_mesh
+	prong3.material_override = metal_mat
+	prong3.position = Vector3(0, 0.17, 0.04)
+	prong3.rotation_degrees = Vector3(30, 0, 0)
+
+	grappling_hook_model.add_child(prong3)
+
+	# Position: held in right hand
+	grappling_hook_model.position = GRAPPLING_HOOK_REST_POSITION
+	grappling_hook_model.rotation_degrees = GRAPPLING_HOOK_REST_ROTATION
+
+	# Attach to camera
+	if player:
+		var camera: Camera3D = player.get_node_or_null("Camera3D")
+		if camera:
+			camera.add_child(grappling_hook_model)
+
+
+func _remove_grappling_hook() -> void:
+	if grappling_hook_model:
+		grappling_hook_model.queue_free()
+		grappling_hook_model = null
 
 
 func _place_item() -> bool:

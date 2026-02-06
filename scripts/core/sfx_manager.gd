@@ -34,6 +34,10 @@ const DEFAULT_COOLDOWNS: Dictionary = {
 	"rabbit_hop": 3.0,  # Only hear a hop every 3 seconds max
 	"bird_chirp": 8.0,  # Rare chirps
 	"bird_flap": 5.0,   # Rare flap sounds
+	# Grappling hook sounds
+	"grapple_fire": 0.3,
+	"grapple_attach": 0.3,
+	"grapple_land": 0.3,
 }
 
 # Anti-repetition tracking for footsteps
@@ -77,6 +81,11 @@ const SFX_PATHS: Dictionary = {
 	"rabbit_hop": "res://assets/audio/sfx/animals/rabbit_hop.mp3",
 	"bird_chirp": "res://assets/audio/sfx/animals/bird_chirp.mp3",
 	"bird_flap": "res://assets/audio/sfx/animals/bird_flap.mp3",
+
+	# Grappling hook sounds
+	"grapple_fire": "res://assets/audio/sfx/tools/grapple_fire.mp3",
+	"grapple_attach": "res://assets/audio/sfx/tools/grapple_attach.mp3",
+	"grapple_land": "res://assets/audio/sfx/tools/grapple_land.mp3",
 }
 
 # Footstep paths (multiple variants per surface)

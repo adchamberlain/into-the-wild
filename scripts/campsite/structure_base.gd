@@ -44,3 +44,18 @@ func destroy() -> void:
 	is_active = false
 	structure_destroyed.emit()
 	queue_free()
+
+
+## Get save data for this structure. Override in subclasses to add custom data.
+func get_save_data() -> Dictionary:
+	return {
+		"structure_type": structure_type,
+		"position": {"x": global_position.x, "y": global_position.y, "z": global_position.z},
+		"rotation_y": rotation.y,
+		"is_active": is_active
+	}
+
+
+## Load save data for this structure. Override in subclasses to load custom data.
+func load_save_data(data: Dictionary) -> void:
+	is_active = data.get("is_active", true)

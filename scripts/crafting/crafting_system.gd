@@ -219,6 +219,15 @@ func _load_recipes() -> void:
 			"description": "A bright, long-lasting light source.",
 			"requires_bench": true,
 			"min_camp_level": 3
+		},
+		"grappling_hook": {
+			"name": "Grappling Hook",
+			"inputs": {"rope": 3, "metal_ingot": 2, "branch": 1},
+			"output_type": "grappling_hook",
+			"output_amount": 1,
+			"description": "A climbing tool for ascending steep cliffs.",
+			"requires_bench": true,
+			"min_camp_level": 2
 		}
 	}
 

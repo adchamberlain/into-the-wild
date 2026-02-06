@@ -61,6 +61,10 @@ var show_coordinates: bool = true
 var is_celebrating: bool = false
 var celebration_tween: Tween = null
 
+# Grapple reticle (uses existing Crosshair label)
+@onready var crosshair: Label = $Crosshair
+var default_crosshair_color: Color = Color(1, 1, 1, 0.8)
+
 var time_manager: Node
 var player: Node
 var inventory: Node
@@ -183,6 +187,7 @@ func _ready() -> void:
 	_update_equipped_display()
 	_update_campsite_level_display()
 	_update_weather_display()
+
 
 
 func _update_time_display() -> void:
@@ -469,6 +474,9 @@ func _process(delta: float) -> void:
 	# Check if player is resting and show prompt
 	_update_resting_prompt()
 
+	# Update grapple reticle
+	_update_grapple_reticle()
+
 
 func _on_weather_changed(weather_type: String) -> void:
 	_update_weather_display()
@@ -704,6 +712,37 @@ func _input(event: InputEvent) -> void:
 	if is_celebrating:
 		if (event is InputEventKey and event.pressed) or (event is InputEventJoypadButton and event.pressed):
 			_hide_celebration()
+
+
+## Update crosshair color based on grapple target validity.
+func _update_grapple_reticle() -> void:
+	if not crosshair or not equipment:
+		return
+
+	# Only change color when grappling hook is equipped
+	if equipment.get_equipped() == "grappling_hook":
+		# Get grappling hook node to check target validity
+		var grappling_hook: Node = player.get_node_or_null("GrapplingHook") if player else null
+		if grappling_hook and "current_target_valid" in grappling_hook:
+			var color: Color
+			if grappling_hook.is_grappling:
+				# During grapple, show blue
+				color = Color(0.4, 0.7, 1.0, 1.0)
+			elif grappling_hook.current_target_valid:
+				# Valid target - green
+				color = Color(0.4, 1.0, 0.4, 1.0)
+			elif grappling_hook.current_target_reason != "" and grappling_hook.current_target_reason != "No target":
+				# Invalid target with reason - red
+				color = Color(1.0, 0.4, 0.4, 1.0)
+			else:
+				# No target - white
+				color = default_crosshair_color
+			crosshair.add_theme_color_override("font_color", color)
+		else:
+			crosshair.add_theme_color_override("font_color", default_crosshair_color)
+	else:
+		# Reset to default color when not using grappling hook
+		crosshair.add_theme_color_override("font_color", default_crosshair_color)
 
 
 ## Fade the screen to black and back. Calls callback after fade out completes.

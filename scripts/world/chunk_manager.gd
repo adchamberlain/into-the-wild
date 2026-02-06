@@ -19,9 +19,9 @@ enum WaterBodyType { POND, LAKE, RIVER }
 @export var noise_scale: float = 0.018  # Moderate frequency for varied terrain
 
 # Tree spawning settings
-@export var tree_density: float = 0.25
+@export var tree_density: float = 0.30  # Increased to compensate for larger grid
 @export var tree_min_distance: float = 14.0
-@export var tree_grid_size: float = 2.5
+@export var tree_grid_size: float = 3.5  # Increased from 2.5 - fewer checks, better performance
 
 # Water body settings - structured storage replacing simple pond_locations
 # Each water body: {type: WaterBodyType, center: Vector2, radius: float, depth: float}
@@ -122,7 +122,7 @@ var region_height_params: Dictionary = {
 	RegionType.FOREST: {"scale": 5.0, "step": 1.0},   # Current default
 	RegionType.HILLS: {"scale": 22.0, "step": 1.0},   # Dramatic hills with jumpable steps
 	RegionType.ROCKY: {"scale": 12.0, "step": 1.0},   # Jagged cliffs with jumpable steps
-	RegionType.MOUNTAIN: {"scale": 50.0, "step": 1.5} # Tall peaks with dramatic blocky cliffs
+	RegionType.MOUNTAIN: {"scale": 24.0, "step": 1.0} # Tall peaks with stable geometry
 }
 
 # Region-specific vegetation multipliers
@@ -869,6 +869,89 @@ func _has_carved_neighbor(x: float, z: float, threshold: float) -> bool:
 	return false
 
 
+## Cached neighbor heights for height limiting (cleared after each get_height_at call)
+var _height_limit_cache: Dictionary = {}
+
+
+func _limit_height_difference(x: float, z: float, height: float, max_diff: float) -> float:
+	## Limit height difference between this cell and its neighbors to max_diff units.
+	## This prevents single-cell cliffs that cause collision issues.
+	## Returns the adjusted height.
+
+	# Create cache key for this position
+	var cache_key: String = "%d_%d" % [int(x / cell_size), int(z / cell_size)]
+
+	# If we've already calculated this position, return cached result
+	if _height_limit_cache.has(cache_key):
+		return _height_limit_cache[cache_key]
+
+	# Get raw heights of cardinal neighbors (without limiting, to avoid recursion)
+	var neighbor_offsets: Array[Vector2] = [
+		Vector2(cell_size, 0),   # East
+		Vector2(-cell_size, 0),  # West
+		Vector2(0, cell_size),   # South
+		Vector2(0, -cell_size)   # North
+	]
+
+	var min_neighbor_height: float = INF
+	for offset in neighbor_offsets:
+		var nx: float = x + offset.x
+		var nz: float = z + offset.y
+		var neighbor_height: float = _get_raw_mountain_height(nx, nz)
+		if neighbor_height < min_neighbor_height:
+			min_neighbor_height = neighbor_height
+
+	# If lowest neighbor is more than max_diff below us, limit our height
+	if min_neighbor_height != INF and height - min_neighbor_height > max_diff:
+		height = min_neighbor_height + max_diff
+
+	# Cache the result
+	_height_limit_cache[cache_key] = height
+	return height
+
+
+func _get_raw_mountain_height(x: float, z: float) -> float:
+	## Get the raw mountain height without height limiting (to avoid recursion).
+	## This is a simplified version of the MOUNTAIN case in get_height_at.
+	var snapped_x: float = (floor(x / cell_size) + 0.5) * cell_size
+	var snapped_z: float = (floor(z / cell_size) + 0.5) * cell_size
+
+	var region: RegionType = get_region_at(snapped_x, snapped_z)
+	if region != RegionType.MOUNTAIN:
+		# For non-mountain regions, use a high value so it doesn't constrain mountains
+		return INF
+
+	var params: Dictionary = region_height_params[region]
+	var region_height_scale: float = params["scale"]
+
+	# Large-scale mountain shapes
+	var mountain_shape: float = hill_noise.get_noise_2d(snapped_x * 0.6, snapped_z * 0.6)
+	mountain_shape = (mountain_shape + 1.0) * 0.5
+	mountain_shape = pow(mountain_shape, 1.5)
+	var height: float = mountain_shape * region_height_scale
+
+	# Add ridges and detail
+	var ridge: float = hill_noise.get_noise_2d(snapped_x * 1.0, snapped_z * 1.0)
+	ridge = (ridge + 1.0) * 0.5
+	height += ridge * 2.0
+
+	var detail: float = detail_noise.get_noise_2d(snapped_x * 1.5, snapped_z * 1.5)
+	height += detail * 1.0
+
+	# Apply path carving
+	var path_value: float = path_noise.get_noise_2d(snapped_x, snapped_z)
+	var mountain_path_threshold: float = 0.25
+	if path_value > mountain_path_threshold:
+		var path_strength: float = (path_value - mountain_path_threshold) / (1.0 - mountain_path_threshold)
+		var path_reduction: float = path_strength * height * 0.55
+		height -= path_reduction
+
+	# Minimum height
+	height = max(4.0, height)
+
+	return height
+
+
 func _get_base_terrain_height(x: float, z: float) -> float:
 	## Get terrain height without water body modifications (for river path finding)
 	var region: RegionType = get_region_at(x, z)
@@ -1128,25 +1211,25 @@ func get_height_at(x: float, z: float) -> float:
 
 		height = max(1.0, height)
 
-	# Special terrain generation for MOUNTAIN - tall dramatic peaks with treeline
+	# Special terrain generation for MOUNTAIN - tall peaks with stable geometry
 	elif region == RegionType.MOUNTAIN:
-		# Large-scale mountain shapes using hill noise with higher amplitude
-		var mountain_shape: float = hill_noise.get_noise_2d(snapped_x * 0.8, snapped_z * 0.8)
-		# Transform to 0-1 range, then apply power curve for dramatic peaks
+		# Large-scale mountain shapes using hill noise
+		var mountain_shape: float = hill_noise.get_noise_2d(snapped_x * 0.6, snapped_z * 0.6)
+		# Transform to 0-1 range, then apply power curve for peaks
 		mountain_shape = (mountain_shape + 1.0) * 0.5
-		mountain_shape = pow(mountain_shape, 1.8)  # More dramatic than hills
+		mountain_shape = pow(mountain_shape, 1.5)
 		height = mountain_shape * region_height_scale
 
-		# Add medium-scale ridges
-		var ridge: float = hill_noise.get_noise_2d(snapped_x * 1.2, snapped_z * 1.2)
+		# Add medium-scale ridges (reduced for stability)
+		var ridge: float = hill_noise.get_noise_2d(snapped_x * 1.0, snapped_z * 1.0)
 		ridge = (ridge + 1.0) * 0.5
-		height += ridge * 8.0
+		height += ridge * 2.0
 
-		# Add detail variation for rocky surface
+		# Add detail variation for rocky surface (reduced)
 		var detail: float = detail_noise.get_noise_2d(snapped_x * 1.5, snapped_z * 1.5)
-		height += detail * 5.0
+		height += detail * 1.0
 
-		# Carve climbing paths through mountains (similar to hills but sparser)
+		# Carve climbing paths through mountains
 		var path_value: float = path_noise.get_noise_2d(snapped_x, snapped_z)
 		var mountain_path_threshold: float = 0.25
 
@@ -1154,12 +1237,15 @@ func get_height_at(x: float, z: float) -> float:
 			var has_carved_neighbor: bool = _has_carved_neighbor(snapped_x, snapped_z, mountain_path_threshold)
 			if has_carved_neighbor:
 				var path_strength: float = (path_value - mountain_path_threshold) / (1.0 - mountain_path_threshold)
-				# Mountains have gentler paths to maintain grandeur
-				var path_reduction: float = path_strength * height * 0.5
+				var path_reduction: float = path_strength * height * 0.55
 				height -= path_reduction
 
-		# Ensure mountains have significant minimum height
-		height = max(15.0, height)
+		# Ensure mountains have minimum height
+		height = max(4.0, height)
+
+		# Limit height differences between adjacent cells to prevent single-cell cliffs
+		# Max 8 units difference keeps terrain climbable while preserving dramatic multi-cell cliffs
+		height = _limit_height_difference(snapped_x, snapped_z, height, 8.0)
 
 	# Quantize to blocky steps (using region-specific step size)
 	height = floor(height / region_height_step) * region_height_step
