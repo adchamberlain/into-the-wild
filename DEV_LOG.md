@@ -2885,6 +2885,28 @@ Fixed four bugs with cave interiors: entrance interaction triggering from wrong 
 
 ---
 
+## Session 24 - Cave Entrance Visual Redesign v2 (2026-02-06)
+
+### Problem
+Cave entrance was a massive grey rectangular structure (12x6x10 mound body + 4x4.5x6 shoulders + 7x3x6 cap) that just looked like a giant grey wall. The dark opening was hidden behind all this geometry. Camera could clip through the rock when approaching.
+
+### Fix
+Completely replaced the massive mound design with a minimal rock archway:
+- **Dark opening is the dominant visual**: 3.5x3.5 dark rectangle is the first thing you see
+- **Rock arch frame**: Two thin pillars (1.5x3.5x1.5) and a lintel (5.5x1.5x1.8) framing the opening
+- **Small overhang**: 4.0x0.6x1.2 ledge jutting forward above the opening
+- **Thin back wall**: 5.0x4.5x0.5 behind the opening for depth illusion
+- **Total footprint**: ~5.5 wide, ~5 tall, ~2.5 deep (was ~12x8x10)
+- Collision matches just the arch frame pieces, no massive invisible boxes
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/cave_entrance.gd` | Complete rewrite - minimal rock arch instead of massive mound structure |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
