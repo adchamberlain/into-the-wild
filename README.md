@@ -8,19 +8,21 @@ A solo camping adventure game built in Godot 4.5. Survive in the wilderness by g
 
 ### Infinite Procedural World
 - **Chunk-based terrain** - Endless exploration with procedurally generated landscapes
-- **Four distinct regions** - Meadow (gentle rolling hills), Forest (dense trees), Hills (dramatic terrain with climbing paths), Rocky (jagged cliffs with caves)
-- **Biome variety** - Mixed forests with oak, big oak, and birch trees
-- **Natural features** - Ponds, lakes, and rivers for swimming and fishing
-- **Blocky terrain** - Cell-based terrain with vertical cliffs and height variation
+- **Five distinct regions** - Meadow (gentle rolling hills), Forest (dense trees), Hills (dramatic terrain with climbing paths), Rocky (jagged cliffs with caves), Mountain (alpine peaks with ponderosa pines)
+- **Biome variety** - Mixed forests with oak, big oak, birch, and ponderosa pine trees
+- **Natural features** - Ponds, lakes, alpine lakes, and rivers for swimming and fishing
+- **Blocky terrain** - Cell-based terrain with per-cell BoxShape3D collision for pixel-perfect physics
 - **Ambient wildlife** - Rabbits and birds that flee when approached
 - **Cave entrances** - Explorable underground areas in rocky regions (requires torch)
+- **Loading screen** - Cycling camping artwork while the world generates
 
 ### Survival Systems
 - **Health & Hunger** - Manage your vital stats to stay alive
-- **Weather System** - Dynamic weather including rain, storms, fog, heat waves, and cold snaps
+- **Weather System** - Dynamic weather including rain, storms, fog, heat waves, and cold snaps with GPU-accelerated particle effects
 - **Day/Night Cycle** - 20-minute real-time days with dynamic sky, stars, and moon
 - **Swimming** - Explore underwater with breath mechanics
 - **Save System** - 3 save slots with camp level and timestamp display
+- **Traps** - Place traps to catch rabbits for food
 
 ### Gathering & Crafting
 - **Resource Gathering** - Collect branches, rocks, berries, mushrooms, herbs, and wood
@@ -65,6 +67,7 @@ Build up your camp through three levels:
 | 8 | Crafting Bench Kit | Place a workbench |
 | 20 | Machete | Clear thorny obstacles (200 durability) |
 | 21 | Lantern | Bright light source, 2x torch range |
+| 22 | Grappling Hook | Ascend cliff faces with arc-based traversal (100 durability) |
 
 ## Controls
 
@@ -134,6 +137,11 @@ Full controller support with PlayStation button prompts.
 | Fishing Rod | 3 Branch + 1 Rope |
 | Healing Salve | 3 Herb |
 | Berry Pouch | 5 Berry |
+| Drying Rack Kit | 6 Branch + 2 Rope |
+| Garden Plot Kit | 4 Wood + 2 Herb |
+| Machete | 2 Metal Ingot + 1 Branch (Camp Lvl 2) |
+| Grappling Hook | 3 Rope + 2 Metal Ingot + 1 Branch (Camp Lvl 2) |
+| Lantern | 2 Metal Ingot + 1 Crystal (Camp Lvl 3) |
 
 ## Cooking
 
@@ -155,12 +163,11 @@ Cook raw food at a fire pit for better hunger restoration:
 | Rain | Reduces fire effectiveness | None needed |
 | Fog | Reduced visibility | None needed |
 
-Weather features GPU-accelerated particle effects for rain, snow, and dust.
-
 ## Audio
 
 - 12 ambient music tracks with shuffle and crossfade
 - Configurable music volume in settings
+- Sound effects for tools, gathering, crafting, weather, and wildlife
 
 ## Requirements
 
