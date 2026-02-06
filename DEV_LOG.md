@@ -2569,19 +2569,59 @@ Phase 1 (collision batching) eliminated collision spikes, but chunks still cause
 
 ---
 
+## Session 18 - Fix Grappling Hook Detection (2026-02-05)
+
+Fixed two critical bugs that prevented the grappling hook crosshair from ever turning green on cliff faces.
+
+### Bug 1: Cell Boundary Snapping
+When the physics ray hits the side of a tall collision box (cliff face), the hit position lands right at the cell boundary (e.g., x=2.999). `get_height_at()` uses `floor(x / cell_size)` which snaps this to the **short cell in front** of the cliff instead of the tall cliff cell, returning the wrong (low) height. Fix: nudge the hit position 0.15 units into the collider before the height lookup, and if that still misses, scan forward along the horizontal look direction (up to 5 cells) to find nearby cliffs.
+
+### Bug 2: LOS Check Blocked by Cliff's Own Collision
+The line-of-sight ray from player chest to cliff top anchor always passes through the cliff's own collision geometry. The old tolerance (`anchor_dist - 2.0`) was far too small — the LOS ray hits the cliff face many units before reaching the anchor, always returning "Obstructed". Fix: check if the LOS hit is near the anchor horizontally (within 1.5 cell widths); if so, it's the cliff face itself, not an intervening obstruction.
+
+### Additional Improvement
+Changed cliff-top search to use horizontal-only forward direction (`Vector2(ray_dir.x, ray_dir.z).normalized()`) instead of the full 3D ray direction. This prevents steep upward look angles from undershooting the horizontal scan distance.
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/player/grappling_hook.gd` | Fixed cell boundary snapping with 0.15-unit nudge, added horizontal forward scan for cliff detection, fixed LOS check to allow cliff face hits near anchor |
+
+---
+
+## Session 19 - Fix Grappling Hook Terrain Clipping (2026-02-05)
+
+Fixed a bug where using the grappling hook would pull the player through terrain geometry, trapping them underground.
+
+### Root Cause
+`_interpolate_grapple()` used a straight-line lerp from the player's start position to the cliff-top target. Since `is_grappling` disables physics processing (velocity zeroed, early return in `_physics_process`), the player's position was set directly without collision detection — so the straight-line path went right through terrain.
+
+### Fix: Arc Path + Terrain Safety Checks
+1. **Parabolic arc path**: The grapple trajectory now arcs upward, peaking 3 units above the highest point (start or target). This carries the player up and over terrain instead of through it.
+2. **Terrain height clamping during interpolation**: At every interpolation step, the player's Y is clamped to at least 0.5 units above the terrain surface at their current X,Z position.
+3. **Landing position terrain verification**: On grapple completion, the final landing Y is verified against actual terrain height to prevent placement underground.
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/player/grappling_hook.gd` | Replaced straight-line lerp with parabolic arc in `_interpolate_grapple()`, added terrain height safety checks during interpolation and on landing |
+
+---
+
 ## Next Session
 
 ### Known Issues
-- **Grappling hook is broken** - Currently not working correctly, needs debugging and fixing
+- None critical
 
 ### Planned Tasks
-1. **Fix grappling hook** - Debug and repair grappling hook functionality
-2. Add camera collision to prevent clipping into terrain
-3. Remove debug grappling hook code (auto-gives hook on spawn)
-4. Add grappling hook sound effect audio files
-5. Test and polish cave system integration
-6. Test BoxShape3D collision thoroughly at terrain transitions
-7. Disable `debug_performance` logging once stuttering is confirmed fixed
+1. Add camera collision to prevent clipping into terrain
+2. Remove debug grappling hook code (auto-gives hook on spawn)
+3. Add grappling hook sound effect audio files
+4. Test and polish cave system integration
+5. Test BoxShape3D collision thoroughly at terrain transitions
+6. Disable `debug_performance` logging once stuttering is confirmed fixed
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

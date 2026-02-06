@@ -122,42 +122,47 @@ func get_grapple_target() -> Dictionary:
 	var hit_position: Vector3 = result.position
 	var hit_normal: Vector3 = result.normal
 
-	# NEW APPROACH: Instead of requiring vertical wall hit, check if the terrain
-	# at the hit point is significantly higher than the player.
-	# This works with HeightMapShape3D which creates sloped collision.
-
-	# Get the terrain height at the hit position
+	# Check if terrain ahead of the hit point is significantly higher than player.
+	# Nudge hit position slightly into the collider to avoid cell boundary snapping
+	# (ray hits land right at box edges; floor() can snap to the wrong cell).
+	var nudged_hit: Vector3 = hit_position + ray_direction.normalized() * 0.15
+	hit_position = nudged_hit  # Use nudged position for all subsequent lookups
 	var terrain_height_at_hit: float = chunk_manager.get_height_at(hit_position.x, hit_position.z)
 	var player_height: float = player.global_position.y
 	var height_diff: float = terrain_height_at_hit - player_height
 
-	# If we're looking at terrain that's higher than us, it's potentially grappleable
+	# If the nudged hit didn't find higher terrain, scan forward along the
+	# horizontal look direction to find nearby cliffs (up to 5 cells ahead).
 	if height_diff < MIN_HEIGHT_DIFFERENCE:
-		# Maybe we hit a slope going up - check ahead in the look direction
-		var look_ahead: Vector3 = hit_position + ray_direction.normalized() * CELL_SIZE
-		var height_ahead: float = chunk_manager.get_height_at(look_ahead.x, look_ahead.z)
-		height_diff = height_ahead - player_height
-
-		if height_diff < MIN_HEIGHT_DIFFERENCE:
+		var forward_2d: Vector2 = Vector2(ray_direction.x, ray_direction.z).normalized()
+		var found_cliff: bool = false
+		for i in range(1, 6):
+			var sample_x: float = hit_position.x + forward_2d.x * CELL_SIZE * i
+			var sample_z: float = hit_position.z + forward_2d.y * CELL_SIZE * i
+			var sample_height: float = chunk_manager.get_height_at(sample_x, sample_z)
+			if sample_height - player_height >= MIN_HEIGHT_DIFFERENCE:
+				terrain_height_at_hit = sample_height
+				hit_position = Vector3(sample_x, sample_height, sample_z)
+				height_diff = sample_height - player_height
+				found_cliff = true
+				break
+		if not found_cliff:
 			return {"valid": false, "reason": "Too short"}
 
-		# Use the look-ahead position as our target
-		terrain_height_at_hit = height_ahead
-		hit_position = look_ahead
-
-	# Find the top of the cliff - sample in a small grid to find the highest nearby point
+	# Find the top of the cliff - sample forward to find the highest nearby point
 	var best_height: float = terrain_height_at_hit
 	var best_x: float = hit_position.x
 	var best_z: float = hit_position.z
+	var forward_2d: Vector2 = Vector2(ray_direction.x, ray_direction.z).normalized()
 
-	# Search in the direction we're looking for the cliff top
-	for i in range(1, 4):
-		var sample_pos: Vector3 = hit_position + ray_direction.normalized() * (CELL_SIZE * i)
-		var sample_height: float = chunk_manager.get_height_at(sample_pos.x, sample_pos.z)
+	for i in range(1, 5):
+		var sample_x: float = hit_position.x + forward_2d.x * CELL_SIZE * i
+		var sample_z: float = hit_position.z + forward_2d.y * CELL_SIZE * i
+		var sample_height: float = chunk_manager.get_height_at(sample_x, sample_z)
 		if sample_height > best_height:
 			best_height = sample_height
-			best_x = sample_pos.x
-			best_z = sample_pos.z
+			best_x = sample_x
+			best_z = sample_z
 		elif sample_height < best_height - 1.0:
 			# Height dropped, we've passed the cliff top
 			break
@@ -186,7 +191,10 @@ func get_grapple_target() -> Dictionary:
 	if total_dist > MAX_TOTAL_RANGE:
 		return {"valid": false, "reason": "Out of range"}
 
-	# Check line of sight to anchor
+	# Check line of sight to anchor.
+	# The LOS ray will inevitably hit the cliff's own collision geometry on its
+	# way to the top, so we check whether the hit is the cliff face itself
+	# (near the anchor horizontally) vs a genuine obstruction between player and cliff.
 	var los_query := PhysicsRayQueryParameters3D.create(
 		player.global_position + Vector3(0, 1.0, 0),  # From player's chest
 		anchor + Vector3(0, 0.5, 0)  # To slightly above anchor
@@ -196,44 +204,42 @@ func get_grapple_target() -> Dictionary:
 
 	var los_result: Dictionary = space_state.intersect_ray(los_query)
 
-	# LOS is blocked if we hit something before reaching near the anchor
 	if not los_result.is_empty():
-		var los_hit_dist: float = (los_result.position - player.global_position).length()
-		var anchor_dist: float = (anchor - player.global_position).length()
-		# Allow some tolerance (hit should be very close to anchor)
-		if los_hit_dist < anchor_dist - 2.0:
+		var los_hit: Vector3 = los_result.position
+		# Check if the hit is near the anchor horizontally — if so, it's the
+		# cliff face itself, not an intervening obstruction.
+		var horiz_dist_to_anchor: float = Vector2(
+			los_hit.x - anchor.x, los_hit.z - anchor.z
+		).length()
+		if horiz_dist_to_anchor > CELL_SIZE * 1.5:
 			return {"valid": false, "reason": "Obstructed"}
 
 	# Check that landing zone isn't water
 	if _is_position_water(anchor.x, anchor.z):
 		return {"valid": false, "reason": "Water landing"}
 
-	# Calculate landing position (center of the cliff top cell)
-	# Use the best_x, best_z we found as the cliff top location
-	var landing_x: float = best_x
-	var landing_z: float = best_z
+	# Use best_height directly for anchor — do NOT re-query get_height_at here,
+	# because best_x/best_z can sit on cell boundaries that snap to the wrong cell.
+	# best_height was already computed correctly from get_height_at during the search.
+	anchor = Vector3(best_x, top_height + 0.5, best_z)
 
-	# Get the actual terrain height at landing position
-	var landing_height: float = chunk_manager.get_height_at(landing_x, landing_z)
-
-	# Update anchor point with correct terrain height
-	anchor = Vector3(landing_x, landing_height + 0.5, landing_z)
-
-	# Landing is at the cliff top, slightly toward the player
+	# Landing is on the cliff top, offset AWAY from the cliff edge (deeper onto top).
+	# "to_player" points toward the cliff edge, so we go the opposite direction.
 	var to_player: Vector3 = (player.global_position - anchor).normalized()
 	to_player.y = 0
 	if to_player.length() > 0.1:
 		to_player = to_player.normalized()
 	else:
-		to_player = Vector3(0, 0, 1)  # Default direction if player is directly below
+		to_player = Vector3(0, 0, 1)
 
-	var landing: Vector3 = Vector3(landing_x, landing_height + 0.1, landing_z) + to_player * DISMOUNT_FORWARD_OFFSET
+	var landing: Vector3 = Vector3(best_x, top_height + 0.1, best_z) - to_player * DISMOUNT_FORWARD_OFFSET
 
-	# Make sure landing is at terrain height
+	# Query landing height, but never go below the cliff top (prevents
+	# cell boundary snapping from pulling the player back down the cliff).
 	var final_landing_height: float = chunk_manager.get_height_at(landing.x, landing.z)
-	landing.y = final_landing_height + 0.1
+	landing.y = max(final_landing_height, top_height) + 0.1
 
-	print("[GrapplingHook] VALID TARGET! Anchor: %s, Landing: %s, terrain_height: %.1f" % [anchor, landing, final_landing_height])
+	print("[GrapplingHook] VALID TARGET! Anchor: %s, Landing: %s, cliff_top: %.1f" % [anchor, landing, top_height])
 
 	return {
 		"valid": true,
@@ -323,8 +329,24 @@ func _interpolate_grapple(progress: float) -> void:
 	var target: Vector3 = current_landing
 	target.y = current_anchor.y + 0.5
 
-	# Interpolate position
+	# Arc path: go up first, then over to the target.
+	# The apex is above the highest point (start or target) to clear terrain.
+	var apex_y: float = max(grapple_start_position.y, target.y) + 3.0
+
+	# Horizontal position: straight lerp
 	var new_pos: Vector3 = grapple_start_position.lerp(target, eased_progress)
+
+	# Vertical position: parabolic arc (peaks at midpoint)
+	# At progress 0 -> start.y, at progress 0.5 -> apex_y, at progress 1 -> target.y
+	var base_y: float = lerpf(grapple_start_position.y, target.y, eased_progress)
+	var arc_offset: float = 4.0 * (apex_y - max(grapple_start_position.y, target.y)) * eased_progress * (1.0 - eased_progress)
+	new_pos.y = base_y + arc_offset
+
+	# Safety: never go below the terrain surface at current position
+	if chunk_manager:
+		var terrain_y: float = chunk_manager.get_height_at(new_pos.x, new_pos.z)
+		new_pos.y = max(new_pos.y, terrain_y + 0.5)
+
 	player.global_position = new_pos
 
 	# Update rope visual to follow player
@@ -336,11 +358,16 @@ func _on_grapple_complete() -> void:
 	# Play landing sound
 	SFXManager.play_sfx("grapple_land")
 
-	# Position player at landing spot - get correct terrain height
-	var terrain_height: float = chunk_manager.get_height_at(current_landing.x, current_landing.z) if chunk_manager else current_landing.y
-	player.global_position = Vector3(current_landing.x, terrain_height + 0.5, current_landing.z)
+	# Position player at landing spot. Use the pre-computed landing height
+	# (which already accounts for cliff top), but verify against actual terrain
+	# to prevent clipping underground.
+	var final_y: float = current_landing.y + 0.4
+	if chunk_manager:
+		var terrain_y: float = chunk_manager.get_height_at(current_landing.x, current_landing.z)
+		final_y = max(final_y, terrain_y + 0.5)
+	player.global_position = Vector3(current_landing.x, final_y, current_landing.z)
 
-	print("[GrapplingHook] Landed at %s (terrain height: %.1f)" % [player.global_position, terrain_height])
+	print("[GrapplingHook] Landed at %s" % [player.global_position])
 
 	# Give small forward velocity
 	var forward: Vector3 = -player.global_transform.basis.z
