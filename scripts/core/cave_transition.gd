@@ -256,6 +256,9 @@ func _restore_player_position() -> void:
 		print("[CaveTransition] ERROR: main scene not ready")
 		return
 
+	# Calculate safe spawn position: in front of cave entrance, on top of terrain
+	var safe_pos: Vector3 = _get_safe_return_position()
+
 	if stored_player:
 		# Replace the fresh player from main.tscn with our preserved one
 		# (keeps cave-gained inventory/stats intact)
@@ -264,7 +267,7 @@ func _restore_player_position() -> void:
 			fresh_player.get_parent().remove_child(fresh_player)
 			fresh_player.queue_free()
 
-		stored_player.global_position = return_position + Vector3(0, 0.5, 0)
+		stored_player.global_position = safe_pos
 		stored_player.rotation.y = return_rotation
 		main_root.add_child(stored_player)
 		print("[CaveTransition] Preserved player restored at %s" % stored_player.global_position)
@@ -273,7 +276,7 @@ func _restore_player_position() -> void:
 		# Fallback: just reposition existing player
 		var player: Node = tree.get_first_node_in_group("player")
 		if player:
-			player.global_position = return_position + Vector3(0, 0.5, 0)
+			player.global_position = safe_pos
 			player.rotation.y = return_rotation
 			print("[CaveTransition] Player position restored")
 
@@ -297,6 +300,27 @@ func _restore_player_position() -> void:
 		main_root.add_child(stored_pause_menu)
 		print("[CaveTransition] Preserved PauseMenu restored")
 		stored_pause_menu = null
+
+
+func _get_safe_return_position() -> Vector3:
+	## Calculate a safe position above terrain for returning from cave.
+	## Uses ChunkManager.get_height_at() to find the actual terrain height,
+	## then places the player well above it to avoid spawning under terrain.
+	var pos: Vector3 = return_position
+
+	# Query ChunkManager for the real terrain height at this position
+	var chunk_manager: Node = get_tree().current_scene.get_node_or_null("World/Terrain")
+	if chunk_manager and chunk_manager.has_method("get_height_at"):
+		var terrain_y: float = chunk_manager.get_height_at(pos.x, pos.z)
+		# Place player 1.5 units above terrain (enough clearance to not clip)
+		pos.y = terrain_y + 1.5
+		print("[CaveTransition] Terrain height at return pos: %.1f, placing player at y=%.1f" % [terrain_y, pos.y])
+	else:
+		# Fallback: use stored position + generous offset
+		pos.y = return_position.y + 3.0
+		print("[CaveTransition] No ChunkManager found, using fallback y=%.1f" % pos.y)
+
+	return pos
 
 
 ## Placeholder cave effect when scene doesn't exist yet.
