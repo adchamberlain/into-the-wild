@@ -36,6 +36,7 @@ var resting_in_structure: Node = null  # The shelter we're resting in
 var is_in_water: bool = false
 var is_climbing: bool = false
 var climbing_structure: Node = null  # The ladder we're climbing
+var is_grappling: bool = false  # Whether player is being pulled by grappling hook
 
 # Performance: throttle raycast checks
 const INTERACTION_CHECK_INTERVAL: float = 0.1  # Check 10x/sec instead of 60x/sec
@@ -49,8 +50,12 @@ var interaction_text_refresh_timer: float = 0.0
 const INTERACT_COOLDOWN: float = 0.15
 var interact_cooldown_timer: float = 0.0
 
-# Fall-through protection (debug only - world floor provides actual protection)
-var fall_warning_y: float = -50.0  # Log warning if player falls this low
+# Fall-through protection (safety net - shouldn't trigger with BoxShape3D collision)
+var fall_warning_y: float = -50.0  # Emergency recovery if player somehow falls this low
+var last_safe_position: Vector3 = Vector3.ZERO  # Last known position on solid ground
+var safe_position_update_timer: float = 0.0
+const SAFE_POSITION_UPDATE_INTERVAL: float = 0.5  # Update safe position every 0.5 seconds
+
 
 # Footstep sound timing
 var footstep_timer: float = 0.0
@@ -106,6 +111,17 @@ func _ready() -> void:
 	if interaction_ray:
 		interaction_ray.target_position = Vector3(0, 0, -interaction_distance)
 		interaction_ray.enabled = true
+
+	# Initialize fall-through protection with spawn position
+	call_deferred("_init_safe_position")
+
+	# DEBUG: Give player grappling hook for testing
+	call_deferred("_debug_give_grappling_hook")
+
+
+func _init_safe_position() -> void:
+	last_safe_position = global_position
+	print("[Player] Initial safe position: %s" % last_safe_position)
 
 
 func _is_loading_screen_active() -> bool:
@@ -183,31 +199,14 @@ func _physics_process(delta: float) -> void:
 	if interact_cooldown_timer > 0:
 		interact_cooldown_timer -= delta
 
-	# Skip movement processing while resting or climbing
-	if is_resting or is_climbing:
-		velocity = Vector3.ZERO
-		return
-
-	# Handle right stick camera look (controller)
-	_handle_controller_look(delta)
-
-	# Handle swimming vs normal movement
-	# Only use swimming if actually submerged (below water surface), not just in water area
-	var actually_swimming: bool = is_in_water and global_position.y < water_surface_y
-	if actually_swimming:
-		_process_swimming(delta)
-	else:
-		_process_normal_movement(delta)
-
-	move_and_slide()
-
-	# Throttle interaction raycast checks for performance
+	# Interaction checks must run even while resting/climbing/grappling
+	# so that current_interaction_target stays updated
 	interaction_check_timer += delta
 	if interaction_check_timer >= INTERACTION_CHECK_INTERVAL:
 		interaction_check_timer = 0.0
 		_update_interaction_target()
 
-	# Periodically refresh interaction text for dynamic objects (e.g., drying rack progress)
+	# Periodically refresh interaction text for dynamic objects
 	if current_interaction_target:
 		interaction_text_refresh_timer += delta
 		if interaction_text_refresh_timer >= INTERACTION_TEXT_REFRESH_INTERVAL:
@@ -219,6 +218,23 @@ func _physics_process(delta: float) -> void:
 
 	# Fall-through protection: track safe position and recover if fallen
 	_update_fall_protection(delta)
+
+	# Skip movement processing while resting, climbing, or grappling
+	if is_resting or is_climbing or is_grappling:
+		velocity = Vector3.ZERO
+		return
+
+	# Handle right stick camera look (controller)
+	_handle_controller_look(delta)
+
+	# Handle swimming vs normal movement
+	var actually_swimming: bool = is_in_water and global_position.y < water_surface_y
+	if actually_swimming:
+		_process_swimming(delta)
+	else:
+		_process_normal_movement(delta)
+
+	move_and_slide()
 
 
 func _handle_controller_look(delta: float) -> void:
@@ -418,6 +434,16 @@ func set_climbing(climbing: bool, structure: Node = null) -> void:
 		interaction_cleared.emit()
 
 
+## Set whether player is grappling (being pulled by grappling hook).
+func set_grappling(grappling: bool) -> void:
+	is_grappling = grappling
+
+	if grappling:
+		# Clear interaction target while grappling
+		current_interaction_target = null
+		interaction_cleared.emit()
+
+
 ## Set whether player is in water (swimming).
 func set_in_water(in_water: bool) -> void:
 	var was_in_water: bool = is_in_water
@@ -504,11 +530,34 @@ func _notification(what: int) -> void:
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 
 
-## Fall-through protection: logs warning if player falls unusually low.
-## The world floor at y=-100 provides actual collision protection.
-func _update_fall_protection(_delta: float) -> void:
+## Fall-through protection: safety net in case player somehow falls below world.
+## With BoxShape3D collision matching visual terrain, this should rarely trigger.
+func _update_fall_protection(delta: float) -> void:
+	# Update safe position periodically when on solid ground
+	safe_position_update_timer += delta
+	if safe_position_update_timer >= SAFE_POSITION_UPDATE_INTERVAL:
+		safe_position_update_timer = 0.0
+		if is_on_floor() and not is_grappling:
+			last_safe_position = global_position
+
+	# Emergency recovery if player falls extremely low (shouldn't happen with proper collision)
 	if global_position.y < fall_warning_y:
-		push_warning("[Player] Falling unusually low (y=%.1f). World floor will catch at y=-100." % global_position.y)
+		push_warning("[Player] Emergency fall recovery triggered (y=%.1f)." % global_position.y)
+		_recover_from_fall()
+
+
+func _recover_from_fall() -> void:
+	velocity = Vector3.ZERO
+
+	# Try to use last safe position if valid
+	if last_safe_position != Vector3.ZERO and last_safe_position.y > -10:
+		global_position = last_safe_position + Vector3(0, 0.5, 0)
+		print("[Player] Recovered to last safe position: %s" % global_position)
+	else:
+		# Fallback: teleport to spawn
+		global_position = Vector3(0, 5, 0)
+		last_safe_position = global_position
+		print("[Player] Recovered to spawn point.")
 
 
 ## Update footstep sounds based on movement.
@@ -536,6 +585,13 @@ func _get_surface_type() -> String:
 
 	# Default to grass for forest, plains, meadow
 	return "grass"
+
+
+## DEBUG: Give player grappling hook for testing.
+func _debug_give_grappling_hook() -> void:
+	if inventory:
+		inventory.add_item("grappling_hook", 1)
+		print("[DEBUG] Gave player grappling hook for testing")
 
 
 ## Check if any UI menu is open and blocking player input.

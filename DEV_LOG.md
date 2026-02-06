@@ -2051,13 +2051,450 @@ Large gray untextured rectangular block visible in MOUNTAIN regions looked disco
 
 ---
 
+## Session 49 - Grappling Hook Tool (2026-02-04)
+
+**New craftable tool** for ascending steep cliff faces in MOUNTAIN and ROCKY regions. Complements rope ladders by providing active traversal rather than placed infrastructure.
+
+### Core Mechanic
+
+1. Equip grappling hook
+2. Aim at cliff face - crosshair shows target validity (green/red/white)
+3. Fire with R2/right-click
+4. Player is pulled up via tween-based ascent
+5. Land on top of cliff with slight forward momentum
+
+### Crafting Recipe
+
+| Ingredient | Quantity |
+|------------|----------|
+| Rope | 3 |
+| Metal Ingot | 2 |
+| Branch | 1 |
+
+- Requires crafting bench
+- Camp Level 2
+
+### Technical Implementation
+
+**Target Detection:**
+- Raycast from camera to find cliff faces (vertical surfaces)
+- Validates: height difference (2-15 units), horizontal range (8 units), line of sight
+- Checks for valid landing zone (flat top, not water)
+- Returns anchor point and calculated landing position
+
+**Ascent Mechanics:**
+- Tween-based movement (not physics) for reliability
+- Smooth ease-out curve
+- Player state set to `is_grappling` to disable normal movement
+- Rope visual updates each frame during ascent
+- Durability consumed on successful grapple (100 uses)
+
+**Visual Feedback:**
+- Color-coded targeting reticle in HUD:
+  - Green: Valid target
+  - Red: Invalid target (shows reason)
+  - White: No target
+  - Blue: Currently grappling
+- Rope mesh stretches from player to anchor during ascent
+- Hook visual appears at anchor point
+- First-person grappling hook model when equipped
+
+**Range Limits:**
+| Dimension | Limit |
+|-----------|-------|
+| Vertical | 15 units |
+| Horizontal | 8 units |
+| Total distance | 17 units |
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `scripts/player/grappling_hook.gd` | Core grappling logic, target detection, ascent tween, visuals |
+| `docs/GRAPPLING_HOOK_DESIGN.md` | Full design document |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/player/equipment.gd` | Added grappling_hook to EQUIPPABLE_ITEMS, TOOL_MAX_DURABILITY, model creation, _use_grappling_hook() |
+| `scripts/crafting/crafting_system.gd` | Added grappling_hook recipe |
+| `scripts/player/player_controller.gd` | Added is_grappling state, set_grappling() function, movement override |
+| `scripts/core/sfx_manager.gd` | Added grapple_fire, grapple_attach, grapple_land sound paths and cooldowns |
+| `scripts/ui/hud.gd` | Added grapple targeting reticle with color-coded feedback |
+
+### Sound Effects Needed
+
+| Sound | Path | Description |
+|-------|------|-------------|
+| grapple_fire | `assets/audio/sfx/tools/grapple_fire.mp3` | Whoosh + rope sound |
+| grapple_attach | `assets/audio/sfx/tools/grapple_attach.mp3` | Metal impact on stone |
+| grapple_land | `assets/audio/sfx/tools/grapple_land.mp3` | Soft landing thud |
+
+---
+
+## Session 50 - Bug Fixes & Terrain Stability (2026-02-04)
+
+### Bug Fixes
+
+**Grappling Hook:**
+- Fixed undefined variable bug in `get_grapple_target()` - `top_world_x`/`top_world_z` changed to `best_x`/`best_z`
+- Fixed duplicate variable declaration for `anchor`
+
+**Structure Save/Load:**
+- Added `get_save_data()` and `load_save_data()` methods to `StructureBase` class
+- Fixes parse error in `structure_snare_trap.gd` that was calling non-existent super methods
+
+**Interaction System:**
+- Moved interaction raycast checks before the resting/climbing/grappling early return in `_physics_process`
+- Fixes bug where player couldn't pick up objects after using grappling hook
+
+### Fall-Through Protection
+
+Added robust terrain fall-through detection and recovery:
+- Tracks last safe position when player is on floor
+- Detects when player falls 3+ units below expected terrain height
+- Automatically teleports player back to last safe position
+- Fallback to terrain height if no safe position recorded
+
+### Camera Improvements
+
+- Increased camera near clip from 0.05 to 0.15 to reduce terrain clipping on steep slopes
+
+### Mountain Terrain Stability
+
+Reduced mountain terrain extremeness to fix geometry glitches:
+- Height scale: 50 → 30
+- Ridge contribution: 8 → 4
+- Detail contribution: 5 → 2
+- Step size: 1.5 → 1.0
+- Minimum height: 15 → 10
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/player/grappling_hook.gd` | Fixed undefined variables in target detection |
+| `scripts/campsite/structure_base.gd` | Added save/load methods |
+| `scripts/player/player_controller.gd` | Added fall-through protection, fixed interaction check order |
+| `scripts/world/chunk_manager.gd` | Reduced mountain terrain extremeness |
+| `scenes/player/player.tscn` | Increased camera near clip |
+
+### Known Issues (To Fix Later)
+
+1. Camera still clips through terrain on very steep slopes (may need camera collision system)
+2. Mountain terrain geometry still has some visual glitches at extreme heights
+3. HeightMapShape3D creates invisible collision slopes near cliffs (fundamental Godot limitation)
+4. Grappling hook landing position can be imprecise
+
+### Debug Code to Remove
+
+- `_debug_give_grappling_hook()` in `player_controller.gd` - auto-gives grappling hook for testing
+
+---
+
+## Session 51 - Mountain Terrain Fix (2026-02-05)
+
+### Problem
+
+Mountain terrain was unplayable due to:
+- Extreme heights (36+ units vs HILLS 26 units)
+- Weak path carving (40% vs HILLS 60%)
+- HeightMapShape3D creates invisible collision slopes on blocky terrain
+- Adjacent cells could have 10+ unit height differences causing single-cell cliffs
+
+### Solution: Two-Pronged Fix
+
+**1. Terrain Parameter Tuning:**
+
+Adjusted mountain generation parameters for more reasonable terrain:
+
+| Parameter | Before | After |
+|-----------|--------|-------|
+| Height scale | 30.0 | 24.0 |
+| Ridge addition | 4.0 | 2.0 |
+| Detail addition | 2.0 | 1.0 |
+| Path carving | 0.4 | 0.55 |
+| Minimum height | 10.0 | 4.0 |
+
+Result: Max peaks ~27 units (still dramatic), clearer climbing paths.
+
+**2. Height Difference Limiter:**
+
+Added `_limit_height_difference()` function that caps height differences between adjacent cells at 8 units max. This prevents single-cell cliffs that cause collision issues while preserving dramatic multi-cell cliffs.
+
+**3. Trimesh Collision for Mountains:**
+
+For chunks containing MOUNTAIN terrain, now uses `ConcavePolygonShape3D` (trimesh) instead of `HeightMapShape3D`. This makes collision match the visual mesh exactly - no more invisible slopes causing players to slide off cliffs they should be able to stand on.
+
+Other biomes continue to use `HeightMapShape3D` for better performance.
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/chunk_manager.gd` | Tuned 5 mountain parameters, added `_limit_height_difference()` and `_get_raw_mountain_height()` functions |
+| `scripts/world/terrain_chunk.gd` | Added conditional trimesh collision for mountains via `_generate_trimesh_collision()` and `_generate_heightmap_collision()` |
+
+### Verification Checklist
+
+1. **Height test**: Walk to mountains, peaks should reach ~25-27 units max
+2. **Path test**: Climbing paths should be clearly navigable without jumping constantly
+3. **Cliff test**: No single-cell drops greater than 8 units
+4. **Collision test**: Walk along cliff edges - no falling through or sliding off
+5. **Visual test**: Mountains still look distinct and dramatic vs HILLS
+
+---
+
+## Session 52 - Performance Fix: Batched Spawning (2026-02-05)
+
+### Problem
+
+Game was stuttering every few seconds while walking around. The stuttering coincided with chunk loading, where all trees, resources, decorations, and animals for a chunk were being instantiated in a single frame.
+
+### Solution: Batched Spawning System
+
+Converted all chunk spawning from synchronous to async coroutines that yield periodically to spread work across multiple frames.
+
+**Key Changes:**
+
+1. **Batched Tree Spawning**: Trees now spawn in batches of 6, yielding between batches
+2. **Batched Resource Spawning**: Resources spawn in batches of 10, yielding between batches
+3. **Batched Decoration Spawning**: Decorations spawn in batches of 15, yielding between batches
+4. **Sequential Chaining**: Spawners chain sequentially (trees → resources → decorations → animals)
+
+**Additional Optimizations:**
+
+| Setting | Before | After | Impact |
+|---------|--------|-------|--------|
+| Tree grid size | 2.5 | 3.5 | 47% fewer grid checks |
+| Tree density | 0.25 | 0.30 | Compensates for larger grid |
+| Resource grid size | 4.0 | 5.0 | 36% fewer grid checks |
+| Target grass per chunk | 60 | 40 | 33% fewer decorations |
+| Target flowers per chunk | 20 | 12 | 40% fewer decorations |
+
+### How Batching Works
+
+Instead of:
+```
+spawn_all_trees()  # 30+ instantiations in one frame -> stutter
+```
+
+Now:
+```
+spawn 6 trees -> yield -> spawn 6 trees -> yield -> ...
+```
+
+This spreads the CPU cost across multiple frames, eliminating visible stuttering.
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/terrain_chunk.gd` | Added batching constants, converted spawning to async coroutines with yields |
+| `scripts/world/chunk_manager.gd` | Increased tree_grid_size (3.5) and tree_density (0.30) |
+
+---
+
+## Session 53 - Terrain Collision Fix: Height Sampling Alignment (2026-02-05)
+
+### Problem
+
+Players were falling through terrain, especially near water edges and terrain transitions. The root cause was a **sampling position mismatch** between the visual mesh and collision.
+
+### Root Cause Analysis
+
+The visual mesh samples heights at **cell centers**:
+```gdscript
+// Visual mesh - samples at cell centers
+var world_x: float = chunk_world_x + (cx * cell_size) + cell_size / 2.0
+```
+
+But the heightmap collision was sampling at **grid vertices**:
+```gdscript
+// Collision (OLD BUG) - samples at grid vertices
+var world_x: float = chunk_world_x + x * cell_size  // Missing center offset!
+```
+
+This meant collision heights were sampled 1 unit away from where the visual mesh sampled. At terrain transitions (water edges, cliffs), this caused the collision surface to be at a completely different height than the visible terrain.
+
+### The Fix
+
+Aligned heightmap collision sampling with visual mesh:
+
+```gdscript
+// Collision (FIXED) - samples at cell centers like visual mesh
+var world_x: float = chunk_world_x + x * cell_size + cell_size / 2.0
+var world_z: float = chunk_world_z + z * cell_size + cell_size / 2.0
+```
+
+Also adjusted heightmap position offset to match the new sampling:
+```gdscript
+collision_shape.position = Vector3(
+    chunk_world_x + chunk_world_size / 2.0 + cell_size / 2.0,  // +0.5 cell offset
+    0.0,
+    chunk_world_z + chunk_world_size / 2.0 + cell_size / 2.0
+)
+```
+
+### What Didn't Work
+
+1. **Trimesh collision for all terrain** - Too expensive, caused severe stuttering
+2. **Stuck detection system** - Band-aid that fired constantly, didn't fix root cause
+3. **Heightmap scale adjustment** - Created worse mismatch issues
+
+### Performance: Async Terrain Mesh Generation
+
+Also added async terrain mesh generation to fix stuttering when chunks load:
+
+**Before:** Terrain mesh (576 cells with triangles) generated in one frame → stutter
+
+**After:** Mesh generation spread across 4 frames (6 rows per frame):
+```gdscript
+const MESH_ROWS_PER_BATCH: int = 6
+
+func _generate_terrain_mesh_batched() -> void:
+    for cz in range(chunk_size_cells):
+        # ... generate row ...
+        rows_this_batch += 1
+        if rows_this_batch >= MESH_ROWS_PER_BATCH:
+            rows_this_batch = 0
+            await get_tree().process_frame
+```
+
+**New chunk generation pipeline:**
+1. `_build_height_cache()` - sync (fast, needed for collision)
+2. `_generate_collision_from_mesh()` - sync (player needs to walk immediately)
+3. `_generate_terrain_mesh_batched()` - async (4 frames)
+4. Tree/resource/decoration spawning - async (already batched)
+
+### Additional Fix: MAX Height Sampling
+
+HeightMapShape3D interpolates between samples, creating smooth slopes where our visual mesh has flat steps. At height transitions (cliffs, river edges), the interpolated collision can be BELOW the visual terrain, causing fall-through.
+
+**Fix**: For each heightmap vertex, sample the MAX height of all 4 surrounding cell centers:
+```gdscript
+for offset in [(-0.5,-0.5), (0.5,-0.5), (-0.5,0.5), (0.5,0.5)]:
+    var sample_h: float = get_height_at(world_x + offset.x * cell_size, ...)
+    if sample_h > height:
+        height = sample_h
+```
+
+This ensures collision is always AT or ABOVE the visual terrain.
+
+### Emergency Recovery Loop Detection
+
+Added detection for when fall-through recovery gets stuck in a loop (keeps recovering to same bad position). After 3 recoveries in 2 seconds, player is teleported to spawn (0, 5, 0) as emergency escape.
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/terrain_chunk.gd` | Fixed collision with MAX height sampling, async mesh generation |
+| `scripts/player/player_controller.gd` | Added recovery loop detection with emergency spawn teleport |
+
+---
+
+## Session 54 - Minecraft-Style BoxShape3D Collision System (2026-02-05)
+
+### Problem: HeightMapShape3D Fall-Through
+
+Despite multiple fixes to HeightMapShape3D collision (MAX height sampling, aligned coordinates), players could still fall through terrain at height transitions. The fundamental issue: HeightMapShape3D **interpolates** between sample points, creating smooth collision surfaces that don't match our blocky visual terrain.
+
+At cliffs and height transitions:
+- Visual terrain: flat top at height 10, vertical cliff, flat top at height 5
+- HeightMapShape3D: smooth slope from 10 to 5, can dip BELOW visual surface
+
+### Solution: Per-Cell BoxShape3D (Minecraft-Style)
+
+Replaced HeightMapShape3D with individual BoxShape3D for each terrain cell:
+
+```gdscript
+func _generate_box_collision() -> void:
+    for cz in range(chunk_size_cells):
+        for cx in range(chunk_size_cells):
+            var height: float = _height_cache[cz + 1][cx + 1]
+            if height < 0:  # Skip water
+                continue
+
+            var box: BoxShape3D = BoxShape3D.new()
+            box.size = Vector3(cell_size, max(height, 0.5), cell_size)
+
+            var collision_shape: CollisionShape3D = CollisionShape3D.new()
+            collision_shape.shape = box
+            collision_shape.position = Vector3(world_x, box_height / 2.0, world_z)
+            terrain_collision.add_child(collision_shape)
+```
+
+**Why this works:**
+- Each cell gets a box extending from y=0 to cell height
+- Collision perfectly matches visual: flat top at exact cell height
+- No interpolation = no invisible slopes = no fall-through
+- Vertical cliff faces handled naturally (boxes don't overlap)
+
+### Performance: Async Batching
+
+256 boxes per chunk (16x16 cells) is more shapes than HeightMapShape3D, but:
+- BoxShape3D is trivial (just an AABB)
+- Godot's Jolt physics handles thousands of AABB efficiently
+- Async batching spreads creation across frames:
+
+```gdscript
+const BOXES_PER_BATCH: int = 32  # Cheap AABB creation
+
+# Yield every 32 boxes to prevent frame stutter
+if boxes_this_batch >= BOXES_PER_BATCH:
+    boxes_this_batch = 0
+    await get_tree().process_frame
+```
+
+At 60fps: 32 boxes/frame = 8 frames = ~130ms to complete chunk collision.
+Player walks from chunk edge inward, so collision is ready before they reach interior.
+
+### Simplified Fall Recovery
+
+With collision now matching visual terrain, the complex fall-through detection (comparing player Y to expected terrain height) is no longer needed. Simplified to emergency-only recovery:
+
+```gdscript
+func _update_fall_protection(delta: float) -> void:
+    # Track safe position when on floor
+    if is_on_floor() and not is_grappling:
+        last_safe_position = global_position
+
+    # Emergency recovery only for extreme cases (shouldn't trigger)
+    if global_position.y < -50:
+        _recover_from_fall()
+```
+
+### Code Removed
+
+Deleted these functions (obsolete with BoxShape3D):
+- `_generate_heightmap_collision()` - replaced by `_generate_box_collision()`
+- `_generate_trimesh_collision()` - alternative approach, never used
+- `_add_collision_side_face()` - helper for trimesh, no longer needed
+- `_generate_collision()` - wrapper function, simplified away
+
+Removed from player_controller.gd:
+- Terrain height comparison logic (fall-through detection)
+- Recovery loop counter system (3-recovery limit)
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/terrain_chunk.gd` | Replaced HeightMapShape3D with BoxShape3D per cell, async batching |
+| `scripts/player/player_controller.gd` | Simplified fall recovery to emergency-only |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Optional: DualSense haptics and adaptive triggers
-2. Test and polish cave system integration
-3. Add sound effects for thorns clearing and cave ambience
-4. Test mountain terrain generation and ponderosa spawning
+1. Add camera collision to prevent clipping into terrain
+2. Remove debug grappling hook code
+3. Add grappling hook sound effect audio files
+4. Test and polish cave system integration
+5. Test BoxShape3D collision thoroughly at terrain transitions
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

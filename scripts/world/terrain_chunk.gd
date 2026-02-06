@@ -60,40 +60,44 @@ func setup(coord: Vector2i, manager: Node) -> void:
 	chunk_manager = manager
 
 
+## Batching configuration - controls how many items spawn per frame to prevent stuttering
+const TREES_PER_BATCH: int = 6  # Trees are expensive (collision, etc.)
+const RESOURCES_PER_BATCH: int = 10
+const DECORATIONS_PER_BATCH: int = 15
+const MESH_ROWS_PER_BATCH: int = 6  # Terrain mesh rows per frame
+# Note: Box collision runs synchronously (not batched) - must be ready before player arrives
+
+
 func generate() -> void:
 	if is_generated:
 		return
 
-	# Generate terrain mesh and collision immediately (required for player to walk)
-	_generate_terrain_mesh()
-	_generate_collision_from_mesh()  # Uses height cache from mesh generation
+	# Phase 1: Build height cache (fast, needed for collision)
+	_build_height_cache()
 
-	# Defer spawning to spread work across frames
-	call_deferred("_spawn_chunk_trees")
-	call_deferred("_deferred_spawn_resources")
-	call_deferred("_deferred_spawn_decorations")
-	call_deferred("_deferred_spawn_animals")
+	# Phase 2: Generate collision immediately (player needs to walk)
+	_generate_collision_from_mesh()
+
+	# Phase 3: Start async terrain mesh + spawning pipeline
+	_generate_terrain_async()
 
 	is_generated = true
 
 
-func _deferred_spawn_resources() -> void:
-	# Extra frame delay to spread load
-	await get_tree().process_frame
-	_spawn_chunk_resources()
+func _generate_terrain_async() -> void:
+	## Async pipeline: mesh generation spread across frames, then spawning
+	await _generate_terrain_mesh_batched()
 
+	# Chain to tree spawning after mesh is complete
+	await get_tree().process_frame
+	await _spawn_chunk_trees()
 
-func _deferred_spawn_decorations() -> void:
-	# Extra frame delay to spread load
 	await get_tree().process_frame
-	await get_tree().process_frame
-	_spawn_chunk_decorations()
+	await _spawn_chunk_resources()
 
+	await get_tree().process_frame
+	await _spawn_chunk_decorations()
 
-func _deferred_spawn_animals() -> void:
-	# Extra frame delay to spread load
-	await get_tree().process_frame
-	await get_tree().process_frame
 	await get_tree().process_frame
 	_spawn_chunk_animals()
 
@@ -103,19 +107,14 @@ var _height_cache: Array = []
 var _height_cache_size: int = 0
 
 
-func _generate_terrain_mesh() -> void:
-	var surface_tool: SurfaceTool = SurfaceTool.new()
-	surface_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
-
+func _build_height_cache() -> void:
+	## Pre-compute and cache all heights for this chunk.
+	## This is fast and needed before collision can be generated.
 	var cell_size: float = chunk_manager.cell_size
 	var chunk_size_cells: int = chunk_manager.chunk_size_cells
-
-	# Calculate world position of this chunk's origin
 	var chunk_world_x: float = chunk_coord.x * chunk_size_cells * cell_size
 	var chunk_world_z: float = chunk_coord.y * chunk_size_cells * cell_size
 
-	# Pre-compute and cache all heights (including 1 cell border for neighbor lookups)
-	# This dramatically reduces noise sampling calls
 	_height_cache_size = chunk_size_cells + 2  # +2 for border cells
 	_height_cache.resize(_height_cache_size)
 	for cz in range(_height_cache_size):
@@ -126,7 +125,20 @@ func _generate_terrain_mesh() -> void:
 			var world_z: float = chunk_world_z + ((cz - 1) * cell_size) + cell_size / 2.0
 			_height_cache[cz][cx] = chunk_manager.get_height_at(world_x, world_z)
 
-	# Generate each cell in this chunk
+
+func _generate_terrain_mesh_batched() -> void:
+	## Generate terrain mesh in batches across multiple frames to prevent stuttering.
+	var surface_tool: SurfaceTool = SurfaceTool.new()
+	surface_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+
+	var cell_size: float = chunk_manager.cell_size
+	var chunk_size_cells: int = chunk_manager.chunk_size_cells
+	var chunk_world_x: float = chunk_coord.x * chunk_size_cells * cell_size
+	var chunk_world_z: float = chunk_coord.y * chunk_size_cells * cell_size
+
+	var rows_this_batch: int = 0
+
+	# Generate each cell in this chunk, yielding every MESH_ROWS_PER_BATCH rows
 	for cz in range(chunk_size_cells):
 		for cx in range(chunk_size_cells):
 			var world_x: float = chunk_world_x + (cx * cell_size)
@@ -141,13 +153,19 @@ func _generate_terrain_mesh() -> void:
 			# Create side faces where there's height difference
 			_add_side_faces_cached(surface_tool, world_x, world_z, cell_size, height, cx, cz, chunk_size_cells)
 
+		# Yield after each batch of rows to spread work across frames
+		rows_this_batch += 1
+		if rows_this_batch >= MESH_ROWS_PER_BATCH:
+			rows_this_batch = 0
+			await get_tree().process_frame
+
 	var mesh: ArrayMesh = surface_tool.commit()
 
 	terrain_mesh = MeshInstance3D.new()
 	terrain_mesh.mesh = mesh
 	terrain_mesh.material_override = chunk_manager.get_terrain_material()
 	add_child(terrain_mesh)
-	# NOTE: Don't clear height cache here - collision generation needs it
+	# Note: Height cache is cleared in unload() to allow async box collision to complete
 
 
 func _add_top_face_cached(st: SurfaceTool, x: float, z: float, size: float, height: float, cx: int, cz: int) -> void:
@@ -625,75 +643,66 @@ func _calculate_side_ao_bottom(x: float, z: float, height: float, face_normal: V
 
 
 func _generate_collision_from_mesh() -> void:
-	# Use HeightMapShape3D - single efficient shape instead of 256 boxes
 	terrain_collision = StaticBody3D.new()
 	terrain_collision.name = "TerrainCollision"
-
-	var cell_size: float = chunk_manager.cell_size
-	var chunk_size_cells: int = chunk_manager.chunk_size_cells
-	var chunk_world_size: float = chunk_size_cells * cell_size
-
-	var chunk_world_x: float = chunk_coord.x * chunk_world_size
-	var chunk_world_z: float = chunk_coord.y * chunk_world_size
-
-	# HeightMapShape3D requires (width+1) x (depth+1) points for width x depth cells
-	var map_width: int = chunk_size_cells + 1
-	var map_depth: int = chunk_size_cells + 1
-
-	# Build height data array (row-major: z * width + x)
-	var map_data: PackedFloat32Array = PackedFloat32Array()
-	map_data.resize(map_width * map_depth)
-
-	for z in range(map_depth):
-		for x in range(map_width):
-			var world_x: float = chunk_world_x + x * cell_size
-			var world_z: float = chunk_world_z + z * cell_size
-
-			# Use cached height for interior vertices, direct calculation for edges
-			# Edge vertices (x=chunk_size_cells or z=chunk_size_cells) must use get_height_at()
-			# to ensure correct heights at chunk boundaries (cache has wrong positions for edges)
-			var height: float
-			if _height_cache.size() > 0 and x < chunk_size_cells and z < chunk_size_cells:
-				# Interior vertex - use cache (offset by 1 for border)
-				var cache_x: int = x + 1
-				var cache_z: int = z + 1
-				height = _height_cache[cache_z][cache_x]
-			else:
-				# Edge vertex - always use direct calculation for correct chunk boundary heights
-				height = chunk_manager.get_height_at(world_x, world_z)
-
-			map_data[z * map_width + x] = height
-
-	# Create the heightmap shape
-	var heightmap: HeightMapShape3D = HeightMapShape3D.new()
-	heightmap.map_width = map_width
-	heightmap.map_depth = map_depth
-	heightmap.map_data = map_data
-
-	var collision_shape: CollisionShape3D = CollisionShape3D.new()
-	collision_shape.shape = heightmap
-
-	# Position the collision shape - HeightMapShape3D is centered at origin
-	# and scaled by 1 unit per sample, so we need to scale and position it
-	collision_shape.scale = Vector3(cell_size, 1.0, cell_size)
-	collision_shape.position = Vector3(
-		chunk_world_x + chunk_world_size / 2.0,
-		0.0,
-		chunk_world_z + chunk_world_size / 2.0
-	)
-
-	terrain_collision.add_child(collision_shape)
 	add_child(terrain_collision)
 
-	# Clear height cache to free memory (no longer needed after collision generated)
-	_height_cache.clear()
+	# Start async box collision generation (Minecraft-style per-cell AABB)
+	# This creates BoxShape3D for each cell, which exactly matches the visual terrain
+	# Unlike HeightMapShape3D which interpolates and causes fall-through
+	_generate_box_collision()
 
 
-func _generate_collision() -> void:
-	_generate_collision_from_mesh()
+func _generate_box_collision() -> void:
+	## Generate per-cell BoxShape3D collision (Minecraft-style).
+	## One box per cell with exact heights - no merging, no rounding.
+	## This is the most reliable approach that exactly matches visual terrain.
+	##
+	## MUST run synchronously - async collision causes fall-through when player
+	## reaches chunk before collision is ready.
+	var cell_size: float = chunk_manager.cell_size
+	var chunk_size_cells: int = chunk_manager.chunk_size_cells
+	var chunk_world_x: float = chunk_coord.x * chunk_size_cells * cell_size
+	var chunk_world_z: float = chunk_coord.y * chunk_size_cells * cell_size
+
+	for cz in range(chunk_size_cells):
+		for cx in range(chunk_size_cells):
+			var height: float = _height_cache[cz + 1][cx + 1]
+
+			# For water cells (negative height), create collision at water bottom
+			# This allows swimming while preventing fall-through
+			# Use absolute value to get depth, minimum 0.5 for thin collision
+			var box_height: float
+			var box_y_center: float
+
+			if height < 0:
+				# Water cell: create thin collision at water bottom
+				# The water bottom is at height (negative), box extends down from y=0
+				box_height = max(abs(height), 0.5)
+				box_y_center = -box_height / 2.0  # Center is below y=0
+			else:
+				# Normal terrain: box from y=0 up to terrain height
+				box_height = max(height, 0.5)
+				box_y_center = box_height / 2.0
+
+			# Calculate world position (cell center)
+			var world_x: float = chunk_world_x + cx * cell_size + cell_size / 2.0
+			var world_z: float = chunk_world_z + cz * cell_size + cell_size / 2.0
+
+			# Create box collision
+			var box: BoxShape3D = BoxShape3D.new()
+			box.size = Vector3(cell_size, box_height, cell_size)
+
+			var collision_shape: CollisionShape3D = CollisionShape3D.new()
+			collision_shape.shape = box
+			collision_shape.position = Vector3(world_x, box_y_center, world_z)
+
+			terrain_collision.add_child(collision_shape)
+
 
 
 func _spawn_chunk_trees() -> void:
+	## Spawns trees with batching - yields every TREES_PER_BATCH to prevent frame stuttering
 	var tree_scene: PackedScene = chunk_manager.tree_scene
 	var big_tree_scene: PackedScene = chunk_manager.big_tree_scene
 	var birch_tree_scene: PackedScene = chunk_manager.birch_tree_scene
@@ -718,6 +727,8 @@ func _spawn_chunk_trees() -> void:
 	var chunk_seed: int = chunk_coord.x * 73856093 ^ chunk_coord.y * 19349663
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = chunk_seed
+
+	var trees_spawned_this_batch: int = 0
 
 	var x: float = 0.0
 	while x < chunk_world_size:
@@ -810,11 +821,18 @@ func _spawn_chunk_trees() -> void:
 				trees_container.add_child(tree)
 				spawned_trees.append(tree)
 
+				# Batch yielding - pause every N trees to prevent frame stuttering
+				trees_spawned_this_batch += 1
+				if trees_spawned_this_batch >= TREES_PER_BATCH:
+					trees_spawned_this_batch = 0
+					await get_tree().process_frame
+
 			z += tree_grid_size
 		x += tree_grid_size
 
 
 func _spawn_chunk_resources() -> void:
+	## Spawns resources with batching - yields every RESOURCES_PER_BATCH to prevent frame stuttering
 	resources_container = Node3D.new()
 	resources_container.name = "Resources"
 	add_child(resources_container)
@@ -837,7 +855,8 @@ func _spawn_chunk_resources() -> void:
 	resource_noise.seed = chunk_manager.noise_seed + 2000
 	resource_noise.frequency = 0.1
 
-	var resource_grid_size: float = 4.0  # Larger grid for resources
+	var resource_grid_size: float = 5.0  # Larger grid for resources - fewer checks, better performance
+	var resources_spawned_this_batch: int = 0
 
 	var x: float = 0.0
 	while x < chunk_world_size:
@@ -881,6 +900,9 @@ func _spawn_chunk_resources() -> void:
 			var berry_mult: float = chunk_manager.get_vegetation_multiplier(region, "berry")
 			var herb_mult: float = chunk_manager.get_vegetation_multiplier(region, "herb")
 
+			# Track if we spawned something this iteration
+			var spawned: bool = false
+
 			# Try spawning different resource types
 			var resource_roll: float = rng.randf()
 
@@ -889,84 +911,81 @@ func _spawn_chunk_resources() -> void:
 			var branch_chance: float = chunk_manager.branch_density * (0.5 + forest_value)
 			if resource_roll < branch_chance and chunk_manager.branch_scene:
 				_spawn_resource(chunk_manager.branch_scene, res_x, res_y, res_z, rng)
-				z += resource_grid_size
-				continue
-
-			# Rocks - spawn near water pools (shoreline rocks) + region-based
-			resource_roll = rng.randf()
-			var dist_to_pond: float = chunk_manager.get_distance_to_nearest_pond(res_x, res_z)
-			var pond_radius: float = chunk_manager.pond_radius
-			var rock_chance: float = 0.0
-
-			# Rocks spawn in a band around ponds (from pond edge to ~15 units out)
-			var dist_from_pond_edge: float = dist_to_pond - pond_radius
-			if dist_from_pond_edge > 0.0 and dist_from_pond_edge < 15.0:
-				# Higher chance closer to water edge, tapering off with distance
-				var proximity_factor: float = 1.0 - (dist_from_pond_edge / 15.0)
-				rock_chance = chunk_manager.rock_density * 8.0 * proximity_factor * rock_mult
+				spawned = true
 			else:
-				# Region-based rock spawning (rocky areas have many more rocks)
-				rock_chance = chunk_manager.rock_density * rock_mult
+				# Rocks - spawn near water pools (shoreline rocks) + region-based
+				resource_roll = rng.randf()
+				var dist_to_pond: float = chunk_manager.get_distance_to_nearest_pond(res_x, res_z)
+				var pond_radius: float = chunk_manager.pond_radius
+				var rock_chance: float = 0.0
 
-			if resource_roll < rock_chance and chunk_manager.rock_scene:
-				_spawn_resource(chunk_manager.rock_scene, res_x, res_y, res_z, rng)
-				z += resource_grid_size
-				continue
+				# Rocks spawn in a band around ponds (from pond edge to ~15 units out)
+				var dist_from_pond_edge: float = dist_to_pond - pond_radius
+				if dist_from_pond_edge > 0.0 and dist_from_pond_edge < 15.0:
+					var proximity_factor: float = 1.0 - (dist_from_pond_edge / 15.0)
+					rock_chance = chunk_manager.rock_density * 8.0 * proximity_factor * rock_mult
+				else:
+					rock_chance = chunk_manager.rock_density * rock_mult
 
-			# Berry bushes - clustered in clearings (inverse of forest), region-adjusted
-			resource_roll = rng.randf()
-			var berry_chance: float = chunk_manager.berry_density * (1.5 - forest_value) * berry_mult
-			if resource_roll < berry_chance and chunk_manager.berry_bush_scene:
-				_spawn_resource(chunk_manager.berry_bush_scene, res_x, res_y, res_z, rng)
-				z += resource_grid_size
-				continue
+				if resource_roll < rock_chance and chunk_manager.rock_scene:
+					_spawn_resource(chunk_manager.rock_scene, res_x, res_y, res_z, rng)
+					spawned = true
+				else:
+					# Berry bushes - clustered in clearings (inverse of forest), region-adjusted
+					resource_roll = rng.randf()
+					var berry_chance: float = chunk_manager.berry_density * (1.5 - forest_value) * berry_mult
+					if resource_roll < berry_chance and chunk_manager.berry_bush_scene:
+						_spawn_resource(chunk_manager.berry_bush_scene, res_x, res_y, res_z, rng)
+						spawned = true
+					else:
+						# Mushrooms - more common in forests
+						resource_roll = rng.randf()
+						var mushroom_chance: float = chunk_manager.mushroom_density * (0.5 + forest_value)
+						if resource_roll < mushroom_chance and chunk_manager.mushroom_scene:
+							_spawn_resource(chunk_manager.mushroom_scene, res_x, res_y, res_z, rng)
+							spawned = true
+						else:
+							# Herbs - scattered everywhere, region-adjusted
+							resource_roll = rng.randf()
+							if resource_roll < chunk_manager.herb_density * herb_mult and chunk_manager.herb_scene:
+								_spawn_resource(chunk_manager.herb_scene, res_x, res_y, res_z, rng)
+								spawned = true
+							else:
+								# Ore deposits - spawn in ROCKY (4.5%) and HILLS (1.5%) regions
+								resource_roll = rng.randf()
+								var ore_chance: float = 0.0
+								if region == ChunkManager.RegionType.ROCKY:
+									ore_chance = 0.045
+								elif region == ChunkManager.RegionType.HILLS:
+									ore_chance = 0.015
+								elif region == ChunkManager.RegionType.MOUNTAIN:
+									ore_chance = 0.03
+								if resource_roll < ore_chance and chunk_manager.ore_scene:
+									_spawn_resource(chunk_manager.ore_scene, res_x, res_y, res_z, rng)
+									spawned = true
+								else:
+									# Osha root - alpine medicinal plant
+									resource_roll = rng.randf()
+									var osha_mult: float = chunk_manager.get_vegetation_multiplier(region, "osha")
+									var osha_base_chance: float = 0.02
+									var osha_chance: float = 0.0
 
-			# Mushrooms - more common in forests
-			resource_roll = rng.randf()
-			var mushroom_chance: float = chunk_manager.mushroom_density * (0.5 + forest_value)
-			if resource_roll < mushroom_chance and chunk_manager.mushroom_scene:
-				_spawn_resource(chunk_manager.mushroom_scene, res_x, res_y, res_z, rng)
-				z += resource_grid_size
-				continue
+									if region == ChunkManager.RegionType.MOUNTAIN:
+										if res_y > 20.0 and res_y < 45.0:
+											osha_chance = osha_base_chance * osha_mult
+									elif res_y > 25.0:
+										osha_chance = osha_base_chance * osha_mult
 
-			# Herbs - scattered everywhere, region-adjusted
-			resource_roll = rng.randf()
-			if resource_roll < chunk_manager.herb_density * herb_mult and chunk_manager.herb_scene:
-				_spawn_resource(chunk_manager.herb_scene, res_x, res_y, res_z, rng)
-				z += resource_grid_size
-				continue
+									if resource_roll < osha_chance and chunk_manager.osha_root_scene:
+										_spawn_resource(chunk_manager.osha_root_scene, res_x, res_y, res_z, rng)
+										spawned = true
 
-			# Ore deposits - spawn in ROCKY (4.5%) and HILLS (1.5%) regions
-			resource_roll = rng.randf()
-			var ore_chance: float = 0.0
-			if region == ChunkManager.RegionType.ROCKY:
-				ore_chance = 0.045  # 4.5% chance in rocky
-			elif region == ChunkManager.RegionType.HILLS:
-				ore_chance = 0.015  # 1.5% chance in hills
-			elif region == ChunkManager.RegionType.MOUNTAIN:
-				ore_chance = 0.03  # 3% chance in mountains
-			if resource_roll < ore_chance and chunk_manager.ore_scene:
-				_spawn_resource(chunk_manager.ore_scene, res_x, res_y, res_z, rng)
-				z += resource_grid_size
-				continue
-
-			# Osha root - alpine medicinal plant, spawns at high elevations
-			resource_roll = rng.randf()
-			var osha_mult: float = chunk_manager.get_vegetation_multiplier(region, "osha")
-			var osha_base_chance: float = 0.02  # 2% base chance
-			var osha_chance: float = 0.0
-
-			# Osha root grows at high elevations and in mountain regions
-			if region == ChunkManager.RegionType.MOUNTAIN:
-				# In mountains: spawns below treeline but above base
-				if res_y > 20.0 and res_y < 45.0:
-					osha_chance = osha_base_chance * osha_mult
-			elif res_y > 25.0:
-				# At high elevation in other biomes (hills, rocky)
-				osha_chance = osha_base_chance * osha_mult
-
-			if resource_roll < osha_chance and chunk_manager.osha_root_scene:
-				_spawn_resource(chunk_manager.osha_root_scene, res_x, res_y, res_z, rng)
+			# Batch yielding - pause every N resources to prevent frame stuttering
+			if spawned:
+				resources_spawned_this_batch += 1
+				if resources_spawned_this_batch >= RESOURCES_PER_BATCH:
+					resources_spawned_this_batch = 0
+					await get_tree().process_frame
 
 			z += resource_grid_size
 		x += resource_grid_size
@@ -1001,6 +1020,7 @@ func _spawn_resource(scene: PackedScene, x: float, y: float, z: float, rng: Rand
 
 
 func _spawn_chunk_decorations() -> void:
+	## Spawns decorations with batching - yields every DECORATIONS_PER_BATCH to prevent frame stuttering
 	decorations_container = Node3D.new()
 	decorations_container.name = "Decorations"
 	add_child(decorations_container)
@@ -1029,13 +1049,14 @@ func _spawn_chunk_decorations() -> void:
 	var world_area: float = 110.0 * 110.0  # Original decoration area (55 radius * 2)
 	var area_ratio: float = chunk_area / world_area
 
-	var target_grass: int = int(60 * area_ratio)  # Reduced from 250
-	var target_red_flowers: int = int(10 * area_ratio)  # Reduced from 35
-	var target_yellow_flowers: int = int(10 * area_ratio)  # Reduced from 35
+	var target_grass: int = int(40 * area_ratio)  # Reduced from 60
+	var target_red_flowers: int = int(6 * area_ratio)  # Reduced from 10
+	var target_yellow_flowers: int = int(6 * area_ratio)  # Reduced from 10
 
+	var decorations_spawned_this_batch: int = 0
 	var grass_count: int = 0
 	var attempts: int = 0
-	var max_attempts: int = target_grass * 10
+	var max_attempts: int = target_grass * 8  # Reduced max attempts
 
 	# Spawn grass
 	while grass_count < target_grass and attempts < max_attempts:
@@ -1061,12 +1082,18 @@ func _spawn_chunk_decorations() -> void:
 			_create_grass_tuft(Vector3(world_x, y + 0.01, world_z), rng)
 			grass_count += 1
 
+			# Batch yielding
+			decorations_spawned_this_batch += 1
+			if decorations_spawned_this_batch >= DECORATIONS_PER_BATCH:
+				decorations_spawned_this_batch = 0
+				await get_tree().process_frame
+
 		attempts += 1
 
 	# Spawn flowers
 	var flower_count: int = 0
 	attempts = 0
-	max_attempts = (target_red_flowers + target_yellow_flowers) * 10
+	max_attempts = (target_red_flowers + target_yellow_flowers) * 8  # Reduced max attempts
 
 	while flower_count < target_red_flowers + target_yellow_flowers and attempts < max_attempts:
 		var x: float = rng.randf_range(0, chunk_world_size)
@@ -1094,6 +1121,12 @@ func _spawn_chunk_decorations() -> void:
 				color = Color(0.95, 0.85, 0.15)  # Yellow
 			_create_flower(Vector3(world_x, y + 0.01, world_z), color, rng)
 			flower_count += 1
+
+			# Batch yielding
+			decorations_spawned_this_batch += 1
+			if decorations_spawned_this_batch >= DECORATIONS_PER_BATCH:
+				decorations_spawned_this_batch = 0
+				await get_tree().process_frame
 
 		attempts += 1
 
@@ -1269,6 +1302,9 @@ func _spawn_bird(pos: Vector3) -> void:
 
 
 func unload() -> void:
+	# Clear height cache first - this signals async box collision to stop if still running
+	_height_cache.clear()
+
 	# Clean up all children
 	for tree in spawned_trees:
 		if is_instance_valid(tree):
