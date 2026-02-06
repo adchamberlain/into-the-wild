@@ -2673,7 +2673,7 @@ Rebuilt all 3D object artwork across the entire game to match the rich, layered 
 Fixed all campsite structures using outdated simple art when placed during gameplay. The detailed artwork that was added to `save_load.gd` (Session 26) was only used when loading saved games. The `placement_system.gd` still had the original basic single-box versions for all structures. Synced all 9 structure creation functions so placed structures match the detailed art.
 
 ### Structures Updated in `placement_system.gd`
-- **Fire Pit**: Was grey box + orange box. Now has 8 individual stones, crossed logs with bark, charred center, 9-layer fire, sparks, glow
+- **Fire Pit**: Redesigned to elegant simplicity - 6 stones in neat ring (2 alternating shades), 2 crossed logs, 3-layer fire (base/mid/tip). Replaced overbuilt version that had 8 stones, highlights, bark stripes, log ends, charred center, 9 fire layers, sparks, ground glow (~35 meshes → ~11)
 - **Basic Shelter**: Was canvas + poles only. Now has canvas shadow underside, seam lines, bark strips, lashing, leaf bed
 - **Storage Container**: Was plain box + lid. Now has plank grain lines, metal corner bands, handle with brackets, latch
 - **Crafting Bench**: Was tabletop + 4 legs. Now has wood grain, edge banding, cross-braces, hammer + knife on surface, wear marks
@@ -2699,11 +2699,16 @@ Fixed all campsite structures using outdated simple art when placed during gamep
 
 **Fix**: Deleted all 4 stale `.tscn` files and cleared their scene paths in `structure_data.gd`. Now all structures use the detailed programmatic `_create_structure_programmatically()` path.
 
+### Bug Fix: Residual Structure Floating
+
+Even after the collision box fix, structures still appeared to float slightly above the ground due to the collision surface and visual terrain surface meeting at exactly the same Y level, creating a visible seam. Added a -0.04 unit Y offset when placing structures so they sink slightly into the ground, eliminating the visual gap.
+
 ### Files Modified
 
 | File | Changes |
 |------|---------|
-| `scripts/campsite/placement_system.gd` | Replaced 9 `_create_*` functions with detailed art matching `save_load.gd` |
+| `scripts/campsite/placement_system.gd` | Replaced 9 `_create_*` functions with detailed art; redesigned fire pit to elegant simplicity; added -0.04 ground sink offset |
+| `scripts/core/save_load.gd` | Redesigned fire pit to match placement_system (elegant 6-stone + 3-flame version) |
 | `scripts/world/terrain_chunk.gd` | Fixed collision box Y positioning so top matches visual terrain height |
 | `scripts/campsite/structure_data.gd` | Cleared scene paths for fire_pit, basic_shelter, storage_container, crafting_bench |
 | `scenes/campsite/structures/*.tscn` | Deleted 4 stale scene files (fire_pit, basic_shelter, crafting_bench, storage_container) |
@@ -2719,8 +2724,7 @@ Fixed all campsite structures using outdated simple art when placed during gamep
 1. Add camera collision to prevent clipping into terrain
 2. Add grappling hook sound effect audio files
 3. Test and polish cave system integration
-4. Test BoxShape3D collision thoroughly at terrain transitions
-5. Disable `debug_performance` logging once stuttering is confirmed fixed
+4. Disable `debug_performance` logging once stuttering is confirmed fixed
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

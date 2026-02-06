@@ -770,140 +770,46 @@ func _create_fire_pit() -> StaticBody3D:
 	collision.position.y = 0.2
 	fire_pit.add_child(collision)
 
-	# --- Stone ring: 8 individual stones arranged in a circle ---
-	var stone_colors: Array[Color] = [
-		Color(0.38, 0.36, 0.33), Color(0.42, 0.40, 0.36),
-		Color(0.35, 0.33, 0.30), Color(0.40, 0.38, 0.35),
-		Color(0.36, 0.34, 0.31), Color(0.44, 0.42, 0.38),
-		Color(0.33, 0.31, 0.28), Color(0.39, 0.37, 0.34)
-	]
-	for i: int in range(8):
+	# --- Stone ring: 6 stones in a neat circle ---
+	var stone_mat: StandardMaterial3D = StandardMaterial3D.new()
+	stone_mat.albedo_color = Color(0.40, 0.38, 0.35)
+	stone_mat.roughness = 0.95
+	var stone_dark_mat: StandardMaterial3D = StandardMaterial3D.new()
+	stone_dark_mat.albedo_color = Color(0.34, 0.32, 0.29)
+	stone_dark_mat.roughness = 0.95
+	for i: int in range(6):
 		var stone: MeshInstance3D = MeshInstance3D.new()
 		var stone_mesh: BoxMesh = BoxMesh.new()
-		var sw: float = 0.25 + (i % 3) * 0.05
-		var sh: float = 0.15 + (i % 2) * 0.04
-		var sd: float = 0.22 + (i % 3) * 0.03
-		stone_mesh.size = Vector3(sw, sh, sd)
+		stone_mesh.size = Vector3(0.22, 0.12, 0.18)
 		stone.mesh = stone_mesh
-		var angle: float = i * TAU / 8.0
-		stone.position = Vector3(cos(angle) * 0.52, sh / 2.0, sin(angle) * 0.52)
+		var angle: float = i * TAU / 6.0
+		stone.position = Vector3(cos(angle) * 0.42, 0.06, sin(angle) * 0.42)
 		stone.rotation.y = angle + 0.3
-		var s_mat: StandardMaterial3D = StandardMaterial3D.new()
-		s_mat.albedo_color = stone_colors[i]
-		s_mat.roughness = 0.95
-		stone.material_override = s_mat
+		stone.material_override = stone_mat if i % 2 == 0 else stone_dark_mat
 		fire_pit.add_child(stone)
 
-	# Stone highlights (lighter tops)
-	for i: int in range(4):
-		var highlight: MeshInstance3D = MeshInstance3D.new()
-		var h_mesh: BoxMesh = BoxMesh.new()
-		h_mesh.size = Vector3(0.18, 0.03, 0.15)
-		highlight.mesh = h_mesh
-		var angle: float = i * TAU / 4.0 + 0.4
-		highlight.position = Vector3(cos(angle) * 0.50, 0.18, sin(angle) * 0.50)
-		highlight.rotation.y = angle
-		var h_mat: StandardMaterial3D = StandardMaterial3D.new()
-		h_mat.albedo_color = Color(0.50, 0.48, 0.44, 0.6)
-		h_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		highlight.material_override = h_mat
-		fire_pit.add_child(highlight)
-
-	# --- Crossed logs with bark texture ---
-	var bark_mat: StandardMaterial3D = StandardMaterial3D.new()
-	bark_mat.albedo_color = Color(0.38, 0.24, 0.12)
-	bark_mat.roughness = 0.92
-
-	var bark_dark_mat: StandardMaterial3D = StandardMaterial3D.new()
-	bark_dark_mat.albedo_color = Color(0.30, 0.18, 0.08)
-	bark_dark_mat.roughness = 0.92
-
-	# Log 1
+	# --- Two crossed logs ---
+	var log_mat: StandardMaterial3D = StandardMaterial3D.new()
+	log_mat.albedo_color = Color(0.36, 0.22, 0.10)
+	log_mat.roughness = 0.92
 	var log1: MeshInstance3D = MeshInstance3D.new()
 	var log1_mesh: BoxMesh = BoxMesh.new()
-	log1_mesh.size = Vector3(0.9, 0.12, 0.13)
+	log1_mesh.size = Vector3(0.7, 0.10, 0.10)
 	log1.mesh = log1_mesh
-	log1.position = Vector3(0, 0.12, 0)
-	log1.rotation.y = -0.2
-	log1.material_override = bark_mat
+	log1.position = Vector3(0, 0.10, 0)
+	log1.rotation.y = -0.3
+	log1.material_override = log_mat
 	fire_pit.add_child(log1)
-
-	# Log 1 bark stripe
-	var log1_stripe: MeshInstance3D = MeshInstance3D.new()
-	var stripe_mesh: BoxMesh = BoxMesh.new()
-	stripe_mesh.size = Vector3(0.88, 0.04, 0.14)
-	log1_stripe.mesh = stripe_mesh
-	log1_stripe.position = Vector3(0, 0.14, 0)
-	log1_stripe.rotation.y = -0.2
-	log1_stripe.material_override = bark_dark_mat
-	fire_pit.add_child(log1_stripe)
-
-	# Log 2 (crossed)
 	var log2: MeshInstance3D = MeshInstance3D.new()
 	var log2_mesh: BoxMesh = BoxMesh.new()
-	log2_mesh.size = Vector3(0.85, 0.11, 0.12)
+	log2_mesh.size = Vector3(0.65, 0.09, 0.09)
 	log2.mesh = log2_mesh
-	log2.position = Vector3(0, 0.16, 0)
-	log2.rotation.y = 0.9
-	log2.material_override = bark_mat
+	log2.position = Vector3(0, 0.14, 0)
+	log2.rotation.y = 0.8
+	log2.material_override = log_mat
 	fire_pit.add_child(log2)
 
-	# Log ends (lighter cross-sections)
-	var end_mat: StandardMaterial3D = StandardMaterial3D.new()
-	end_mat.albedo_color = Color(0.55, 0.42, 0.28)
-	for j: int in range(4):
-		var log_end: MeshInstance3D = MeshInstance3D.new()
-		var end_mesh: BoxMesh = BoxMesh.new()
-		end_mesh.size = Vector3(0.12, 0.12, 0.04)
-		log_end.mesh = end_mesh
-		var ex: float = [-0.44, 0.44, -0.38, 0.38][j]
-		var ez: float = [0.09, -0.09, -0.32, 0.32][j]
-		log_end.position = Vector3(ex, 0.14, ez)
-		log_end.rotation.y = [0.0, 0.0, 0.9, 0.9][j]
-		log_end.material_override = end_mat
-		fire_pit.add_child(log_end)
-
-	# Charred center
-	var char_mat: StandardMaterial3D = StandardMaterial3D.new()
-	char_mat.albedo_color = Color(0.08, 0.06, 0.04)
-	var charred: MeshInstance3D = MeshInstance3D.new()
-	var char_mesh: BoxMesh = BoxMesh.new()
-	char_mesh.size = Vector3(0.35, 0.04, 0.35)
-	charred.mesh = char_mesh
-	charred.position = Vector3(0, 0.06, 0)
-	charred.material_override = char_mat
-	fire_pit.add_child(charred)
-
-	# --- Layered fire (embers -> deep orange -> orange -> yellow -> white tip) ---
-	# Embers at base
-	var ember_mat: StandardMaterial3D = StandardMaterial3D.new()
-	ember_mat.albedo_color = Color(0.7, 0.15, 0.0)
-	ember_mat.emission_enabled = true
-	ember_mat.emission = Color(0.7, 0.12, 0.0)
-	ember_mat.emission_energy_multiplier = 1.5
-	var embers: MeshInstance3D = MeshInstance3D.new()
-	var ember_mesh: BoxMesh = BoxMesh.new()
-	ember_mesh.size = Vector3(0.4, 0.08, 0.4)
-	embers.mesh = ember_mesh
-	embers.position = Vector3(0, 0.22, 0)
-	embers.material_override = ember_mat
-	fire_pit.add_child(embers)
-
-	# Hot coals
-	var coal_mat: StandardMaterial3D = StandardMaterial3D.new()
-	coal_mat.albedo_color = Color(0.9, 0.25, 0.0)
-	coal_mat.emission_enabled = true
-	coal_mat.emission = Color(0.85, 0.2, 0.0)
-	coal_mat.emission_energy_multiplier = 2.0
-	var coals: MeshInstance3D = MeshInstance3D.new()
-	var coal_mesh: BoxMesh = BoxMesh.new()
-	coal_mesh.size = Vector3(0.3, 0.06, 0.3)
-	coals.mesh = coal_mesh
-	coals.position = Vector3(0, 0.27, 0)
-	coals.material_override = coal_mat
-	fire_pit.add_child(coals)
-
-	# Base flame - wide, deep orange
+	# --- Fire: 3 layers (base, mid, tip) ---
 	var base_flame_mat: StandardMaterial3D = StandardMaterial3D.new()
 	base_flame_mat.albedo_color = Color(1.0, 0.35, 0.0)
 	base_flame_mat.emission_enabled = true
@@ -912,36 +818,12 @@ func _create_fire_pit() -> StaticBody3D:
 	var base_flame: MeshInstance3D = MeshInstance3D.new()
 	base_flame.name = "FireMesh"
 	var bf_mesh: BoxMesh = BoxMesh.new()
-	bf_mesh.size = Vector3(0.35, 0.25, 0.3)
+	bf_mesh.size = Vector3(0.28, 0.22, 0.24)
 	base_flame.mesh = bf_mesh
-	base_flame.position = Vector3(0, 0.42, 0)
+	base_flame.position = Vector3(0, 0.30, 0)
 	base_flame.material_override = base_flame_mat
 	fire_pit.add_child(base_flame)
 
-	# Left tongue
-	var tongue_mat: StandardMaterial3D = StandardMaterial3D.new()
-	tongue_mat.albedo_color = Color(0.95, 0.4, 0.0)
-	tongue_mat.emission_enabled = true
-	tongue_mat.emission = Color(0.9, 0.35, 0.0)
-	tongue_mat.emission_energy_multiplier = 2.0
-	var l_tongue: MeshInstance3D = MeshInstance3D.new()
-	var lt_mesh: BoxMesh = BoxMesh.new()
-	lt_mesh.size = Vector3(0.12, 0.2, 0.1)
-	l_tongue.mesh = lt_mesh
-	l_tongue.position = Vector3(-0.15, 0.40, 0.05)
-	l_tongue.material_override = tongue_mat
-	fire_pit.add_child(l_tongue)
-
-	# Right tongue
-	var r_tongue: MeshInstance3D = MeshInstance3D.new()
-	var rt_mesh: BoxMesh = BoxMesh.new()
-	rt_mesh.size = Vector3(0.1, 0.18, 0.12)
-	r_tongue.mesh = rt_mesh
-	r_tongue.position = Vector3(0.14, 0.42, -0.06)
-	r_tongue.material_override = tongue_mat
-	fire_pit.add_child(r_tongue)
-
-	# Mid flame - bright orange
 	var mid_mat: StandardMaterial3D = StandardMaterial3D.new()
 	mid_mat.albedo_color = Color(1.0, 0.55, 0.05)
 	mid_mat.emission_enabled = true
@@ -949,88 +831,24 @@ func _create_fire_pit() -> StaticBody3D:
 	mid_mat.emission_energy_multiplier = 3.0
 	var mid_flame: MeshInstance3D = MeshInstance3D.new()
 	var mf_mesh: BoxMesh = BoxMesh.new()
-	mf_mesh.size = Vector3(0.25, 0.2, 0.2)
+	mf_mesh.size = Vector3(0.18, 0.18, 0.16)
 	mid_flame.mesh = mf_mesh
-	mid_flame.position = Vector3(0, 0.58, 0)
+	mid_flame.position = Vector3(0, 0.48, 0)
 	mid_flame.material_override = mid_mat
 	fire_pit.add_child(mid_flame)
 
-	# Upper flame - yellow-orange
-	var upper_mat: StandardMaterial3D = StandardMaterial3D.new()
-	upper_mat.albedo_color = Color(1.0, 0.7, 0.15)
-	upper_mat.emission_enabled = true
-	upper_mat.emission = Color(1.0, 0.65, 0.1)
-	upper_mat.emission_energy_multiplier = 3.0
-	var upper_flame: MeshInstance3D = MeshInstance3D.new()
-	var uf_mesh: BoxMesh = BoxMesh.new()
-	uf_mesh.size = Vector3(0.18, 0.18, 0.15)
-	upper_flame.mesh = uf_mesh
-	upper_flame.position = Vector3(0, 0.72, 0)
-	upper_flame.material_override = upper_mat
-	fire_pit.add_child(upper_flame)
-
-	# Flame tip - bright yellow
 	var tip_mat: StandardMaterial3D = StandardMaterial3D.new()
-	tip_mat.albedo_color = Color(1.0, 0.85, 0.3)
+	tip_mat.albedo_color = Color(1.0, 0.82, 0.25)
 	tip_mat.emission_enabled = true
-	tip_mat.emission = Color(1.0, 0.8, 0.2)
+	tip_mat.emission = Color(1.0, 0.75, 0.15)
 	tip_mat.emission_energy_multiplier = 3.5
 	var tip_flame: MeshInstance3D = MeshInstance3D.new()
 	var tf_mesh: BoxMesh = BoxMesh.new()
-	tf_mesh.size = Vector3(0.1, 0.14, 0.08)
+	tf_mesh.size = Vector3(0.10, 0.12, 0.08)
 	tip_flame.mesh = tf_mesh
-	tip_flame.position = Vector3(0, 0.86, 0)
+	tip_flame.position = Vector3(0, 0.62, 0)
 	tip_flame.material_override = tip_mat
 	fire_pit.add_child(tip_flame)
-
-	# Hot core - white-yellow glow at center
-	var core_mat: StandardMaterial3D = StandardMaterial3D.new()
-	core_mat.albedo_color = Color(1.0, 0.95, 0.7, 0.85)
-	core_mat.emission_enabled = true
-	core_mat.emission = Color(1.0, 0.9, 0.6)
-	core_mat.emission_energy_multiplier = 4.0
-	core_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	var core: MeshInstance3D = MeshInstance3D.new()
-	var core_mesh: BoxMesh = BoxMesh.new()
-	core_mesh.size = Vector3(0.12, 0.15, 0.12)
-	core.mesh = core_mesh
-	core.position = Vector3(0, 0.45, 0)
-	core.material_override = core_mat
-	fire_pit.add_child(core)
-
-	# Rising sparks
-	var spark_mat: StandardMaterial3D = StandardMaterial3D.new()
-	spark_mat.albedo_color = Color(1.0, 0.8, 0.3)
-	spark_mat.emission_enabled = true
-	spark_mat.emission = Color(1.0, 0.75, 0.2)
-	spark_mat.emission_energy_multiplier = 3.0
-	for i: int in range(5):
-		var spark: MeshInstance3D = MeshInstance3D.new()
-		var sp_mesh: BoxMesh = BoxMesh.new()
-		sp_mesh.size = Vector3(0.03, 0.03, 0.03)
-		spark.mesh = sp_mesh
-		spark.position = Vector3(
-			(i - 2) * 0.08 + (i % 2) * 0.04,
-			1.0 + i * 0.08,
-			(i % 3 - 1) * 0.05
-		)
-		spark.material_override = spark_mat
-		fire_pit.add_child(spark)
-
-	# Fire glow background (soft orange aura on ground)
-	var glow_mat: StandardMaterial3D = StandardMaterial3D.new()
-	glow_mat.albedo_color = Color(1.0, 0.4, 0.1, 0.15)
-	glow_mat.emission_enabled = true
-	glow_mat.emission = Color(1.0, 0.35, 0.05)
-	glow_mat.emission_energy_multiplier = 1.0
-	glow_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	var glow: MeshInstance3D = MeshInstance3D.new()
-	var glow_mesh: BoxMesh = BoxMesh.new()
-	glow_mesh.size = Vector3(1.5, 0.02, 1.5)
-	glow.mesh = glow_mesh
-	glow.position = Vector3(0, 0.02, 0)
-	glow.material_override = glow_mat
-	fire_pit.add_child(glow)
 
 	var light: OmniLight3D = OmniLight3D.new()
 	light.name = "FireLight"
