@@ -199,10 +199,11 @@ func place_torch_instant() -> bool:
 		# Use authoritative terrain height (avoids raycast edge issues at steps)
 		var terrain_height: float = chunk_manager.get_height_at(target_pos.x, target_pos.z)
 
-		# Reject placement unless target is at the same elevation as the player
+		# Reject placement unless target is near the same elevation as the player
+		# Threshold of 1.5 allows one walkable step (height_step=1.0) but blocks cliffs
 		var player_terrain: float = chunk_manager.get_height_at(player.global_position.x, player.global_position.z)
-		if absf(terrain_height - player_terrain) > 0.5:
-			print("[PlacementSystem] Torch placement rejected: target height %.1f != player ground %.1f" % [terrain_height, player_terrain])
+		if absf(terrain_height - player_terrain) > 1.5:
+			print("[PlacementSystem] Torch placement rejected: target height %.1f too far from player ground %.1f" % [terrain_height, player_terrain])
 			return false
 
 		target_pos.y = terrain_height - 0.04
