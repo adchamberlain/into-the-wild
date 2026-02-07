@@ -2972,6 +2972,35 @@ Added a compass + lodestone navigation system. Rare ore (mined in caves) can now
 
 ---
 
+## Session 36 - Config Menu Cleanup & Torch Placement Fix (2026-02-06)
+
+### Overview
+Fixed several config menu UI issues (controller navigation, font consistency, duplicate buttons, hint text) and fixed torch/lodestone placement clipping under terrain at step boundaries.
+
+### Features Implemented
+
+1. **Config menu: removed duplicate Save/Load buttons** - Save and Load were already accessible from the main pause menu; removed the buttons, status label, and related signal handlers from the config menu to reduce clutter.
+
+2. **Config menu: UI Scale now controller-navigable** - The UI Scale slider was not selectable with D-pad because `_build_focusable_controls()` ran before the slider was created. Fixed by rebuilding the focusable controls list after UI Scale creation.
+
+3. **Config menu: UI Scale font size matched** - Changed UI Scale label from 24px to 32px and value label from 24px to 28px, matching all other config menu items.
+
+4. **Config menu: combined close hint** - Updated hint label from keyboard-only "Press TAB to close" to show both input methods: "Press TAB or B to close" (keyboard mode) / "↑↓ Navigate ←→ Adjust A Select B/TAB Close" (controller mode). Increased hint font size from 26px to 32px.
+
+5. **Torch/lodestone placement: snap to terrain cell centers** - Changed grid snap from 1.0m (arbitrary) to 3.0m terrain cell centers using `(floor(x / cell_size) + 0.5) * cell_size`. This ensures objects always land on the center top of a terrain block, not on edges or between blocks.
+
+6. **Torch/lodestone placement: authoritative height lookup** - Replaced physics raycast (`_get_ground_height`) with `ChunkManager.get_height_at()` for Y positioning. The raycast could return incorrect heights at terrain step boundaries where collision box edges meet, causing objects to clip under terrain. The ChunkManager function returns the exact mathematical block height.
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scenes/ui/config_menu.tscn` | Removed SaveLoadContainer, SaveButton, LoadButton, SaveStatusLabel, HSeparator5; increased HintLabel font_size to 32 |
+| `scripts/ui/config_menu.gd` | Removed save/load button refs and signal handlers; fixed UI Scale font sizes; changed insertion point to before hint separator; added `_build_focusable_controls()` call after UI Scale creation; updated hint text for both input devices |
+| `scripts/campsite/placement_system.gd` | Added `chunk_manager` reference (found via Main node); torch and lodestone snap to terrain cell centers; use `chunk_manager.get_height_at()` for authoritative block height |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
