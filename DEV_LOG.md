@@ -3031,16 +3031,85 @@ Fixed music toggle race condition, restricted torch placement to same elevation,
 
 ---
 
+## Session 24 - Cave Crash Fix & Cave Resource Respawn Cooldown (2026-02-06)
+
+### Cave Crash Fix
+
+**Problem**: Game occasionally crashed when the player entered a cave due to timing race conditions during scene transitions.
+
+**Root Cause**: `CaveInteriorManager._ready()` used `await get_tree().process_frame` which created a race condition with `CaveTransition` adding the player to the cave scene. The order of coroutine resumption was non-deterministic, causing null reference errors. Additionally, double-clicking the cave entrance could trigger two transitions simultaneously.
+
+**Fixes**:
+- Replaced `await` calls in `CaveInteriorManager._ready()` and `_setup_references()` with `call_deferred()` for deterministic initialization
+- Added `_setup_complete` flag to prevent `_process()` from running before setup finishes
+- Added `_transitioning` guard in `CaveTransition` to prevent double entry/exit
+- Fixed error path in `_load_cave_scene()` that destructively freed the player/HUD on failure - now attempts to return to overworld instead
+- Fixed `_show_notification()` HUD lookup to use `get_tree().current_scene` instead of hardcoded paths
+
+### Cave Resource Respawn Cooldown
+
+**Problem**: Cave resources (crystals, iron ore, rare ore) respawned every time the player entered/exited the cave, allowing infinite accumulation. Resources were never registered with `ResourceManager` since it only discovers overworld resources.
+
+**Fix**: Added persistent cave resource depletion tracking to `CaveTransition` (autoload singleton that survives scene transitions):
+- `cave_resource_state` dictionary tracks depleted resources per cave ID with timestamps
+- On cave entry, `CaveInteriorManager._setup_cave_resources()` checks tracked state and marks resources as depleted if their 6-hour respawn timer hasn't elapsed
+- On resource depletion, `_on_cave_resource_depleted()` records the event to CaveTransition
+- Game time is snapshotted in `CaveTransition.entry_game_*` before the overworld scene is destroyed (since TimeManager lives in the overworld)
+- State is included in save/load via `CaveTransition.get_save_data()`/`load_save_data()`
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/caves/cave_interior_manager.gd` | Removed awaits, added `_setup_complete` flag, added `_setup_cave_resources()` and `_on_cave_resource_depleted()`, fixed HUD lookup |
+| `scripts/core/cave_transition.gd` | Added `_transitioning` guard, time snapshot on entry, `cave_resource_state` tracking with `track_cave_resource_depleted()` and `get_depleted_cave_resources()`, included in save/load |
+
+---
+
+## Session 133 - Regression Test Suite & Fall Recovery Fix (2026-02-07)
+
+### Fall Recovery Fix
+Fixed edge case in `_recover_from_fall()` where `Vector3.ZERO` was used as a sentinel for "no safe position recorded". Since the campsite is at world origin (0,0,0), players at the campsite would fail the check. Added `_has_safe_position: bool` flag to track whether a safe position has been recorded.
+
+### Regression Test Suite
+Created comprehensive automated test suite (493 tests across 7 test files) that runs headless:
+```
+/Applications/Godot.app/Contents/MacOS/Godot --path . --headless --script tests/run_all_tests.gd
+```
+
+**Test Coverage:**
+- **Inventory** (23 tests): add/remove/has_item/clear, edge cases (zero/negative), copy safety
+- **Crafting** (177 tests): recipe field validation, material checks, bench/camp-level requirements, input consumption, output production, compass+lodestone special case, all recipes discoverable
+- **TerrainCollision** (52 tests): box geometry for normal/water/zero-height terrain, minimum box height, cell coverage gaps, chunk boundary contiguity, pit prevention logic, height cache border
+- **StructureData** (143 tests): footprint validation, item-to-structure roundtrip, spacing rules, structure count (15), cabin largest/torch smallest, camp level requirements
+- **CaveTransition** (21 tests): resource respawn timing (6-hour threshold, cross-day, exact boundary), duplicate tracking, save data roundtrip, double entry guard, scene path existence, exit position offset
+- **SaveLoad** (44 tests): inventory/position/structure JSON roundtrip, field presence, version, time field ranges, float precision
+- **UIConstants** (33 tests): font size tier ranges, panel background color, text colors (gold/green/red/grey), font resource existence, tier non-overlap
+
+### Files Created/Modified
+
+| File | Changes |
+|------|---------|
+| `tests/test_base.gd` | New - lightweight test framework with assert helpers |
+| `tests/run_all_tests.gd` | New - SceneTree-based test runner |
+| `tests/test_inventory.gd` | New - 13 test functions |
+| `tests/test_crafting.gd` | New - 13 test functions |
+| `tests/test_terrain_collision.gd` | New - 12 test functions |
+| `tests/test_structure_data.gd` | New - 12 test functions |
+| `tests/test_cave_transition.gd` | New - 10 test functions |
+| `tests/test_save_load.gd` | New - 10 test functions |
+| `tests/test_ui_constants.gd` | New - 12 test functions |
+| `scripts/player/player_controller.gd` | Fixed Vector3.ZERO sentinel in fall recovery |
+| `CLAUDE.md` | Added Regression Tests section under Workflow |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
 1. Add camera collision to prevent clipping into terrain
 2. Add grappling hook sound effect audio files
 3. Disable `debug_performance` logging once stuttering is confirmed fixed
-
-### Known Issues
-- Game occasionally crashes when the player enters a cave
-- Cave resources (crystals, iron ore, rare ore) respawn every time the player enters/exits the cave, allowing infinite accumulation. Should respawn on a timed cooldown instead.
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

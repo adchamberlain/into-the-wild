@@ -21,12 +21,13 @@ var light_check_timer: float = 0.0
 var darkness_overlay: ColorRect = null
 var player: Node = null
 var exit_area: Area3D = null
+var _setup_complete: bool = false
 
 
 func _ready() -> void:
-	# Find darkness overlay in scene
-	await get_tree().process_frame
-	_setup_references()
+	# Defer setup to let the scene tree settle (no await - avoids race conditions
+	# with CaveTransition adding the player)
+	call_deferred("_setup_references")
 
 
 func _setup_references() -> void:
@@ -37,18 +38,15 @@ func _setup_references() -> void:
 
 	if not darkness_overlay:
 		var parent: Node = get_parent()
-		for child in parent.get_children():
-			if child is CanvasLayer and child.name == "DarknessOverlay":
-				darkness_overlay = child.get_node_or_null("ColorRect")
-				break
-
-	# Find player
-	await get_tree().process_frame
-	player = get_tree().get_first_node_in_group("player")
+		if parent:
+			for child in parent.get_children():
+				if child is CanvasLayer and child.name == "DarknessOverlay":
+					darkness_overlay = child.get_node_or_null("ColorRect")
+					break
 
 	# Find exit area
 	exit_area = get_node_or_null("../ExitArea")
-	if exit_area:
+	if exit_area and not exit_area.body_entered.is_connected(_on_exit_area_entered):
 		exit_area.body_entered.connect(_on_exit_area_entered)
 
 	# Build natural rock formations around the exit
@@ -56,15 +54,22 @@ func _setup_references() -> void:
 	# Add rock detail along the cave walls
 	_build_wall_details()
 
+	# Apply saved cave resource state and track new depletions
+	_setup_cave_resources()
+
 	# Initial state
 	_update_darkness_state()
 
-	print("[CaveManager] Setup complete. Overlay: %s, Player: %s, Exit: %s" % [
-		darkness_overlay != null, player != null, exit_area != null
+	_setup_complete = true
+	print("[CaveManager] Setup complete. Overlay: %s, Exit: %s" % [
+		darkness_overlay != null, exit_area != null
 	])
 
 
 func _process(delta: float) -> void:
+	if not _setup_complete:
+		return
+
 	# Periodic light check
 	light_check_timer += delta
 	if light_check_timer >= DARKNESS_CHECK_INTERVAL:
@@ -141,6 +146,64 @@ func _apply_darkness_damage() -> void:
 		player_damaged.emit(DARKNESS_DAMAGE_AMOUNT)
 
 	print("[CaveManager] Darkness damage: %d HP" % DARKNESS_DAMAGE_AMOUNT)
+
+
+## Apply saved depleted state and connect to resource signals for tracking.
+func _setup_cave_resources() -> void:
+	var cave_transition: Node = get_node_or_null("/root/CaveTransition")
+	if not cave_transition:
+		return
+
+	var cave_id: int = cave_transition.current_cave_id
+	if cave_id < 0:
+		return
+
+	# Use the time snapshot taken by CaveTransition at cave entry
+	var current_day: int = cave_transition.entry_game_day
+	var current_hour: int = cave_transition.entry_game_hour
+	var current_minute: int = cave_transition.entry_game_minute
+
+	# Get list of resource names that are still depleted
+	var depleted_names: Array[String] = []
+	if cave_transition.has_method("get_depleted_cave_resources"):
+		depleted_names = cave_transition.get_depleted_cave_resources(cave_id, current_day, current_hour, current_minute)
+
+	# Find the Resources container in the cave scene
+	var resources_node: Node = get_node_or_null("../Resources")
+	if not resources_node:
+		return
+
+	var depleted_count: int = 0
+	for child in resources_node.get_children():
+		if child is ResourceNode:
+			# Apply depleted state if tracked
+			if child.name in depleted_names:
+				child._set_depleted_state(true)
+				depleted_count += 1
+
+			# Connect to depleted signal to track new depletions
+			if not child.depleted.is_connected(_on_cave_resource_depleted.bind(child)):
+				child.depleted.connect(_on_cave_resource_depleted.bind(child))
+
+	if depleted_count > 0:
+		print("[CaveManager] Restored %d depleted cave resources" % depleted_count)
+
+
+func _on_cave_resource_depleted(resource: ResourceNode) -> void:
+	var cave_transition: Node = get_node_or_null("/root/CaveTransition")
+	if not cave_transition or not cave_transition.has_method("track_cave_resource_depleted"):
+		return
+
+	var cave_id: int = cave_transition.current_cave_id
+	if cave_id < 0:
+		return
+
+	# Use the entry time snapshot (time is frozen while in cave)
+	var current_day: int = cave_transition.entry_game_day
+	var current_hour: int = cave_transition.entry_game_hour
+	var current_minute: int = cave_transition.entry_game_minute
+
+	cave_transition.track_cave_resource_depleted(cave_id, resource.name, current_day, current_hour, current_minute)
 
 
 func _on_exit_area_entered(body: Node) -> void:
@@ -345,13 +408,12 @@ func _get_player_equipment(player_node: Node) -> Equipment:
 
 
 func _show_notification(message: String, color: Color) -> void:
-	# Try to find HUD in cave scene
-	var hud: Node = get_tree().root.get_node_or_null("CaveInterior/HUD")
-	if not hud:
-		# Try main scene HUD path as fallback
-		hud = get_tree().root.get_node_or_null("Main/HUD")
-	if hud and hud.has_method("show_notification"):
-		hud.show_notification(message, color)
+	# Find HUD as child of current scene (CaveTransition adds it there)
+	var scene_root: Node = get_tree().current_scene
+	if scene_root:
+		var hud: Node = scene_root.get_node_or_null("HUD")
+		if hud and hud.has_method("show_notification"):
+			hud.show_notification(message, color)
 
 
 ## Force light state (for testing or special events).

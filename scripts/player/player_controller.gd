@@ -53,6 +53,7 @@ var interact_cooldown_timer: float = 0.0
 # Fall-through protection (safety net - shouldn't trigger with BoxShape3D collision)
 var fall_warning_y: float = -50.0  # Emergency recovery if player somehow falls this low
 var last_safe_position: Vector3 = Vector3.ZERO  # Last known position on solid ground
+var _has_safe_position: bool = false  # Whether last_safe_position has been set (avoids Vector3.ZERO sentinel issue)
 var safe_position_update_timer: float = 0.0
 const SAFE_POSITION_UPDATE_INTERVAL: float = 0.5  # Update safe position every 0.5 seconds
 
@@ -119,6 +120,7 @@ func _ready() -> void:
 
 func _init_safe_position() -> void:
 	last_safe_position = global_position
+	_has_safe_position = true
 	print("[Player] Initial safe position: %s" % last_safe_position)
 
 
@@ -557,6 +559,7 @@ func _update_fall_protection(delta: float) -> void:
 		safe_position_update_timer = 0.0
 		if is_on_floor() and not is_grappling:
 			last_safe_position = global_position
+			_has_safe_position = true
 
 	# Emergency recovery if player falls extremely low (shouldn't happen with proper collision)
 	if global_position.y < fall_warning_y:
@@ -567,14 +570,16 @@ func _update_fall_protection(delta: float) -> void:
 func _recover_from_fall() -> void:
 	velocity = Vector3.ZERO
 
-	# Try to use last safe position if valid
-	if last_safe_position != Vector3.ZERO and last_safe_position.y > -10:
+	# Try to use last safe position if valid (use flag instead of Vector3.ZERO check
+	# since campsite center IS at origin)
+	if _has_safe_position and last_safe_position.y > -10:
 		global_position = last_safe_position + Vector3(0, 0.5, 0)
 		print("[Player] Recovered to last safe position: %s" % global_position)
 	else:
 		# Fallback: teleport to spawn
 		global_position = Vector3(0, 5, 0)
 		last_safe_position = global_position
+		_has_safe_position = true
 		print("[Player] Recovered to spawn point.")
 
 

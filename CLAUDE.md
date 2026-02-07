@@ -4,6 +4,8 @@
 
 **Into the Wild** is a solo camping adventure game built in Godot 4.5 with GDScript. See `into-the-wild-game-spec.md` for the full game specification.
 
+This project primarily uses Python and TypeScript for tooling/experiments, and GDScript for the Godot survival game. When working on the game, all scripts are GDScript (.gd files). When working on data/ML experiments, use Python.
+
 ## Important Guidelines
 
 ### Development Log
@@ -73,3 +75,36 @@ Chunk generation has three expensive operations that **must be batched** across 
 ### Current Phase
 
 See the bottom of `DEV_LOG.md` for the current development phase and planned tasks.
+
+## Godot Development
+
+For complex bugs involving interconnected systems (terrain, collision, caves, save/load), use a task agent to explore all files that interact with the affected system and map out their dependencies, then come back with a plan before making any changes. Don't jump straight to code.
+
+When fixing bugs in Godot/GDScript, always verify that fixes don't introduce regressions in related systems. After each fix, check: 1) No dangling function references 2) No null value errors 3) Related gameplay mechanics still work. Run a mental 'blast radius' check before committing.
+
+For iterative visual/geometry work (cave designs, structure art, UI layouts, loading screens), propose the approach and get user confirmation BEFORE implementing. When user reports visual issues, ask for specifics rather than guessing fixes. Expect 2-3 rounds of iteration minimum.
+
+For performance optimization in Godot, always profile and identify ALL bottlenecks before fixing any single one. Don't declare victory after fixing one bottleneck - check for remaining issues (height cache, mesh batching, collision sync, async readiness). Prefer comprehensive fixes over incremental band-aids.
+
+### Common GDScript Pitfalls
+
+When editing GDScript files, be careful with: 1) Vector3 truthiness (use `vector != Vector3.ZERO` not `if vector`) 2) Dictionary `.has()` vs property access 3) Slot/index number mismatches between input handlers and inventory systems. Double-check these patterns.
+
+## Workflow
+
+After completing all changes for a task, always commit and push to main unless told otherwise. Use descriptive commit messages summarizing what was changed and why.
+
+### Regression Tests
+
+Before committing changes, run the regression test suite:
+```
+/Applications/Godot.app/Contents/MacOS/Godot --path . --headless --script tests/run_all_tests.gd
+```
+All tests must pass. If a test fails, fix the issue before committing. The suite covers:
+- **Inventory** - add/remove/has/clear/edge cases
+- **Crafting** - recipes, bench/level requirements, input consumption, output production
+- **TerrainCollision** - box geometry, water slabs, pit prevention, chunk boundaries
+- **StructureData** - footprints, item mappings, spacing rules, camp levels
+- **CaveTransition** - respawn timing, save roundtrip, entry guards, scene paths
+- **SaveLoad** - serialization roundtrips, field presence, JSON precision
+- **UIConstants** - font size tiers, panel colors, text colors, font resource

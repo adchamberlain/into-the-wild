@@ -23,12 +23,26 @@ var stored_pause_menu: Node = null
 
 # Transition settings
 var fade_duration: float = 0.5
+var _transitioning: bool = false  # Guard against double entry/exit
 
 # Scene paths
 const CAVE_SCENES: Dictionary = {
 	"small": "res://scenes/caves/cave_interior_small.tscn",
 	"medium": "res://scenes/caves/cave_interior_medium.tscn"
 }
+
+# Cave resource respawn settings (in game hours)
+const CAVE_RESOURCE_RESPAWN_HOURS: float = 6.0
+
+# Tracks depleted cave resources across entries/exits.
+# Key: cave_id (String) → Value: Array of Dictionaries
+# Each dict: {node_name: String, depleted_day: int, depleted_hour: int, depleted_minute: int}
+var cave_resource_state: Dictionary = {}
+
+# Game time snapshot taken at cave entry (overworld TimeManager is destroyed during transition)
+var entry_game_day: int = 1
+var entry_game_hour: int = 8
+var entry_game_minute: int = 0
 
 # Reference to fade overlay
 var fade_overlay: ColorRect = null
@@ -54,9 +68,11 @@ func _create_fade_overlay() -> void:
 
 ## Enter a cave from the overworld.
 func enter_cave(cave_id: int, cave_type: String, player: Node, entrance_pos: Vector3 = Vector3.ZERO, entrance_rot_y: float = 0.0) -> void:
-	if is_in_cave:
-		print("[CaveTransition] Already in a cave!")
+	if is_in_cave or _transitioning:
+		print("[CaveTransition] Already in a cave or transitioning!")
 		return
+
+	_transitioning = true
 
 	print("[CaveTransition] Entering %s cave #%d" % [cave_type, cave_id])
 
@@ -100,6 +116,15 @@ func _load_cave_scene(cave_id: int, cave_type: String, scene_path: String) -> vo
 	var tree: SceneTree = get_tree()
 
 	var main_root: Node = tree.current_scene
+
+	# Snapshot game time before the overworld scene is destroyed
+	if main_root:
+		var time_mgr: Node = main_root.get_node_or_null("TimeManager")
+		if time_mgr:
+			entry_game_day = time_mgr.current_day
+			entry_game_hour = time_mgr.current_hour
+			entry_game_minute = time_mgr.current_minute
+			print("[CaveTransition] Snapshotted game time: day %d, %d:%02d" % [entry_game_day, entry_game_hour, entry_game_minute])
 
 	# Auto-save to a temporary file BEFORE removing anything so SaveLoad reads
 	# correct state. This does NOT touch the player's save slots.
@@ -168,16 +193,11 @@ func _load_cave_scene(cave_id: int, cave_type: String, scene_path: String) -> vo
 			print("[CaveTransition] PauseMenu added to cave scene")
 			stored_pause_menu = null
 	else:
-		print("[CaveTransition] ERROR: cave scene not ready")
-		if stored_player:
-			stored_player.queue_free()
-			stored_player = null
-		if stored_hud:
-			stored_hud.queue_free()
-			stored_hud = null
-		if stored_pause_menu:
-			stored_pause_menu.queue_free()
-			stored_pause_menu = null
+		print("[CaveTransition] ERROR: cave scene not ready, returning to overworld")
+		# Don't free stored nodes - try to return to overworld instead
+		is_in_cave = false
+		_return_to_overworld()
+		return
 
 	_fade_back()
 
@@ -185,14 +205,19 @@ func _load_cave_scene(cave_id: int, cave_type: String, scene_path: String) -> vo
 func _fade_back() -> void:
 	var tween: Tween = create_tween()
 	tween.tween_property(fade_overlay, "color:a", 0.0, fade_duration)
-	tween.tween_callback(func(): transition_completed.emit())
+	tween.tween_callback(func():
+		_transitioning = false
+		transition_completed.emit()
+	)
 
 
 ## Exit the current cave and return to overworld.
 func exit_cave() -> void:
-	if not is_in_cave:
-		print("[CaveTransition] Not in a cave!")
+	if not is_in_cave or _transitioning:
+		print("[CaveTransition] Not in a cave or already transitioning!")
 		return
+
+	_transitioning = true
 
 	print("[CaveTransition] Exiting cave, returning to (%.1f, %.1f, %.1f)" % [
 		return_position.x, return_position.y, return_position.z
@@ -392,6 +417,56 @@ func get_current_cave_type() -> String:
 	return current_cave_type
 
 
+## Record a cave resource as depleted.
+func track_cave_resource_depleted(cave_id: int, node_name: String, day: int, hour: int, minute: int) -> void:
+	var key: String = str(cave_id)
+	if not cave_resource_state.has(key):
+		cave_resource_state[key] = []
+
+	# Avoid duplicates
+	var entries: Array = cave_resource_state[key]
+	for entry: Dictionary in entries:
+		if entry.get("node_name", "") == node_name:
+			return
+
+	entries.append({
+		"node_name": node_name,
+		"depleted_day": day,
+		"depleted_hour": hour,
+		"depleted_minute": minute
+	})
+	print("[CaveTransition] Tracked depleted cave resource: cave %d, %s at day %d %d:%02d" % [cave_id, node_name, day, hour, minute])
+
+
+## Get depleted resources for a cave, removing any that have respawned.
+func get_depleted_cave_resources(cave_id: int, current_day: int, current_hour: int, current_minute: int) -> Array[String]:
+	var key: String = str(cave_id)
+	if not cave_resource_state.has(key):
+		return []
+
+	var still_depleted: Array[String] = []
+	var entries: Array = cave_resource_state[key]
+	var remaining: Array = []
+
+	for entry: Dictionary in entries:
+		var d_day: int = entry.get("depleted_day", 1)
+		var d_hour: int = entry.get("depleted_hour", 0)
+		var d_minute: int = entry.get("depleted_minute", 0)
+
+		# Calculate elapsed game time in minutes
+		var elapsed_minutes: float = float((current_day - d_day) * 24 * 60 + (current_hour - d_hour) * 60 + (current_minute - d_minute))
+		var respawn_minutes: float = CAVE_RESOURCE_RESPAWN_HOURS * 60.0
+
+		if elapsed_minutes < respawn_minutes:
+			still_depleted.append(entry.get("node_name", ""))
+			remaining.append(entry)
+		else:
+			print("[CaveTransition] Cave resource respawned: %s (%.0f min elapsed)" % [entry.get("node_name", ""), elapsed_minutes])
+
+	cave_resource_state[key] = remaining
+	return still_depleted
+
+
 ## Get save data for persistence.
 func get_save_data() -> Dictionary:
 	return {
@@ -402,7 +477,11 @@ func get_save_data() -> Dictionary:
 		"return_rotation": return_rotation,
 		"cave_entrance_position": {"x": cave_entrance_position.x, "y": cave_entrance_position.y, "z": cave_entrance_position.z},
 		"cave_entrance_rotation_y": cave_entrance_rotation_y,
-		"overworld_seed": overworld_seed
+		"overworld_seed": overworld_seed,
+		"cave_resource_state": cave_resource_state,
+		"entry_game_day": entry_game_day,
+		"entry_game_hour": entry_game_hour,
+		"entry_game_minute": entry_game_minute
 	}
 
 
@@ -428,3 +507,7 @@ func load_save_data(data: Dictionary) -> void:
 	)
 	cave_entrance_rotation_y = data.get("cave_entrance_rotation_y", 0.0)
 	overworld_seed = data.get("overworld_seed", 0)
+	cave_resource_state = data.get("cave_resource_state", {})
+	entry_game_day = data.get("entry_game_day", 1)
+	entry_game_hour = data.get("entry_game_hour", 8)
+	entry_game_minute = data.get("entry_game_minute", 0)
