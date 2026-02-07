@@ -3001,12 +3001,46 @@ Fixed several config menu UI issues (controller navigation, font consistency, du
 
 ---
 
+## Session 37 - Music Toggle, Torch Elevation, Pit Prevention & Sleep Fix (2026-02-06)
+
+### Overview
+Fixed music toggle race condition, restricted torch placement to same elevation, prevented inescapable terrain pits, added cave-aware torch placement, and fixed canvas tent / cabin bed not advancing days.
+
+### Features Implemented
+
+1. **Music toggle fix** - Toggling music off then on failed because the 1-second fade-out tween's `stop()` callback fired after re-enabling. Fixed by tracking the fade tween and killing it on re-enable before starting fresh playback.
+
+2. **Torch placement: same-elevation restriction** - Torches now only place on terrain at the same elevation as the player (±1.5 block height tolerance). Prevents torches from landing on mountain peaks or in valleys when the forward projection crosses an elevation change.
+
+3. **Torch placement: cave-aware logic** - In caves, `ChunkManager` is freed (overworld unloaded). Fixed by using `is_instance_valid(chunk_manager)` instead of truthiness check. Cave placement uses 1.0m grid snap, raycasts from player height + 2 (below ceiling, above floor), and skips the same-elevation check (cave floors are flat).
+
+4. **Terrain pit prevention** - Rocky/hilly terrain could generate isolated low cells creating inescapable pits. Added universal pit prevention at the end of `get_height_at()`: no cell may be more than 1 block below ALL its cardinal neighbors. Uses recursive neighbor check with a `_in_pit_check` guard flag to prevent infinite recursion.
+
+5. **Canvas tent & cabin bed day advancement fix** - Both `structure_canvas_tent.gd` and `cabin_bed.gd` overrode `_skip_to_dawn()` but forgot to increment `time_manager.current_day` and emit `day_changed`. This caused "Day 3/3" at camp level 2 to never advance, blocking level 3 progression. Fixed both to match the parent shelter's behavior.
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/core/music_manager.gd` | Added `fade_tween` tracking; kill pending fade on re-enable in `set_music_enabled()` |
+| `scripts/campsite/placement_system.gd` | Added overworld/cave branching with `is_instance_valid()`; same-elevation check (1.5 threshold) in overworld; cave-specific raycast from player height |
+| `scripts/world/chunk_manager.gd` | Added universal pit prevention in `get_height_at()` with `_in_pit_check` recursion guard |
+| `scripts/campsite/structure_canvas_tent.gd` | Added `current_day += 1` and `day_changed.emit()` to `_skip_to_dawn()` |
+| `scripts/campsite/cabin_bed.gd` | Added `current_day += 1` and `day_changed.emit()` to `_skip_to_dawn()` |
+| `scripts/core/save_load.gd` | Added `day` to time data save/load; emit `day_changed` on load |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
 1. Add camera collision to prevent clipping into terrain
 2. Add grappling hook sound effect audio files
 3. Disable `debug_performance` logging once stuttering is confirmed fixed
+
+### Known Issues
+- Game occasionally crashes when the player enters a cave
+- Cave resources (crystals, iron ore, rare ore) respawn every time the player enters/exits the cave, allowing infinite accumulation. Should respawn on a timed cooldown instead.
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

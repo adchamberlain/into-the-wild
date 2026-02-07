@@ -484,7 +484,8 @@ func _collect_player_data() -> Dictionary:
 func _collect_time_data() -> Dictionary:
 	return {
 		"hour": time_manager.current_hour,
-		"minute": time_manager.current_minute
+		"minute": time_manager.current_minute,
+		"day": time_manager.current_day
 	}
 
 
@@ -699,9 +700,11 @@ func _apply_player_data(data: Dictionary) -> void:
 
 
 func _apply_time_data(data: Dictionary) -> void:
+	time_manager.current_day = int(data.get("day", 1))
 	time_manager.current_hour = int(data.get("hour", 8))
 	time_manager.current_minute = int(data.get("minute", 0))
 	time_manager._update_period()
+	time_manager.day_changed.emit(time_manager.current_day)
 
 
 func _apply_weather_data(data: Dictionary) -> void:

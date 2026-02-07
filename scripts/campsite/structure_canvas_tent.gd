@@ -17,11 +17,14 @@ func _ready() -> void:
 
 
 func _skip_to_dawn(player: Node, time_manager: Node) -> void:
-	# Set time to 6 AM (dawn)
+	# Advance to next day at 6 AM (dawn)
+	time_manager.current_day += 1
 	time_manager.current_hour = 6
 	time_manager.current_minute = 0
 	time_manager._update_period()
+	time_manager.day_changed.emit(time_manager.current_day)
 	time_manager.time_changed.emit(time_manager.current_hour, time_manager.current_minute)
+	print("[CanvasTent] Advanced to day %d" % time_manager.current_day)
 
 	# Full heal and better hunger restore in canvas tent
 	if player.has_node("PlayerStats"):
