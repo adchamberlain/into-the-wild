@@ -187,31 +187,30 @@ func place_torch_instant() -> bool:
 
 	var target_pos: Vector3 = player.global_position + forward * placement_distance
 
-	# Snap to terrain cell center to place on block tops, not edges/sides
-	var cell_sz: float = 3.0  # Terrain cell size
-	if chunk_manager and "cell_size" in chunk_manager:
-		cell_sz = chunk_manager.cell_size
-	target_pos.x = (floor(target_pos.x / cell_sz) + 0.5) * cell_sz
-	target_pos.z = (floor(target_pos.z / cell_sz) + 0.5) * cell_sz
+	# Check if we're in a cave (ChunkManager doesn't exist there)
+	var in_overworld: bool = is_instance_valid(chunk_manager) and chunk_manager.has_method("get_height_at")
 
-	# Use authoritative terrain height from ChunkManager (avoids raycast edge issues at steps)
-	var terrain_height: float
-	if chunk_manager and chunk_manager.has_method("get_height_at"):
-		terrain_height = chunk_manager.get_height_at(target_pos.x, target_pos.z)
+	if in_overworld:
+		# Overworld: snap to terrain cell center to place on block tops
+		var cell_sz: float = chunk_manager.cell_size
+		target_pos.x = (floor(target_pos.x / cell_sz) + 0.5) * cell_sz
+		target_pos.z = (floor(target_pos.z / cell_sz) + 0.5) * cell_sz
+
+		# Use authoritative terrain height (avoids raycast edge issues at steps)
+		var terrain_height: float = chunk_manager.get_height_at(target_pos.x, target_pos.z)
+
+		# Reject placement unless target is at the same elevation as the player
+		var player_terrain: float = chunk_manager.get_height_at(player.global_position.x, player.global_position.z)
+		if absf(terrain_height - player_terrain) > 0.5:
+			print("[PlacementSystem] Torch placement rejected: target height %.1f != player ground %.1f" % [terrain_height, player_terrain])
+			return false
+
+		target_pos.y = terrain_height - 0.04
 	else:
-		terrain_height = _get_ground_height(target_pos.x, target_pos.z)
-
-	# Reject placement unless target is at the same elevation as the player
-	var player_terrain: float
-	if chunk_manager and chunk_manager.has_method("get_height_at"):
-		player_terrain = chunk_manager.get_height_at(player.global_position.x, player.global_position.z)
-	else:
-		player_terrain = _get_ground_height(player.global_position.x, player.global_position.z)
-	if absf(terrain_height - player_terrain) > 0.5:
-		print("[PlacementSystem] Torch placement rejected: target height %.1f != player ground %.1f" % [terrain_height, player_terrain])
-		return false
-
-	target_pos.y = terrain_height - 0.04
+		# Cave/interior: use simple grid snap and raycast from player height (avoids hitting ceiling)
+		target_pos.x = round(target_pos.x / grid_size) * grid_size
+		target_pos.z = round(target_pos.z / grid_size) * grid_size
+		target_pos.y = _get_ground_height(target_pos.x, target_pos.z, player.global_position.y + 2.0) - 0.04
 
 	# Create the torch structure
 	var structure: Node3D = _create_placed_torch()
@@ -267,27 +266,29 @@ func place_lodestone_instant() -> bool:
 
 	var target_pos: Vector3 = player.global_position + forward * placement_distance
 
-	# Snap to terrain cell center to place on block tops, not edges/sides
-	var cell_sz: float = 3.0
-	if chunk_manager and "cell_size" in chunk_manager:
-		cell_sz = chunk_manager.cell_size
-	target_pos.x = (floor(target_pos.x / cell_sz) + 0.5) * cell_sz
-	target_pos.z = (floor(target_pos.z / cell_sz) + 0.5) * cell_sz
+	# Check if we're in a cave (ChunkManager doesn't exist there)
+	var in_overworld: bool = is_instance_valid(chunk_manager) and chunk_manager.has_method("get_height_at")
 
-	# Use authoritative terrain height from ChunkManager (avoids raycast edge issues at steps)
-	var terrain_height: float
-	if chunk_manager and chunk_manager.has_method("get_height_at"):
-		terrain_height = chunk_manager.get_height_at(target_pos.x, target_pos.z)
+	if in_overworld:
+		# Overworld: snap to terrain cell center, use ChunkManager height
+		var cell_sz: float = chunk_manager.cell_size
+		target_pos.x = (floor(target_pos.x / cell_sz) + 0.5) * cell_sz
+		target_pos.z = (floor(target_pos.z / cell_sz) + 0.5) * cell_sz
+
+		var terrain_height: float = chunk_manager.get_height_at(target_pos.x, target_pos.z)
+
+		# Reject placement if terrain is too far above or below the player
+		var height_diff: float = absf(terrain_height - player.global_position.y)
+		if height_diff > 4.0:
+			print("[PlacementSystem] Lodestone placement rejected: terrain height %.1f too far from player %.1f (diff %.1f)" % [terrain_height, player.global_position.y, height_diff])
+			return false
+
+		target_pos.y = terrain_height - 0.04
 	else:
-		terrain_height = _get_ground_height(target_pos.x, target_pos.z)
-
-	# Reject placement if terrain is too far above or below the player (e.g. mountain peak nearby)
-	var height_diff: float = absf(terrain_height - player.global_position.y)
-	if height_diff > 4.0:
-		print("[PlacementSystem] Lodestone placement rejected: terrain height %.1f too far from player %.1f (diff %.1f)" % [terrain_height, player.global_position.y, height_diff])
-		return false
-
-	target_pos.y = terrain_height - 0.04
+		# Cave/interior: use simple grid snap and raycast from player height
+		target_pos.x = round(target_pos.x / grid_size) * grid_size
+		target_pos.z = round(target_pos.z / grid_size) * grid_size
+		target_pos.y = _get_ground_height(target_pos.x, target_pos.z, player.global_position.y + 2.0) - 0.04
 
 	# Create the lodestone structure
 	var structure: Node3D = _create_lodestone()
@@ -438,7 +439,7 @@ func _apply_preview_material(node: Node) -> void:
 
 
 ## Get ground height at a position using raycast.
-func _get_ground_height(x: float, z: float) -> float:
+func _get_ground_height(x: float, z: float, from_y: float = 50.0) -> float:
 	if not player:
 		return 0.0
 
@@ -446,8 +447,8 @@ func _get_ground_height(x: float, z: float) -> float:
 	if not space_state:
 		return 0.0
 
-	# Raycast from high above down to find ground
-	var ray_origin: Vector3 = Vector3(x, 50.0, z)
+	# Raycast downward to find ground
+	var ray_origin: Vector3 = Vector3(x, from_y, z)
 	var ray_end: Vector3 = Vector3(x, -10.0, z)
 
 	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.new()
