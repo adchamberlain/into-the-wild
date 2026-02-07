@@ -195,10 +195,19 @@ func place_torch_instant() -> bool:
 	target_pos.z = (floor(target_pos.z / cell_sz) + 0.5) * cell_sz
 
 	# Use authoritative terrain height from ChunkManager (avoids raycast edge issues at steps)
+	var terrain_height: float
 	if chunk_manager and chunk_manager.has_method("get_height_at"):
-		target_pos.y = chunk_manager.get_height_at(target_pos.x, target_pos.z) - 0.04
+		terrain_height = chunk_manager.get_height_at(target_pos.x, target_pos.z)
 	else:
-		target_pos.y = _get_ground_height(target_pos.x, target_pos.z) - 0.04
+		terrain_height = _get_ground_height(target_pos.x, target_pos.z)
+
+	# Reject placement if terrain is too far above or below the player (e.g. mountain peak nearby)
+	var height_diff: float = absf(terrain_height - player.global_position.y)
+	if height_diff > 4.0:
+		print("[PlacementSystem] Torch placement rejected: terrain height %.1f too far from player %.1f (diff %.1f)" % [terrain_height, player.global_position.y, height_diff])
+		return false
+
+	target_pos.y = terrain_height - 0.04
 
 	# Create the torch structure
 	var structure: Node3D = _create_placed_torch()
@@ -262,10 +271,19 @@ func place_lodestone_instant() -> bool:
 	target_pos.z = (floor(target_pos.z / cell_sz) + 0.5) * cell_sz
 
 	# Use authoritative terrain height from ChunkManager (avoids raycast edge issues at steps)
+	var terrain_height: float
 	if chunk_manager and chunk_manager.has_method("get_height_at"):
-		target_pos.y = chunk_manager.get_height_at(target_pos.x, target_pos.z) - 0.04
+		terrain_height = chunk_manager.get_height_at(target_pos.x, target_pos.z)
 	else:
-		target_pos.y = _get_ground_height(target_pos.x, target_pos.z) - 0.04
+		terrain_height = _get_ground_height(target_pos.x, target_pos.z)
+
+	# Reject placement if terrain is too far above or below the player (e.g. mountain peak nearby)
+	var height_diff: float = absf(terrain_height - player.global_position.y)
+	if height_diff > 4.0:
+		print("[PlacementSystem] Lodestone placement rejected: terrain height %.1f too far from player %.1f (diff %.1f)" % [terrain_height, player.global_position.y, height_diff])
+		return false
+
+	target_pos.y = terrain_height - 0.04
 
 	# Create the lodestone structure
 	var structure: Node3D = _create_lodestone()
