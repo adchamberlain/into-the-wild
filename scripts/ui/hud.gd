@@ -54,6 +54,11 @@ const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 @onready var celebration_unlocks: Label = $CelebrationPanel/CelebrationVBox/CelebrationUnlocks
 @onready var celebration_prompt: Label = $CelebrationPanel/CelebrationVBox/CelebrationPrompt
 
+# Compass HUD
+var compass_panel: PanelContainer
+var compass_label: Label
+var camera: Camera3D
+
 # Config for coordinates visibility
 var show_coordinates: bool = true
 
@@ -182,6 +187,13 @@ func _ready() -> void:
 	if notification_panel:
 		notification_panel.visible = false
 
+	# Cache camera reference
+	if player:
+		camera = player.get_node_or_null("Camera3D")
+
+	# Create compass panel programmatically
+	_create_compass_panel()
+
 	# Initialize displays
 	_update_inventory_display()
 	_update_equipped_display()
@@ -218,10 +230,11 @@ func _on_interaction_target_changed(target: Node, interaction_text: String) -> v
 
 	if interaction_prompt:
 		var prompt_text: String = _get_interact_prompt() + " " + interaction_text
-		# Add move hint if target is a structure (except torches - pick up only)
+		# Add move hint if target is a structure (except torches/lodestones - pick up only)
 		if target and target.is_in_group("structure"):
-			var is_torch: bool = target.get("structure_type") == "placed_torch"
-			if not is_torch:
+			var stype: String = target.get("structure_type") if target.get("structure_type") else ""
+			var is_pickup_only: bool = stype == "placed_torch" or stype == "lodestone"
+			if not is_pickup_only:
 				var move_key: String = _get_button_prompt("move_structure")
 				prompt_text += "  [%s] Move" % move_key
 		interaction_prompt.text = prompt_text
@@ -289,7 +302,7 @@ func _update_equipped_display() -> void:
 		var use_key: String = _get_button_prompt("use_equipped")
 		var unequip_key: String = _get_button_prompt("unequip")
 
-		if equipped_type == "torch":
+		if equipped_type == "torch" or equipped_type == "lodestone":
 			var interact_key: String = _get_button_prompt("interact")
 			equipped_label.text += " [%s place, %s unequip]" % [interact_key, unequip_key]
 		elif StructureData.is_placeable_item(equipped_type):
@@ -461,6 +474,7 @@ func _process(delta: float) -> void:
 		hud_update_timer = 0.0
 		_update_coordinates_display()
 		_update_protection_display()
+		_update_compass_display()
 
 	# Handle weather damage flash
 	if weather_damage_flash_timer > 0:
@@ -777,3 +791,96 @@ func fade_to_black_and_back(fade_out_duration: float, hold_duration: float, fade
 
 	# Hide overlay when done
 	tween.tween_callback(func(): fade_overlay.visible = false)
+
+
+func _create_compass_panel() -> void:
+	# Create the compass HUD panel programmatically
+	compass_panel = PanelContainer.new()
+	compass_panel.name = "CompassPanel"
+
+	# Style: semi-transparent dark background matching HUD style
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color(0.1, 0.1, 0.12, 0.8)
+	style.corner_radius_top_left = 10
+	style.corner_radius_top_right = 10
+	style.corner_radius_bottom_left = 10
+	style.corner_radius_bottom_right = 10
+	style.content_margin_left = 16.0
+	style.content_margin_right = 16.0
+	style.content_margin_top = 8.0
+	style.content_margin_bottom = 8.0
+	compass_panel.add_theme_stylebox_override("panel", style)
+
+	# Position below StatsPanel (left side)
+	compass_panel.anchors_preset = Control.PRESET_TOP_LEFT
+	compass_panel.offset_left = 20.0
+	compass_panel.offset_top = 190.0
+	compass_panel.offset_right = 320.0
+	compass_panel.offset_bottom = 240.0
+
+	# Label for compass text
+	compass_label = Label.new()
+	compass_label.name = "CompassLabel"
+	compass_label.add_theme_font_override("font", HUD_FONT)
+	compass_label.add_theme_font_size_override("font_size", 32)
+	compass_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3, 1))
+	compass_label.text = ""
+	compass_panel.add_child(compass_label)
+
+	add_child(compass_panel)
+	compass_panel.visible = false
+
+
+func _update_compass_display() -> void:
+	if not compass_panel or not compass_label:
+		return
+
+	# Check if player has compass in inventory AND lodestone is placed
+	var has_compass: bool = inventory and inventory.has_item("compass")
+	var lodestone_placed: bool = campsite_manager and campsite_manager.has_method("has_structure") and campsite_manager.has_structure("lodestone")
+
+	if not has_compass or not lodestone_placed:
+		compass_panel.visible = false
+		return
+
+	# Get lodestone position
+	if not campsite_manager.has_method("get_structures_of_type"):
+		compass_panel.visible = false
+		return
+
+	var lodestones: Array = campsite_manager.get_structures_of_type("lodestone")
+	if lodestones.is_empty():
+		compass_panel.visible = false
+		return
+
+	var lodestone_pos: Vector3 = lodestones[0].global_position
+	if not player or not camera:
+		compass_panel.visible = false
+		return
+
+	# Calculate direction on XZ plane
+	var to_target: Vector3 = lodestone_pos - player.global_position
+	to_target.y = 0  # XZ plane only
+	var distance: float = to_target.length()
+
+	if distance < 0.5:
+		# Very close, just show distance
+		compass_label.text = "Lodestone  here"
+		compass_panel.visible = true
+		return
+
+	var cam_forward: Vector3 = -camera.global_transform.basis.z
+	cam_forward.y = 0
+	cam_forward = cam_forward.normalized()
+
+	var dx: float = to_target.x
+	var dz: float = to_target.z
+	var dot: float = cam_forward.x * dx + cam_forward.z * dz
+	var cross_val: float = cam_forward.x * dz - cam_forward.z * dx
+	var angle: float = atan2(cross_val, dot)
+
+	# Map angle to 8-direction arrow
+	var arrows: Array[String] = ["↑", "↗", "→", "↘", "↓", "↙", "←", "↖"]
+	var index: int = int(round(fmod(angle + TAU, TAU) / (TAU / 8.0))) % 8
+	compass_label.text = "Lodestone  %s  %dm" % [arrows[index], int(distance)]
+	compass_panel.visible = true

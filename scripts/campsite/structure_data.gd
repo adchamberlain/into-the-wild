@@ -120,6 +120,13 @@ const STRUCTURES: Dictionary = {
 		"category": "utility",
 		"footprint_radius": 0.3,
 		"reclaimable": true
+	},
+	"lodestone": {
+		"name": "Lodestone",
+		"scene": "",
+		"item_required": "lodestone",
+		"category": "utility",
+		"footprint_radius": 0.4
 	}
 }
 
@@ -138,7 +145,8 @@ const PLACEABLE_ITEMS: Array[String] = [
 	"smithing_station_kit",
 	"smoker_kit",
 	"weather_vane_kit",
-	"torch"
+	"torch",
+	"lodestone"
 ]
 
 

@@ -23,6 +23,7 @@ A solo camping adventure game built in Godot 4.5. Survive in the wilderness by g
 - **Swimming** - Explore underwater with breath mechanics
 - **Save System** - 3 save slots with camp level and timestamp display
 - **Traps** - Place traps to catch rabbits for food
+- **Compass Navigation** - Craft a compass and lodestone from rare ore; place the lodestone as a beacon and the HUD shows a directional arrow with distance back to it
 
 ### Gathering & Crafting
 - **Resource Gathering** - Collect branches, rocks, berries, mushrooms, herbs, and wood
@@ -52,6 +53,7 @@ Build up your camp through three levels:
 | Herb Garden | Passive herb production |
 | Canvas Tent | Better weather protection |
 | Log Cabin | Walkable interior with bed (full restore) and kitchen (5 advanced recipes) |
+| Lodestone | Navigation beacon — place anywhere, compass points back to it |
 
 ### Tools & Equipment
 
@@ -68,6 +70,7 @@ Build up your camp through three levels:
 | 20 | Machete | Clear thorny obstacles (200 durability) |
 | 21 | Lantern | Bright light source, 2x torch range |
 | 22 | Grappling Hook | Ascend cliff faces with arc-based traversal (100 durability) |
+| 23 | Lodestone | Placeable navigation beacon (pick up with E) |
 
 ## Controls
 
@@ -142,6 +145,7 @@ Full controller support with PlayStation button prompts.
 | Machete | 2 Metal Ingot + 1 Branch (Camp Lvl 2) |
 | Grappling Hook | 3 Rope + 2 Metal Ingot + 1 Branch (Camp Lvl 2) |
 | Lantern | 2 Metal Ingot + 1 Crystal (Camp Lvl 3) |
+| Compass & Lodestone | 2 Rare Ore + 1 Metal Ingot + 1 Crystal (Camp Lvl 3) |
 
 ## Cooking
 

@@ -401,11 +401,16 @@ func _try_interact() -> void:
 			var interaction_text: String = _get_interaction_text(current_interaction_target)
 			interaction_target_changed.emit(current_interaction_target, interaction_text)
 	else:
-		# No interaction target - try instant torch placement if torch is equipped
+		# No interaction target - try instant placement if torch/lodestone is equipped
 		if equipment and equipment.get_equipped() == "torch":
 			var placement_system: Node = get_node_or_null("PlacementSystem")
 			if placement_system and placement_system.has_method("place_torch_instant"):
 				if placement_system.place_torch_instant():
+					equipment.unequip()
+		elif equipment and equipment.get_equipped() == "lodestone":
+			var placement_system: Node = get_node_or_null("PlacementSystem")
+			if placement_system and placement_system.has_method("place_lodestone_instant"):
+				if placement_system.place_lodestone_instant():
 					equipment.unequip()
 
 
@@ -500,8 +505,9 @@ func _try_use_equipped() -> void:
 func _try_move_structure() -> void:
 	# Check if we're looking at a structure
 	if current_interaction_target and current_interaction_target.is_in_group("structure"):
-		# Torches can only be picked up, not moved
-		if current_interaction_target.get("structure_type") == "placed_torch":
+		# Torches and lodestones can only be picked up, not moved
+		var stype: String = current_interaction_target.get("structure_type") if current_interaction_target.get("structure_type") else ""
+		if stype == "placed_torch" or stype == "lodestone":
 			return
 		var placement_system: Node = get_node_or_null("PlacementSystem")
 		if placement_system and placement_system.has_method("start_move"):

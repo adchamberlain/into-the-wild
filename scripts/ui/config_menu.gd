@@ -64,6 +64,10 @@ var selecting_slot_for_load: bool = false
 var slot_panel: PanelContainer
 var slot_buttons: Array[Button] = []
 
+# UI Scale
+var ui_scale_slider: HSlider
+var ui_scale_label: Label
+
 # Controller navigation
 var focused_control_index: int = 0
 var focusable_controls: Array[Control] = []  # All navigable controls in order
@@ -102,6 +106,9 @@ func _ready() -> void:
 
 	# Initialize UI state
 	_init_ui()
+
+	# Create UI scale control
+	_create_ui_scale_control()
 
 	# Create slot selection panel
 	_create_slot_panel()
@@ -176,6 +183,70 @@ func _init_ui() -> void:
 
 	# Apply initial config
 	_apply_config()
+
+
+## Create the UI Scale slider programmatically and insert it before Save/Load.
+func _create_ui_scale_control() -> void:
+	var game_state: Node = get_node_or_null("/root/GameState")
+	if not game_state or not "ui_scale" in game_state:
+		return
+
+	var vbox: VBoxContainer = panel.get_node("VBoxContainer")
+	var font: Font = load("res://resources/hud_font.tres")
+
+	# Separator before UI Scale
+	var sep := HSeparator.new()
+	sep.name = "UIScaleSeparator"
+
+	# Container
+	var container := HBoxContainer.new()
+	container.name = "UIScaleContainer"
+	container.add_theme_constant_override("separation", 10)
+
+	# Name label
+	var name_label := Label.new()
+	name_label.text = "UI Scale"
+	name_label.add_theme_font_override("font", font)
+	name_label.add_theme_font_size_override("font_size", 24)
+	name_label.custom_minimum_size.x = 200
+	container.add_child(name_label)
+
+	# Slider
+	ui_scale_slider = HSlider.new()
+	ui_scale_slider.min_value = 0.5
+	ui_scale_slider.max_value = 1.5
+	ui_scale_slider.step = 0.05
+	ui_scale_slider.value = game_state.ui_scale
+	ui_scale_slider.custom_minimum_size.x = 200
+	ui_scale_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	container.add_child(ui_scale_slider)
+
+	# Value label
+	ui_scale_label = Label.new()
+	ui_scale_label.text = "%.0f%%" % (game_state.ui_scale * 100)
+	ui_scale_label.add_theme_font_override("font", font)
+	ui_scale_label.add_theme_font_size_override("font_size", 24)
+	ui_scale_label.custom_minimum_size.x = 80
+	container.add_child(ui_scale_label)
+
+	# Insert before SaveLoadContainer
+	var save_container: Node = save_button.get_parent()
+	var insert_idx: int = save_container.get_index()
+	vbox.add_child(sep)
+	vbox.move_child(sep, insert_idx)
+	vbox.add_child(container)
+	vbox.move_child(container, insert_idx + 1)
+
+	# Connect
+	ui_scale_slider.value_changed.connect(_on_ui_scale_changed)
+
+
+func _on_ui_scale_changed(value: float) -> void:
+	if ui_scale_label:
+		ui_scale_label.text = "%.0f%%" % (value * 100)
+	var game_state: Node = get_node_or_null("/root/GameState")
+	if game_state and game_state.has_method("set_ui_scale"):
+		game_state.set_ui_scale(value)
 
 
 ## Create the slot selection panel programmatically.
@@ -705,6 +776,8 @@ func _build_focusable_controls() -> void:
 		focusable_controls.append(music_toggle)
 	if music_volume_slider:
 		focusable_controls.append(music_volume_slider)
+	if ui_scale_slider:
+		focusable_controls.append(ui_scale_slider)
 	if save_button:
 		focusable_controls.append(save_button)
 	if load_button:

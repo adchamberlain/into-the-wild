@@ -2936,6 +2936,42 @@ Completely replaced the massive mound design with a minimal rock archway:
 
 ---
 
+## Session - Compass & Lodestone Navigation System (2026-02-06)
+
+### Overview
+Added a compass + lodestone navigation system. Rare ore (mined in caves) can now be crafted into a compass and lodestone beacon. When both are active, a directional HUD indicator shows an arrow pointing toward the lodestone with distance, helping players navigate back to their beacon.
+
+### Features Implemented
+
+1. **Compass & Lodestone crafting recipe** - Requires 2x rare_ore, 1x metal_ingot, 1x crystal at a crafting bench (camp level 3). Produces both a `compass` (passive inventory item) and a `lodestone` (placeable item).
+
+2. **Lodestone structure** - A dark magnetic rock with golden emissive veins and a subtle warm glow light. Can be placed instantly (same pattern as torches) and picked up by interacting with it (E key).
+
+3. **Compass HUD indicator** - Small panel on the left side below the stats panel showing directional arrow and distance to lodestone (e.g., `Lodestone  ↗  42m`). Uses 8 unicode arrows for cardinal/ordinal directions. Only visible when compass is in inventory AND lodestone is placed. Direction is calculated on the XZ plane using camera forward vector.
+
+4. **Lodestone instant placement** - Equip lodestone and press R to place 3m in front of player (grid-snapped, terrain-height-adjusted). Same one-press pattern as torch placement.
+
+5. **Lodestone pick-up** - Interact with placed lodestone to reclaim it. Excluded from structure move system (pick-up only, like torches).
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/crafting/crafting_system.gd` | Added compass recipe; craft() gives bonus lodestone on compass craft |
+| `scripts/campsite/structure_data.gd` | Added lodestone to STRUCTURES dict and PLACEABLE_ITEMS array |
+| `scripts/player/equipment.gd` | Added lodestone to EQUIPPABLE_ITEMS (slot 23); instant placement in _place_item() |
+| `scripts/core/save_load.gd` | Added lodestone case to _create_structure_programmatically(); added _create_lodestone() mesh function |
+| `scripts/campsite/placement_system.gd` | Added place_lodestone_instant() and _create_lodestone() mesh function |
+| `scripts/ui/hud.gd` | Added compass panel creation, direction calculation, and throttled compass update; excluded lodestone from Move prompt |
+
+### Files Created
+
+| File | Description |
+|------|-------------|
+| `scripts/campsite/structure_lodestone.gd` | StructureLodestone class extending StructureBase - pick-up interaction, campsite unregister |
+
+---
+
 ## Next Session
 
 ### Planned Tasks

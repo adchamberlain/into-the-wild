@@ -227,6 +227,67 @@ func place_torch_instant() -> bool:
 	return true
 
 
+## Instantly place a lodestone without preview mode.
+## Returns true if placement succeeded.
+func place_lodestone_instant() -> bool:
+	if not player or not camera or not inventory:
+		return false
+
+	if not inventory.has_item("lodestone"):
+		return false
+
+	# Calculate position 3m in front of player
+	var forward: Vector3 = -camera.global_transform.basis.z
+	forward.y = 0
+	forward = forward.normalized()
+
+	var target_pos: Vector3 = player.global_position + forward * placement_distance
+
+	# Snap to grid
+	target_pos.x = round(target_pos.x / grid_size) * grid_size
+	target_pos.z = round(target_pos.z / grid_size) * grid_size
+
+	# Get terrain height, sink slightly to prevent floating seam
+	target_pos.y = _get_ground_height(target_pos.x, target_pos.z) - 0.04
+
+	# Create the lodestone structure
+	var structure: Node3D = _create_lodestone()
+	if not structure:
+		print("[PlacementSystem] Failed to create lodestone")
+		return false
+
+	# Position and orient toward player
+	structure.global_position = target_pos
+	var look_target: Vector3 = Vector3(player.global_position.x, target_pos.y, player.global_position.z)
+	if target_pos.distance_squared_to(look_target) > 0.001:
+		structure.look_at(look_target, Vector3.UP)
+		structure.rotate_y(PI)
+
+	# Add to Structures container
+	var structures_container: Node = player.get_parent().get_node_or_null("Structures")
+	if structures_container:
+		structures_container.add_child(structure)
+	else:
+		player.get_parent().add_child(structure)
+
+	# Activate the lodestone
+	if structure.has_method("on_placed"):
+		structure.on_placed()
+
+	# Consume from inventory
+	inventory.remove_item("lodestone", 1)
+
+	# Register with campsite manager
+	if campsite_manager and campsite_manager.has_method("register_structure"):
+		campsite_manager.register_structure(structure, "lodestone")
+
+	# SFX and signal
+	SFXManager.play_sfx("place_confirm")
+	placement_confirmed.emit("lodestone", target_pos)
+	print("[PlacementSystem] Instantly placed lodestone at %s" % target_pos)
+	return true
+
+
 ## Cancel placement mode.
 func cancel_placement() -> void:
 	if not is_placing:
@@ -3316,3 +3377,130 @@ func _create_placed_torch() -> StaticBody3D:
 	torch.add_child(light)
 
 	return torch
+
+
+func _create_lodestone() -> StaticBody3D:
+	var lodestone: StaticBody3D = StaticBody3D.new()
+	lodestone.name = "Lodestone"
+	lodestone.set_script(load("res://scripts/campsite/structure_lodestone.gd"))
+
+	# Dark stone material
+	var stone_mat: StandardMaterial3D = StandardMaterial3D.new()
+	stone_mat.albedo_color = Color(0.18, 0.16, 0.20)
+	stone_mat.roughness = 0.9
+
+	var stone_dark_mat: StandardMaterial3D = StandardMaterial3D.new()
+	stone_dark_mat.albedo_color = Color(0.14, 0.12, 0.16)
+	stone_dark_mat.roughness = 0.95
+
+	# Gold vein material with emission
+	var vein_mat: StandardMaterial3D = StandardMaterial3D.new()
+	vein_mat.albedo_color = Color(0.85, 0.65, 0.15)
+	vein_mat.emission_enabled = true
+	vein_mat.emission = Color(0.9, 0.7, 0.1)
+	vein_mat.emission_energy_multiplier = 1.5
+	vein_mat.metallic = 0.6
+	vein_mat.roughness = 0.3
+
+	# Bright gold accent
+	var gold_mat: StandardMaterial3D = StandardMaterial3D.new()
+	gold_mat.albedo_color = Color(1.0, 0.8, 0.2)
+	gold_mat.emission_enabled = true
+	gold_mat.emission = Color(1.0, 0.75, 0.15)
+	gold_mat.emission_energy_multiplier = 2.0
+	gold_mat.metallic = 0.8
+	gold_mat.roughness = 0.2
+
+	# Collision
+	var collision: CollisionShape3D = CollisionShape3D.new()
+	var box_shape: BoxShape3D = BoxShape3D.new()
+	box_shape.size = Vector3(0.4, 0.5, 0.4)
+	collision.shape = box_shape
+	collision.position.y = 0.25
+	lodestone.add_child(collision)
+
+	# Main stone body
+	var body: MeshInstance3D = MeshInstance3D.new()
+	var body_mesh: BoxMesh = BoxMesh.new()
+	body_mesh.size = Vector3(0.35, 0.3, 0.30)
+	body.mesh = body_mesh
+	body.position = Vector3(0, 0.15, 0)
+	body.material_override = stone_mat
+	lodestone.add_child(body)
+
+	# Upper stone mass
+	var upper: MeshInstance3D = MeshInstance3D.new()
+	var upper_mesh: BoxMesh = BoxMesh.new()
+	upper_mesh.size = Vector3(0.28, 0.2, 0.25)
+	upper.mesh = upper_mesh
+	upper.position = Vector3(0.02, 0.35, -0.01)
+	upper.material_override = stone_dark_mat
+	lodestone.add_child(upper)
+
+	# Small stone bump on top
+	var bump: MeshInstance3D = MeshInstance3D.new()
+	var bump_mesh: BoxMesh = BoxMesh.new()
+	bump_mesh.size = Vector3(0.15, 0.08, 0.14)
+	bump.mesh = bump_mesh
+	bump.position = Vector3(-0.02, 0.48, 0.01)
+	bump.material_override = stone_mat
+	lodestone.add_child(bump)
+
+	# Gold vein strip 1
+	var vein1: MeshInstance3D = MeshInstance3D.new()
+	var vein1_mesh: BoxMesh = BoxMesh.new()
+	vein1_mesh.size = Vector3(0.03, 0.22, 0.02)
+	vein1.mesh = vein1_mesh
+	vein1.position = Vector3(0.08, 0.22, 0.16)
+	vein1.rotation.z = 0.3
+	vein1.material_override = vein_mat
+	lodestone.add_child(vein1)
+
+	# Gold vein strip 2
+	var vein2: MeshInstance3D = MeshInstance3D.new()
+	var vein2_mesh: BoxMesh = BoxMesh.new()
+	vein2_mesh.size = Vector3(0.02, 0.18, 0.03)
+	vein2.mesh = vein2_mesh
+	vein2.position = Vector3(-0.17, 0.28, 0.04)
+	vein2.rotation.z = -0.4
+	vein2.material_override = vein_mat
+	lodestone.add_child(vein2)
+
+	# Gold vein strip 3
+	var vein3: MeshInstance3D = MeshInstance3D.new()
+	var vein3_mesh: BoxMesh = BoxMesh.new()
+	vein3_mesh.size = Vector3(0.15, 0.02, 0.02)
+	vein3.mesh = vein3_mesh
+	vein3.position = Vector3(0, 0.38, -0.13)
+	vein3.material_override = vein_mat
+	lodestone.add_child(vein3)
+
+	# Gold accent nugget on top
+	var nugget1: MeshInstance3D = MeshInstance3D.new()
+	var nugget1_mesh: BoxMesh = BoxMesh.new()
+	nugget1_mesh.size = Vector3(0.06, 0.04, 0.05)
+	nugget1.mesh = nugget1_mesh
+	nugget1.position = Vector3(0.04, 0.46, 0.03)
+	nugget1.material_override = gold_mat
+	lodestone.add_child(nugget1)
+
+	# Gold accent nugget on side
+	var nugget2: MeshInstance3D = MeshInstance3D.new()
+	var nugget2_mesh: BoxMesh = BoxMesh.new()
+	nugget2_mesh.size = Vector3(0.04, 0.05, 0.04)
+	nugget2.mesh = nugget2_mesh
+	nugget2.position = Vector3(0.16, 0.2, 0.08)
+	nugget2.material_override = gold_mat
+	lodestone.add_child(nugget2)
+
+	# Warm glow light
+	var light: OmniLight3D = OmniLight3D.new()
+	light.name = "LodestoneLight"
+	light.light_color = Color(1.0, 0.85, 0.4)
+	light.light_energy = 2.0
+	light.omni_range = 4.0
+	light.shadow_enabled = false
+	light.position = Vector3(0, 0.35, 0)
+	lodestone.add_child(light)
+
+	return lodestone

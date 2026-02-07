@@ -228,6 +228,15 @@ func _load_recipes() -> void:
 			"description": "A climbing tool for ascending steep cliffs.",
 			"requires_bench": true,
 			"min_camp_level": 2
+		},
+		"compass": {
+			"name": "Compass & Lodestone",
+			"inputs": {"rare_ore": 2, "metal_ingot": 1, "crystal": 1},
+			"output_type": "compass",
+			"output_amount": 1,
+			"description": "A magnetic compass and lodestone beacon for navigation.",
+			"requires_bench": true,
+			"min_camp_level": 3
 		}
 	}
 
@@ -312,6 +321,10 @@ func craft(recipe_id: String, at_bench: bool = false, campsite_level: int = 1) -
 
 	# Add output
 	inventory.add_item(output_type, output_amount)
+
+	# Compass also produces a lodestone for placement
+	if output_type == "compass":
+		inventory.add_item("lodestone", 1)
 
 	print("[Crafting] Crafted %s x%d" % [output_type, output_amount])
 	recipe_crafted.emit(recipe_id, output_type, output_amount)

@@ -150,6 +150,12 @@ const EQUIPPABLE_ITEMS: Dictionary = {
 		"slot": 14,
 		"has_light": false,
 		"tool_type": "grappling_hook"
+	},
+	"lodestone": {
+		"name": "Lodestone",
+		"slot": 23,
+		"has_light": false,
+		"placeable": true
 	}
 }
 
@@ -1271,6 +1277,14 @@ func _place_item() -> bool:
 	if equipped_item == "torch":
 		if placement_system and placement_system.has_method("place_torch_instant"):
 			if placement_system.place_torch_instant():
+				unequip()
+				return true
+		return false
+
+	# Lodestone: instant placement without preview mode
+	if equipped_item == "lodestone":
+		if placement_system and placement_system.has_method("place_lodestone_instant"):
+			if placement_system.place_lodestone_instant():
 				unequip()
 				return true
 		return false
