@@ -51,6 +51,7 @@ var player: CharacterBody3D
 var camera: Camera3D
 var inventory: Inventory
 var campsite_manager: Node  # Will be set by player
+var chunk_manager: Node  # For authoritative terrain height lookups
 
 
 func _ready() -> void:
@@ -65,6 +66,10 @@ func _setup_references() -> void:
 		camera = parent.get_node_or_null("Camera3D")
 		if parent.has_method("get_inventory"):
 			inventory = parent.get_inventory()
+		# Find ChunkManager for terrain height lookups
+		var main: Node = parent.get_parent()
+		if main:
+			chunk_manager = main.get_node_or_null("ChunkManager")
 		print("[PlacementSystem] Setup complete")
 
 
@@ -182,12 +187,18 @@ func place_torch_instant() -> bool:
 
 	var target_pos: Vector3 = player.global_position + forward * placement_distance
 
-	# Snap to grid
-	target_pos.x = round(target_pos.x / grid_size) * grid_size
-	target_pos.z = round(target_pos.z / grid_size) * grid_size
+	# Snap to terrain cell center to place on block tops, not edges/sides
+	var cell_sz: float = 3.0  # Terrain cell size
+	if chunk_manager and "cell_size" in chunk_manager:
+		cell_sz = chunk_manager.cell_size
+	target_pos.x = (floor(target_pos.x / cell_sz) + 0.5) * cell_sz
+	target_pos.z = (floor(target_pos.z / cell_sz) + 0.5) * cell_sz
 
-	# Get terrain height, sink slightly to prevent floating seam
-	target_pos.y = _get_ground_height(target_pos.x, target_pos.z) - 0.04
+	# Use authoritative terrain height from ChunkManager (avoids raycast edge issues at steps)
+	if chunk_manager and chunk_manager.has_method("get_height_at"):
+		target_pos.y = chunk_manager.get_height_at(target_pos.x, target_pos.z) - 0.04
+	else:
+		target_pos.y = _get_ground_height(target_pos.x, target_pos.z) - 0.04
 
 	# Create the torch structure
 	var structure: Node3D = _create_placed_torch()
@@ -243,12 +254,18 @@ func place_lodestone_instant() -> bool:
 
 	var target_pos: Vector3 = player.global_position + forward * placement_distance
 
-	# Snap to grid
-	target_pos.x = round(target_pos.x / grid_size) * grid_size
-	target_pos.z = round(target_pos.z / grid_size) * grid_size
+	# Snap to terrain cell center to place on block tops, not edges/sides
+	var cell_sz: float = 3.0
+	if chunk_manager and "cell_size" in chunk_manager:
+		cell_sz = chunk_manager.cell_size
+	target_pos.x = (floor(target_pos.x / cell_sz) + 0.5) * cell_sz
+	target_pos.z = (floor(target_pos.z / cell_sz) + 0.5) * cell_sz
 
-	# Get terrain height, sink slightly to prevent floating seam
-	target_pos.y = _get_ground_height(target_pos.x, target_pos.z) - 0.04
+	# Use authoritative terrain height from ChunkManager (avoids raycast edge issues at steps)
+	if chunk_manager and chunk_manager.has_method("get_height_at"):
+		target_pos.y = chunk_manager.get_height_at(target_pos.x, target_pos.z) - 0.04
+	else:
+		target_pos.y = _get_ground_height(target_pos.x, target_pos.z) - 0.04
 
 	# Create the lodestone structure
 	var structure: Node3D = _create_lodestone()

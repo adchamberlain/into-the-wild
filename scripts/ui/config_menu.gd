@@ -45,9 +45,6 @@ var music_volume: float = 50.0  # 0-100
 @onready var day_length_label: Label = $Panel/VBoxContainer/DayLengthContainer/DayLengthValue
 @onready var tree_respawn_slider: HSlider = $Panel/VBoxContainer/TreeRespawnContainer/TreeRespawnSlider
 @onready var tree_respawn_label: Label = $Panel/VBoxContainer/TreeRespawnContainer/TreeRespawnValue
-@onready var save_button: Button = $Panel/VBoxContainer/SaveLoadContainer/SaveButton
-@onready var load_button: Button = $Panel/VBoxContainer/SaveLoadContainer/LoadButton
-@onready var save_status_label: Label = $Panel/VBoxContainer/SaveStatusLabel
 @onready var hint_label: Label = $Panel/VBoxContainer/HintLabel
 @onready var music_toggle: CheckButton = $Panel/VBoxContainer/MusicToggle
 @onready var music_volume_slider: HSlider = $Panel/VBoxContainer/MusicVolumeContainer/MusicVolumeSlider
@@ -165,19 +162,6 @@ func _init_ui() -> void:
 	if music_volume_slider:
 		music_volume_slider.value_changed.connect(_on_music_volume_changed)
 
-	# Connect save/load buttons
-	if save_button:
-		save_button.pressed.connect(_on_save_pressed)
-	if load_button:
-		load_button.pressed.connect(_on_load_pressed)
-
-	# Connect save/load signals for status display
-	if save_load:
-		save_load.game_saved.connect(_on_game_saved)
-		save_load.game_loaded.connect(_on_game_loaded)
-		save_load.save_failed.connect(_on_save_failed)
-		save_load.load_failed.connect(_on_load_failed)
-
 	# Build focusable controls list for controller navigation
 	_build_focusable_controls()
 
@@ -185,7 +169,7 @@ func _init_ui() -> void:
 	_apply_config()
 
 
-## Create the UI Scale slider programmatically and insert it before Save/Load.
+## Create the UI Scale slider programmatically and insert it before the hint label.
 func _create_ui_scale_control() -> void:
 	var game_state: Node = get_node_or_null("/root/GameState")
 	if not game_state or not "ui_scale" in game_state:
@@ -207,7 +191,7 @@ func _create_ui_scale_control() -> void:
 	var name_label := Label.new()
 	name_label.text = "UI Scale"
 	name_label.add_theme_font_override("font", font)
-	name_label.add_theme_font_size_override("font_size", 24)
+	name_label.add_theme_font_size_override("font_size", 32)
 	name_label.custom_minimum_size.x = 200
 	container.add_child(name_label)
 
@@ -225,13 +209,17 @@ func _create_ui_scale_control() -> void:
 	ui_scale_label = Label.new()
 	ui_scale_label.text = "%.0f%%" % (game_state.ui_scale * 100)
 	ui_scale_label.add_theme_font_override("font", font)
-	ui_scale_label.add_theme_font_size_override("font_size", 24)
+	ui_scale_label.add_theme_font_size_override("font_size", 28)
 	ui_scale_label.custom_minimum_size.x = 80
 	container.add_child(ui_scale_label)
 
-	# Insert before SaveLoadContainer
-	var save_container: Node = save_button.get_parent()
-	var insert_idx: int = save_container.get_index()
+	# Insert before the hint separator
+	var hint_sep: Node = vbox.get_node_or_null("HSeparator4")
+	var insert_idx: int
+	if hint_sep:
+		insert_idx = hint_sep.get_index()
+	else:
+		insert_idx = vbox.get_child_count()
 	vbox.add_child(sep)
 	vbox.move_child(sep, insert_idx)
 	vbox.add_child(container)
@@ -239,6 +227,9 @@ func _create_ui_scale_control() -> void:
 
 	# Connect
 	ui_scale_slider.value_changed.connect(_on_ui_scale_changed)
+
+	# Rebuild focusable controls now that ui_scale_slider exists
+	_build_focusable_controls()
 
 
 func _on_ui_scale_changed(value: float) -> void:
@@ -722,30 +713,6 @@ func _on_slot_cancel_pressed() -> void:
 	_hide_slot_panel()
 
 
-func _on_game_saved(_filepath: String, slot: int) -> void:
-	_show_save_status("Saved to Slot %d!" % slot, Color.GREEN)
-
-
-func _on_game_loaded(_filepath: String, slot: int) -> void:
-	_show_save_status("Loaded Slot %d!" % slot, Color.GREEN)
-
-
-func _on_save_failed(error: String) -> void:
-	_show_save_status("Save Failed: %s" % error, Color.RED)
-
-
-func _on_load_failed(error: String) -> void:
-	_show_save_status("Load Failed: %s" % error, Color.RED)
-
-
-func _show_save_status(message: String, color: Color) -> void:
-	if save_status_label:
-		save_status_label.text = message
-		save_status_label.modulate = color
-		save_status_label.visible = true
-		# Hide after 3 seconds
-		get_tree().create_timer(3.0).timeout.connect(func(): save_status_label.visible = false)
-
 
 # ============================================================================
 # Controller Navigation
@@ -778,10 +745,6 @@ func _build_focusable_controls() -> void:
 		focusable_controls.append(music_volume_slider)
 	if ui_scale_slider:
 		focusable_controls.append(ui_scale_slider)
-	if save_button:
-		focusable_controls.append(save_button)
-	if load_button:
-		focusable_controls.append(load_button)
 
 
 ## Navigate through controls with D-pad.
@@ -875,27 +838,14 @@ func _on_input_device_changed(_is_controller: bool) -> void:
 		_update_hint_label()
 
 
-## Update hint label and button text based on input device.
+## Update hint label based on input device.
 func _update_hint_label() -> void:
 	var input_mgr: Node = get_node_or_null("/root/InputManager")
 	var using_controller: bool = input_mgr and input_mgr.is_using_controller()
 
-	# Update hint label
+	# Update hint label - always show both keyboard and controller close methods
 	if hint_label:
 		if using_controller:
-			hint_label.text = "↑↓ Navigate  ←→ Adjust  × Select  ○ Close"
+			hint_label.text = "↑↓ Navigate  ←→ Adjust  A Select  B/TAB Close"
 		else:
-			hint_label.text = "Press TAB to close"
-
-	# Update Save/Load button labels
-	if save_button:
-		if using_controller:
-			save_button.text = "Save"
-		else:
-			save_button.text = "Save (K)"
-
-	if load_button:
-		if using_controller:
-			load_button.text = "Load"
-		else:
-			load_button.text = "Load (L)"
+			hint_label.text = "Press TAB or B to close"

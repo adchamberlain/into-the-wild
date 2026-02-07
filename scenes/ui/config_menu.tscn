@@ -158,35 +158,6 @@ theme_override_font_sizes/font_size = 28
 text = "50%"
 horizontal_alignment = 1
 
-[node name="HSeparator5" type="HSeparator" parent="Panel/VBoxContainer"]
-layout_mode = 2
-
-[node name="SaveLoadContainer" type="HBoxContainer" parent="Panel/VBoxContainer"]
-layout_mode = 2
-theme_override_constants/separation = 20
-
-[node name="SaveButton" type="Button" parent="Panel/VBoxContainer/SaveLoadContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 28
-text = "Save (K)"
-
-[node name="LoadButton" type="Button" parent="Panel/VBoxContainer/SaveLoadContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 28
-text = "Load (L)"
-
-[node name="SaveStatusLabel" type="Label" parent="Panel/VBoxContainer"]
-visible = false
-layout_mode = 2
-theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 26
-text = "Status"
-horizontal_alignment = 1
-
 [node name="HSeparator4" type="HSeparator" parent="Panel/VBoxContainer"]
 layout_mode = 2
 
@@ -194,6 +165,6 @@ layout_mode = 2
 layout_mode = 2
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 26
+theme_override_font_sizes/font_size = 32
 text = "Press TAB to close"
 horizontal_alignment = 1
