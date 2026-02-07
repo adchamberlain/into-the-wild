@@ -608,7 +608,6 @@ func get_config() -> Dictionary:
 ## Save/Load functions
 func _on_save_pressed() -> void:
 	if not save_load:
-		_show_save_status("Error: Save system not found", Color.RED)
 		return
 
 	# Show slot selection for save
@@ -620,7 +619,6 @@ func _on_save_pressed() -> void:
 
 func _on_load_pressed() -> void:
 	if not save_load:
-		_show_save_status("Error: Save system not found", Color.RED)
 		return
 
 	# Show slot selection for load
