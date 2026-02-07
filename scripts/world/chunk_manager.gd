@@ -876,6 +876,9 @@ func _has_carved_neighbor(x: float, z: float, threshold: float) -> bool:
 	return false
 
 
+## Pit prevention: guard flag to prevent recursion when checking neighbor heights
+var _in_pit_check: bool = false
+
 ## Cached neighbor heights for height limiting (cleared after each get_height_at call)
 var _height_limit_cache: Dictionary = {}
 
@@ -1285,6 +1288,24 @@ func get_height_at(x: float, z: float) -> float:
 			var t: float = (dist_to_cave - cave_flat_inner) / (cave_flat_outer - cave_flat_inner)
 			t = clamp(t, 0.0, 1.0)
 			height = cave_platform_height + (height - cave_platform_height) * t
+
+	# Pit prevention: ensure no cell is more than 1 block below ALL cardinal neighbors.
+	# This prevents inescapable holes. Uses a recursion guard so neighbor lookups
+	# skip this step (one level deep only).
+	if not _in_pit_check:
+		_in_pit_check = true
+		var min_neighbor: float = INF
+		var pit_offsets: Array[Vector2] = [
+			Vector2(cell_size, 0), Vector2(-cell_size, 0),
+			Vector2(0, cell_size), Vector2(0, -cell_size)
+		]
+		for offset in pit_offsets:
+			var nh: float = get_height_at(snapped_x + offset.x, snapped_z + offset.y)
+			if nh < min_neighbor:
+				min_neighbor = nh
+		_in_pit_check = false
+		if min_neighbor != INF and min_neighbor - height > 1.0:
+			height = min_neighbor - 1.0
 
 	return height
 
