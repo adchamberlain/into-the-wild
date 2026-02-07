@@ -201,10 +201,14 @@ func place_torch_instant() -> bool:
 	else:
 		terrain_height = _get_ground_height(target_pos.x, target_pos.z)
 
-	# Reject placement if terrain is too far above or below the player (e.g. mountain peak nearby)
-	var height_diff: float = absf(terrain_height - player.global_position.y)
-	if height_diff > 4.0:
-		print("[PlacementSystem] Torch placement rejected: terrain height %.1f too far from player %.1f (diff %.1f)" % [terrain_height, player.global_position.y, height_diff])
+	# Reject placement unless target is at the same elevation as the player
+	var player_terrain: float
+	if chunk_manager and chunk_manager.has_method("get_height_at"):
+		player_terrain = chunk_manager.get_height_at(player.global_position.x, player.global_position.z)
+	else:
+		player_terrain = _get_ground_height(player.global_position.x, player.global_position.z)
+	if absf(terrain_height - player_terrain) > 0.5:
+		print("[PlacementSystem] Torch placement rejected: target height %.1f != player ground %.1f" % [terrain_height, player_terrain])
 		return false
 
 	target_pos.y = terrain_height - 0.04
