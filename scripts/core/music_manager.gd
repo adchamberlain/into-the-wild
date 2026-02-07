@@ -45,6 +45,7 @@ var track_order: Array[int] = []
 var is_crossfading: bool = false
 var pause_timer: float = 0.0
 var waiting_for_next: bool = false
+var fade_tween: Tween  # Track fade-out tween so it can be killed on re-enable
 
 
 func _ready() -> void:
@@ -185,13 +186,21 @@ func _on_track_finished(player: AudioStreamPlayer) -> void:
 func set_music_enabled(enabled: bool) -> void:
 	music_enabled = enabled
 	if enabled:
-		if not active_player.playing:
-			_play_next_track()
+		# Kill any pending fade-out tween to prevent it from stopping playback
+		if fade_tween and fade_tween.is_valid():
+			fade_tween.kill()
+			fade_tween = null
+		# Ensure player is in a clean state for fresh playback
+		active_player.stop()
+		active_player.volume_db = music_volume_db
+		_play_next_track()
 	else:
 		# Fade out current music
-		var tween: Tween = create_tween()
-		tween.tween_property(active_player, "volume_db", -80.0, 1.0)
-		tween.tween_callback(active_player.stop)
+		if fade_tween and fade_tween.is_valid():
+			fade_tween.kill()
+		fade_tween = create_tween()
+		fade_tween.tween_property(active_player, "volume_db", -80.0, 1.0)
+		fade_tween.tween_callback(active_player.stop)
 		waiting_for_next = false
 
 
