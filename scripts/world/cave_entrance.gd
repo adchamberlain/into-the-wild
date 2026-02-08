@@ -272,15 +272,16 @@ func _build_crater_rim(dark_mat: StandardMaterial3D, rng: RandomNumberGenerator)
 
 	# ===== INNER CRATER WALLS (earth/rock sides descending from y=0 to y=-3) =====
 	var earth_mat: StandardMaterial3D = _get_earth_material()
-	# Left crater wall
+	# Left crater wall (extended to Z=+4 to cover full skip zone boundary)
 	_add_interior_rock(
-		Vector3(-3.0, -1.5, 0.0), Vector3(0.8, 3.0, 6.0), Vector3(0, 0, 0), earth_mat)
-	# Right crater wall
+		Vector3(-3.0, -1.5, 0.5), Vector3(0.8, 3.0, 7.0), Vector3(0, 0, 0), earth_mat)
+	# Right crater wall (extended to Z=+4 to cover full skip zone boundary)
 	_add_interior_rock(
-		Vector3(3.0, -1.5, 0.0), Vector3(0.8, 3.0, 6.0), Vector3(0, 0, 0), earth_mat)
+		Vector3(3.0, -1.5, 0.5), Vector3(0.8, 3.0, 7.0), Vector3(0, 0, 0), earth_mat)
 	# Front crater wall (below the stairway entrance, at +Z edge)
+	# Extended to Z=4.6 to cover the full terrain skip zone boundary (skip zone ends at Z=+4)
 	_add_interior_rock(
-		Vector3(0, -1.5, 3.4), Vector3(7.0, 3.0, 0.8), Vector3(0, 0, 0), earth_mat)
+		Vector3(0, -1.5, 4.0), Vector3(8.0, 3.0, 1.2), Vector3(0, 0, 0), earth_mat)
 
 	# ===== MOSS patches on rim boulders =====
 	var moss_mat: StandardMaterial3D = _get_moss_material()
@@ -334,9 +335,10 @@ func _build_stairway(rng: RandomNumberGenerator) -> void:
 		Vector3(3.0, -1.5, -0.75), Vector3(0.8, 3.0, 7.5), Vector3(0, 0, 0), earth_mat)
 
 	# Earth/rock overhang at ~z=-3 representing the ground surface over the tunnel
+	# Lowered to Y=-0.5 to avoid z-fighting with terrain surface panels above
 	var ceiling_mat: StandardMaterial3D = _get_ceiling_material()
 	_add_interior_rock(
-		Vector3(0, 0.25, -4.0), Vector3(7.6, 0.5, 2.0), Vector3(0, 0, 0), ceiling_mat)
+		Vector3(0, -0.5, -4.0), Vector3(7.6, 0.5, 2.0), Vector3(0, 0, 0), ceiling_mat)
 
 
 func _build_tunnel(rng: RandomNumberGenerator) -> void:
@@ -370,12 +372,14 @@ func _build_tunnel(rng: RandomNumberGenerator) -> void:
 			wall_mat
 		)
 
-	# -- CEILING: spans the width, segmented (also acts as ground surface above) --
+	# -- CEILING: spans the width, segmented --
+	# Lowered to Y=-0.8 so tops (~Y=-0.2) stay well below terrain surface panels (Y=0.0)
+	# to prevent z-fighting between dark ceiling and terrain-colored surface
 	for seg: int in range(6):
 		var z_start: float = -6.0 - float(seg) * 3.0
 		var height_var: float = rng.randf_range(-0.2, 0.2)
 		_add_interior_rock(
-			Vector3(0, 0.0 + height_var, z_start - 1.5),
+			Vector3(0, -0.8 + height_var, z_start - 1.5),
 			Vector3(7.6, 0.8, 3.0),
 			Vector3(0, 0, 0),
 			ceiling_mat
@@ -465,22 +469,26 @@ func _build_terrain_surface() -> void:
 	var terrain_mat: StandardMaterial3D = _get_terrain_surface_material()
 	var terrain_mat2: StandardMaterial3D = _get_terrain_surface_material2()
 
+	# All panels at Y=0.0 to match surrounding terrain height (cave node sits at Y=2.0,
+	# so local Y=0 = world Y=2.0 = terrain platform height). Height 0.3 provides coverage
+	# without protruding above terrain. Bottom at Y=-0.15 is above ceiling tops (max ~Y=-0.2).
+
 	# Main panel over the tunnel: z=-5 to z=-25, full width
 	_add_interior_rock(
-		Vector3(0, 0.3, -15.0), Vector3(8.0, 0.4, 20.0), Vector3(0, 0, 0), terrain_mat)
+		Vector3(0, 0.0, -15.0), Vector3(8.0, 0.3, 20.0), Vector3(0, 0, 0), terrain_mat)
 	# Left side panel: covers margin from crater to tunnel, z=+4.5 to z=-5
 	_add_interior_rock(
-		Vector3(-4.0, 0.3, -0.25), Vector3(3.0, 0.4, 9.5), Vector3(0, 0, 0), terrain_mat2)
+		Vector3(-4.0, 0.0, -0.25), Vector3(3.0, 0.3, 9.5), Vector3(0, 0, 0), terrain_mat2)
 	# Right side panel: covers margin from crater to tunnel, z=+4.5 to z=-5
 	_add_interior_rock(
-		Vector3(4.0, 0.3, -0.25), Vector3(3.0, 0.4, 9.5), Vector3(0, 0, 0), terrain_mat2)
+		Vector3(4.0, 0.0, -0.25), Vector3(3.0, 0.3, 9.5), Vector3(0, 0, 0), terrain_mat2)
 	# Front panel: in front of stairway opening, z=+3 to z=+4.5
 	_add_interior_rock(
-		Vector3(0, 0.3, 3.75), Vector3(5.0, 0.4, 1.5), Vector3(0, 0, 0), terrain_mat)
+		Vector3(0, 0.0, 3.75), Vector3(5.0, 0.3, 1.5), Vector3(0, 0, 0), terrain_mat)
 
 	# Stairway overhang surface — terrain-colored cover over the overhang piece
 	_add_interior_rock(
-		Vector3(0, 0.35, -4.0), Vector3(5.0, 0.3, 2.0), Vector3(0, 0, 0), terrain_mat)
+		Vector3(0, 0.0, -4.0), Vector3(5.0, 0.3, 2.0), Vector3(0, 0, 0), terrain_mat)
 
 
 func _build_cave_area() -> void:
