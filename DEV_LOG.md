@@ -3172,6 +3172,103 @@ Created comprehensive automated test suite (493 tests across 7 test files) that 
 
 ---
 
+## Session - Bug Fix Batch (2026-02-07)
+
+**Six gameplay bug fixes** reported by players during play-testing.
+
+### Thorn Bush Obstacle Rework
+
+**Problem**: Thorn bushes were `StaticBody3D` walls that players could clip through, and the hard-wall mechanic didn't make gameplay sense for thorns.
+
+**Fix**: Converted thorns from a blocking wall to a damage + slow zone:
+- Disabled `StaticBody3D` collision (layer/mask set to 0)
+- Added `Area3D` detection zone for player entry/exit
+- Players inside thorns take **1 HP damage every 0.5 seconds** (2 HP/s effective)
+- Movement slowed to **40% speed** while inside thorns
+- Added `set_thorn_slow()` method to player controller
+- Machete clearing mechanic unchanged (3 chops to clear)
+- Slow effect removed immediately when cleared or when player exits
+
+**Files Modified**: `scripts/world/obstacle_thorns.gd`, `scripts/player/player_controller.gd`
+
+### Iron Ore Harvest Sound
+
+**Problem**: Harvesting iron ore played the `tree_fall` sound effect, which makes no sense for mining ore.
+
+**Cause**: `_complete_harvest()` in `resource_node.gd` played `tree_fall` for any resource with `chops_required > 1`. Iron ore has `chops_required = 5`.
+
+**Fix**: Changed the condition to check resource type instead of chop count:
+- `resource_type == "wood"` or `secondary_resource_type == "branch"` → play `tree_fall`
+- Everything else → play `pickup`
+
+**Files Modified**: `scripts/resources/resource_node.gd`
+
+### Footstep Sounds Against Walls
+
+**Problem**: Footstep sounds played when the player walked into a wall and couldn't actually move.
+
+**Cause**: Footsteps triggered based on **input direction** (`direction.length() > 0`) before `move_and_slide()`, not actual movement. When blocked by a wall, velocity is zeroed by collision resolution but footsteps had already been triggered.
+
+**Fix**: Moved footstep logic to **after** `move_and_slide()` in `_physics_process()`:
+- Checks actual horizontal velocity (`Vector2(velocity.x, velocity.z).length() > 0.5`)
+- Covers both walking and swimming in one location
+- Removed old input-based footstep calls from `_process_normal_movement()` and `_process_swimming()`
+
+**Files Modified**: `scripts/player/player_controller.gd`
+
+### Floating Structures on Load
+
+**Problem**: Structures placed far from spawn could float above the ground after saving and loading.
+
+**Cause**: Structures were loaded with their saved Y position directly, while terrain height at distant locations can vary slightly between sessions. The player's Y was already recalculated from terrain on load, but structures were not.
+
+**Fix**: Added terrain height recalculation in `_recreate_structure()`:
+```gdscript
+if chunk_manager and chunk_manager.has_method("get_height_at"):
+    var terrain_y: float = chunk_manager.get_height_at(pos.x, pos.z)
+    pos.y = terrain_y
+```
+
+**Files Modified**: `scripts/core/save_load.gd`
+
+### Structure Rotation Not Persisted
+
+**Problem**: Shelters, tents, and cabins would face random directions after saving and loading instead of keeping their door oriented toward the player.
+
+**Cause**: Structure rotation was never saved. Only `type` and `position` were stored. On load, structures were recreated with default rotation (0,0,0), so doors faced world +Z regardless of original placement orientation.
+
+**Fix**:
+- **Save**: Added `"rotation_y": structure.rotation.y` to structure save data
+- **Load**: Restore `structure.rotation.y` from saved data
+- Old saves without `rotation_y` gracefully default to 0
+
+**Files Modified**: `scripts/core/save_load.gd`
+
+### Torch/Lodestone Placement Offset
+
+**Problem**: Torches and lodestones placed one block ahead of where the camera crosshair was pointing.
+
+**Cause**: Placement used the camera's forward direction **flattened to horizontal** and projected 3m from the **player's feet**, ignoring camera pitch entirely. Combined with 3m cell grid snapping, the placement consistently overshot.
+
+**Fix**: Added `_get_crosshair_terrain_hit()` — a physics raycast from the camera along its actual look direction (including pitch). Torch/lodestone now places where the crosshair hits terrain. Falls back to the old forward projection if the crosshair doesn't hit terrain within range (e.g., looking at the sky).
+
+**Files Modified**: `scripts/campsite/placement_system.gd`
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/obstacle_thorns.gd` | Converted from blocking wall to Area3D damage+slow zone |
+| `scripts/resources/resource_node.gd` | Fixed harvest sound: tree_fall only for trees, pickup for ore |
+| `scripts/player/player_controller.gd` | Post-collision footsteps, thorn slow support |
+| `scripts/core/save_load.gd` | Recalculate structure Y on load, save/restore rotation_y |
+| `scripts/campsite/placement_system.gd` | Crosshair raycast for torch/lodestone placement |
+
+### Test Results
+- All 488 regression tests pass
+
+---
+
 ## Next Session
 
 ### Planned Tasks
