@@ -230,9 +230,19 @@ func _ready() -> void:
 		_load_chunks_around(Vector2i(0, 0))
 
 
+## Performance profiling - tracks per-frame timing for debugging stuttering
+var _perf_frame_count: int = 0
+var _perf_log_interval: int = 60  # Log summary every N frames
+var _perf_max_frame_ms: float = 0.0
+var _perf_total_frame_ms: float = 0.0
+var _perf_chunk_loads_this_interval: int = 0
+
+
 func _process(_delta: float) -> void:
 	if not player:
 		return
+
+	var frame_start: int = Time.get_ticks_usec()
 
 	# Check if player moved to a new chunk
 	var player_chunk: Vector2i = _world_to_chunk(player.global_position)
@@ -243,6 +253,28 @@ func _process(_delta: float) -> void:
 	# Process chunk loading/unloading queue (skip if nothing to do)
 	if not chunks_to_load.is_empty() or not chunks_to_unload.is_empty():
 		_process_chunk_queues()
+
+	var frame_ms: float = (Time.get_ticks_usec() - frame_start) / 1000.0
+	_perf_total_frame_ms += frame_ms
+	if frame_ms > _perf_max_frame_ms:
+		_perf_max_frame_ms = frame_ms
+	_perf_frame_count += 1
+	if _perf_frame_count >= _perf_log_interval:
+		var avg_ms: float = _perf_total_frame_ms / _perf_frame_count
+		print("[PERF] ChunkMgr _process: avg=%.2fms max=%.2fms over %d frames, %d chunk loads, active_heavy=%d, FPS=%.0f" % [
+			avg_ms, _perf_max_frame_ms, _perf_frame_count, _perf_chunk_loads_this_interval,
+			_active_heavy_generations, Engine.get_frames_per_second()])
+		print("[PERF] get_height_at calls: %d direct + %d pit_recursive = %d total (over %d frames, avg %.0f/frame)" % [
+			_perf_height_calls, _perf_height_calls_pit,
+			_perf_height_calls + _perf_height_calls_pit,
+			_perf_frame_count,
+			float(_perf_height_calls + _perf_height_calls_pit) / _perf_frame_count])
+		_perf_frame_count = 0
+		_perf_total_frame_ms = 0.0
+		_perf_max_frame_ms = 0.0
+		_perf_chunk_loads_this_interval = 0
+		_perf_height_calls = 0
+		_perf_height_calls_pit = 0
 
 
 func _setup_noise() -> void:
@@ -879,6 +911,10 @@ func _has_carved_neighbor(x: float, z: float, threshold: float) -> bool:
 ## Pit prevention: guard flag to prevent recursion when checking neighbor heights
 var _in_pit_check: bool = false
 
+## Performance profiling: count get_height_at calls per frame
+var _perf_height_calls: int = 0
+var _perf_height_calls_pit: int = 0  # Calls from pit prevention recursion
+
 ## Cached neighbor heights for height limiting (cleared after each get_height_at call)
 var _height_limit_cache: Dictionary = {}
 
@@ -1102,6 +1138,10 @@ func get_vegetation_multiplier(region: RegionType, resource_type: String) -> flo
 
 
 func get_height_at(x: float, z: float, skip_pit_check: bool = false) -> float:
+	if _in_pit_check:
+		_perf_height_calls_pit += 1
+	else:
+		_perf_height_calls += 1
 	# Snap to cell center FIRST for consistent height across each cell
 	# This ensures objects spawn at the same height as the terrain mesh
 	var snapped_x: float = (floor(x / cell_size) + 0.5) * cell_size
@@ -1477,15 +1517,22 @@ func _load_chunk(chunk_coord: Vector2i) -> void:
 	if loaded_chunks.has(chunk_coord):
 		return
 
+	_perf_chunk_loads_this_interval += 1
+
 	# Determine if player is standing on this chunk (needs sync collision)
 	var player_chunk: Vector2i = last_player_chunk
 	var is_player_chunk: bool = (chunk_coord == player_chunk)
 
+	var t0: int = Time.get_ticks_usec()
 	var chunk: TerrainChunk = TerrainChunk.new()
 	chunk.setup(chunk_coord, self)
 	chunk.name = "Chunk_%d_%d" % [chunk_coord.x, chunk_coord.y]
 	add_child(chunk)
 	chunk.generate(is_player_chunk)
+	var load_ms: float = (Time.get_ticks_usec() - t0) / 1000.0
+
+	if is_player_chunk or load_ms > 5.0:
+		print("[PERF] _load_chunk %s sync=%s took %.2fms" % [str(chunk_coord), str(is_player_chunk), load_ms])
 
 	loaded_chunks[chunk_coord] = chunk
 
