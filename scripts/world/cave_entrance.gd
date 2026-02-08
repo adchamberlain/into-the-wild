@@ -26,6 +26,9 @@ static var _ceiling_mat: StandardMaterial3D = null
 static var _moss_mat: StandardMaterial3D = null
 static var _earth_mat: StandardMaterial3D = null
 static var _step_mat: StandardMaterial3D = null
+# Terrain surface materials for the ground above the tunnel (blends with surrounding terrain)
+static var _terrain_surface_mat: StandardMaterial3D = null
+static var _terrain_surface_mat2: StandardMaterial3D = null
 # Rock material palette: 6 shared tints from lightest to darkest
 static var _rock_palette: Array = []  # Array[StandardMaterial3D]
 
@@ -85,6 +88,24 @@ static func _get_step_material() -> StandardMaterial3D:
 		_step_mat.albedo_color = Color(0.32, 0.28, 0.22)
 		_step_mat.roughness = 0.95
 	return _step_mat
+
+
+static func _get_terrain_surface_material() -> StandardMaterial3D:
+	if not _terrain_surface_mat:
+		# Blend of rocky (0.45, 0.42, 0.38) and hills (0.38, 0.45, 0.35) grass colors
+		_terrain_surface_mat = StandardMaterial3D.new()
+		_terrain_surface_mat.albedo_color = Color(0.40, 0.44, 0.34)
+		_terrain_surface_mat.roughness = 0.95
+	return _terrain_surface_mat
+
+
+static func _get_terrain_surface_material2() -> StandardMaterial3D:
+	if not _terrain_surface_mat2:
+		# Slightly different shade for variation
+		_terrain_surface_mat2 = StandardMaterial3D.new()
+		_terrain_surface_mat2.albedo_color = Color(0.43, 0.41, 0.36)
+		_terrain_surface_mat2.roughness = 0.95
+	return _terrain_surface_mat2
 
 
 static func _get_rock_palette() -> Array:
@@ -172,6 +193,9 @@ func _setup_visuals() -> void:
 
 	# ===== INTERIOR DETAILS =====
 	_build_interior_details(rng)
+
+	# ===== TERRAIN SURFACE ABOVE TUNNEL =====
+	_build_terrain_surface()
 
 	# ===== CAVE AREA3D (player detection) =====
 	_build_cave_area()
@@ -432,6 +456,31 @@ func _build_interior_details(rng: RandomNumberGenerator) -> void:
 			Vector3(rng.randf_range(-3, 3), 0, rng.randf_range(-3, 3)),
 			rubble_mat
 		)
+
+
+func _build_terrain_surface() -> void:
+	## Terrain-colored visual panels above the tunnel so it looks like natural ground
+	## from above, not a dark slab. Leaves the stairway opening clear.
+	## The dark ceiling underneath remains for the interior cave view.
+	var terrain_mat: StandardMaterial3D = _get_terrain_surface_material()
+	var terrain_mat2: StandardMaterial3D = _get_terrain_surface_material2()
+
+	# Main panel over the tunnel: z=-5 to z=-25, full width
+	_add_interior_rock(
+		Vector3(0, 0.3, -15.0), Vector3(8.0, 0.4, 20.0), Vector3(0, 0, 0), terrain_mat)
+	# Left side panel: covers margin from crater to tunnel, z=+4.5 to z=-5
+	_add_interior_rock(
+		Vector3(-4.0, 0.3, -0.25), Vector3(3.0, 0.4, 9.5), Vector3(0, 0, 0), terrain_mat2)
+	# Right side panel: covers margin from crater to tunnel, z=+4.5 to z=-5
+	_add_interior_rock(
+		Vector3(4.0, 0.3, -0.25), Vector3(3.0, 0.4, 9.5), Vector3(0, 0, 0), terrain_mat2)
+	# Front panel: in front of stairway opening, z=+3 to z=+4.5
+	_add_interior_rock(
+		Vector3(0, 0.3, 3.75), Vector3(5.0, 0.4, 1.5), Vector3(0, 0, 0), terrain_mat)
+
+	# Stairway overhang surface — terrain-colored cover over the overhang piece
+	_add_interior_rock(
+		Vector3(0, 0.35, -4.0), Vector3(5.0, 0.3, 2.0), Vector3(0, 0, 0), terrain_mat)
 
 
 func _build_cave_area() -> void:
