@@ -3304,10 +3304,40 @@ Also increased `cave_min_spacing` from 60 to 100 to prevent ramp overlap between
 
 ---
 
+### Cave Interior Cleanup (continued)
+
+**Symptom**: Inside the cave, terrain blocks were visible through the floor, a tree was growing through the ceiling, and the interior looked chaotic.
+
+**Cause**: The terrain mesh/collision generation and tree/resource spawning systems had no awareness of cave tunnel volumes. They generated terrain blocks, trees, and resources at every grid cell, including those inside the cave tunnel (local x=[-3,+3], z=[0,-18]).
+
+**Fix**: Added two exclusion functions to `chunk_manager.gd`:
+- `is_inside_cave_tunnel(x, z)` — rectangular check for the tunnel volume (with 1-unit margin)
+- `is_near_cave_entrance(x, z)` — wider check covering tunnel + entrance rocks + boulders
+
+Applied exclusions in `terrain_chunk.gd`:
+1. **Terrain mesh generation**: Skip cells inside cave tunnel in `_generate_terrain_mesh_batched()`
+2. **Terrain collision (sync)**: Skip cells in `_generate_box_collision()`
+3. **Terrain collision (batched)**: Skip cells in `_generate_box_collision_batched()`
+4. **Tree spawning**: Skip positions near cave entrance in `_spawn_chunk_trees()`
+5. **Resource spawning**: Skip positions near cave entrance in `_spawn_chunk_resources()`
+
+### Files Modified (cumulative)
+
+| File | Changes |
+|------|---------|
+| `scripts/world/chunk_manager.gd` | Property assignment fix, terrain ramp, cave spacing, `is_inside_cave_tunnel()`, `is_near_cave_entrance()` |
+| `scripts/world/cave_entrance.gd` | Diagnostic print, shared material optimization |
+| `scripts/world/terrain_chunk.gd` | Cave tunnel exclusion in mesh generation, both collision generators, tree spawning, and resource spawning |
+
+### Test Results
+- All 488 regression tests pass
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test cave entrance fixes: verify caves are visible and terrain around them is climbable
+1. Play-test cave interior: verify no terrain/trees/resources inside, clean floor and walls
 2. Add camera collision to prevent clipping into terrain
 3. Add grappling hook sound effect audio files
 4. Disable `debug_performance` logging once stuttering is confirmed fixed

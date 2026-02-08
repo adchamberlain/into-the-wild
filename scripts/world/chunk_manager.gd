@@ -1622,6 +1622,31 @@ func is_near_any_pond(world_x: float, world_z: float, buffer: float = 2.0) -> bo
 	return is_in_water(world_x, world_z, buffer)
 
 
+func is_inside_cave_tunnel(world_x: float, world_z: float) -> bool:
+	## Check if a world position falls inside any cave tunnel volume.
+	## Tunnel is local x=[-4, +4], z=[-19, +1] relative to cave center.
+	## Slightly wider than the 6-unit tunnel to prevent partial overlap.
+	for cave in cave_entrances:
+		var cave_center: Vector2 = cave["center"]
+		var local_x: float = world_x - cave_center.x
+		var local_z: float = world_z - cave_center.y
+		if local_x >= -4.0 and local_x <= 4.0 and local_z >= -19.0 and local_z <= 1.0:
+			return true
+	return false
+
+
+func is_near_cave_entrance(world_x: float, world_z: float) -> bool:
+	## Check if a world position is near any cave entrance (wider area for tree/resource exclusion).
+	## Covers the tunnel, entrance rocks, and scattered boulders.
+	for cave in cave_entrances:
+		var cave_center: Vector2 = cave["center"]
+		var local_x: float = world_x - cave_center.x
+		var local_z: float = world_z - cave_center.y
+		if local_x >= -6.0 and local_x <= 6.0 and local_z >= -20.0 and local_z <= 7.0:
+			return true
+	return false
+
+
 func _spawn_river_features_in_chunk(chunk_coord: Vector2i, min_x: float, max_x: float, min_z: float, max_z: float) -> void:
 	## Spawn entire rivers when any part enters a loaded chunk
 	for river_idx in range(rivers.size()):

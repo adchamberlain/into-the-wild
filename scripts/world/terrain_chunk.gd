@@ -253,6 +253,12 @@ func _generate_terrain_mesh_batched() -> void:
 			var world_x: float = chunk_world_x + (cx * cell_size)
 			var world_z: float = chunk_world_z + (cz * cell_size)
 
+			# Skip cells inside cave tunnels (cave has its own floor/walls)
+			var cell_center_x: float = world_x + cell_size / 2.0
+			var cell_center_z: float = world_z + cell_size / 2.0
+			if chunk_manager.is_inside_cave_tunnel(cell_center_x, cell_center_z):
+				continue
+
 			# Get height from cache (offset by 1 for border)
 			var height: float = _height_cache[cz + 1][cx + 1]
 
@@ -779,6 +785,12 @@ func _generate_box_collision() -> void:
 
 	for cz in range(chunk_size_cells):
 		for cx in range(chunk_size_cells):
+			# Skip cells inside cave tunnels (cave has its own collision)
+			var cell_cx: float = chunk_world_x + cx * cell_size + cell_size / 2.0
+			var cell_cz: float = chunk_world_z + cz * cell_size + cell_size / 2.0
+			if chunk_manager.is_inside_cave_tunnel(cell_cx, cell_cz):
+				continue
+
 			var height: float = _height_cache[cz + 1][cx + 1]
 
 			# For water cells (negative height), create collision at water bottom
@@ -830,6 +842,12 @@ func _generate_box_collision_batched() -> void:
 			return
 
 		for cx in range(chunk_size_cells):
+			# Skip cells inside cave tunnels (cave has its own collision)
+			var cell_cx: float = chunk_world_x + cx * cell_size + cell_size / 2.0
+			var cell_cz: float = chunk_world_z + cz * cell_size + cell_size / 2.0
+			if chunk_manager.is_inside_cave_tunnel(cell_cx, cell_cz):
+				continue
+
 			var height: float = _height_cache[cz + 1][cx + 1]
 
 			var box_height: float
@@ -917,6 +935,11 @@ func _spawn_chunk_trees() -> void:
 
 			# Skip if there's a player structure at this location
 			if chunk_manager.is_position_blocked_by_structure(world_x, world_z, 1.5):
+				z += tree_grid_size
+				continue
+
+			# Skip if inside or near a cave entrance
+			if chunk_manager.is_near_cave_entrance(world_x, world_z):
 				z += tree_grid_size
 				continue
 
@@ -1050,6 +1073,11 @@ func _spawn_chunk_resources() -> void:
 
 			# Skip if there's a player structure at this location
 			if chunk_manager.is_position_blocked_by_structure(res_x, res_z, 0.5):
+				z += resource_grid_size
+				continue
+
+			# Skip if inside or near a cave entrance
+			if chunk_manager.is_near_cave_entrance(res_x, res_z):
 				z += resource_grid_size
 				continue
 
