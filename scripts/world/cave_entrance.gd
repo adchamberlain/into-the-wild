@@ -136,7 +136,6 @@ func _add_interior_rock(pos: Vector3, size: Vector3, rot: Vector3, mat: Standard
 
 
 func _setup_visuals() -> void:
-	print("[CaveEntrance] Building visuals for cave_id=%d type=%s at %s" % [cave_id, cave_type, str(global_position)])
 	var dark_mat: StandardMaterial3D = _get_dark_material()
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = cave_id * 12345

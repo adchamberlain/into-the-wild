@@ -79,13 +79,8 @@ func generate(sync_collision: bool = true) -> void:
 
 	if sync_collision:
 		# Player's chunk: fully synchronous height cache + collision
-		var t0: int = Time.get_ticks_usec()
 		_build_height_cache()
-		var t1: int = Time.get_ticks_usec()
 		_generate_collision_from_mesh(true)
-		var t2: int = Time.get_ticks_usec()
-		print("[PERF] Player chunk %s SYNC: height_cache=%.2fms collision=%.2fms total=%.2fms" % [
-			str(chunk_coord), (t1 - t0) / 1000.0, (t2 - t1) / 1000.0, (t2 - t0) / 1000.0])
 		# Fire-and-forget async mesh + spawning (no slot needed for player chunk)
 		_generate_terrain_async()
 	else:
@@ -97,7 +92,6 @@ func _generate_async_full() -> void:
 	## Full async pipeline with concurrency slot management.
 	## Waits for a slot, then runs height cache + collision + mesh in batches.
 	## Releases slot before lighter spawning work.
-	var gen_start: int = Time.get_ticks_usec()
 
 	# Wait for a generation slot
 	while chunk_manager._active_heavy_generations >= chunk_manager.MAX_CONCURRENT_HEAVY_GENERATIONS:
@@ -110,12 +104,10 @@ func _generate_async_full() -> void:
 	_holds_generation_slot = true
 
 	# Batched height cache (~5 frames)
-	var t0: int = Time.get_ticks_usec()
 	await _build_height_cache_batched()
 	if not is_inside_tree():
 		_release_generation_slot()
 		return
-	var height_ms: float = (Time.get_ticks_usec() - t0) / 1000.0
 
 	# Start batched collision (fire-and-forget coroutine)
 	_generate_collision_from_mesh(false)
@@ -127,12 +119,10 @@ func _generate_async_full() -> void:
 		return
 
 	# Batched mesh generation (~8 frames)
-	t0 = Time.get_ticks_usec()
 	await _generate_terrain_mesh_batched()
 	if not is_inside_tree():
 		_release_generation_slot()
 		return
-	var mesh_ms: float = (Time.get_ticks_usec() - t0) / 1000.0
 
 	# Release slot before lighter spawning work
 	_release_generation_slot()
@@ -141,16 +131,12 @@ func _generate_async_full() -> void:
 	await get_tree().process_frame
 	if not is_inside_tree():
 		return
-	t0 = Time.get_ticks_usec()
 	await _spawn_chunk_trees()
-	var trees_ms: float = (Time.get_ticks_usec() - t0) / 1000.0
 
 	if not is_inside_tree():
 		return
 	await get_tree().process_frame
-	t0 = Time.get_ticks_usec()
 	await _spawn_chunk_resources()
-	var resources_ms: float = (Time.get_ticks_usec() - t0) / 1000.0
 
 	if not is_inside_tree():
 		return
@@ -161,10 +147,6 @@ func _generate_async_full() -> void:
 		return
 	await get_tree().process_frame
 	_spawn_chunk_animals()
-
-	var total_ms: float = (Time.get_ticks_usec() - gen_start) / 1000.0
-	print("[PERF] Async chunk %s: height=%.1fms mesh=%.1fms trees=%.1fms resources=%.1fms total=%.1fms" % [
-		str(chunk_coord), height_ms, mesh_ms, trees_ms, resources_ms, total_ms])
 
 
 func _release_generation_slot() -> void:
@@ -249,8 +231,6 @@ func _build_height_cache_batched() -> void:
 	# _in_pit_check flag, which would stay set across yields and interfere with
 	# other concurrent chunks' height calculations.
 	var rows_this_batch: int = 0
-	var batch_start: int = Time.get_ticks_usec()
-	var max_batch_ms: float = 0.0
 	for cz in range(_height_cache_size):
 		_height_cache[cz] = []
 		_height_cache[cz].resize(_height_cache_size)
@@ -261,17 +241,10 @@ func _build_height_cache_batched() -> void:
 
 		rows_this_batch += 1
 		if rows_this_batch >= HEIGHTCACHE_ROWS_PER_BATCH:
-			var batch_ms: float = (Time.get_ticks_usec() - batch_start) / 1000.0
-			if batch_ms > max_batch_ms:
-				max_batch_ms = batch_ms
 			rows_this_batch = 0
 			await get_tree().process_frame
-			batch_start = Time.get_ticks_usec()
 			if not is_inside_tree():
 				return
-
-	if max_batch_ms > 5.0:
-		print("[PERF] Height cache batched %s: max_batch=%.2fms" % [str(chunk_coord), max_batch_ms])
 
 	# Post-process: fix pits using cached neighbor heights
 	_apply_pit_prevention()
@@ -310,8 +283,6 @@ func _generate_terrain_mesh_batched() -> void:
 	var chunk_world_z: float = chunk_coord.y * chunk_size_cells * cell_size
 
 	var rows_this_batch: int = 0
-	var mesh_batch_start: int = Time.get_ticks_usec()
-	var max_mesh_batch_ms: float = 0.0
 
 	# Generate each cell in this chunk, yielding every MESH_ROWS_PER_BATCH rows
 	for cz in range(chunk_size_cells):
@@ -337,17 +308,10 @@ func _generate_terrain_mesh_batched() -> void:
 		# Yield after each batch of rows to spread work across frames
 		rows_this_batch += 1
 		if rows_this_batch >= MESH_ROWS_PER_BATCH:
-			var mesh_batch_ms: float = (Time.get_ticks_usec() - mesh_batch_start) / 1000.0
-			if mesh_batch_ms > max_mesh_batch_ms:
-				max_mesh_batch_ms = mesh_batch_ms
 			rows_this_batch = 0
 			await get_tree().process_frame
-			mesh_batch_start = Time.get_ticks_usec()
 			if not is_inside_tree():
 				return
-
-	if max_mesh_batch_ms > 5.0:
-		print("[PERF] Mesh batch %s: max_batch=%.2fms" % [str(chunk_coord), max_mesh_batch_ms])
 
 	var mesh: ArrayMesh = surface_tool.commit()
 
