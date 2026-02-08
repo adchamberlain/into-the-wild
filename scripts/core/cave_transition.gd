@@ -24,8 +24,8 @@ var time_in_darkness: float = 0.0
 var darkness_damage_timer: float = 0.0
 var light_check_timer: float = 0.0
 
-# Cave resource respawn settings (in game hours) - 72 hours = 3 game days
-const CAVE_RESOURCE_RESPAWN_HOURS: float = 72.0
+# Cave resource respawn settings (in game hours) - 168 hours = 7 game days
+const CAVE_RESOURCE_RESPAWN_HOURS: float = 168.0
 
 # Tracks depleted cave resources.
 # Key: cave_id (String) → Value: Array of Dictionaries
