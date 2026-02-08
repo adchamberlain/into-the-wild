@@ -3360,11 +3360,42 @@ Applied exclusions in `terrain_chunk.gd`:
 
 ---
 
+## Session 30 - Fix Concurrency Bug in Pit Prevention (2026-02-07)
+
+### Problem
+After the pit prevention optimization (Session 29), the game was "shaky and weird" with stuttering from the very first frame. The gameplay was described as "absolutely terrible."
+
+### Root Cause: Shared Mutable State Across Frame Yields
+The pit prevention optimization used a shared boolean flag `chunk_manager._in_pit_check` that was set to `true` during height cache builds and cleared after. For the **sync** build (player's chunk, no yields), this worked fine. But for the **batched** build (distant chunks), the flag stayed `true` across `await get_tree().process_frame` yields.
+
+When the player's chunk sync build completed and cleared the flag to `false` mid-batch, the remaining rows of the batched build suddenly had pit prevention **re-enabled** inside `get_height_at()`. This caused:
+1. **4x recursive overhead** on those rows (exactly what the optimization was supposed to eliminate)
+2. **Double pit prevention** - once inline in `get_height_at()`, then again in `_apply_pit_prevention()` post-processing
+3. **Inconsistent terrain heights** - some rows got pit prevention, others didn't, within the same chunk
+
+### Fix
+Replaced the shared mutable flag with an explicit `skip_pit_check: bool = false` parameter on `get_height_at()`. Height cache builds pass `true` to skip inline pit prevention (applied as post-processing instead). The shared `_in_pit_check` flag now only serves as a recursion guard within single-frame `get_height_at()` calls - never held across yields.
+
+### Architectural Lesson
+**Never hold shared mutable state across `await` yields in GDScript coroutines.** Even though GDScript is single-threaded, cooperative multitasking via `await` means other coroutines run between yields. Shared flags that span yields create the exact same class of bugs as thread-safety issues in multi-threaded code. Prefer function parameters over shared flags when possible.
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/chunk_manager.gd` | Added `skip_pit_check` parameter to `get_height_at()` |
+| `scripts/world/terrain_chunk.gd` | Removed shared flag manipulation from height cache builds, use parameter instead |
+
+### Test Results
+- All 488 regression tests pass
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test cave interior: verify no terrain/trees/resources inside, clean floor and walls
-2. Verify stuttering is resolved after pit prevention optimization
+1. Play-test: verify stuttering is resolved and terrain looks correct
+2. Play-test cave interior: verify no terrain/trees/resources inside, clean floor and walls
 3. Add camera collision to prevent clipping into terrain
 4. Add grappling hook sound effect audio files
 
