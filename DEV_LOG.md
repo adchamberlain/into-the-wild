@@ -3452,13 +3452,60 @@ Additionally, the fall recovery threshold was set at Y=-50, so a player at Y=-12
 
 ---
 
+## Session - Cave Entrance Redesign: Natural Sinkhole (2026-02-07)
+
+### Overview
+Completely redesigned cave entrances from above-ground bunker/building structures to natural sinkholes — holes in the ground that the player descends into via stone steps.
+
+### What Changed
+
+**Old design**: Dark opening at y=1.6 framed by large rock masses reaching y=4.8 above ground. Looked like a building sitting on the terrain.
+
+**New design**: Rocky crater rim at ground level (y=0) with a 5-step stairway descending to y=-2.5, leading into an underground tunnel with floor at y=-3.0 and ceiling at y=0.
+
+### Architecture (side view)
+```
+Terrain surface (y=0)
+═══╗ rim rocks ╔═══════════════════════════
+   ║           ║  ceiling (ground above)
+   ╠─step 1    ╠═══════════════════════════
+   ╠──step 2   ║
+   ╠───step 3  ║    UNDERGROUND TUNNEL
+   ╠────step 4 ║    (floor at y=-3.0)
+   ╠─────step 5║    crystals, ore, details
+   ╚═══════════╩═══════════════════════════
+   z=+3        z=-6                    z=-24
+```
+
+### Key Design Decisions
+- **5 solid steps**: Each step is a filled box from its tread down to the tunnel floor (y=-3.0), preventing any gaps
+- **3.0 unit headroom**: Tunnel ceiling at y=0, floor at y=-3.0 (player capsule ~2 units)
+- **Crater rim**: 8 low rim boulders + 5 scattered surface boulders, no above-ground walls
+- **Earth walls**: Inner crater sides descend from y=0 to y=-3.0
+- **Cave Area3D**: Starts at z=-3 (only triggers when player is actually underground)
+- **Surface replacement panels**: Collision panels at y=0 fill the terrain skip zone around the opening
+- **Floor slab**: 11×30 unit collision floor covers entire terrain skip zone with margin
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/cave_entrance.gd` | Complete rewrite: `_build_entrance_rocks()` → `_build_crater_rim()`, new `_build_stairway()`, shifted `_build_tunnel()` underground, shifted `_build_interior_details()`, repositioned `_build_cave_area()`, rewritten `_build_collision()`, adjusted `_spawn_resources()` positions. Added `_earth_mat` and `_step_mat` shared static materials. |
+| `scripts/world/chunk_manager.gd` | `is_inside_cave_tunnel()`: expanded z range from `[-19,+1]` to `[-25,+4]`. `is_near_cave_entrance()`: expanded z range from `[-20,+7]` to `[-26,+7]`. |
+
+### Test Results
+- All 488 regression tests pass
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test cave entrance: verify no fall-through when walking into caves
-2. Play-test cave interior: verify no terrain/trees/resources inside, clean floor and walls
-3. Add camera collision to prevent clipping into terrain
-4. Add grappling hook sound effect audio files
+1. Play-test cave entrance: verify sinkhole looks natural from above, no floating terrain
+2. Play-test descent: walk down all 5 steps smoothly, no fall-through at step edges
+3. Play-test tunnel: verify darkness triggers, crystals/ore visible, no clipping
+4. Add camera collision to prevent clipping into terrain
+5. Add grappling hook sound effect audio files
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.
