@@ -23,6 +23,9 @@ static var _dark_mat: StandardMaterial3D = null
 static var _floor_mat: StandardMaterial3D = null
 static var _wall_mat: StandardMaterial3D = null
 static var _ceiling_mat: StandardMaterial3D = null
+static var _moss_mat: StandardMaterial3D = null
+# Rock material palette: 6 shared tints from lightest to darkest
+static var _rock_palette: Array = []  # Array[StandardMaterial3D]
 
 
 static func _get_dark_material() -> StandardMaterial3D:
@@ -57,30 +60,61 @@ static func _get_ceiling_material() -> StandardMaterial3D:
 	return _ceiling_mat
 
 
+static func _get_moss_material() -> StandardMaterial3D:
+	if not _moss_mat:
+		_moss_mat = StandardMaterial3D.new()
+		_moss_mat.albedo_color = Color(0.25, 0.35, 0.20, 0.65)
+		_moss_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_moss_mat.roughness = 0.95
+	return _moss_mat
+
+
+static func _get_rock_palette() -> Array:
+	if _rock_palette.size() == 0:
+		var colors: Array[Color] = [
+			Color(0.46, 0.44, 0.40),  # 0: lightest entrance rock
+			Color(0.42, 0.40, 0.36),  # 1: medium entrance rock
+			Color(0.38, 0.36, 0.32),  # 2: dark entrance rock / stalactites
+			Color(0.30, 0.28, 0.25),  # 3: transition rock
+			Color(0.22, 0.20, 0.17),  # 4: interior outcrops / rubble
+			Color(0.17, 0.15, 0.13),  # 5: darkest interior stalactites
+		]
+		for c: Color in colors:
+			var mat := StandardMaterial3D.new()
+			mat.albedo_color = c
+			mat.roughness = 0.95
+			_rock_palette.append(mat)
+	return _rock_palette
+
+
 func _ready() -> void:
 	add_to_group("cave_entrance")
 	call_deferred("_setup_visuals")
 
 
-func _make_rock_mat(r: float, g: float, b: float) -> StandardMaterial3D:
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.albedo_color = Color(r, g, b)
-	mat.roughness = 0.95
-	return mat
-
-
 func _add_rock(pos: Vector3, size: Vector3, rot: Vector3, tint: float, rng: RandomNumberGenerator) -> MeshInstance3D:
-	## Helper: create a rock block with position, size, rotation, and color tint
+	## Helper: create a rock block with position, size, rotation, and color tint.
+	## Uses shared palette materials instead of per-rock material creation.
 	var mesh_inst := MeshInstance3D.new()
 	var box := BoxMesh.new()
 	box.size = size
 	mesh_inst.mesh = box
-	# Base grey-brown with tint variation
-	mesh_inst.material_override = _make_rock_mat(
-		clamp(0.42 + tint + rng.randf_range(-0.02, 0.02), 0.28, 0.52),
-		clamp(0.40 + tint * 0.8 + rng.randf_range(-0.02, 0.02), 0.26, 0.48),
-		clamp(0.36 + tint * 0.6 + rng.randf_range(-0.02, 0.02), 0.24, 0.44)
-	)
+	# Consume 3 RNG values to preserve deterministic sequence (originally per-channel color variation)
+	rng.randf_range(-0.02, 0.02)
+	rng.randf_range(-0.02, 0.02)
+	rng.randf_range(-0.02, 0.02)
+	# Map tint to shared palette index (0=lightest, 2=darkest entrance rock)
+	var palette: Array = _get_rock_palette()
+	var idx: int
+	if tint >= 0.03:
+		idx = 0  # lightest
+	elif tint >= 0.0:
+		idx = 1  # medium
+	elif tint >= -0.03:
+		idx = 2  # medium-dark
+	else:
+		idx = 3  # darker
+	mesh_inst.material_override = palette[idx]
 	mesh_inst.position = pos
 	mesh_inst.rotation_degrees = rot
 	add_child(mesh_inst)
@@ -102,6 +136,7 @@ func _add_interior_rock(pos: Vector3, size: Vector3, rot: Vector3, mat: Standard
 
 
 func _setup_visuals() -> void:
+	print("[CaveEntrance] Building visuals for cave_id=%d type=%s at %s" % [cave_id, cave_type, str(global_position)])
 	var dark_mat: StandardMaterial3D = _get_dark_material()
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = cave_id * 12345
@@ -221,13 +256,14 @@ func _build_entrance_rocks(dark_mat: StandardMaterial3D, rng: RandomNumberGenera
 		)
 
 	# ===== STALACTITES hanging from lintel =====
+	var stalac_mat: StandardMaterial3D = _get_rock_palette()[2]  # dark entrance rock
 	for i: int in range(4):
 		var s_h: float = rng.randf_range(0.3, 0.9)
 		var stalac := MeshInstance3D.new()
 		var s_mesh := BoxMesh.new()
 		s_mesh.size = Vector3(0.18, s_h, 0.18)
 		stalac.mesh = s_mesh
-		stalac.material_override = _make_rock_mat(0.38, 0.36, 0.32)
+		stalac.material_override = stalac_mat
 		stalac.position = Vector3(
 			rng.randf_range(-1.3, 1.3),
 			3.3 - s_h * 0.5,
@@ -238,10 +274,7 @@ func _build_entrance_rocks(dark_mat: StandardMaterial3D, rng: RandomNumberGenera
 		arch_meshes.append(stalac)
 
 	# ===== MOSS patches on rock surfaces =====
-	var moss_mat := StandardMaterial3D.new()
-	moss_mat.albedo_color = Color(0.25, 0.35, 0.20, 0.65)
-	moss_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	moss_mat.roughness = 0.95
+	var moss_mat: StandardMaterial3D = _get_moss_material()
 	for i: int in range(4):
 		var moss := MeshInstance3D.new()
 		var m_mesh := BoxMesh.new()
@@ -315,22 +348,25 @@ func _build_tunnel(rng: RandomNumberGenerator) -> void:
 
 
 func _build_interior_details(rng: RandomNumberGenerator) -> void:
-	## Add stalactites, wall outcrops, and rubble inside the tunnel
-	var wall_mat: StandardMaterial3D = _get_wall_material()
+	## Add stalactites, wall outcrops, and rubble inside the tunnel.
+	## Uses shared palette materials to avoid per-rock shader compilation.
+	var palette: Array = _get_rock_palette()
+	var interior_stalac_mat: StandardMaterial3D = palette[5]  # darkest
+	var outcrop_mat: StandardMaterial3D = palette[4]  # interior outcrops
+	var rubble_mat: StandardMaterial3D = palette[4]  # interior rubble
 
 	# -- Stalactites hanging from ceiling --
 	for i: int in range(8):
 		var s_h: float = rng.randf_range(0.3, 1.2)
-		var stalac_mat: StandardMaterial3D = _make_rock_mat(
-			0.17 + rng.randf_range(-0.02, 0.02),
-			0.15 + rng.randf_range(-0.02, 0.02),
-			0.13 + rng.randf_range(-0.02, 0.02)
-		)
+		# Consume 3 RNG values (originally per-stalactite color variation)
+		rng.randf_range(-0.02, 0.02)
+		rng.randf_range(-0.02, 0.02)
+		rng.randf_range(-0.02, 0.02)
 		_add_interior_rock(
 			Vector3(rng.randf_range(-2.2, 2.2), 5.0 - s_h * 0.5, rng.randf_range(-16.0, -1.0)),
 			Vector3(rng.randf_range(0.12, 0.25), s_h, rng.randf_range(0.12, 0.25)),
 			Vector3(rng.randf_range(-5, 5), 0, rng.randf_range(-5, 5)),
-			stalac_mat
+			interior_stalac_mat
 		)
 
 	# -- Wall outcrops (bulges from walls) --
@@ -338,26 +374,27 @@ func _build_interior_details(rng: RandomNumberGenerator) -> void:
 		var side: float = -1.0 if i % 2 == 0 else 1.0
 		var outcrop_z: float = rng.randf_range(-15.0, -2.0)
 		var outcrop_y: float = rng.randf_range(0.5, 3.5)
-		var tint: float = rng.randf_range(-0.03, 0.03)
+		# Consume RNG to preserve deterministic sequence for positions
+		rng.randf_range(-0.03, 0.03)
 		_add_interior_rock(
 			Vector3(side * (2.6 + rng.randf_range(0.0, 0.3)), outcrop_y, outcrop_z),
 			Vector3(rng.randf_range(0.8, 1.5), rng.randf_range(0.8, 2.0), rng.randf_range(0.8, 1.5)),
 			Vector3(rng.randf_range(-5, 5), rng.randf_range(-5, 5), rng.randf_range(-3, 3)),
-			_make_rock_mat(0.22 + tint, 0.20 + tint * 0.8, 0.17 + tint * 0.6)
+			outcrop_mat
 		)
 
 	# -- Floor rubble (small rocks scattered on the floor) --
 	for i: int in range(6):
 		var bsize: float = rng.randf_range(0.25, 0.7)
+		# Consume RNG to preserve deterministic sequence for positions
+		rng.randf_range(-0.03, 0.03)
+		rng.randf_range(-0.02, 0.02)
+		rng.randf_range(-0.02, 0.02)
 		_add_interior_rock(
 			Vector3(rng.randf_range(-2.0, 2.0), bsize * 0.25, rng.randf_range(-16.0, -1.0)),
 			Vector3(bsize, bsize * 0.5, bsize * 0.65),
 			Vector3(rng.randf_range(-8, 8), rng.randf_range(0, 45), rng.randf_range(-5, 5)),
-			_make_rock_mat(
-				0.20 + rng.randf_range(-0.03, 0.03),
-				0.18 + rng.randf_range(-0.02, 0.02),
-				0.15 + rng.randf_range(-0.02, 0.02)
-			)
+			rubble_mat
 		)
 
 	# -- Stalagmites rising from floor --
@@ -367,7 +404,7 @@ func _build_interior_details(rng: RandomNumberGenerator) -> void:
 			Vector3(rng.randf_range(-2.0, 2.0), s_h * 0.5, rng.randf_range(-15.0, -3.0)),
 			Vector3(rng.randf_range(0.2, 0.4), s_h, rng.randf_range(0.2, 0.4)),
 			Vector3(rng.randf_range(-3, 3), 0, rng.randf_range(-3, 3)),
-			_make_rock_mat(0.20, 0.18, 0.15)
+			rubble_mat
 		)
 
 

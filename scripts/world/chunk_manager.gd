@@ -63,7 +63,7 @@ var obstacle_spawn_min_distance: float = 100.0  # Min distance from spawn (outsi
 # Each: {center: Vector2, cave_id: int, cave_type: String}
 var cave_entrances: Array[Dictionary] = []
 var cave_count: int = 2  # Target number of cave entrances (reduced for performance)
-var cave_min_spacing: float = 60.0  # Min distance between caves
+var cave_min_spacing: float = 100.0  # Min distance between caves (must exceed 2x ramp radius)
 var cave_spawn_min_distance: float = 85.0  # Min distance from spawn
 
 # Region-specific pond sizes {radius_min, radius_max, depth}
@@ -1119,8 +1119,9 @@ func get_height_at(x: float, z: float) -> float:
 
 	# Flatten terrain around cave entrances for walkable approach (covers full cave depth)
 	var cave_flat_inner: float = 16.0  # Flat platform radius
-	var cave_flat_outer: float = 22.0  # Ramp falloff radius
+	var cave_flat_outer: float = 46.0  # Ramp falloff radius (wide enough for gradual climb)
 	var cave_platform_height: float = 2.0  # Low walkable platform height
+	var cave_max_slope: float = 0.67  # Max height per world unit (2.0 per cell) - ensures climbability
 	for cave in cave_entrances:
 		var cave_center: Vector2 = cave["center"]
 		var dist_to_cave: float = Vector2(snapped_x - cave_center.x, snapped_z - cave_center.y).length()
@@ -1287,7 +1288,12 @@ func get_height_at(x: float, z: float) -> float:
 		if dist_to_cave >= cave_flat_inner and dist_to_cave < cave_flat_outer:
 			var t: float = (dist_to_cave - cave_flat_inner) / (cave_flat_outer - cave_flat_inner)
 			t = clamp(t, 0.0, 1.0)
-			height = cave_platform_height + (height - cave_platform_height) * t
+			# Smooth-step curve: gentle start near cave (climbable), steeper toward natural terrain
+			t = t * t * (3.0 - 2.0 * t)
+			var ramp_height: float = cave_platform_height + (height - cave_platform_height) * t
+			# Cap gradient to prevent unclimbable cliffs around cave platform
+			var max_height_at_dist: float = cave_platform_height + (dist_to_cave - cave_flat_inner) * cave_max_slope
+			height = min(ramp_height, max_height_at_dist)
 
 	# Pit prevention: ensure no cell is more than 1 block below ALL cardinal neighbors.
 	# This prevents inescapable holes. Uses a recursion guard so neighbor lookups
@@ -1951,15 +1957,13 @@ func _spawn_cave_entrance(cave_idx: int) -> void:
 	entrance.set_script(cave_entrance_script)
 	entrance.name = "Cave_%d_%s" % [cave_idx, cave_type]
 
-	# Set cave properties
-	if "cave_id" in entrance:
-		entrance.cave_id = cave_idx
-	if "cave_type" in entrance:
-		entrance.cave_type = cave_type
+	# Set cave properties directly (do NOT use "in" check - it can fail after set_script)
+	entrance.cave_id = cave_idx
+	entrance.cave_type = cave_type
 
-	# Position on terrain
+	# Position on terrain - use position (local) since parent (Terrain) is at origin
 	var terrain_height: float = get_height_at(cave_center.x, cave_center.y)
-	entrance.global_position = Vector3(cave_center.x, terrain_height, cave_center.y)
+	entrance.position = Vector3(cave_center.x, terrain_height, cave_center.y)
 
 	add_child(entrance)
 	spawned_cave_indices.append(cave_idx)

@@ -3269,10 +3269,45 @@ if chunk_manager and chunk_manager.has_method("get_height_at"):
 
 ---
 
+## Session 29 - Cave Entrance Fixes (2026-02-07)
+
+### Bug 1: Cave Entrance Invisible / Properties Not Set
+
+**Symptom**: Player traveled to logged cave entrance location but found nothing visible.
+
+**Cause**: `_spawn_cave_entrance()` in `chunk_manager.gd` used `if "cave_id" in entrance:` to conditionally set properties after `set_script()`. The GDScript `in` operator on Objects after `set_script()` is fragile and may fail to detect `@export` properties, leaving `cave_id` at default 0 and `cave_type` at "small". While the geometry should still render with default values, the pattern is incorrect and was replaced with direct assignment. Also changed `global_position` to `position` (local) since the parent Terrain node is at origin.
+
+**Fix**: Direct property assignment without `in` checks. Added diagnostic print in `_setup_visuals()` to log cave_id, type, and position when visuals are built.
+
+### Bug 2: Inescapable Hole Near Cave Entrances
+
+**Symptom**: Player fell into a pit near cave entrance at (-140.5, 3.0, 125.5) and could not escape. Distance from cave center was ~15.7 units, right at the cave platform edge.
+
+**Cause**: The terrain ramp from cave platform (y=2.0) to natural ROCKY/HILLS terrain (y=10-20+) transitioned over only 6 units (`cave_flat_outer=22` minus `cave_flat_inner=16`). With cell_size=3.0, this created 2-cell transitions with 5-10 unit height jumps — unclimbable walls surrounding the cave platform like a bowl.
+
+**Fix**: Three changes to `get_height_at()`:
+1. **Widened ramp**: `cave_flat_outer` increased from 22 to 46 (30-unit transition zone, ~10 cells)
+2. **Smoothstep curve**: `t = t * t * (3.0 - 2.0 * t)` for gentle start near cave platform
+3. **Slope cap**: `cave_max_slope = 0.67` limits height increase to 2.0 per cell, guaranteeing climbability regardless of surrounding terrain height
+
+Also increased `cave_min_spacing` from 60 to 100 to prevent ramp overlap between adjacent caves.
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/chunk_manager.gd` | Direct property assignment in `_spawn_cave_entrance()`, wider/smoother cave terrain ramp with slope cap, increased cave spacing |
+| `scripts/world/cave_entrance.gd` | Diagnostic print in `_setup_visuals()`, shared material optimization (palette/moss from previous session) |
+
+### Test Results
+- All 488 regression tests pass
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test inline caves: walk in/out, verify darkness, harvest resources, check respawn
+1. Play-test cave entrance fixes: verify caves are visible and terrain around them is climbable
 2. Add camera collision to prevent clipping into terrain
 3. Add grappling hook sound effect audio files
 4. Disable `debug_performance` logging once stuttering is confirmed fixed
