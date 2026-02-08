@@ -191,6 +191,8 @@ var _height_cache_size: int = 0
 func _build_height_cache() -> void:
 	## Pre-compute and cache all heights for this chunk (synchronous).
 	## Used for player's chunk where we need immediate collision.
+	## Pit prevention is done as post-processing on the cache instead of
+	## recursive calls inside get_height_at() - saves ~80% of computation.
 	var cell_size: float = chunk_manager.cell_size
 	var chunk_size_cells: int = chunk_manager.chunk_size_cells
 	var chunk_world_x: float = chunk_coord.x * chunk_size_cells * cell_size
@@ -198,6 +200,9 @@ func _build_height_cache() -> void:
 
 	_height_cache_size = chunk_size_cells + 2  # +2 for border cells
 	_height_cache.resize(_height_cache_size)
+
+	# Skip pit prevention during build (applied as post-processing below)
+	chunk_manager._in_pit_check = true
 	for cz in range(_height_cache_size):
 		_height_cache[cz] = []
 		_height_cache[cz].resize(_height_cache_size)
@@ -205,11 +210,16 @@ func _build_height_cache() -> void:
 			var world_x: float = chunk_world_x + ((cx - 1) * cell_size) + cell_size / 2.0
 			var world_z: float = chunk_world_z + ((cz - 1) * cell_size) + cell_size / 2.0
 			_height_cache[cz][cx] = chunk_manager.get_height_at(world_x, world_z)
+	chunk_manager._in_pit_check = false
+
+	# Post-process: fix pits using cached neighbor heights (replaces recursive calls)
+	_apply_pit_prevention()
 
 
 func _build_height_cache_batched() -> void:
 	## Batched version of _build_height_cache() - yields every HEIGHTCACHE_ROWS_PER_BATCH rows.
-	## Each batch: 4 rows x 18 cols = 72 get_height_at() calls (~3.8ms).
+	## Each batch: 4 rows x 18 cols = 72 get_height_at() calls.
+	## Pit prevention skipped during build and applied as post-processing.
 	var cell_size: float = chunk_manager.cell_size
 	var chunk_size_cells: int = chunk_manager.chunk_size_cells
 	var chunk_world_x: float = chunk_coord.x * chunk_size_cells * cell_size
@@ -217,6 +227,9 @@ func _build_height_cache_batched() -> void:
 
 	_height_cache_size = chunk_size_cells + 2  # +2 for border cells
 	_height_cache.resize(_height_cache_size)
+
+	# Skip pit prevention during build (applied as post-processing below)
+	chunk_manager._in_pit_check = true
 
 	var rows_this_batch: int = 0
 	for cz in range(_height_cache_size):
@@ -232,7 +245,35 @@ func _build_height_cache_batched() -> void:
 			rows_this_batch = 0
 			await get_tree().process_frame
 			if not is_inside_tree():
+				chunk_manager._in_pit_check = false
 				return
+
+	chunk_manager._in_pit_check = false
+
+	# Post-process: fix pits using cached neighbor heights
+	_apply_pit_prevention()
+
+
+func _apply_pit_prevention() -> void:
+	## Post-process height cache to prevent inescapable pits.
+	## A cell is a "pit" if it's more than 1 block below ALL cardinal neighbors.
+	## Uses cached neighbor heights instead of recursive get_height_at() calls,
+	## eliminating ~1300 redundant height computations per chunk.
+	for cz in range(1, _height_cache_size - 1):
+		for cx in range(1, _height_cache_size - 1):
+			var height: float = _height_cache[cz][cx]
+			var min_neighbor: float = _height_cache[cz - 1][cx]  # North
+			var south: float = _height_cache[cz + 1][cx]
+			if south < min_neighbor:
+				min_neighbor = south
+			var west: float = _height_cache[cz][cx - 1]
+			if west < min_neighbor:
+				min_neighbor = west
+			var east: float = _height_cache[cz][cx + 1]
+			if east < min_neighbor:
+				min_neighbor = east
+			if min_neighbor - height > 1.0:
+				_height_cache[cz][cx] = min_neighbor - 1.0
 
 
 func _generate_terrain_mesh_batched() -> void:

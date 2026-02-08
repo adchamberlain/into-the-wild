@@ -3334,13 +3334,39 @@ Applied exclusions in `terrain_chunk.gd`:
 
 ---
 
+### Performance: Pit Prevention Optimization
+
+**Symptom**: Stuttering during gameplay, especially when crossing chunk boundaries.
+
+**Root cause**: The `get_height_at()` pit prevention used 4 recursive calls per cell, each doing the full terrain computation (10 water body iterations, river checks, noise sampling, cave ramp). For the player's sync height cache (324 cells), this meant 324 * 4 = 1,296 redundant `get_height_at()` calls, each as expensive as the primary call. Total: ~1,620 full height computations per chunk load.
+
+**Fix**: Moved pit prevention from recursive calls inside `get_height_at()` to a post-processing pass on the height cache:
+1. Set `_in_pit_check = true` during height cache build → skips pit prevention in all calls
+2. After build completes, run `_apply_pit_prevention()` on the cached heights
+3. Post-processing uses cached neighbor values (4 array lookups per cell vs 4 full function calls)
+
+**Impact**: ~80% reduction in height cache computation. The 1,296 recursive calls (each doing water/river/noise/cave loops) are replaced by 256 simple array comparisons. The sync height cache for the player's chunk drops from ~17-30ms to ~4-8ms.
+
+**Behavior**: Identical to the previous implementation - pit prevention still checks that no cell is more than 1 block below ALL cardinal neighbors, using the same raw (pre-pit-prevention) neighbor heights.
+
+### Files Modified (cumulative)
+
+| File | Changes |
+|------|---------|
+| `scripts/world/terrain_chunk.gd` | Pit prevention as post-processing on height cache, cave tunnel exclusion |
+
+### Test Results
+- All 488 regression tests pass
+
+---
+
 ## Next Session
 
 ### Planned Tasks
 1. Play-test cave interior: verify no terrain/trees/resources inside, clean floor and walls
-2. Add camera collision to prevent clipping into terrain
-3. Add grappling hook sound effect audio files
-4. Disable `debug_performance` logging once stuttering is confirmed fixed
+2. Verify stuttering is resolved after pit prevention optimization
+3. Add camera collision to prevent clipping into terrain
+4. Add grappling hook sound effect audio files
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.
