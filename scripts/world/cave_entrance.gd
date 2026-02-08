@@ -1,21 +1,28 @@
 extends StaticBody3D
 class_name CaveEntrance
-## Cave entrance - a rocky outcrop with a dark opening. Built from layered
-## rock blocks to look like a natural hillside formation.
-## Requires torch/lantern to enter.
+## Inline cave structure - a walkable tunnel built directly in the overworld.
+## Player walks in freely (no interaction needed). Contains crystal/ore resources.
+## Darkness is handled by CaveTransition when player enters the Area3D.
 
-signal entered(cave_id: int)
+signal resource_depleted(cave_id: int, node_name: String)
 
 # Cave properties
 @export var cave_id: int = 0
-@export var cave_type: String = "small"  # "small", "medium", "large"
+@export var cave_type: String = "small"
 
 # Visual nodes
 var arch_meshes: Array[MeshInstance3D] = []
 var darkness_mesh: MeshInstance3D = null
 
+# Interior nodes
+var cave_area: Area3D = null
+var resource_nodes: Array[Node] = []
+
 # Shared materials (static to avoid shader compilation per instance)
 static var _dark_mat: StandardMaterial3D = null
+static var _floor_mat: StandardMaterial3D = null
+static var _wall_mat: StandardMaterial3D = null
+static var _ceiling_mat: StandardMaterial3D = null
 
 
 static func _get_dark_material() -> StandardMaterial3D:
@@ -26,8 +33,31 @@ static func _get_dark_material() -> StandardMaterial3D:
 	return _dark_mat
 
 
+static func _get_floor_material() -> StandardMaterial3D:
+	if not _floor_mat:
+		_floor_mat = StandardMaterial3D.new()
+		_floor_mat.albedo_color = Color(0.18, 0.16, 0.14)
+		_floor_mat.roughness = 0.95
+	return _floor_mat
+
+
+static func _get_wall_material() -> StandardMaterial3D:
+	if not _wall_mat:
+		_wall_mat = StandardMaterial3D.new()
+		_wall_mat.albedo_color = Color(0.22, 0.20, 0.17)
+		_wall_mat.roughness = 0.95
+	return _wall_mat
+
+
+static func _get_ceiling_material() -> StandardMaterial3D:
+	if not _ceiling_mat:
+		_ceiling_mat = StandardMaterial3D.new()
+		_ceiling_mat.albedo_color = Color(0.15, 0.14, 0.12)
+		_ceiling_mat.roughness = 0.95
+	return _ceiling_mat
+
+
 func _ready() -> void:
-	add_to_group("interactable")
 	add_to_group("cave_entrance")
 	call_deferred("_setup_visuals")
 
@@ -58,15 +88,51 @@ func _add_rock(pos: Vector3, size: Vector3, rot: Vector3, tint: float, rng: Rand
 	return mesh_inst
 
 
+func _add_interior_rock(pos: Vector3, size: Vector3, rot: Vector3, mat: StandardMaterial3D) -> MeshInstance3D:
+	## Helper: create an interior rock block with a shared material
+	var mesh_inst := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = size
+	mesh_inst.mesh = box
+	mesh_inst.material_override = mat
+	mesh_inst.position = pos
+	mesh_inst.rotation_degrees = rot
+	add_child(mesh_inst)
+	return mesh_inst
+
+
 func _setup_visuals() -> void:
 	var dark_mat: StandardMaterial3D = _get_dark_material()
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = cave_id * 12345
 
 	# Entrance faces +Z. Player approaches from +Z, walks into -Z.
+	# Tunnel extends from z=0 to z=-18.
 
+	# ===== ENTRANCE ROCK FORMATION =====
+	_build_entrance_rocks(dark_mat, rng)
+
+	# ===== TUNNEL STRUCTURE =====
+	_build_tunnel(rng)
+
+	# ===== INTERIOR DETAILS =====
+	_build_interior_details(rng)
+
+	# ===== CAVE AREA3D (player detection) =====
+	_build_cave_area()
+
+	# ===== COLLISION =====
+	_build_collision()
+
+	# ===== RESOURCES =====
+	_spawn_resources()
+
+	# ===== APPLY SAVED RESOURCE STATE =====
+	_apply_saved_resource_state()
+
+
+func _build_entrance_rocks(dark_mat: StandardMaterial3D, rng: RandomNumberGenerator) -> void:
 	# ===== DARK OPENING (the main visual landmark) =====
-	# Irregular shape: main rectangle + offset pieces to break up the edge
 	darkness_mesh = MeshInstance3D.new()
 	darkness_mesh.name = "DarkOpening"
 	var dark_box := BoxMesh.new()
@@ -111,11 +177,8 @@ func _setup_visuals() -> void:
 	# ===== ROCK FORMATION (layered blocks forming a natural outcrop) =====
 
 	# -- Left rock mass: 3 stacked irregular blocks --
-	# Base block (widest, sits on ground)
 	_add_rock(Vector3(-2.8, 1.0, 0.2), Vector3(2.4, 2.0, 2.2), Vector3(0, rng.randf_range(-4, 4), rng.randf_range(-2, 2)), -0.04, rng)
-	# Middle block (slightly offset)
 	_add_rock(Vector3(-2.5, 2.6, 0.0), Vector3(2.0, 1.4, 2.0), Vector3(rng.randf_range(-3, 3), rng.randf_range(-6, 6), rng.randf_range(-3, 3)), -0.02, rng)
-	# Top piece (smaller, capping)
 	_add_rock(Vector3(-2.3, 3.8, 0.1), Vector3(1.6, 1.0, 1.6), Vector3(rng.randf_range(-5, 5), rng.randf_range(-8, 8), rng.randf_range(-4, 4)), 0.02, rng)
 
 	# -- Right rock mass: 3 stacked irregular blocks --
@@ -124,22 +187,13 @@ func _setup_visuals() -> void:
 	_add_rock(Vector3(3.0, 3.5, 0.0), Vector3(1.4, 0.8, 1.4), Vector3(rng.randf_range(-5, 5), rng.randf_range(-8, 8), rng.randf_range(-4, 4)), 0.03, rng)
 
 	# -- Top rock mass: spans across the opening --
-	# Main lintel (heavy, irregular)
 	_add_rock(Vector3(0, 3.8, 0.3), Vector3(5.0, 1.4, 2.2), Vector3(rng.randf_range(-3, 3), 0, rng.randf_range(-2, 2)), 0.01, rng)
-	# Upper cap (sits on the lintel, offset)
 	_add_rock(Vector3(rng.randf_range(-0.5, 0.5), 4.8, -0.1), Vector3(3.5, 1.0, 2.0), Vector3(rng.randf_range(-4, 4), rng.randf_range(-5, 5), rng.randf_range(-3, 3)), 0.04, rng)
-
-	# -- Back rock face: fills in behind the opening so you don't see through --
-	_add_rock(Vector3(0, 2.2, -1.0), Vector3(5.5, 5.0, 1.0), Vector3(0, 0, 0), -0.06, rng)
-	# Extra back block for width
-	_add_rock(Vector3(-2.0, 1.5, -1.5), Vector3(2.5, 3.0, 1.5), Vector3(0, rng.randf_range(-5, 5), 0), -0.08, rng)
-	_add_rock(Vector3(2.0, 1.5, -1.5), Vector3(2.5, 3.0, 1.5), Vector3(0, rng.randf_range(-5, 5), 0), -0.07, rng)
 
 	# -- Overhang: juts forward above the opening --
 	_add_rock(Vector3(rng.randf_range(-0.3, 0.3), 4.2, 1.2), Vector3(3.5, 0.7, 1.5), Vector3(-12, 0, rng.randf_range(-3, 3)), 0.02, rng)
 
 	# ===== RUBBLE / BOULDERS at base =====
-	# Large rubble flanking the opening
 	_add_rock(Vector3(-2.0, 0.4, 1.8), Vector3(1.6, 0.8, 1.2), Vector3(rng.randf_range(-5, 5), rng.randf_range(0, 20), rng.randf_range(-5, 5)), -0.02, rng)
 	_add_rock(Vector3(2.2, 0.35, 2.0), Vector3(1.4, 0.7, 1.0), Vector3(rng.randf_range(-5, 5), rng.randf_range(0, 30), rng.randf_range(-5, 5)), 0.0, rng)
 
@@ -201,15 +255,161 @@ func _setup_visuals() -> void:
 		add_child(moss)
 		arch_meshes.append(moss)
 
-	# ===== COLLISION =====
+
+func _build_tunnel(rng: RandomNumberGenerator) -> void:
+	## Build the walkable tunnel extending from z=0 to z=-18
+	var wall_mat: StandardMaterial3D = _get_wall_material()
+	var floor_mat: StandardMaterial3D = _get_floor_material()
+	var ceiling_mat: StandardMaterial3D = _get_ceiling_material()
+
+	# Tunnel dimensions: 6 wide (x=-3 to +3), 5 tall (y=0 to 5), 18 deep (z=0 to -18)
+
+	# -- LEFT WALL: segmented for visual interest --
+	for seg: int in range(6):
+		var z_start: float = -float(seg) * 3.0
+		var width_var: float = rng.randf_range(-0.15, 0.15)
+		_add_interior_rock(
+			Vector3(-3.0 - width_var, 2.5, z_start - 1.5),
+			Vector3(0.8 + width_var * 2.0, 5.0, 3.0),
+			Vector3(0, 0, 0),
+			wall_mat
+		)
+
+	# -- RIGHT WALL: segmented --
+	for seg: int in range(6):
+		var z_start: float = -float(seg) * 3.0
+		var width_var: float = rng.randf_range(-0.15, 0.15)
+		_add_interior_rock(
+			Vector3(3.0 + width_var, 2.5, z_start - 1.5),
+			Vector3(0.8 + width_var * 2.0, 5.0, 3.0),
+			Vector3(0, 0, 0),
+			wall_mat
+		)
+
+	# -- CEILING: spans the width, segmented --
+	for seg: int in range(6):
+		var z_start: float = -float(seg) * 3.0
+		var height_var: float = rng.randf_range(-0.2, 0.2)
+		_add_interior_rock(
+			Vector3(0, 5.0 + height_var, z_start - 1.5),
+			Vector3(7.6, 0.8, 3.0),
+			Vector3(0, 0, 0),
+			ceiling_mat
+		)
+
+	# -- FLOOR: continuous slab --
+	_add_interior_rock(
+		Vector3(0, -0.25, -9.0),
+		Vector3(6.0, 0.5, 18.0),
+		Vector3(0, 0, 0),
+		floor_mat
+	)
+
+	# -- BACK WALL: seals the end of the tunnel --
+	_add_interior_rock(
+		Vector3(0, 2.5, -18.5),
+		Vector3(7.6, 5.5, 1.0),
+		Vector3(0, 0, 0),
+		wall_mat
+	)
+
+
+func _build_interior_details(rng: RandomNumberGenerator) -> void:
+	## Add stalactites, wall outcrops, and rubble inside the tunnel
+	var wall_mat: StandardMaterial3D = _get_wall_material()
+
+	# -- Stalactites hanging from ceiling --
+	for i: int in range(8):
+		var s_h: float = rng.randf_range(0.3, 1.2)
+		var stalac_mat: StandardMaterial3D = _make_rock_mat(
+			0.17 + rng.randf_range(-0.02, 0.02),
+			0.15 + rng.randf_range(-0.02, 0.02),
+			0.13 + rng.randf_range(-0.02, 0.02)
+		)
+		_add_interior_rock(
+			Vector3(rng.randf_range(-2.2, 2.2), 5.0 - s_h * 0.5, rng.randf_range(-16.0, -1.0)),
+			Vector3(rng.randf_range(0.12, 0.25), s_h, rng.randf_range(0.12, 0.25)),
+			Vector3(rng.randf_range(-5, 5), 0, rng.randf_range(-5, 5)),
+			stalac_mat
+		)
+
+	# -- Wall outcrops (bulges from walls) --
+	for i: int in range(4):
+		var side: float = -1.0 if i % 2 == 0 else 1.0
+		var outcrop_z: float = rng.randf_range(-15.0, -2.0)
+		var outcrop_y: float = rng.randf_range(0.5, 3.5)
+		var tint: float = rng.randf_range(-0.03, 0.03)
+		_add_interior_rock(
+			Vector3(side * (2.6 + rng.randf_range(0.0, 0.3)), outcrop_y, outcrop_z),
+			Vector3(rng.randf_range(0.8, 1.5), rng.randf_range(0.8, 2.0), rng.randf_range(0.8, 1.5)),
+			Vector3(rng.randf_range(-5, 5), rng.randf_range(-5, 5), rng.randf_range(-3, 3)),
+			_make_rock_mat(0.22 + tint, 0.20 + tint * 0.8, 0.17 + tint * 0.6)
+		)
+
+	# -- Floor rubble (small rocks scattered on the floor) --
+	for i: int in range(6):
+		var bsize: float = rng.randf_range(0.25, 0.7)
+		_add_interior_rock(
+			Vector3(rng.randf_range(-2.0, 2.0), bsize * 0.25, rng.randf_range(-16.0, -1.0)),
+			Vector3(bsize, bsize * 0.5, bsize * 0.65),
+			Vector3(rng.randf_range(-8, 8), rng.randf_range(0, 45), rng.randf_range(-5, 5)),
+			_make_rock_mat(
+				0.20 + rng.randf_range(-0.03, 0.03),
+				0.18 + rng.randf_range(-0.02, 0.02),
+				0.15 + rng.randf_range(-0.02, 0.02)
+			)
+		)
+
+	# -- Stalagmites rising from floor --
+	for i: int in range(3):
+		var s_h: float = rng.randf_range(0.4, 1.0)
+		_add_interior_rock(
+			Vector3(rng.randf_range(-2.0, 2.0), s_h * 0.5, rng.randf_range(-15.0, -3.0)),
+			Vector3(rng.randf_range(0.2, 0.4), s_h, rng.randf_range(0.2, 0.4)),
+			Vector3(rng.randf_range(-3, 3), 0, rng.randf_range(-3, 3)),
+			_make_rock_mat(0.20, 0.18, 0.15)
+		)
+
+
+func _build_cave_area() -> void:
+	## Create an Area3D covering the cave interior for player detection
+	cave_area = Area3D.new()
+	cave_area.name = "CaveInterior"
+
+	var col_shape := CollisionShape3D.new()
+	var box_shape := BoxShape3D.new()
+	# Cover interior volume: x=-3 to +3, y=0 to 5, z=0 to -18
+	box_shape.size = Vector3(6.0, 5.0, 18.0)
+	col_shape.shape = box_shape
+	col_shape.position = Vector3(0, 2.5, -9.0)
+	cave_area.add_child(col_shape)
+
+	cave_area.body_entered.connect(_on_body_entered)
+	cave_area.body_exited.connect(_on_body_exited)
+
+	add_child(cave_area)
+
+
+func _build_collision() -> void:
+	# -- Entrance rock collision --
 	# Left rock mass
 	_add_collision(Vector3(-2.8, 2.0, 0.1), Vector3(2.4, 4.0, 2.2))
 	# Right rock mass
 	_add_collision(Vector3(2.8, 2.0, 0.1), Vector3(2.2, 4.0, 2.4))
 	# Top lintel
 	_add_collision(Vector3(0, 4.2, 0.1), Vector3(5.5, 2.0, 2.2))
+
+	# -- Tunnel collision --
+	# Left wall
+	_add_collision(Vector3(-3.4, 2.5, -9.0), Vector3(0.8, 5.0, 18.0))
+	# Right wall
+	_add_collision(Vector3(3.4, 2.5, -9.0), Vector3(0.8, 5.0, 18.0))
+	# Ceiling
+	_add_collision(Vector3(0, 5.4, -9.0), Vector3(7.6, 0.8, 18.0))
+	# Floor
+	_add_collision(Vector3(0, -0.25, -9.0), Vector3(6.0, 0.5, 18.0))
 	# Back wall
-	_add_collision(Vector3(0, 2.5, -1.2), Vector3(6.0, 5.0, 1.5))
+	_add_collision(Vector3(0, 2.5, -18.5), Vector3(7.6, 5.5, 1.0))
 
 
 func _add_collision(pos: Vector3, size: Vector3) -> void:
@@ -221,73 +421,106 @@ func _add_collision(pos: Vector3, size: Vector3) -> void:
 	add_child(col)
 
 
-## Check if a player is near the cave mouth opening AND facing it.
-func _is_near_cave_mouth(player_node: Node3D) -> bool:
-	var local_pos: Vector3 = to_local(player_node.global_position)
-	var horizontal_dist: float = abs(local_pos.x)
-	if horizontal_dist > 2.0 or local_pos.z < 0.5 or local_pos.z > 4.0 or local_pos.y > 4.0:
-		return false
-	var player_forward: Vector3 = -player_node.global_transform.basis.z.normalized()
-	var to_entrance: Vector3 = (global_position - player_node.global_position).normalized()
-	return player_forward.dot(to_entrance) > 0.3
+func _spawn_resources() -> void:
+	## Spawn 2 CrystalNodes and 1 RareOreNode inside the cave
+	var crystal_script: GDScript = load("res://scripts/resources/crystal_node.gd")
+	var ore_script: GDScript = load("res://scripts/resources/rare_ore_node.gd")
+
+	if not crystal_script or not ore_script:
+		push_warning("[CaveEntrance] Failed to load resource scripts")
+		return
+
+	# Crystal 1: left wall, midway through tunnel
+	var crystal1: StaticBody3D = StaticBody3D.new()
+	crystal1.set_script(crystal_script)
+	crystal1.name = "CrystalNode_0"
+	crystal1.position = Vector3(-2.2, 1.0, -6.0)
+	crystal1.rotation_degrees = Vector3(0, 15, 10)
+	add_child(crystal1)
+	resource_nodes.append(crystal1)
+
+	# Crystal 2: right wall, deeper in tunnel
+	var crystal2: StaticBody3D = StaticBody3D.new()
+	crystal2.set_script(crystal_script)
+	crystal2.name = "CrystalNode_1"
+	crystal2.position = Vector3(2.0, 1.5, -13.0)
+	crystal2.rotation_degrees = Vector3(0, -20, -8)
+	add_child(crystal2)
+	resource_nodes.append(crystal2)
+
+	# Rare ore: back of cave
+	var ore: StaticBody3D = StaticBody3D.new()
+	ore.set_script(ore_script)
+	ore.name = "RareOreNode_0"
+	ore.position = Vector3(0.5, 0.5, -16.0)
+	add_child(ore)
+	resource_nodes.append(ore)
+
+	# Connect depleted signals for tracking
+	for res_node: Node in resource_nodes:
+		if res_node.has_signal("depleted"):
+			res_node.depleted.connect(_on_resource_depleted.bind(res_node))
 
 
-func get_interaction_text() -> String:
-	var player: Node = get_tree().get_first_node_in_group("player")
-	if not player or not _is_near_cave_mouth(player):
-		return ""
-	var equipment: Equipment = _get_player_equipment(player)
-	if equipment:
-		var equipped: String = equipment.get_equipped()
-		var item_data: Dictionary = equipment.EQUIPPABLE_ITEMS.get(equipped, {})
-		if item_data.get("has_light", false):
-			return "Enter Cave"
-	return "Too dark! Need a torch."
-
-
-func interact(player: Node) -> bool:
-	if not _is_near_cave_mouth(player):
-		return false
-	var equipment: Equipment = _get_player_equipment(player)
-	if not equipment:
-		_show_notification("Cannot enter cave!", Color(1.0, 0.5, 0.5))
-		return true
-	var equipped: String = equipment.get_equipped()
-	var item_data: Dictionary = equipment.EQUIPPABLE_ITEMS.get(equipped, {})
-	if not item_data.get("has_light", false):
-		_show_notification("It's pitch black! You need a torch or lantern.", Color(1.0, 0.6, 0.4))
-		return true
-	_enter_cave(player)
-	return true
-
-
-func _enter_cave(player: Node) -> void:
-	print("[CaveEntrance] Entering %s cave #%d" % [cave_type, cave_id])
+func _apply_saved_resource_state() -> void:
+	## Check CaveTransition for depleted resources and apply state
 	var cave_transition: Node = get_node_or_null("/root/CaveTransition")
-	if cave_transition and cave_transition.has_method("enter_cave"):
-		cave_transition.enter_cave(cave_id, cave_type, player, global_position, rotation.y)
-		entered.emit(cave_id)
-	else:
-		_show_notification("Entering %s cave..." % cave_type, Color(0.7, 0.7, 0.9))
-		entered.emit(cave_id)
+	if not cave_transition or not cave_transition.has_method("get_depleted_cave_resources"):
+		return
+
+	# Get current game time from TimeManager
+	var time_manager: Node = _find_time_manager()
+	if not time_manager:
+		return
+
+	var current_day: int = time_manager.current_day if "current_day" in time_manager else 1
+	var current_hour: int = time_manager.current_hour if "current_hour" in time_manager else 8
+	var current_minute: int = time_manager.current_minute if "current_minute" in time_manager else 0
+
+	var depleted_names: Array[String] = cave_transition.get_depleted_cave_resources(
+		cave_id, current_day, current_hour, current_minute
+	)
+
+	for res_node: Node in resource_nodes:
+		if res_node.name in depleted_names and res_node.has_method("_set_depleted_state"):
+			res_node._set_depleted_state(true)
 
 
-func _get_player_equipment(player: Node) -> Equipment:
-	if player.has_node("Equipment"):
-		return player.get_node("Equipment") as Equipment
-	if player.has_method("get_equipment"):
-		return player.get_equipment()
-	return null
+func _on_resource_depleted(res_node: Node) -> void:
+	## Track resource depletion in CaveTransition
+	var cave_transition: Node = get_node_or_null("/root/CaveTransition")
+	if not cave_transition or not cave_transition.has_method("track_cave_resource_depleted"):
+		return
+
+	var time_manager: Node = _find_time_manager()
+	var day: int = 1
+	var hour: int = 8
+	var minute: int = 0
+	if time_manager:
+		day = time_manager.current_day if "current_day" in time_manager else 1
+		hour = time_manager.current_hour if "current_hour" in time_manager else 8
+		minute = time_manager.current_minute if "current_minute" in time_manager else 0
+
+	cave_transition.track_cave_resource_depleted(cave_id, res_node.name, day, hour, minute)
+	resource_depleted.emit(cave_id, res_node.name)
 
 
-func _show_notification(message: String, color: Color) -> void:
-	var hud: Node = _find_hud()
-	if hud and hud.has_method("show_notification"):
-		hud.show_notification(message, color)
+func _on_body_entered(body: Node) -> void:
+	if body.is_in_group("player"):
+		var cave_transition: Node = get_node_or_null("/root/CaveTransition")
+		if cave_transition and cave_transition.has_method("player_entered_cave"):
+			cave_transition.player_entered_cave(cave_id)
 
 
-func _find_hud() -> Node:
+func _on_body_exited(body: Node) -> void:
+	if body.is_in_group("player"):
+		var cave_transition: Node = get_node_or_null("/root/CaveTransition")
+		if cave_transition and cave_transition.has_method("player_exited_cave"):
+			cave_transition.player_exited_cave()
+
+
+func _find_time_manager() -> Node:
 	var root: Node = get_tree().root
-	if root.has_node("Main/HUD"):
-		return root.get_node("Main/HUD")
+	if root.has_node("Main/TimeManager"):
+		return root.get_node("Main/TimeManager")
 	return null

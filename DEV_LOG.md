@@ -3104,12 +3104,81 @@ Created comprehensive automated test suite (493 tests across 7 test files) that 
 
 ---
 
+## Session - Convert Caves to Inline Terrain Features (2026-02-07)
+
+**Major architectural change**: Replaced scene-based cave system with Minecraft-style inline caves built directly in the overworld. No more scene transitions, autosaves, or interaction prompts.
+
+### What Changed
+
+**Cave Structure** (`scripts/world/cave_entrance.gd`):
+- Complete rewrite from entrance-only visual to full walkable tunnel (6-wide x 5-tall x 18-deep)
+- Tunnel has segmented walls, ceiling, floor, back wall, stalactites, wall outcrops, floor rubble, stalagmites
+- Area3D detects player entry/exit and notifies CaveTransition
+- Spawns 2 CrystalNodes + 1 RareOreNode inside cave
+- Applies saved depleted resource state on ready
+- Removed `interact()`, `get_interaction_text()`, interactable group - player walks in freely
+- Kept `cave_entrance` group for terrain flattening
+- Uses shared static materials for tunnel walls/ceiling/floor
+
+**Cave Transition** (`scripts/core/cave_transition.gd`):
+- Stripped from 514 lines to ~200 lines - now a pure state manager
+- Removed all scene transition code: `enter_cave()`, `exit_cave()`, `_load_cave_scene()`, `_return_to_overworld()`, `_restore_player_position()`, `_show_placeholder_cave()`, `_fade_back()`
+- Removed stored player/HUD/PauseMenu preservation, return position tracking, overworld seed storage
+- Added `player_entered_cave()` / `player_exited_cave()` for Area3D callbacks
+- Added inline darkness system (from cave_interior_manager): light checking every 0.5s, 95% darkness overlay, damage after 60s in darkness (2 HP / 10s)
+- Changed resource respawn from 6 hours to 72 hours (3 game days)
+- Simplified save data to just `cave_resource_state`
+
+**Terrain Flattening** (`scripts/world/chunk_manager.gd`):
+- Increased `cave_flat_inner` from 8.0 to 16.0 (covers full cave depth)
+- Increased `cave_flat_outer` from 12.0 to 22.0 (gradual ramp around cave)
+
+**Save/Load Cleanup** (`scripts/core/save_load.gd`):
+- Removed `CAVE_AUTOSAVE_FILE` constant
+- Removed `save_cave_autosave()`, `has_cave_autosave()`, `load_cave_autosave()` functions
+- Removed cave autosave pending check in `_check_pending_load()`
+- Removed `skip_player_data_on_load` check in `_apply_save_data()`
+
+**Game State Cleanup** (`scripts/core/game_state.gd`):
+- Removed `skip_player_data_on_load` and `pending_cave_autosave` variables
+
+**Deleted Files**:
+- `scripts/caves/cave_interior_manager.gd` (423 lines)
+- `scenes/caves/cave_interior_small.tscn`
+
+**Tests** (`tests/test_cave_transition.gd`):
+- Updated respawn threshold from 6h to 72h
+- Added `test_resource_respawn_72h_boundary` (71h59m vs 72h01m)
+- Removed `test_cave_scene_paths_exist`, `test_exit_position_offset`, `test_double_entry_guard` (no longer relevant)
+- Updated `test_save_data_roundtrip` for simplified save format
+
+**Validation** (`validation/check_scene.gd`):
+- New headless validation script checks script loading, deleted file absence, and CaveTransition API correctness
+
+### Test Results
+- All 488 regression tests pass (was 493 - removed 5 scene-transition-specific tests, added 3 new inline-cave tests)
+
+| File | Changes |
+|------|---------|
+| `scripts/world/cave_entrance.gd` | Major rewrite - full walkable tunnel with resources |
+| `scripts/core/cave_transition.gd` | Major simplification - state manager with darkness |
+| `scripts/world/chunk_manager.gd` | Terrain flattening radius 8→16 / 12→22 |
+| `scripts/core/save_load.gd` | Removed cave autosave system |
+| `scripts/core/game_state.gd` | Removed cave pending vars |
+| `tests/test_cave_transition.gd` | Updated for 72h respawn, removed scene tests |
+| `validation/check_scene.gd` | New - headless cave system validation |
+| `scripts/caves/cave_interior_manager.gd` | Deleted |
+| `scenes/caves/cave_interior_small.tscn` | Deleted |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Add camera collision to prevent clipping into terrain
-2. Add grappling hook sound effect audio files
-3. Disable `debug_performance` logging once stuttering is confirmed fixed
+1. Play-test inline caves: walk in/out, verify darkness, harvest resources, check respawn
+2. Add camera collision to prevent clipping into terrain
+3. Add grappling hook sound effect audio files
+4. Disable `debug_performance` logging once stuttering is confirmed fixed
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

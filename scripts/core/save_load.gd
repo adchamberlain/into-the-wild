@@ -11,8 +11,6 @@ const SAVE_DIR: String = "user://saves/"
 const SAVE_FILE: String = "save.json"  # Legacy single save file (backward compatibility)
 const SAVE_VERSION: int = 1
 const NUM_SLOTS: int = 3
-const CAVE_AUTOSAVE_FILE: String = "cave_autosave.json"  # Temporary save for cave transitions
-
 # Node references (set in _ready or via exported paths)
 @export var player_path: NodePath
 @export var time_manager_path: NodePath
@@ -79,16 +77,10 @@ func _check_pending_load() -> void:
 		push_warning("[SaveLoad] GameState autoload not found!")
 		return
 
-	# Check for cave autosave first (takes priority - it's a temp file)
-	var cave_pending: bool = game_state.get("pending_cave_autosave") == true
 	var pending_slot: int = game_state.consume_pending_load_slot()
 
-	if cave_pending or pending_slot > 0:
-		if cave_pending:
-			print("[SaveLoad] Loading cave autosave after scene reload")
-			game_state.pending_cave_autosave = false
-		else:
-			print("[SaveLoad] Loading pending save from slot %d after scene reload" % pending_slot)
+	if pending_slot > 0:
+		print("[SaveLoad] Loading pending save from slot %d after scene reload" % pending_slot)
 
 		# Wait for terrain to be ready (chunk_manager needs time to initialize)
 		# Wait multiple frames to ensure all nodes are ready
@@ -110,10 +102,7 @@ func _check_pending_load() -> void:
 
 		print("[SaveLoad] References after wait - Player: %s, ChunkManager: %s" % [player != null, chunk_manager != null])
 
-		if cave_pending:
-			load_cave_autosave()
-		else:
-			load_game_slot(pending_slot)
+		load_game_slot(pending_slot)
 
 
 func _ensure_save_directory() -> void:
@@ -157,56 +146,6 @@ func save_game_slot(slot: int) -> bool:
 
 	print("[SaveLoad] Game saved to %s (slot %d)" % [filepath, slot])
 	game_saved.emit(filepath, slot)
-	return true
-
-
-## Save to a temporary file for cave transitions. Does not touch save slots.
-func save_cave_autosave() -> bool:
-	var save_data: Dictionary = _collect_save_data()
-
-	var filepath: String = SAVE_DIR + CAVE_AUTOSAVE_FILE
-	var file: FileAccess = FileAccess.open(filepath, FileAccess.WRITE)
-	if not file:
-		push_error("[SaveLoad] Failed to write cave autosave")
-		return false
-
-	file.store_string(JSON.stringify(save_data, "\t"))
-	file.close()
-	print("[SaveLoad] Cave autosave written")
-	return true
-
-
-## Check if a cave autosave exists.
-func has_cave_autosave() -> bool:
-	return FileAccess.file_exists(SAVE_DIR + CAVE_AUTOSAVE_FILE)
-
-
-## Load and apply the cave autosave, then delete it.
-func load_cave_autosave() -> bool:
-	var filepath: String = SAVE_DIR + CAVE_AUTOSAVE_FILE
-	if not FileAccess.file_exists(filepath):
-		push_error("[SaveLoad] No cave autosave found")
-		return false
-
-	var file: FileAccess = FileAccess.open(filepath, FileAccess.READ)
-	if not file:
-		push_error("[SaveLoad] Failed to read cave autosave")
-		return false
-
-	var json_string: String = file.get_as_text()
-	file.close()
-
-	var json: JSON = JSON.new()
-	if json.parse(json_string) != OK:
-		push_error("[SaveLoad] Failed to parse cave autosave")
-		return false
-
-	var save_data: Dictionary = json.data
-	_apply_save_data(save_data)
-
-	# Delete the temp file after successful load
-	DirAccess.remove_absolute(filepath)
-	print("[SaveLoad] Cave autosave loaded and deleted")
 	return true
 
 
@@ -580,14 +519,7 @@ func _apply_save_data(data: Dictionary) -> void:
 		push_warning("[SaveLoad] Skipping campsite data - campsite_manager is null")
 
 	# Player last (position, stats, inventory)
-	# Skip player data when returning from cave - the preserved player already
-	# has the correct state (including any items gained in the cave).
-	var game_state: Node = get_node_or_null("/root/GameState")
-	var skip_player: bool = game_state and game_state.get("skip_player_data_on_load")
-	if skip_player:
-		game_state.skip_player_data_on_load = false
-		print("[SaveLoad] Skipping player data restore (cave exit - player preserved)")
-	elif data.has("player") and player:
+	if data.has("player") and player:
 		_apply_player_data(data["player"])
 	elif data.has("player"):
 		push_error("[SaveLoad] Cannot apply player data - player is null!")

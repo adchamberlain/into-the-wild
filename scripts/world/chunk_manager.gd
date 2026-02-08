@@ -1117,9 +1117,9 @@ func get_height_at(x: float, z: float) -> float:
 	if distance_from_center < flatten_radius:
 		return 0.0
 
-	# Flatten terrain around cave entrances for walkable approach
-	var cave_flat_inner: float = 8.0  # Flat platform radius
-	var cave_flat_outer: float = 12.0  # Ramp falloff radius
+	# Flatten terrain around cave entrances for walkable approach (covers full cave depth)
+	var cave_flat_inner: float = 16.0  # Flat platform radius
+	var cave_flat_outer: float = 22.0  # Ramp falloff radius
 	var cave_platform_height: float = 2.0  # Low walkable platform height
 	for cave in cave_entrances:
 		var cave_center: Vector2 = cave["center"]

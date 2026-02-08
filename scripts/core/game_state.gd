@@ -9,13 +9,6 @@ var has_pending_seed: bool = false
 # Save slot to load after scene reload (0 = none)
 var pending_load_slot: int = 0
 
-# When true, pending load skips player data restoration (cave exit preserves
-# the player's current inventory/stats so they keep cave-gained items)
-var skip_player_data_on_load: bool = false
-
-# When true, load the cave autosave (separate temp file, not a user slot)
-var pending_cave_autosave: bool = false
-
 # UI scale factor (persisted to user://display_config.cfg)
 var ui_scale: float = 1.0
 
