@@ -3391,13 +3391,43 @@ Replaced the shared mutable flag with an explicit `skip_pit_check: bool = false`
 
 ---
 
+## Session 31 - Fix Mesh Generation Bottleneck: Cached Side Face AO (2026-02-07)
+
+### Problem
+Despite the concurrency bug fix (Session 30), the game still had extreme stuttering at 14-21 FPS for the first 10-15 seconds after loading. Added performance profiling instrumentation to diagnose the root cause.
+
+### Root Cause: Uncached Side Face AO Lookups
+Profiling revealed mesh batch times of 29-76ms (target: ~8ms) and ~800-1000 `get_height_at()` calls per frame during chunk generation.
+
+The culprit was `_add_side_faces_cached()` calling `_calculate_side_ao_top()` (1 uncached `get_height_at()` call) and `_calculate_side_ao_bottom()` (3 uncached `get_height_at()` calls) for every side face during mesh generation. Each of those calls triggered 4 recursive pit-prevention lookups, resulting in **20 full height computations per side face**. These neighbor heights were already available in the height cache but weren't being used.
+
+### Fix
+- Modified `_add_side_faces_cached()` to pre-fetch cardinal neighbor heights from the height cache and compute AO inline
+- Created `_add_side_quad_ao()` that takes pre-computed ao_top and ao_bottom parameters
+- Created `_calc_side_ao_bottom_cached()` helper that uses cached heights
+- Removed dead code: `_add_top_face`, `_add_side_faces`, `_calculate_vertex_ao`, `_calculate_side_ao_top`, `_calculate_side_ao_bottom` (-223 lines, +50 lines net)
+- Removed all `[PERF]` profiling instrumentation after confirming the fix (84 lines removed across 3 files)
+- Removed diagnostic print from `cave_entrance.gd`
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/terrain_chunk.gd` | Cache-based AO computation, new `_add_side_quad_ao()` and `_calc_side_ao_bottom_cached()`, removed dead code and profiling |
+| `scripts/world/chunk_manager.gd` | Removed profiling variables, frame timing, call counters, chunk load timing |
+| `scripts/world/cave_entrance.gd` | Removed diagnostic print |
+
+### Test Results
+- All 488 regression tests pass
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test: verify stuttering is resolved and terrain looks correct
-2. Play-test cave interior: verify no terrain/trees/resources inside, clean floor and walls
-3. Add camera collision to prevent clipping into terrain
-4. Add grappling hook sound effect audio files
+1. Play-test cave interior: verify no terrain/trees/resources inside, clean floor and walls
+2. Add camera collision to prevent clipping into terrain
+3. Add grappling hook sound effect audio files
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.
