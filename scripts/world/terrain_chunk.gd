@@ -202,15 +202,13 @@ func _build_height_cache() -> void:
 	_height_cache.resize(_height_cache_size)
 
 	# Skip pit prevention during build (applied as post-processing below)
-	chunk_manager._in_pit_check = true
 	for cz in range(_height_cache_size):
 		_height_cache[cz] = []
 		_height_cache[cz].resize(_height_cache_size)
 		for cx in range(_height_cache_size):
 			var world_x: float = chunk_world_x + ((cx - 1) * cell_size) + cell_size / 2.0
 			var world_z: float = chunk_world_z + ((cz - 1) * cell_size) + cell_size / 2.0
-			_height_cache[cz][cx] = chunk_manager.get_height_at(world_x, world_z)
-	chunk_manager._in_pit_check = false
+			_height_cache[cz][cx] = chunk_manager.get_height_at(world_x, world_z, true)
 
 	# Post-process: fix pits using cached neighbor heights (replaces recursive calls)
 	_apply_pit_prevention()
@@ -228,9 +226,10 @@ func _build_height_cache_batched() -> void:
 	_height_cache_size = chunk_size_cells + 2  # +2 for border cells
 	_height_cache.resize(_height_cache_size)
 
-	# Skip pit prevention during build (applied as post-processing below)
-	chunk_manager._in_pit_check = true
-
+	# Skip pit prevention during build (applied as post-processing below).
+	# We pass skip_pit_check=true to get_height_at() instead of using the shared
+	# _in_pit_check flag, which would stay set across yields and interfere with
+	# other concurrent chunks' height calculations.
 	var rows_this_batch: int = 0
 	for cz in range(_height_cache_size):
 		_height_cache[cz] = []
@@ -238,17 +237,14 @@ func _build_height_cache_batched() -> void:
 		for cx in range(_height_cache_size):
 			var world_x: float = chunk_world_x + ((cx - 1) * cell_size) + cell_size / 2.0
 			var world_z: float = chunk_world_z + ((cz - 1) * cell_size) + cell_size / 2.0
-			_height_cache[cz][cx] = chunk_manager.get_height_at(world_x, world_z)
+			_height_cache[cz][cx] = chunk_manager.get_height_at(world_x, world_z, true)
 
 		rows_this_batch += 1
 		if rows_this_batch >= HEIGHTCACHE_ROWS_PER_BATCH:
 			rows_this_batch = 0
 			await get_tree().process_frame
 			if not is_inside_tree():
-				chunk_manager._in_pit_check = false
 				return
-
-	chunk_manager._in_pit_check = false
 
 	# Post-process: fix pits using cached neighbor heights
 	_apply_pit_prevention()

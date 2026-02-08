@@ -1101,7 +1101,7 @@ func get_vegetation_multiplier(region: RegionType, resource_type: String) -> flo
 	return region_vegetation[region].get(resource_type, 1.0)
 
 
-func get_height_at(x: float, z: float) -> float:
+func get_height_at(x: float, z: float, skip_pit_check: bool = false) -> float:
 	# Snap to cell center FIRST for consistent height across each cell
 	# This ensures objects spawn at the same height as the terrain mesh
 	var snapped_x: float = (floor(x / cell_size) + 0.5) * cell_size
@@ -1296,9 +1296,10 @@ func get_height_at(x: float, z: float) -> float:
 			height = min(ramp_height, max_height_at_dist)
 
 	# Pit prevention: ensure no cell is more than 1 block below ALL cardinal neighbors.
-	# This prevents inescapable holes. Uses a recursion guard so neighbor lookups
-	# skip this step (one level deep only).
-	if not _in_pit_check:
+	# This prevents inescapable holes. skip_pit_check is used by height cache builds
+	# (which do pit prevention as post-processing instead). _in_pit_check is a
+	# recursion guard so neighbor lookups skip this step (one level deep only).
+	if not skip_pit_check and not _in_pit_check:
 		_in_pit_check = true
 		var min_neighbor: float = INF
 		var pit_offsets: Array[Vector2] = [
