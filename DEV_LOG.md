@@ -3422,12 +3422,43 @@ The culprit was `_add_side_faces_cached()` calling `_calculate_side_ao_top()` (1
 
 ---
 
+## Session 32 - Fix Cave Entrance Fall-Through (2026-02-07)
+
+### Problem
+Player fell through the terrain when approaching a cave entrance, ending up at Y=-12.6 with no way to recover.
+
+### Root Cause: Collision Gap Between Terrain Skip Zone and Cave Floor
+When caves were converted to inline terrain features, `is_inside_cave_tunnel()` removes terrain collision boxes in a rectangular zone (X:[-4,+4], Z:[-19,+1] relative to cave center). The cave's own floor collision was supposed to replace this, but it only covered (X:[-3,+3], Z:[-18,0]) — leaving three gaps:
+
+1. **Front entrance (Z=0 to +1)**: 1-unit gap right where the player walks in
+2. **Both sides (X=±3 to ±4)**: 1-unit gaps on each side
+3. **Back (Z=-19 to -18)**: 1-unit gap (covered by back wall)
+
+Additionally, the fall recovery threshold was set at Y=-50, so a player at Y=-12.6 wouldn't trigger the emergency respawn.
+
+### Fix
+- Expanded cave floor collision from `Vector3(6.0, 0.5, 18.0)` to `Vector3(9.0, 0.5, 21.0)`, fully covering the terrain skip zone with 0.5-unit margin on each side
+- Lowered fall recovery threshold from Y=-50 to Y=-15 as a safety net for any future fall-through edge cases
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/cave_entrance.gd` | Expanded floor collision to cover full terrain skip zone |
+| `scripts/player/player_controller.gd` | Lowered `fall_warning_y` from -50 to -15 |
+
+### Test Results
+- All 488 regression tests pass
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test cave interior: verify no terrain/trees/resources inside, clean floor and walls
-2. Add camera collision to prevent clipping into terrain
-3. Add grappling hook sound effect audio files
+1. Play-test cave entrance: verify no fall-through when walking into caves
+2. Play-test cave interior: verify no terrain/trees/resources inside, clean floor and walls
+3. Add camera collision to prevent clipping into terrain
+4. Add grappling hook sound effect audio files
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.
