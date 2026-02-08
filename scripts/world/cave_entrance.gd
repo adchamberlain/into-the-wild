@@ -442,8 +442,10 @@ func _build_collision() -> void:
 	_add_collision(Vector3(3.4, 2.5, -9.0), Vector3(0.8, 5.0, 18.0))
 	# Ceiling
 	_add_collision(Vector3(0, 5.4, -9.0), Vector3(7.6, 0.8, 18.0))
-	# Floor
-	_add_collision(Vector3(0, -0.25, -9.0), Vector3(6.0, 0.5, 18.0))
+	# Floor - must cover the ENTIRE terrain skip zone (X:[-4,+4] Z:[-19,+1])
+	# to prevent fall-through where terrain collision is removed.
+	# Extra 0.5 margin on each side for cell-center rounding safety.
+	_add_collision(Vector3(0, -0.25, -9.0), Vector3(9.0, 0.5, 21.0))
 	# Back wall
 	_add_collision(Vector3(0, 2.5, -18.5), Vector3(7.6, 5.5, 1.0))
 

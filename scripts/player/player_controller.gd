@@ -53,7 +53,7 @@ const INTERACT_COOLDOWN: float = 0.15
 var interact_cooldown_timer: float = 0.0
 
 # Fall-through protection (safety net - shouldn't trigger with BoxShape3D collision)
-var fall_warning_y: float = -50.0  # Emergency recovery if player somehow falls this low
+var fall_warning_y: float = -15.0  # Emergency recovery if player somehow falls this low
 var last_safe_position: Vector3 = Vector3.ZERO  # Last known position on solid ground
 var _has_safe_position: bool = false  # Whether last_safe_position has been set (avoids Vector3.ZERO sentinel issue)
 var safe_position_update_timer: float = 0.0
