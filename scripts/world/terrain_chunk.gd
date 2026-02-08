@@ -467,185 +467,65 @@ func _add_side_faces_cached(st: SurfaceTool, x: float, z: float, size: float, he
 	var base_cx: int = cx + 1
 	var base_cz: int = cz + 1
 
-	# North side (z-)
-	var north_height: float = _height_cache[base_cz - 1][base_cx]
-	if height > north_height:
-		_add_side_quad(st, Vector3(x, height, z), Vector3(x + size, height, z),
-					   Vector3(x + size, north_height, z), Vector3(x, north_height, z),
-					   Vector3(0, 0, -1))
+	# Pre-fetch all cardinal neighbor heights from cache for AO computation
+	var h_north: float = _height_cache[base_cz - 1][base_cx]
+	var h_south: float = _height_cache[base_cz + 1][base_cx]
+	var h_west: float = _height_cache[base_cz][base_cx - 1]
+	var h_east: float = _height_cache[base_cz][base_cx + 1]
 
-	# South side (z+)
-	var south_height: float = _height_cache[base_cz + 1][base_cx]
-	if height > south_height:
-		_add_side_quad(st, Vector3(x + size, height, z + size), Vector3(x, height, z + size),
-					   Vector3(x, south_height, z + size), Vector3(x + size, south_height, z + size),
-					   Vector3(0, 0, 1))
+	# North side (z-): face normal=(0,0,-1), behind=south, front=north, perp=east/west
+	if height > h_north:
+		var ao_top: float = 1.0 if h_south <= height else 0.85
+		var ao_bottom: float = _calc_side_ao_bottom_cached(h_north, h_north, h_east, h_west)
+		_add_side_quad_ao(st, Vector3(x, height, z), Vector3(x + size, height, z),
+					   Vector3(x + size, h_north, z), Vector3(x, h_north, z),
+					   Vector3(0, 0, -1), ao_top, ao_bottom)
 
-	# West side (x-)
-	var west_height: float = _height_cache[base_cz][base_cx - 1]
-	if height > west_height:
-		_add_side_quad(st, Vector3(x, height, z + size), Vector3(x, height, z),
-					   Vector3(x, west_height, z), Vector3(x, west_height, z + size),
-					   Vector3(-1, 0, 0))
+	# South side (z+): face normal=(0,0,1), behind=north, front=south, perp=west/east
+	if height > h_south:
+		var ao_top: float = 1.0 if h_north <= height else 0.85
+		var ao_bottom: float = _calc_side_ao_bottom_cached(h_south, h_south, h_west, h_east)
+		_add_side_quad_ao(st, Vector3(x + size, height, z + size), Vector3(x, height, z + size),
+					   Vector3(x, h_south, z + size), Vector3(x + size, h_south, z + size),
+					   Vector3(0, 0, 1), ao_top, ao_bottom)
 
-	# East side (x+)
-	var east_height: float = _height_cache[base_cz][base_cx + 1]
-	if height > east_height:
-		_add_side_quad(st, Vector3(x + size, height, z), Vector3(x + size, height, z + size),
-					   Vector3(x + size, east_height, z + size), Vector3(x + size, east_height, z),
-					   Vector3(1, 0, 0))
+	# West side (x-): face normal=(-1,0,0), behind=east, front=west, perp=south/north
+	if height > h_west:
+		var ao_top: float = 1.0 if h_east <= height else 0.85
+		var ao_bottom: float = _calc_side_ao_bottom_cached(h_west, h_west, h_south, h_north)
+		_add_side_quad_ao(st, Vector3(x, height, z + size), Vector3(x, height, z),
+					   Vector3(x, h_west, z), Vector3(x, h_west, z + size),
+					   Vector3(-1, 0, 0), ao_top, ao_bottom)
 
-
-func _add_top_face(st: SurfaceTool, x: float, z: float, size: float, height: float, cx: int, cz: int) -> void:
-	var v0 := Vector3(x, height, z)
-	var v1 := Vector3(x + size, height, z)
-	var v2 := Vector3(x + size, height, z + size)
-	var v3 := Vector3(x, height, z + size)
-
-	var normal := Vector3.UP
-
-	# Get cell center for region lookup
-	var center_x: float = x + size / 2.0
-	var center_z: float = z + size / 2.0
-
-	# Get region-specific colors
-	var region: ChunkManager.RegionType = chunk_manager.get_region_at(center_x, center_z)
-	var region_colors: Dictionary = chunk_manager.get_region_colors(region)
-	var grass_color: Color = region_colors["grass"]
-
-	# Color variation based on world position for consistency across chunks
-	var world_cx: int = chunk_coord.x * chunk_manager.chunk_size_cells + cx
-	var world_cz: int = chunk_coord.y * chunk_manager.chunk_size_cells + cz
-	var variation: float = sin(world_cx * 12.9898 + world_cz * 78.233) * 0.08
-
-	var cell_grass: Color = Color(
-		clamp(grass_color.r + variation, grass_color.r - 0.08, grass_color.r + 0.10),
-		clamp(grass_color.g + variation * 0.5, grass_color.g - 0.07, grass_color.g + 0.10),
-		clamp(grass_color.b + variation * 0.3, grass_color.b - 0.07, grass_color.b + 0.07)
-	)
-
-	# Calculate vertex AO for each corner
-	# Sample heights at the 3 diagonal neighbors that share each corner
-	var ao0: float = _calculate_vertex_ao(x, z, height, -1, -1)  # NW corner (v0)
-	var ao1: float = _calculate_vertex_ao(x + size, z, height, 1, -1)  # NE corner (v1)
-	var ao2: float = _calculate_vertex_ao(x + size, z + size, height, 1, 1)  # SE corner (v2)
-	var ao3: float = _calculate_vertex_ao(x, z + size, height, -1, 1)  # SW corner (v3)
-
-	# Apply AO to colors
-	var color0: Color = cell_grass * ao0
-	var color1: Color = cell_grass * ao1
-	var color2: Color = cell_grass * ao2
-	var color3: Color = cell_grass * ao3
-
-	# Get UV coordinates for top face (grass_top texture or stone for rocky)
-	var uvs: Array[Vector2]
-	if region == ChunkManager.RegionType.ROCKY:
-		uvs = TerrainTextures.get_stone_uvs()
-	else:
-		uvs = TerrainTextures.get_top_face_uvs()
-
-	# Triangle 1: v0, v2, v1
-	st.set_color(color0)
-	st.set_normal(normal)
-	st.set_uv(uvs[0])
-	st.add_vertex(v0)
-	st.set_color(color2)
-	st.set_normal(normal)
-	st.set_uv(uvs[2])
-	st.add_vertex(v2)
-	st.set_color(color1)
-	st.set_normal(normal)
-	st.set_uv(uvs[1])
-	st.add_vertex(v1)
-
-	# Triangle 2: v0, v3, v2
-	st.set_color(color0)
-	st.set_normal(normal)
-	st.set_uv(uvs[0])
-	st.add_vertex(v0)
-	st.set_color(color3)
-	st.set_normal(normal)
-	st.set_uv(uvs[3])
-	st.add_vertex(v3)
-	st.set_color(color2)
-	st.set_normal(normal)
-	st.set_uv(uvs[2])
-	st.add_vertex(v2)
+	# East side (x+): face normal=(1,0,0), behind=west, front=east, perp=north/south
+	if height > h_east:
+		var ao_top: float = 1.0 if h_west <= height else 0.85
+		var ao_bottom: float = _calc_side_ao_bottom_cached(h_east, h_east, h_north, h_south)
+		_add_side_quad_ao(st, Vector3(x + size, height, z), Vector3(x + size, height, z + size),
+					   Vector3(x + size, h_east, z + size), Vector3(x + size, h_east, z),
+					   Vector3(1, 0, 0), ao_top, ao_bottom)
 
 
-## Calculate ambient occlusion factor for a vertex corner.
-## dir_x/dir_z indicate which corner (-1,-1 = NW, 1,-1 = NE, 1,1 = SE, -1,1 = SW)
-func _calculate_vertex_ao(vertex_x: float, vertex_z: float, current_height: float, dir_x: int, dir_z: int) -> float:
-	var cell_size: float = chunk_manager.cell_size
-	var ao_strength: float = 0.12  # How much each occluding neighbor darkens
-
-	# Sample the 3 neighbors that share this corner
-	# Cardinal neighbors (share an edge)
-	var neighbor_x_height: float = chunk_manager.get_height_at(vertex_x + dir_x * cell_size, vertex_z)
-	var neighbor_z_height: float = chunk_manager.get_height_at(vertex_x, vertex_z + dir_z * cell_size)
-	# Diagonal neighbor (share just the corner)
-	var neighbor_diag_height: float = chunk_manager.get_height_at(vertex_x + dir_x * cell_size, vertex_z + dir_z * cell_size)
-
-	# Count how many neighbors are higher (would cast shadow on this corner)
+func _calc_side_ao_bottom_cached(bottom_height: float, front_h: float, left_h: float, right_h: float) -> float:
+	## Calculate AO for bottom vertices of a side face using cached heights.
+	var ao_strength: float = 0.10
 	var occlusion_count: int = 0
-	if neighbor_x_height > current_height:
+	if front_h > bottom_height:
 		occlusion_count += 1
-	if neighbor_z_height > current_height:
+	if left_h > bottom_height:
 		occlusion_count += 1
-	if neighbor_diag_height > current_height:
-		# Diagonal counts less (further away)
+	if right_h > bottom_height:
 		occlusion_count += 1
-
-	# AO factor: 1.0 = no occlusion, lower = darker
-	var ao: float = 1.0 - (occlusion_count * ao_strength)
-	return clamp(ao, 0.55, 1.0)  # Don't go too dark
+	var ao: float = 0.90 - (occlusion_count * ao_strength)
+	return clamp(ao, 0.55, 0.95)
 
 
-func _add_side_faces(st: SurfaceTool, x: float, z: float, size: float, height: float, cx: int, cz: int, chunk_size_cells: int) -> void:
-	var cell_size: float = chunk_manager.cell_size
-
-	# Calculate world position for neighbor lookups
-	var chunk_world_x: float = chunk_coord.x * chunk_size_cells * cell_size
-	var chunk_world_z: float = chunk_coord.y * chunk_size_cells * cell_size
-
-	# North side (z-)
-	var north_x: float = x + size / 2.0
-	var north_z: float = z - size / 2.0
-	var north_height: float = chunk_manager.get_height_at(north_x, north_z)
-	if height > north_height:
-		_add_side_quad(st, Vector3(x, height, z), Vector3(x + size, height, z),
-					   Vector3(x + size, north_height, z), Vector3(x, north_height, z),
-					   Vector3(0, 0, -1))
-
-	# South side (z+)
-	var south_x: float = x + size / 2.0
-	var south_z: float = z + size + size / 2.0
-	var south_height: float = chunk_manager.get_height_at(south_x, south_z)
-	if height > south_height:
-		_add_side_quad(st, Vector3(x + size, height, z + size), Vector3(x, height, z + size),
-					   Vector3(x, south_height, z + size), Vector3(x + size, south_height, z + size),
-					   Vector3(0, 0, 1))
-
-	# West side (x-)
-	var west_x: float = x - size / 2.0
-	var west_z: float = z + size / 2.0
-	var west_height: float = chunk_manager.get_height_at(west_x, west_z)
-	if height > west_height:
-		_add_side_quad(st, Vector3(x, height, z + size), Vector3(x, height, z),
-					   Vector3(x, west_height, z), Vector3(x, west_height, z + size),
-					   Vector3(-1, 0, 0))
-
-	# East side (x+)
-	var east_x: float = x + size + size / 2.0
-	var east_z: float = z + size / 2.0
-	var east_height: float = chunk_manager.get_height_at(east_x, east_z)
-	if height > east_height:
-		_add_side_quad(st, Vector3(x + size, height, z), Vector3(x + size, height, z + size),
-					   Vector3(x + size, east_height, z + size), Vector3(x + size, east_height, z),
-					   Vector3(1, 0, 0))
 
 
-func _add_side_quad(st: SurfaceTool, v0: Vector3, v1: Vector3, v2: Vector3, v3: Vector3, normal: Vector3) -> void:
+
+
+func _add_side_quad_ao(st: SurfaceTool, v0: Vector3, v1: Vector3, v2: Vector3, v3: Vector3, normal: Vector3, ao_top: float, ao_bottom: float) -> void:
+	## Draw a side face quad with pre-computed AO values (avoids expensive get_height_at calls).
 	# Get region-specific colors based on position
 	var center_x: float = (v0.x + v1.x) / 2.0
 	var center_z: float = (v0.z + v2.z) / 2.0
@@ -669,12 +549,6 @@ func _add_side_quad(st: SurfaceTool, v0: Vector3, v1: Vector3, v2: Vector3, v3: 
 		clamp(dirt_color.g + variation * 0.8, dirt_color.g - 0.08, dirt_color.g + 0.10),
 		clamp(dirt_color.b + variation * 0.5, dirt_color.b - 0.08, dirt_color.b + 0.10)
 	)
-
-	# Calculate AO for side face vertices
-	# Top vertices (v0, v1) are at the cliff edge - check if there's terrain above (overhang)
-	# Bottom vertices (v2, v3) are in a corner - darker due to surrounding terrain
-	var ao_top: float = _calculate_side_ao_top(center_x, center_z, v0.y, normal)
-	var ao_bottom: float = _calculate_side_ao_bottom(center_x, center_z, v2.y, normal)
 
 	# Get UV coordinates for side faces
 	var side_uvs: Array[Vector2] = TerrainTextures.get_side_face_uvs(total_height > grass_thickness)
@@ -783,53 +657,6 @@ func _add_side_quad(st: SurfaceTool, v0: Vector3, v1: Vector3, v2: Vector3, v3: 
 		st.set_normal(normal)
 		st.set_uv(side_uvs[3])
 		st.add_vertex(v3)
-
-
-## Calculate AO for top vertices of a side face (cliff edge).
-func _calculate_side_ao_top(x: float, z: float, height: float, face_normal: Vector3) -> float:
-	var cell_size: float = chunk_manager.cell_size
-
-	# Check if there's terrain directly above this face (overhang effect)
-	# Sample behind the face (opposite to normal direction) and above
-	var behind_x: float = x - face_normal.x * cell_size
-	var behind_z: float = z - face_normal.z * cell_size
-	var behind_height: float = chunk_manager.get_height_at(behind_x, behind_z)
-
-	# If the terrain behind is higher, this edge is in shadow
-	if behind_height > height:
-		return 0.85  # Subtle darkening at cliff edge
-	return 1.0
-
-
-## Calculate AO for bottom vertices of a side face (in corner/crevice).
-func _calculate_side_ao_bottom(x: float, z: float, height: float, face_normal: Vector3) -> float:
-	var cell_size: float = chunk_manager.cell_size
-	var ao_strength: float = 0.10
-
-	# Bottom vertices are recessed - check surrounding terrain heights
-	# Sample in front of the face and to the sides
-	var front_x: float = x + face_normal.x * cell_size
-	var front_z: float = z + face_normal.z * cell_size
-	var front_height: float = chunk_manager.get_height_at(front_x, front_z)
-
-	# Also check perpendicular directions
-	var perp_x: float = -face_normal.z  # Perpendicular direction
-	var perp_z: float = face_normal.x
-	var left_height: float = chunk_manager.get_height_at(x + perp_x * cell_size, z + perp_z * cell_size)
-	var right_height: float = chunk_manager.get_height_at(x - perp_x * cell_size, z - perp_z * cell_size)
-
-	var occlusion_count: int = 0
-	if front_height > height:
-		occlusion_count += 1
-	if left_height > height:
-		occlusion_count += 1
-	if right_height > height:
-		occlusion_count += 1
-
-	# Bottom of cliffs/walls are naturally darker
-	var base_darkness: float = 0.90  # 10% darker as base
-	var ao: float = base_darkness - (occlusion_count * ao_strength)
-	return clamp(ao, 0.55, 0.95)
 
 
 func _generate_collision_from_mesh(sync: bool = true) -> void:
