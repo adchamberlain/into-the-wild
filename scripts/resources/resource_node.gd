@@ -189,9 +189,11 @@ func _complete_harvest(player: Node) -> void:
 	# Play gather animation
 	_play_gather_animation()
 
-	# Play tree fall sound for trees (multi-chop resources)
-	if chops_required > 1:
+	# Play appropriate harvest completion sound
+	if resource_type == "wood" or secondary_resource_type == "branch":
 		SFXManager.play_sfx("tree_fall")
+	else:
+		SFXManager.play_sfx("pickup")
 
 	# Emit signal for any listeners
 	gathered.emit(resource_type, resource_amount)

@@ -454,7 +454,8 @@ func _collect_campsite_data() -> Dictionary:
 					"x": structure.global_position.x,
 					"y": structure.global_position.y,
 					"z": structure.global_position.z
-				}
+				},
+				"rotation_y": structure.rotation.y
 			}
 
 			# Save fire state if it's a fire pit
@@ -731,7 +732,17 @@ func _recreate_structure(struct_data: Dictionary, container: Node) -> void:
 	if not structure:
 		push_warning("[SaveLoad] Failed to recreate structure: %s" % structure_type)
 		return
+
+	# Recalculate Y from terrain height to prevent floating structures
+	# (terrain generation can produce slightly different heights between sessions)
+	if chunk_manager and chunk_manager.has_method("get_height_at"):
+		var terrain_y: float = chunk_manager.get_height_at(pos.x, pos.z)
+		pos.y = terrain_y
 	structure.global_position = pos
+
+	# Restore rotation so doors/openings face the correct direction
+	if struct_data.has("rotation_y"):
+		structure.rotation.y = struct_data["rotation_y"]
 
 	if container:
 		container.add_child(structure)

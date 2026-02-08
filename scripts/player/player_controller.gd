@@ -37,6 +37,8 @@ var is_in_water: bool = false
 var is_climbing: bool = false
 var climbing_structure: Node = null  # The ladder we're climbing
 var is_grappling: bool = false  # Whether player is being pulled by grappling hook
+var thorn_slow_active: bool = false  # Whether player is slowed by thorns
+var thorn_slow_multiplier: float = 1.0  # Speed multiplier when in thorns
 
 # Performance: throttle raycast checks
 const INTERACTION_CHECK_INTERVAL: float = 0.1  # Check 10x/sec instead of 60x/sec
@@ -236,6 +238,13 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 
+	# Play footstep/splash sounds based on actual movement (after collision resolution)
+	var horizontal_speed: float = Vector2(velocity.x, velocity.z).length()
+	if horizontal_speed > 0.5 and (is_on_floor() or actually_swimming):
+		_update_footsteps(delta)
+	elif horizontal_speed <= 0.5:
+		footstep_timer = 0.0
+
 
 func _handle_controller_look(delta: float) -> void:
 	# Get right stick input for camera look
@@ -277,6 +286,10 @@ func _process_normal_movement(delta: float) -> void:
 	is_sprinting = Input.is_action_pressed("sprint") and is_on_floor()
 	current_speed = sprint_speed if is_sprinting else walk_speed
 
+	# Apply thorn slow effect
+	if thorn_slow_active:
+		current_speed *= thorn_slow_multiplier
+
 	# Get input direction from actions (supports both keyboard and controller)
 	var input_dir: Vector2 = _get_movement_input()
 
@@ -288,10 +301,6 @@ func _process_normal_movement(delta: float) -> void:
 	if direction.length() > 0:
 		velocity.x = direction.x * current_speed
 		velocity.z = direction.z * current_speed
-
-		# Play footstep sounds while moving on floor
-		if is_on_floor():
-			_update_footsteps(get_physics_process_delta_time())
 	else:
 		# Decelerate smoothly
 		velocity.x = move_toward(velocity.x, 0, current_speed)
@@ -353,14 +362,10 @@ func _process_swimming(delta: float) -> void:
 	if direction.length() > 0:
 		velocity.x = direction.x * swim_move_speed
 		velocity.z = direction.z * swim_move_speed
-
-		# Play water splashing sounds while swimming
-		_update_footsteps(delta)
 	else:
 		# Decelerate smoothly (faster in water - more drag)
 		velocity.x = move_toward(velocity.x, 0, swim_move_speed * 2)
 		velocity.z = move_toward(velocity.z, 0, swim_move_speed * 2)
-		footstep_timer = 0.0
 
 
 func _update_interaction_target() -> void:
@@ -458,6 +463,12 @@ func set_grappling(grappling: bool) -> void:
 		# Clear interaction target while grappling
 		current_interaction_target = null
 		interaction_cleared.emit()
+
+
+## Set thorn slow effect on/off.
+func set_thorn_slow(active: bool, factor: float) -> void:
+	thorn_slow_active = active
+	thorn_slow_multiplier = factor if active else 1.0
 
 
 ## Set whether player is in water (swimming).

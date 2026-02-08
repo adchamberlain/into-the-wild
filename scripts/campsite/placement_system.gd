@@ -180,12 +180,18 @@ func place_torch_instant() -> bool:
 	if not inventory.has_item("torch"):
 		return false
 
-	# Calculate position 3m in front of player (same as _update_preview_position)
-	var forward: Vector3 = -camera.global_transform.basis.z
-	forward.y = 0
-	forward = forward.normalized()
+	# Raycast from camera crosshair to find where player is aiming
+	var hit_pos: Vector3 = _get_crosshair_terrain_hit(placement_distance + 2.0)
 
-	var target_pos: Vector3 = player.global_position + forward * placement_distance
+	var target_pos: Vector3
+	if hit_pos != Vector3.ZERO:
+		target_pos = hit_pos
+	else:
+		# Fallback: project forward from player if crosshair doesn't hit terrain
+		var forward: Vector3 = -camera.global_transform.basis.z
+		forward.y = 0
+		forward = forward.normalized()
+		target_pos = player.global_position + forward * placement_distance
 
 	# Check if we're in a cave (ChunkManager doesn't exist there)
 	var in_overworld: bool = is_instance_valid(chunk_manager) and chunk_manager.has_method("get_height_at")
@@ -260,12 +266,18 @@ func place_lodestone_instant() -> bool:
 	if not inventory.has_item("lodestone"):
 		return false
 
-	# Calculate position 3m in front of player
-	var forward: Vector3 = -camera.global_transform.basis.z
-	forward.y = 0
-	forward = forward.normalized()
+	# Raycast from camera crosshair to find where player is aiming
+	var hit_pos: Vector3 = _get_crosshair_terrain_hit(placement_distance + 2.0)
 
-	var target_pos: Vector3 = player.global_position + forward * placement_distance
+	var target_pos: Vector3
+	if hit_pos != Vector3.ZERO:
+		target_pos = hit_pos
+	else:
+		# Fallback: project forward from player if crosshair doesn't hit terrain
+		var forward: Vector3 = -camera.global_transform.basis.z
+		forward.y = 0
+		forward = forward.normalized()
+		target_pos = player.global_position + forward * placement_distance
 
 	# Check if we're in a cave (ChunkManager doesn't exist there)
 	var in_overworld: bool = is_instance_valid(chunk_manager) and chunk_manager.has_method("get_height_at")
@@ -440,6 +452,31 @@ func _apply_preview_material(node: Node) -> void:
 
 
 ## Get ground height at a position using raycast.
+## Raycast from camera along crosshair direction to find where it hits terrain.
+## Returns the hit position, or Vector3.ZERO if no hit within max_dist.
+func _get_crosshair_terrain_hit(max_dist: float = 6.0) -> Vector3:
+	if not player or not camera:
+		return Vector3.ZERO
+
+	var space_state: PhysicsDirectSpaceState3D = player.get_world_3d().direct_space_state
+	if not space_state:
+		return Vector3.ZERO
+
+	var ray_origin: Vector3 = camera.global_position
+	var ray_dir: Vector3 = -camera.global_transform.basis.z
+	var ray_end: Vector3 = ray_origin + ray_dir * max_dist
+
+	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.new()
+	query.from = ray_origin
+	query.to = ray_end
+	query.collision_mask = 1  # Terrain layer
+
+	var result: Dictionary = space_state.intersect_ray(query)
+	if result:
+		return result.position
+	return Vector3.ZERO
+
+
 func _get_ground_height(x: float, z: float, from_y: float = 50.0) -> float:
 	if not player:
 		return 0.0

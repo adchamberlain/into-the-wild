@@ -1,6 +1,7 @@
 extends StaticBody3D
 class_name ObstacleThorns
-## Thorny bush obstacle that blocks paths until cleared with a machete.
+## Thorny bush obstacle that slows and damages players who push through.
+## Can be cleared with a machete (3 chops).
 
 signal cleared()
 
@@ -8,12 +9,22 @@ signal cleared()
 @export var chops_required: int = 3
 @export var required_tool: String = "machete"
 
+# Damage/slow properties
+const DAMAGE_PER_SECOND: float = 2.0
+const SLOW_FACTOR: float = 0.4  # Player moves at 40% speed in thorns
+const DAMAGE_TICK_INTERVAL: float = 0.5
+
 # State
 var is_cleared: bool = false
 var chop_progress: float = 0.0
+var player_inside: bool = false
+var damage_timer: float = 0.0
 
 # Visual nodes
 var thorn_meshes: Array[MeshInstance3D] = []
+
+# Detection area for player contact
+var detection_area: Area3D = null
 
 # Shared materials (static to avoid shader compilation per instance)
 static var _base_mat: StandardMaterial3D = null
@@ -48,18 +59,46 @@ func _ready() -> void:
 	add_to_group("interactable")
 	add_to_group("obstacle")
 
-	# Create visual representation
+	# Disable the StaticBody3D collision so player can walk through
+	# (we use Area3D for detection instead of blocking)
+	collision_layer = 0
+	collision_mask = 0
+
+	# Create visual representation and detection area
 	call_deferred("_setup_visuals")
 
 
+func _physics_process(delta: float) -> void:
+	if is_cleared or not player_inside:
+		return
+
+	# Deal periodic damage to player while inside thorns
+	damage_timer += delta
+	if damage_timer >= DAMAGE_TICK_INTERVAL:
+		damage_timer = 0.0
+		var player: Node = get_tree().get_first_node_in_group("player")
+		if player:
+			var stats: PlayerStats = player.get_node_or_null("PlayerStats")
+			if stats and stats.has_method("take_damage"):
+				stats.take_damage(DAMAGE_PER_SECOND * DAMAGE_TICK_INTERVAL)
+
+
 func _setup_visuals() -> void:
-	# Create collision shape for blocking
-	var collision := CollisionShape3D.new()
-	var box_shape := BoxShape3D.new()
-	box_shape.size = Vector3(8.0, 3.0, 4.0)  # Wide obstacle to block paths
-	collision.shape = box_shape
-	collision.position = Vector3(0, 1.5, 0)
-	add_child(collision)
+	# Create Area3D for detecting player entry (not blocking movement)
+	detection_area = Area3D.new()
+	detection_area.collision_layer = 0
+	detection_area.collision_mask = 1  # Detect player on layer 1
+
+	var area_collision := CollisionShape3D.new()
+	var area_shape := BoxShape3D.new()
+	area_shape.size = Vector3(8.0, 3.0, 4.0)
+	area_collision.shape = area_shape
+	area_collision.position = Vector3(0, 1.5, 0)
+	detection_area.add_child(area_collision)
+
+	detection_area.body_entered.connect(_on_body_entered)
+	detection_area.body_exited.connect(_on_body_exited)
+	add_child(detection_area)
 
 	# Get shared materials (avoids shader compilation per obstacle)
 	var base_mat: StandardMaterial3D = _get_base_material()
@@ -185,6 +224,25 @@ func _setup_visuals() -> void:
 		thorn_meshes.append(vine)
 
 
+func _on_body_entered(body: Node3D) -> void:
+	if body.is_in_group("player"):
+		player_inside = true
+		damage_timer = 0.0
+		# Apply slow effect
+		if body.has_method("set_thorn_slow"):
+			body.set_thorn_slow(true, SLOW_FACTOR)
+		_show_notification("Thorns! Taking damage...", Color(1.0, 0.5, 0.5))
+
+
+func _on_body_exited(body: Node3D) -> void:
+	if body.is_in_group("player"):
+		player_inside = false
+		damage_timer = 0.0
+		# Remove slow effect
+		if body.has_method("set_thorn_slow"):
+			body.set_thorn_slow(false, 1.0)
+
+
 ## Get interaction text for HUD prompt.
 func get_interaction_text() -> String:
 	if is_cleared:
@@ -244,6 +302,13 @@ func receive_chop(player: Node) -> bool:
 func _clear_obstacle() -> void:
 	is_cleared = true
 
+	# Remove slow effect if player is still inside
+	if player_inside:
+		var player: Node = get_tree().get_first_node_in_group("player")
+		if player and player.has_method("set_thorn_slow"):
+			player.set_thorn_slow(false, 1.0)
+		player_inside = false
+
 	# Play clear sound
 	var sfx: Node = get_node_or_null("/root/SFXManager")
 	if sfx and sfx.has_method("play_sfx"):
@@ -264,10 +329,11 @@ func _clear_obstacle() -> void:
 
 
 func _finish_clear() -> void:
-	# Disable collision so player can pass through
-	for child in get_children():
-		if child is CollisionShape3D:
-			child.disabled = true
+	# Disable detection area
+	if detection_area:
+		for child in detection_area.get_children():
+			if child is CollisionShape3D:
+				child.disabled = true
 
 	# Remove from interactable group
 	remove_from_group("interactable")
@@ -331,10 +397,11 @@ func load_save_data(data: Dictionary) -> void:
 
 
 func _apply_cleared_state() -> void:
-	# Apply cleared state visually
-	for child in get_children():
-		if child is CollisionShape3D:
-			child.disabled = true
+	# Disable detection area
+	if detection_area:
+		for child in detection_area.get_children():
+			if child is CollisionShape3D:
+				child.disabled = true
 
 	remove_from_group("interactable")
 
