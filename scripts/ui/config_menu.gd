@@ -844,6 +844,8 @@ func _update_hint_label() -> void:
 	# Update hint label - always show both keyboard and controller close methods
 	if hint_label:
 		if using_controller:
-			hint_label.text = "↑↓ Navigate  ←→ Adjust  A Select  B/TAB Close"
+			var accept_btn: String = input_mgr.get_prompt("ui_accept") if input_mgr else "✕"
+			var cancel_btn: String = input_mgr.get_prompt("ui_cancel") if input_mgr else "○"
+			hint_label.text = "↑↓ Navigate  ←→ Adjust  %s Select  %s Close" % [accept_btn, cancel_btn]
 		else:
-			hint_label.text = "Press TAB or B to close"
+			hint_label.text = "Press TAB to close"
