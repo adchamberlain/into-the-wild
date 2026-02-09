@@ -3740,11 +3740,37 @@ Complete redesign of cave geometry to snap all X/Z boundaries to multiples of `c
 
 ---
 
+## Session 47 - Cave Visual Fixes and Decoration Exclusion (2026-02-08)
+
+### Stairway Seam Fix
+Fixed z-fighting seam visible on cave staircase steps. The 4 steps had Z-depth of exactly 3.0, creating perfectly coplanar faces at their Z boundaries (Z=3.0, Z=0.0, Z=-3.0). Extended each step's Z depth from 3.0 to 3.1 (both visual meshes and collision shapes) so adjacent steps overlap by 0.05 units on each side, eliminating the z-fighting.
+
+### Decoration Cave Exclusion
+Flowers and grass tufts were spawning in mid-air over cave openings because `_spawn_chunk_decorations()` didn't check for cave zones. Trees and resources already excluded cave areas via `is_near_cave_entrance()`, but decorations were missing this check. Added the same `is_near_cave_entrance()` exclusion to both grass tuft and flower spawning loops.
+
+### README Update
+Updated README.md with recent feature additions:
+- Birch Bark Map feature and crafting recipe (Session 43)
+- Birch bark harvesting with machete
+- Auto step-up terrain traversal (Session 44)
+- Grappling hook slot number fix (22 → 13, from Session 41)
+
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/world/cave_entrance.gd` | Modified | Stair step Z depth 3.0 → 3.1 (visual + collision) to fix z-fighting seams |
+| `scripts/world/terrain_chunk.gd` | Modified | Added `is_near_cave_entrance()` check to grass tuft and flower spawning |
+| `README.md` | Modified | Added bark map, birch harvesting, auto step-up, fixed grappling hook slot |
+
+### Test Results
+- All 479 regression tests pass
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test grid-snapped caves: approach from all sides, verify no terrain gaps
-2. Verify 4-step stairway: 1.5 drops are jumpable both down and up
+1. Play-test cave stairway seam fix: verify no visible seams on steps
+2. Play-test decoration exclusion: verify no floating flowers/grass over cave openings
 3. Play-test birch bark harvesting: find birch trees, verify harvest and cooldown
 4. Play-test bark map: craft and open map, verify terrain/water/caves shown correctly
 5. Play-test auto step-up: walk across forest terrain, verify smooth traversal

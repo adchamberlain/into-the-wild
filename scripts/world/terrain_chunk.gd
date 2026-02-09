@@ -1166,6 +1166,11 @@ func _spawn_chunk_decorations() -> void:
 			attempts += 1
 			continue
 
+		# Skip if over cave entrance/tunnel
+		if chunk_manager.is_near_cave_entrance(world_x, world_z):
+			attempts += 1
+			continue
+
 		# Skip if too close to campsite center
 		var dist_from_camp: float = Vector2(world_x, world_z).length()
 		if dist_from_camp < 8.0:
@@ -1203,6 +1208,11 @@ func _spawn_chunk_decorations() -> void:
 
 		# Skip if in any pond area
 		if chunk_manager.is_near_any_pond(world_x, world_z, 1.0):
+			attempts += 1
+			continue
+
+		# Skip if over cave entrance/tunnel
+		if chunk_manager.is_near_cave_entrance(world_x, world_z):
 			attempts += 1
 			continue
 

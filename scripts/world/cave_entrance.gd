@@ -223,17 +223,18 @@ func _build_stairway(_rng: RandomNumberGenerator) -> void:
 	var step_mat: StandardMaterial3D = _get_step_material()
 
 	# Step 1: Z:[+3,+6], tread top Y=-1.5, fill height 4.5
+	# Z depth 3.1 (overlap 0.1 into adjacent steps to prevent z-fighting seams)
 	_add_interior_rock(
-		Vector3(0, -3.75, 4.5), Vector3(6.0, 4.5, 3.0), Vector3(0, 0, 0), step_mat)
+		Vector3(0, -3.75, 4.5), Vector3(6.0, 4.5, 3.1), Vector3(0, 0, 0), step_mat)
 	# Step 2: Z:[0,+3], tread top Y=-3.0, fill height 3.0
 	_add_interior_rock(
-		Vector3(0, -4.5, 1.5), Vector3(6.0, 3.0, 3.0), Vector3(0, 0, 0), step_mat)
+		Vector3(0, -4.5, 1.5), Vector3(6.0, 3.0, 3.1), Vector3(0, 0, 0), step_mat)
 	# Step 3: Z:[-3,0], tread top Y=-4.5, fill height 1.5
 	_add_interior_rock(
-		Vector3(0, -5.25, -1.5), Vector3(6.0, 1.5, 3.0), Vector3(0, 0, 0), step_mat)
+		Vector3(0, -5.25, -1.5), Vector3(6.0, 1.5, 3.1), Vector3(0, 0, 0), step_mat)
 	# Step 4: Z:[-6,-3], tread top Y=-6.0, thin slab 0.3
 	_add_interior_rock(
-		Vector3(0, -6.15, -4.5), Vector3(6.0, 0.3, 3.0), Vector3(0, 0, 0), step_mat)
+		Vector3(0, -6.15, -4.5), Vector3(6.0, 0.3, 3.1), Vector3(0, 0, 0), step_mat)
 
 	# Tunnel entrance overhang where tunnel begins (below terrain surface)
 	var ceiling_mat: StandardMaterial3D = _get_ceiling_material()
@@ -382,10 +383,11 @@ func _build_cave_area() -> void:
 
 func _build_collision() -> void:
 	# -- Stairway step collision (4 solid fills, 1.5 drop per step) --
-	_add_collision(Vector3(0, -3.75, 4.5), Vector3(6.0, 4.5, 3.0))    # Step 1: top=-1.5
-	_add_collision(Vector3(0, -4.5, 1.5), Vector3(6.0, 3.0, 3.0))     # Step 2: top=-3.0
-	_add_collision(Vector3(0, -5.25, -1.5), Vector3(6.0, 1.5, 3.0))   # Step 3: top=-4.5
-	_add_collision(Vector3(0, -6.15, -4.5), Vector3(6.0, 0.3, 3.0))   # Step 4: top=-6.0
+	# Z depth 3.1 to match visual overlap
+	_add_collision(Vector3(0, -3.75, 4.5), Vector3(6.0, 4.5, 3.1))    # Step 1: top=-1.5
+	_add_collision(Vector3(0, -4.5, 1.5), Vector3(6.0, 3.0, 3.1))     # Step 2: top=-3.0
+	_add_collision(Vector3(0, -5.25, -1.5), Vector3(6.0, 1.5, 3.1))   # Step 3: top=-4.5
+	_add_collision(Vector3(0, -6.15, -4.5), Vector3(6.0, 0.3, 3.1))   # Step 4: top=-6.0
 
 	# -- Crater side walls (widened 1.8 to match visual, extend to Z:±7.5) --
 	_add_collision(Vector3(-3.6, -3.0, 0), Vector3(1.8, 6.0, 15.0))   # Left
