@@ -1123,17 +1123,6 @@ func get_height_at(x: float, z: float, skip_pit_check: bool = false) -> float:
 	var cave_platform_height: float = 2.0  # Low walkable platform height
 	var cave_max_slope: float = 0.67  # Max height per world unit (2.0 per cell) - ensures climbability
 
-	# Rectangular flat zone: ensures terrain at skip zone boundaries is flat at platform height.
-	# The skip zone (X:[-4,+4] Z:[-25,+4]) extends beyond the circular flat radius at the back,
-	# so without this check, terrain at Z=-25 would be at ramp height instead of 2.0.
-	for cave in cave_entrances:
-		var cave_center: Vector2 = cave["center"]
-		var local_x: float = snapped_x - cave_center.x
-		var local_z: float = snapped_z - cave_center.y
-		# 1 unit margin beyond skip zone for seamless terrain edge
-		if local_x >= -5.0 and local_x <= 5.0 and local_z >= -26.0 and local_z <= 5.0:
-			return cave_platform_height
-
 	for cave in cave_entrances:
 		var cave_center: Vector2 = cave["center"]
 		var dist_to_cave: float = Vector2(snapped_x - cave_center.x, snapped_z - cave_center.y).length()
@@ -1638,13 +1627,14 @@ func is_near_any_pond(world_x: float, world_z: float, buffer: float = 2.0) -> bo
 func is_inside_cave_tunnel(world_x: float, world_z: float) -> bool:
 	## Check if a world position falls inside the cave CRATER/SINKHOLE area only.
 	## Only the crater opening (where stairs descend) skips terrain generation.
-	## The tunnel area (z < -6) is NOT skipped — normal terrain generates on top,
+	## The tunnel area (z < -5) is NOT skipped — normal terrain generates on top,
 	## giving the tunnel a natural grass surface like Minecraft caves.
+	## Kept tight (X:[-3,+3] Z:[-5,+4]) so terrain covers most of the cave structure.
 	for cave in cave_entrances:
 		var cave_center: Vector2 = cave["center"]
 		var local_x: float = world_x - cave_center.x
 		var local_z: float = world_z - cave_center.y
-		if local_x >= -4.0 and local_x <= 4.0 and local_z >= -6.0 and local_z <= 4.0:
+		if local_x >= -3.0 and local_x <= 3.0 and local_z >= -5.0 and local_z <= 4.0:
 			return true
 	return false
 

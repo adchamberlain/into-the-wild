@@ -3498,14 +3498,44 @@ Terrain surface (y=0)
 
 ---
 
+## Session 40 - Cave Overhaul: Deeper Cave, Movement Fix, Z-Fighting Fix (2026-02-08)
+
+### Summary
+Comprehensive cave entrance overhaul fixing four major issues:
+1. **Movement bug fixed**: Removed rectangular flat zone check from `get_height_at()` that created hard height edges causing players to get stuck on block boundaries in flat terrain
+2. **Z-fighting eliminated**: Lowered ALL cave geometry tops to y<=-0.3 (local) so nothing overlaps with terrain at y=0.0
+3. **Terrain gap minimized**: Shrunk skip zone from X:[-4,+4] Z:[-6,+4] to X:[-3,+3] Z:[-5,+4] — smaller hole in terrain means less visible gap
+4. **Cave made much deeper**: Steps now descend 1.0 per step (was 0.5), tunnel floor at y=-5.5 (was -3.0), giving ~5 units of headroom
+5. **Removed above-ground decorations**: No more rim boulders, scattered rocks, or moss patches that caused z-fighting with terrain
+
+### Key Design Changes
+- **5 deep steps**: Each step drops 1.0 unit, from y=-1.0 to y=-5.0 (tunnel floor at y=-5.5)
+- **~5 unit headroom**: Tunnel ceiling at y=-0.8, floor at y=-5.5
+- **No surface decorations**: Terrain generates naturally over the cave, Minecraft-style
+- **Tighter walls**: X=±2.8 (was ±3.5), matching tighter skip zone
+- **Movement fix**: Circular flat zone (16-unit radius) + ramp zone (16-46 units) handles all terrain transitions smoothly without hard edges
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/chunk_manager.gd` | Removed rectangular flat zone check from `get_height_at()` (fixes movement bug). Shrunk `is_inside_cave_tunnel()` skip zone to X:[-3,+3] Z:[-5,+4]. |
+| `scripts/world/cave_entrance.gd` | Deepened cave: steps 1.0/step to y=-5.0, floor y=-5.5. Lowered all wall/ceiling tops below y=-0.3. Removed rim boulders, scattered rocks, moss. Tightened walls to X=±2.8. Updated collision, interior details, resources for new depth. |
+
+### Test Results
+- All 488 regression tests pass
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test cave entrance: verify sinkhole looks natural from above, no floating terrain
-2. Play-test descent: walk down all 5 steps smoothly, no fall-through at step edges
-3. Play-test tunnel: verify darkness triggers, crystals/ore visible, no clipping
-4. Add camera collision to prevent clipping into terrain
-5. Add grappling hook sound effect audio files
+1. Play-test cave entrance: verify no z-fighting, natural terrain above tunnel
+2. Play-test movement: verify no stuck-on-edges bug in flat terrain areas
+3. Play-test descent: walk down deeper steps smoothly
+4. Play-test tunnel: verify darkness, crystals/ore on floor, headroom feels good
+5. Add camera collision to prevent clipping into terrain
+6. Add grappling hook sound effect audio files
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.
