@@ -3556,15 +3556,73 @@ Removed the rope ladder item entirely from the game. The grappling hook already 
 
 ---
 
+## Session 42 - Config Menu Fix, Remove Thorns, Cave Gap Fix (2026-02-08)
+
+### Config Menu: PlayStation Button Labels
+Fixed the config menu navigation hint at the bottom of the screen. It displayed Xbox labels ("A Select  B/TAB Close") instead of PlayStation symbols. Now uses `InputManager.get_prompt()` to dynamically show correct symbols for the connected controller (e.g., "✕ Select  ○ Close"). Also removed stale "B" from the keyboard-mode hint.
+
+| File | Changes |
+|------|---------|
+| `scripts/ui/config_menu.gd` | Use `InputManager.get_prompt("ui_accept")`/`get_prompt("ui_cancel")` for controller hints |
+
+### Remove Thorn Bush Obstacles
+Removed the thorn bush obstacle system entirely. Thorns looked bad visually and the Area3D damage/slow mechanic didn't work reliably. The machete tool remains as a standalone weapon.
+
+**Removed:**
+- `scripts/world/obstacle_thorns.gd` (411 lines) — full ObstacleThorns implementation
+- Obstacle generation, spawning, tracking, and save/load in chunk_manager.gd
+- Thorn slow effect (`thorn_slow_active`, `set_thorn_slow()`) from player_controller.gd
+- Obstacle save/load blocks from save_load.gd
+- Thorn references from game spec and README
+
+| File | Changes |
+|------|---------|
+| `scripts/world/obstacle_thorns.gd` | **Deleted** |
+| `scripts/world/chunk_manager.gd` | Removed obstacle vars, `_generate_obstacles()`, `_spawn_obstacles_in_chunk()`, `_spawn_obstacle()`, `get_spawned_obstacles()`, `get_obstacles_save_data()`, `load_obstacles_save_data()`, script loading |
+| `scripts/player/player_controller.gd` | Removed `thorn_slow_active`, `thorn_slow_multiplier`, slow effect application, `set_thorn_slow()` |
+| `scripts/core/save_load.gd` | Removed obstacle save/load blocks |
+| `into-the-wild-game-spec.md` | Removed thorn obstacle example |
+| `README.md` | Updated machete description |
+| `tests/test_structure_data.gd` | Fixed pre-existing structure count (15 → 14) |
+
+### Cave Entrance Terrain Gap and Fall Recovery
+
+**Bug 1: Terrain gap to the left of cave entrances**
+
+**Symptom**: Player fell through a gap in the landscape next to cave entrances at approximately (39, -3.5, -123).
+
+**Cause**: The cave's collision walls (0.8 units wide at X:±2.8) didn't extend far enough to guarantee overlap with terrain cells. The terrain skip zone is X:[-3,+3] but cells (cell_size=3.0) aren't aligned to the cave center. Depending on grid alignment, up to 1.5 units of gap could exist between the nearest terrain collision block edge and the cave wall — enough for the player to fall through.
+
+**Fix**: Widened cave collision walls to guarantee overlap regardless of grid alignment:
+- Side walls: 0.8 → 2.8 wide (center shifted outward to ±3.8), extending to X:±5.2
+- Front wall: 6.4 → 10.4 wide, extended forward from 0.8 to 2.2 deep
+- All collision tops raised from y=-0.3 to y=+0.2 (local) to overlap vertically with terrain blocks
+
+**Bug 2: Fall recovery lands underground**
+
+**Symptom**: Recovery teleported player to Y:-2.999, still below terrain. Log: `[Player] Recovered to last safe position: (39.40995, -2.999058, -127.4506)`
+
+**Cause**: Safe position tracker stored position when `is_on_floor()` was true, which included standing on cave geometry below the terrain surface. Recovery put the player back at that underground position.
+
+**Fix**: Recovery now uses `chunk_manager.get_height_at()` to find the actual terrain surface height at the recovery XZ position, and teleports to `terrain_height + 1.0`. Falls back to last safe position or spawn if chunk_manager is unavailable.
+
+| File | Changes |
+|------|---------|
+| `scripts/world/cave_entrance.gd` | Widened side walls (2.8), front wall (10.4×2.2), raised collision tops |
+| `scripts/player/player_controller.gd` | `_recover_from_fall()` uses `get_height_at()` for terrain-aware recovery, added `_find_chunk_manager()` helper |
+
+### Test Results
+- All 473 regression tests pass (count reduced from 488 due to thorn removal and structure count fix)
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test cave entrance: verify no z-fighting, natural terrain above tunnel
-2. Play-test movement: verify no stuck-on-edges bug in flat terrain areas
-3. Play-test descent: walk down deeper steps smoothly
-4. Play-test tunnel: verify darkness, crystals/ore on floor, headroom feels good
-5. Add camera collision to prevent clipping into terrain
-6. Add grappling hook sound effect audio files
+1. Play-test cave entrance gap fix: approach cave from all sides, verify no fall-through
+2. Play-test fall recovery: verify recovery lands on terrain surface
+3. Add camera collision to prevent clipping into terrain
+4. Add grappling hook sound effect audio files
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.
