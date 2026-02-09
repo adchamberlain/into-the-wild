@@ -254,10 +254,11 @@ func _build_stairway(rng: RandomNumberGenerator) -> void:
 		)
 
 	# Side earth walls along stairway (tops at y=-0.3, below terrain)
+	# Z-size 9.5 (center -1.75) covers Z:[-6.5,+3.0] to close visual gap with tunnel walls at Z:-6.
 	_add_interior_rock(
-		Vector3(-2.8, -2.8, -0.75), Vector3(1.0, 5.0, 7.5), Vector3(0, 0, 0), earth_mat)
+		Vector3(-2.8, -2.8, -1.75), Vector3(1.0, 5.0, 9.5), Vector3(0, 0, 0), earth_mat)
 	_add_interior_rock(
-		Vector3(2.8, -2.8, -0.75), Vector3(1.0, 5.0, 7.5), Vector3(0, 0, 0), earth_mat)
+		Vector3(2.8, -2.8, -1.75), Vector3(1.0, 5.0, 9.5), Vector3(0, 0, 0), earth_mat)
 
 	# Earth/rock overhang where tunnel begins (below terrain surface)
 	var ceiling_mat: StandardMaterial3D = _get_ceiling_material()
@@ -434,17 +435,6 @@ func _build_collision() -> void:
 
 	# -- Floor slab covering crater area --
 	_add_collision(Vector3(0, -5.75, -1.0), Vector3(8.0, 0.5, 11.0))
-
-	# -- Surface-level terrain caps (Y=0) --
-	# Fill gaps where terrain cells are removed beyond the cave's underground collision.
-	# The terrain skip zone checks cell centers, but cells extend ±1.5 units past their
-	# center, so terrain removal reaches up to 1.5 units beyond the skip zone boundary.
-	# These flat slabs at Y=0 (local) = terrain surface cover the expanded edges,
-	# leaving the stairway opening (X:[-2.3,+2.3], Z:[-4.5,+3.0]) clear.
-	_add_collision(Vector3(-4.0, -0.25, -1.0), Vector3(4.0, 0.5, 14.0))  # Left cap
-	_add_collision(Vector3(4.0, -0.25, -1.0), Vector3(4.0, 0.5, 14.0))   # Right cap
-	_add_collision(Vector3(0, -0.25, -6.0), Vector3(4.6, 0.5, 3.0))      # Back cap
-	_add_collision(Vector3(0, -0.25, 4.5), Vector3(4.6, 0.5, 3.0))       # Front cap
 
 
 func _add_collision(pos: Vector3, size: Vector3) -> void:

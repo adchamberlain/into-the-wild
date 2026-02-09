@@ -1544,12 +1544,18 @@ func is_inside_cave_tunnel(world_x: float, world_z: float) -> bool:
 	## Only the crater opening (where stairs descend) skips terrain generation.
 	## The tunnel area (z < -5) is NOT skipped — normal terrain generates on top,
 	## giving the tunnel a natural grass surface like Minecraft caves.
-	## Kept tight (X:[-3,+3] Z:[-5,+4]) so terrain covers most of the cave structure.
+	##
+	## This function receives cell CENTER coordinates. To prevent removing cells that
+	## only partially overlap the intended zone, we shrink the check boundaries by
+	## cell_size/2 on each side. A cell is only skipped if its ENTIRE footprint falls
+	## within the intended zone X:[-3,+3] Z:[-5,+4].
+	var half_cell: float = cell_size / 2.0
 	for cave in cave_entrances:
 		var cave_center: Vector2 = cave["center"]
 		var local_x: float = world_x - cave_center.x
 		var local_z: float = world_z - cave_center.y
-		if local_x >= -3.0 and local_x <= 3.0 and local_z >= -5.0 and local_z <= 4.0:
+		if (local_x >= -3.0 + half_cell and local_x <= 3.0 - half_cell
+				and local_z >= -5.0 + half_cell and local_z <= 4.0 - half_cell):
 			return true
 	return false
 
