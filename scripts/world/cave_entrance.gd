@@ -418,8 +418,9 @@ func _build_collision() -> void:
 	# of grid alignment. The terrain skip zone is X:[-3,+3] but cell boundaries
 	# don't align to cave center, so walls must extend well past the skip zone edge.
 	# Center shifted outward; inner edge stays at ~±2.4 (stairway is 4.6 wide).
-	_add_collision(Vector3(-3.8, -2.55, -0.5), Vector3(2.8, 5.5, 9.0))
-	_add_collision(Vector3(3.8, -2.55, -0.5), Vector3(2.8, 5.5, 9.0))
+	# Z-size 11.0 (center -1.5) covers Z:[-7,+4] to close gap with tunnel walls at Z:-6.
+	_add_collision(Vector3(-3.8, -2.55, -1.5), Vector3(2.8, 5.5, 11.0))
+	_add_collision(Vector3(3.8, -2.55, -1.5), Vector3(2.8, 5.5, 11.0))
 	# Front wall - widened to match side walls, extended forward to overlap terrain
 	_add_collision(Vector3(0, -2.55, 4.5), Vector3(10.4, 5.5, 2.2))
 
@@ -433,6 +434,17 @@ func _build_collision() -> void:
 
 	# -- Floor slab covering crater area --
 	_add_collision(Vector3(0, -5.75, -1.0), Vector3(8.0, 0.5, 11.0))
+
+	# -- Surface-level terrain caps (Y=0) --
+	# Fill gaps where terrain cells are removed beyond the cave's underground collision.
+	# The terrain skip zone checks cell centers, but cells extend ±1.5 units past their
+	# center, so terrain removal reaches up to 1.5 units beyond the skip zone boundary.
+	# These flat slabs at Y=0 (local) = terrain surface cover the expanded edges,
+	# leaving the stairway opening (X:[-2.3,+2.3], Z:[-4.5,+3.0]) clear.
+	_add_collision(Vector3(-4.0, -0.25, -1.0), Vector3(4.0, 0.5, 14.0))  # Left cap
+	_add_collision(Vector3(4.0, -0.25, -1.0), Vector3(4.0, 0.5, 14.0))   # Right cap
+	_add_collision(Vector3(0, -0.25, -6.0), Vector3(4.6, 0.5, 3.0))      # Back cap
+	_add_collision(Vector3(0, -0.25, 4.5), Vector3(4.6, 0.5, 3.0))       # Front cap
 
 
 func _add_collision(pos: Vector3, size: Vector3) -> void:
