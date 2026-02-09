@@ -695,4 +695,8 @@ func _is_ui_blocking_input() -> bool:
 		if "is_open" in node and node.is_open:
 			return true
 
+	for node in get_tree().get_nodes_in_group("map_ui"):
+		if is_instance_valid(node):
+			return true
+
 	return false

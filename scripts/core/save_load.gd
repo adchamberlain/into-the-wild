@@ -412,6 +412,9 @@ func _collect_player_data() -> Dictionary:
 		# Save tool durability
 		if equipment.has_method("get_durability_data"):
 			data["tool_durability"] = equipment.get_durability_data()
+		# Save bark harvest tracker
+		if equipment.has_method("get_bark_harvest_data"):
+			data["bark_harvests"] = equipment.get_bark_harvest_data()
 
 	return data
 
@@ -617,6 +620,9 @@ func _apply_player_data(data: Dictionary) -> void:
 		# Load tool durability first
 		if data.has("tool_durability") and equipment.has_method("load_durability_data"):
 			equipment.load_durability_data(data["tool_durability"])
+		# Load bark harvest tracker
+		if data.has("bark_harvests") and equipment.has_method("load_bark_harvest_data"):
+			equipment.load_bark_harvest_data(data["bark_harvests"])
 		# Then equip item
 		if data.has("equipped_item"):
 			var item: String = data["equipped_item"]

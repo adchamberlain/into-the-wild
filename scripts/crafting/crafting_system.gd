@@ -229,6 +229,15 @@ func _load_recipes() -> void:
 			"description": "A magnetic compass and lodestone beacon for navigation.",
 			"requires_bench": true,
 			"min_camp_level": 3
+		},
+		"bark_map": {
+			"name": "Birch Bark Map",
+			"inputs": {"birch_bark": 3, "berry": 2},
+			"output_type": "bark_map",
+			"output_amount": 1,
+			"description": "A hand-drawn map of the surrounding wilderness.",
+			"requires_bench": true,
+			"min_camp_level": 2
 		}
 	}
 

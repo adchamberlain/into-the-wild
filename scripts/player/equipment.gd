@@ -150,6 +150,12 @@ const EQUIPPABLE_ITEMS: Dictionary = {
 		"slot": 23,
 		"has_light": false,
 		"placeable": true
+	},
+	"bark_map": {
+		"name": "Birch Bark Map",
+		"slot": 24,
+		"has_light": false,
+		"tool_type": "map"
 	}
 }
 
@@ -165,6 +171,10 @@ const TOOL_MAX_DURABILITY: Dictionary = {
 
 # Current durability for each tool (item_type -> current durability)
 var tool_durability: Dictionary = {}
+
+# Birch bark harvesting
+var bark_harvest_tracker: Dictionary = {}  # position_key -> harvest_day
+const BARK_REGROW_DAYS: int = 3
 
 # Currently equipped item (empty string = nothing)
 var equipped_item: String = ""
@@ -264,6 +274,8 @@ func _input(event: InputEvent) -> void:
 		_try_equip_slot(12)
 	elif event.physical_keycode == KEY_BRACKETLEFT:
 		_try_equip_slot(13)
+	elif event.physical_keycode == KEY_BRACKETRIGHT:
+		_try_equip_slot(24)
 
 
 ## Cycle through equipment slots (for controller L1/R1).
@@ -361,6 +373,8 @@ func equip(item_type: String) -> bool:
 	elif tool_type == "grappling_hook":
 		_create_grappling_hook_model()
 		_ensure_grappling_hook_controller()
+	elif tool_type == "map":
+		pass  # No 3D model for map
 
 	print("[Equipment] Equipped %s" % item_data.get("name", item_type))
 	item_equipped.emit(item_type)
@@ -380,6 +394,7 @@ func unequip() -> void:
 	_remove_machete()
 	_remove_fishing_rod()
 	_remove_grappling_hook()
+	_close_map_if_open()
 
 	equipped_item = ""
 	print("[Equipment] Unequipped %s" % old_item)
@@ -403,6 +418,8 @@ func use_equipped() -> bool:
 			return _use_fishing_rod()
 		elif tool_type == "grappling_hook":
 			return _use_grappling_hook()
+		elif tool_type == "map":
+			return _use_map()
 		else:
 			return _use_tool()
 
@@ -425,6 +442,13 @@ func _use_tool() -> bool:
 		return false
 
 	var target: Node = interaction_ray.get_collider()
+
+	# Machete on birch tree: harvest birch bark instead of chopping
+	var item_data: Dictionary = EQUIPPABLE_ITEMS.get(equipped_item, {})
+	if item_data.get("tool_type", "") == "machete" and target:
+		var scene_path: String = target.scene_file_path if target.scene_file_path else ""
+		if scene_path.ends_with("birch_tree_resource.tscn"):
+			return _harvest_birch_bark(target)
 
 	# Check for valid targets: resource_node or obstacle groups
 	var valid_target: bool = false
@@ -1445,3 +1469,85 @@ func get_durability_data() -> Dictionary:
 ## Load tool durability data from save.
 func load_durability_data(data: Dictionary) -> void:
 	tool_durability = data.duplicate()
+
+
+## Harvest birch bark from a birch tree using machete.
+func _harvest_birch_bark(target: Node) -> bool:
+	if not inventory:
+		return false
+
+	# Build position key from tree position (0.1-unit resolution)
+	var pos: Vector3 = target.global_position
+	var pos_key: String = "%d_%d" % [int(pos.x * 10), int(pos.z * 10)]
+
+	# Check cooldown
+	var time_mgr: Node = player.get_tree().get_first_node_in_group("time_manager") if player else null
+	if not time_mgr:
+		# Fallback: find via path
+		time_mgr = player.get_node_or_null("/root/Main/TimeManager") if player else null
+
+	var current_day: int = 1
+	if time_mgr and "current_day" in time_mgr:
+		current_day = time_mgr.current_day
+
+	if bark_harvest_tracker.has(pos_key):
+		var harvest_day: int = bark_harvest_tracker[pos_key]
+		if current_day - harvest_day < BARK_REGROW_DAYS:
+			# Show notification via HUD
+			var hud: Node = player.get_tree().get_first_node_in_group("hud") if player else null
+			if hud and hud.has_method("show_notification"):
+				hud.show_notification("Bark hasn't regrown yet", Color(1.0, 0.85, 0.3, 1))
+			print("[Equipment] Birch bark on cooldown (harvested day %d, now day %d)" % [harvest_day, current_day])
+			_play_swing_animation()
+			return false
+
+	# Harvest bark
+	_play_swing_animation()
+	SFXManager.play_sfx("chop")
+	inventory.add_item("birch_bark", 1)
+	bark_harvest_tracker[pos_key] = current_day
+	use_durability(1)
+	item_used.emit(equipped_item)
+
+	# Show notification
+	var hud: Node = player.get_tree().get_first_node_in_group("hud") if player else null
+	if hud and hud.has_method("show_notification"):
+		hud.show_notification("Harvested Birch Bark", Color(0.6, 1.0, 0.6, 1))
+	print("[Equipment] Harvested birch bark from tree at %s" % pos)
+	return true
+
+
+## Toggle map overlay on/off.
+func _use_map() -> bool:
+	if not player:
+		return false
+
+	# Check if map is already open
+	var existing: Node = player.get_tree().get_first_node_in_group("map_ui")
+	if existing and is_instance_valid(existing):
+		existing.close_map()
+		return true
+
+	# Open map overlay
+	var map_ui: CanvasLayer = BarkMapUI.new()
+	player.get_tree().root.add_child(map_ui)
+	return true
+
+
+## Close map overlay if it's open.
+func _close_map_if_open() -> void:
+	if not player:
+		return
+	var existing: Node = player.get_tree().get_first_node_in_group("map_ui")
+	if existing and is_instance_valid(existing) and existing.has_method("close_map"):
+		existing.close_map()
+
+
+## Get bark harvest tracker data for saving.
+func get_bark_harvest_data() -> Dictionary:
+	return bark_harvest_tracker.duplicate()
+
+
+## Load bark harvest tracker data from save.
+func load_bark_harvest_data(data: Dictionary) -> void:
+	bark_harvest_tracker = data.duplicate()

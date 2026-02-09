@@ -3616,13 +3616,52 @@ Removed the thorn bush obstacle system entirely. Thorns looked bad visually and 
 
 ---
 
+## Session 43 - Birch Bark Map Feature (2026-02-08)
+
+### Birch Bark Harvesting
+The machete lost its only purpose when thorn bushes were removed. This gives it a new role: harvesting birch bark from birch trees. Equip the machete and use it on a birch tree (white bark) to harvest `birch_bark`. Each tree has a 3-day regrowth cooldown tracked per-tree position, with save/load persistence.
+
+### Bark Map Crafting
+New crafting recipe: `birch_bark x3 + berry x2` = Birch Bark Map. Requires crafting bench and camp level 2.
+
+### Map Overlay
+Equip the bark_map and press R to open a fullscreen wilderness map showing:
+- Terrain regions colored by type (meadow, forest, hills, rocky, mountain)
+- Water bodies as blue circles, rivers as blue lines
+- Cave entrances as dark squares
+- Campsite at origin as gold circle
+- Player position as white circle
+- North indicator and color legend
+
+Press R again to close. Movement is blocked while map is open.
+
+### Equipment Menu
+Bark map added to equipment menu as slot `]` (slot 24).
+
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/player/equipment.gd` | Modified | Bark harvest tracker, birch tree detection in `_use_tool()`, `_harvest_birch_bark()`, `bark_map` equippable item, `_use_map()` toggle, `_close_map_if_open()`, save/load helpers, `]` key binding |
+| `scripts/crafting/crafting_system.gd` | Modified | Added `bark_map` recipe |
+| `scripts/ui/bark_map_ui.gd` | **New** | CanvasLayer map overlay with terrain sampling and custom `_draw()` rendering |
+| `scripts/player/player_controller.gd` | Modified | Added `map_ui` group check to `_is_ui_blocking_input()` |
+| `scripts/core/save_load.gd` | Modified | Save/load bark harvest tracker data |
+| `scripts/ui/hud.gd` | Modified | Added bark_map equipped hint `[R open map, Q unequip]` |
+| `scripts/ui/equipment_menu.gd` | Modified | Added bark_map to equipment slot list |
+
+### Test Results
+- All 479 regression tests pass
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test cave entrance gap fix: approach cave from all sides, verify no fall-through
-2. Play-test fall recovery: verify recovery lands on terrain surface
-3. Add camera collision to prevent clipping into terrain
-4. Add grappling hook sound effect audio files
+1. Play-test birch bark harvesting: find birch trees, verify harvest and cooldown
+2. Play-test bark map: craft and open map, verify terrain/water/caves shown correctly
+3. Play-test cave entrance gap fix: approach cave from all sides, verify no fall-through
+4. Play-test fall recovery: verify recovery lands on terrain surface
+5. Add camera collision to prevent clipping into terrain
+6. Add grappling hook sound effect audio files
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.
