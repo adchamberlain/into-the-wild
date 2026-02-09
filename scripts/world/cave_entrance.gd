@@ -200,18 +200,20 @@ func _build_crater_rim(dark_mat: StandardMaterial3D, _rng: RandomNumberGenerator
 	darkness_mesh.position = Vector3(0, -6.0, 0)
 	add_child(darkness_mesh)
 
-	# ===== INNER CRATER WALLS (earth/rock sides, tops 0.15 above terrain to avoid z-fighting) =====
-	# Inner faces on grid: X=±3.0, Z=+6.0. Walls extend outward (1.5 thick).
+	# ===== INNER CRATER WALLS (earth/rock sides) =====
+	# Walls are 1.8 thick (0.3 wider than grid cell) so inner faces extend 0.15 past
+	# terrain cell edges, covering terrain side faces and eliminating z-fighting.
+	# Depth extended by 0.6 (0.3 each end) to cover Z boundary side faces too.
 	var earth_mat: StandardMaterial3D = _get_earth_material()
-	# Left crater wall: inner face at X=-3.0
+	# Left crater wall: inner face at X=-2.7, outer at X=-4.5
 	_add_interior_rock(
-		Vector3(-3.75, -2.85, 0), Vector3(1.5, 6.0, 12.0), Vector3(0, 0, 0), earth_mat)
-	# Right crater wall: inner face at X=+3.0
+		Vector3(-3.6, -2.85, 0), Vector3(1.8, 6.0, 12.6), Vector3(0, 0, 0), earth_mat)
+	# Right crater wall: inner face at X=+2.7, outer at X=+4.5
 	_add_interior_rock(
-		Vector3(3.75, -2.85, 0), Vector3(1.5, 6.0, 12.0), Vector3(0, 0, 0), earth_mat)
-	# Front crater wall: inner face at Z=+6.0
+		Vector3(3.6, -2.85, 0), Vector3(1.8, 6.0, 12.6), Vector3(0, 0, 0), earth_mat)
+	# Front crater wall: inner face at Z=+5.7, outer at Z=+7.5
 	_add_interior_rock(
-		Vector3(0, -2.85, 6.75), Vector3(9.0, 6.0, 1.5), Vector3(0, 0, 0), earth_mat)
+		Vector3(0, -2.85, 6.6), Vector3(9.6, 6.0, 1.8), Vector3(0, 0, 0), earth_mat)
 
 
 func _build_stairway(_rng: RandomNumberGenerator) -> void:
@@ -385,11 +387,11 @@ func _build_collision() -> void:
 	_add_collision(Vector3(0, -5.25, -1.5), Vector3(6.0, 1.5, 3.0))   # Step 3: top=-4.5
 	_add_collision(Vector3(0, -6.15, -4.5), Vector3(6.0, 0.3, 3.0))   # Step 4: top=-6.0
 
-	# -- Crater side walls (extend to Z:±7.5 to overlap with tunnel walls) --
-	_add_collision(Vector3(-3.75, -3.0, 0), Vector3(1.5, 6.0, 15.0))  # Left
-	_add_collision(Vector3(3.75, -3.0, 0), Vector3(1.5, 6.0, 15.0))   # Right
-	# Front wall (9.0 wide to cover corners)
-	_add_collision(Vector3(0, -3.0, 6.75), Vector3(9.0, 6.0, 1.5))
+	# -- Crater side walls (widened 1.8 to match visual, extend to Z:±7.5) --
+	_add_collision(Vector3(-3.6, -3.0, 0), Vector3(1.8, 6.0, 15.0))   # Left
+	_add_collision(Vector3(3.6, -3.0, 0), Vector3(1.8, 6.0, 15.0))    # Right
+	# Front wall (9.6 wide to match visual)
+	_add_collision(Vector3(0, -3.0, 6.6), Vector3(9.6, 6.0, 1.8))
 
 	# -- Tunnel collision --
 	_add_collision(Vector3(-3.75, -3.5, -15.0), Vector3(1.5, 5.0, 18.0))   # Left wall
