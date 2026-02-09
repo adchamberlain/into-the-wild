@@ -212,6 +212,8 @@ func _build_height_cache() -> void:
 
 	# Post-process: fix pits using cached neighbor heights (replaces recursive calls)
 	_apply_pit_prevention()
+	# Post-process: smooth isolated 1-block bumps in flat terrain
+	_apply_flat_smoothing()
 
 
 func _build_height_cache_batched() -> void:
@@ -248,6 +250,8 @@ func _build_height_cache_batched() -> void:
 
 	# Post-process: fix pits using cached neighbor heights
 	_apply_pit_prevention()
+	# Post-process: smooth isolated 1-block bumps in flat terrain
+	_apply_flat_smoothing()
 
 
 func _apply_pit_prevention() -> void:
@@ -270,6 +274,33 @@ func _apply_pit_prevention() -> void:
 				min_neighbor = east
 			if min_neighbor - height > 1.0:
 				_height_cache[cz][cx] = min_neighbor - 1.0
+
+
+func _apply_flat_smoothing() -> void:
+	## Smooth isolated 1-block bumps in flat terrain.
+	## If a cell is exactly 1 height step above ALL 4 cardinal neighbors,
+	## it's an isolated bump - snap it down to match the surrounding flat area.
+	## This prevents annoying single-block bumps that catch the player in
+	## otherwise flat terrain. Changes are collected first to avoid modifying
+	## the cache during iteration.
+	var smoothed: Array[Vector3] = []  # Vector3(cx, cz, new_height)
+
+	for cz in range(1, _height_cache_size - 1):
+		for cx in range(1, _height_cache_size - 1):
+			var height: float = _height_cache[cz][cx]
+			var north: float = _height_cache[cz - 1][cx]
+			var south: float = _height_cache[cz + 1][cx]
+			var west: float = _height_cache[cz][cx - 1]
+			var east: float = _height_cache[cz][cx + 1]
+			var max_neighbor: float = maxf(north, maxf(south, maxf(west, east)))
+
+			# Cell is ~1 step above ALL neighbors - isolated bump
+			var diff: float = height - max_neighbor
+			if diff >= 0.9 and diff <= 1.5:
+				smoothed.append(Vector3(cx, cz, max_neighbor))
+
+	for v: Vector3 in smoothed:
+		_height_cache[int(v.y)][int(v.x)] = v.z
 
 
 func _generate_terrain_mesh_batched() -> void:
