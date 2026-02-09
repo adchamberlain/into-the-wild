@@ -99,12 +99,6 @@ const EQUIPPABLE_ITEMS: Dictionary = {
 		"has_light": false,
 		"placeable": true
 	},
-	"rope_ladder_kit": {
-		"name": "Rope Ladder Kit",
-		"slot": 13,
-		"has_light": false,
-		"placeable": true
-	},
 	"snare_trap_kit": {
 		"name": "Snare Trap Kit",
 		"slot": 16,
@@ -147,7 +141,7 @@ const EQUIPPABLE_ITEMS: Dictionary = {
 	},
 	"grappling_hook": {
 		"name": "Grappling Hook",
-		"slot": 14,
+		"slot": 13,
 		"has_light": false,
 		"tool_type": "grappling_hook"
 	},
@@ -270,8 +264,6 @@ func _input(event: InputEvent) -> void:
 		_try_equip_slot(12)
 	elif event.physical_keycode == KEY_BRACKETLEFT:
 		_try_equip_slot(13)
-	elif event.physical_keycode == KEY_BRACKETRIGHT:
-		_try_equip_slot(14)
 
 
 ## Cycle through equipment slots (for controller L1/R1).

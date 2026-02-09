@@ -3527,6 +3527,35 @@ Comprehensive cave entrance overhaul fixing four major issues:
 
 ---
 
+## Session 41 - Remove Rope Ladder Item (2026-02-09)
+
+### Summary
+Removed the rope ladder item entirely from the game. The grappling hook already covers vertical traversal needs, making the rope ladder redundant. The rope ladder had several implementation gaps (no-op `_rebuild_ladder_visuals()`, missing `set_climbing()` player method, non-existent .tscn scene file) and fragile cliff-face placement detection that didn't work reliably. Removing it simplifies the codebase significantly.
+
+### Changes
+- Removed `rope_ladder` structure definition from structure data and placeable items list
+- Removed `rope_ladder_kit` crafting recipe (was 2 rope + 4 branches)
+- Removed `rope_ladder_kit` from equipment system (slot 13)
+- Moved grappling hook from slot 14/`]` key to slot 13/`[` key to fill the gap
+- Removed rope ladder entry from equipment menu UI
+- Removed all rope ladder special-case logic from placement system: cliff-base snapping, cliff-face validation, cliff height calculation, cliff face snapping
+- Removed three cliff helper functions only used by rope ladder: `_has_cliff_face()`, `_snap_to_cliff_face()`, `_calculate_cliff_height()`
+- Removed `_create_rope_ladder()` procedural generation function (~75 lines)
+- Deleted `scripts/campsite/structure_rope_ladder.gd` (climbing script)
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/campsite/structure_data.gd` | Removed `rope_ladder` from STRUCTURES dict and `rope_ladder_kit` from PLACEABLE_ITEMS |
+| `scripts/crafting/crafting_system.gd` | Removed `rope_ladder_kit` recipe |
+| `scripts/player/equipment.gd` | Removed `rope_ladder_kit` equippable entry; moved grappling_hook to slot 13; removed `]` key binding |
+| `scripts/ui/equipment_menu.gd` | Removed rope ladder slot; reassigned `[` key to grappling hook |
+| `scripts/campsite/placement_system.gd` | Removed `calculated_ladder_height` var, rope ladder preview snapping, cliff validation, cliff snap/height calc on confirm, `_create_rope_ladder()`, `_has_cliff_face()`, `_snap_to_cliff_face()`, `_calculate_cliff_height()` |
+| `scripts/campsite/structure_rope_ladder.gd` | **Deleted** |
+
+---
+
 ## Next Session
 
 ### Planned Tasks

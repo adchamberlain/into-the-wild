@@ -73,13 +73,6 @@ const STRUCTURES: Dictionary = {
 		"min_camp_level": 3,
 		"footprint_radius": 4.0
 	},
-	"rope_ladder": {
-		"name": "Rope Ladder",
-		"scene": "res://scenes/campsite/structures/rope_ladder.tscn",
-		"item_required": "rope_ladder_kit",
-		"category": "utility",
-		"footprint_radius": 0.5
-	},
 	"snare_trap": {
 		"name": "Snare Trap",
 		"scene": "res://scenes/campsite/structures/snare_trap.tscn",
@@ -140,7 +133,6 @@ const PLACEABLE_ITEMS: Array[String] = [
 	"garden_plot_kit",
 	"canvas_tent_kit",
 	"cabin_kit",
-	"rope_ladder_kit",
 	"snare_trap_kit",
 	"smithing_station_kit",
 	"smoker_kit",
