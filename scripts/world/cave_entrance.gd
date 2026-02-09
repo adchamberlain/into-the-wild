@@ -200,30 +200,18 @@ func _build_crater_rim(dark_mat: StandardMaterial3D, _rng: RandomNumberGenerator
 	darkness_mesh.position = Vector3(0, -6.0, 0)
 	add_child(darkness_mesh)
 
-	# Depth layers descending into pit (give visual depth from above)
-	for depth_i: int in range(3):
-		var depth_dark := MeshInstance3D.new()
-		var dd_mesh := BoxMesh.new()
-		var shrink: float = float(depth_i) * 0.6
-		dd_mesh.size = Vector3(5.4 - shrink, 0.1, 11.4 - shrink)
-		depth_dark.mesh = dd_mesh
-		depth_dark.material_override = dark_mat
-		depth_dark.position = Vector3(0, -5.4 + float(depth_i) * 0.6, 0)
-		add_child(depth_dark)
-		arch_meshes.append(depth_dark)
-
-	# ===== INNER CRATER WALLS (earth/rock sides, tops at y=0 to stay below terrain) =====
+	# ===== INNER CRATER WALLS (earth/rock sides, tops 0.15 above terrain to avoid z-fighting) =====
 	# Inner faces on grid: X=±3.0, Z=+6.0. Walls extend outward (1.5 thick).
 	var earth_mat: StandardMaterial3D = _get_earth_material()
 	# Left crater wall: inner face at X=-3.0
 	_add_interior_rock(
-		Vector3(-3.75, -3.0, 0), Vector3(1.5, 6.0, 12.0), Vector3(0, 0, 0), earth_mat)
+		Vector3(-3.75, -2.85, 0), Vector3(1.5, 6.0, 12.0), Vector3(0, 0, 0), earth_mat)
 	# Right crater wall: inner face at X=+3.0
 	_add_interior_rock(
-		Vector3(3.75, -3.0, 0), Vector3(1.5, 6.0, 12.0), Vector3(0, 0, 0), earth_mat)
+		Vector3(3.75, -2.85, 0), Vector3(1.5, 6.0, 12.0), Vector3(0, 0, 0), earth_mat)
 	# Front crater wall: inner face at Z=+6.0
 	_add_interior_rock(
-		Vector3(0, -3.0, 6.75), Vector3(9.0, 6.0, 1.5), Vector3(0, 0, 0), earth_mat)
+		Vector3(0, -2.85, 6.75), Vector3(9.0, 6.0, 1.5), Vector3(0, 0, 0), earth_mat)
 
 
 func _build_stairway(_rng: RandomNumberGenerator) -> void:
@@ -295,10 +283,10 @@ func _build_tunnel(rng: RandomNumberGenerator) -> void:
 			ceiling_mat
 		)
 
-	# -- FLOOR: continuous slab, top at Y=-6.0 --
+	# -- FLOOR: continuous slab, top at Y=-6.0, 9.0 wide to extend under walls --
 	_add_interior_rock(
 		Vector3(0, -6.25, -15.0),
-		Vector3(6.0, 0.5, 18.0),
+		Vector3(9.0, 0.5, 18.0),
 		Vector3(0, 0, 0),
 		floor_mat
 	)
