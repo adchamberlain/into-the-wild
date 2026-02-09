@@ -13,6 +13,7 @@ signal interaction_cleared()
 # Step-up: automatically walk over small terrain height differences (like Minecraft's auto-step)
 const STEP_HEIGHT: float = 1.1  # Max step-up height (covers 1.0-unit terrain steps)
 const STEP_TEST_INCREMENT: float = 0.1  # Test in small increments to find minimum step needed
+const STEP_LOOK_AHEAD: float = 6.0  # Distance ahead to check for rising terrain (staircase detection)
 @export var controller_sensitivity: float = 3.0  # Sensitivity for right stick camera control
 
 # Camera settings
@@ -322,7 +323,8 @@ func _process_normal_movement(delta: float) -> void:
 
 ## Auto step-up: walk over small terrain height differences.
 ## Tests incrementally higher positions until forward movement is unblocked,
-## then teleports the player up. move_and_slide() floor snapping handles the rest.
+## then teleports the player up. Includes staircase detection: checks terrain
+## ahead to ensure we're stepping onto flat ground, not climbing a slope.
 func _try_step_up(delta: float) -> void:
 	var h_velocity: Vector3 = Vector3(velocity.x, 0, velocity.z)
 	if h_velocity.length() < 0.1:
@@ -345,7 +347,22 @@ func _try_step_up(delta: float) -> void:
 		var elevated: Transform3D = global_transform
 		elevated.origin.y += test_height
 		if not test_move(elevated, motion):
-			# Can move forward at this height - step up
+			# Can move forward at this height
+			# Staircase detection: for significant steps, check that terrain
+			# ahead is flat (not continuing upward). This prevents chain-stepping
+			# up slopes/cliffs while still allowing single-step bumps.
+			if test_height > 0.5:
+				var chunk_mgr: Node = _find_chunk_manager()
+				if chunk_mgr and chunk_mgr.has_method("get_height_at"):
+					var forward_dir: Vector3 = h_velocity.normalized()
+					var ahead_pos: Vector3 = global_position + forward_dir * STEP_LOOK_AHEAD
+					var step_to_y: float = global_position.y + test_height
+					var ahead_y: float = chunk_mgr.get_height_at(ahead_pos.x, ahead_pos.z)
+					if ahead_y > step_to_y + 0.5:
+						# Terrain continues rising - slope/staircase, don't auto-step
+						test_height += STEP_TEST_INCREMENT
+						continue
+
 			global_position.y += test_height
 			return
 
