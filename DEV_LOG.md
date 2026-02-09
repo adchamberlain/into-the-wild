@@ -3653,6 +3653,29 @@ Bark map added to equipment menu as slot `]` (slot 24).
 
 ---
 
+## Session 44 - Auto Step-Up for Terrain Traversal (2026-02-08)
+
+### Problem
+Forest terrain quantizes heights to 1.0-unit steps, causing adjacent blocks to differ by exactly 1 unit. These look flat visually but the player gets stuck on every edge and has to jump constantly to traverse "flat" terrain.
+
+### Solution
+Added Minecraft-style auto step-up to the player controller. When the player walks into a terrain step while on the ground, the system:
+1. Detects forward movement would collide
+2. Tests incrementally higher positions (0.1 unit increments, up to 1.1 units)
+3. Finds the minimum elevation where forward movement is unblocked
+4. Teleports the player up; `move_and_slide()` floor snapping handles landing
+
+Safety checks prevent step-up when: no obstacle ahead, ceiling above, still blocked at elevated height (wall not step), or not on floor (airborne/swimming).
+
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/player/player_controller.gd` | Modified | Added `STEP_HEIGHT`, `STEP_TEST_INCREMENT` constants, `_try_step_up()` method, step-up call before `move_and_slide()` |
+
+### Test Results
+- All 479 regression tests pass
+
+---
+
 ## Next Session
 
 ### Planned Tasks
