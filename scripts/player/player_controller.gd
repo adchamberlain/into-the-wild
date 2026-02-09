@@ -9,6 +9,10 @@ signal interaction_cleared()
 @export var sprint_speed: float = 8.0
 @export var jump_velocity: float = 5.5  # Allows comfortable 1-block jumps (~1.5 blocks max height)
 @export var mouse_sensitivity: float = 0.002
+
+# Step-up: automatically walk over small terrain height differences (like Minecraft's auto-step)
+const STEP_HEIGHT: float = 1.1  # Max step-up height (covers 1.0-unit terrain steps)
+const STEP_TEST_INCREMENT: float = 0.1  # Test in small increments to find minimum step needed
 @export var controller_sensitivity: float = 3.0  # Sensitivity for right stick camera control
 
 # Camera settings
@@ -243,6 +247,10 @@ func _physics_process(delta: float) -> void:
 	else:
 		_process_normal_movement(delta)
 
+	# Auto step-up: walk over 1-unit terrain height differences without jumping
+	if is_on_floor() and not actually_swimming:
+		_try_step_up(delta)
+
 	move_and_slide()
 
 	# Play footstep/splash sounds based on actual movement (after collision resolution)
@@ -310,6 +318,38 @@ func _process_normal_movement(delta: float) -> void:
 		velocity.z = move_toward(velocity.z, 0, current_speed)
 		# Reset footstep timer when stopped
 		footstep_timer = 0.0
+
+
+## Auto step-up: walk over small terrain height differences.
+## Tests incrementally higher positions until forward movement is unblocked,
+## then teleports the player up. move_and_slide() floor snapping handles the rest.
+func _try_step_up(delta: float) -> void:
+	var h_velocity: Vector3 = Vector3(velocity.x, 0, velocity.z)
+	if h_velocity.length() < 0.1:
+		return
+
+	var motion: Vector3 = h_velocity * delta
+
+	# Check if we'd collide moving forward at current height
+	if not test_move(global_transform, motion):
+		return  # No obstacle ahead, no step needed
+
+	# Try stepping up in small increments to find the minimum height needed
+	var test_height: float = STEP_TEST_INCREMENT
+	while test_height <= STEP_HEIGHT:
+		# Check if there's room above (no ceiling)
+		if test_move(global_transform, Vector3(0, test_height, 0)):
+			return  # Ceiling above, can't step up at all
+
+		# Check if we can move forward at this elevated height
+		var elevated: Transform3D = global_transform
+		elevated.origin.y += test_height
+		if not test_move(elevated, motion):
+			# Can move forward at this height - step up
+			global_position.y += test_height
+			return
+
+		test_height += STEP_TEST_INCREMENT
 
 
 ## Get movement input from both keyboard and controller.
