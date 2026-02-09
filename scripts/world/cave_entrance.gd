@@ -1,8 +1,9 @@
 extends StaticBody3D
 class_name CaveEntrance
 ## Underground cave entrance - a natural sinkhole/crater the player descends into.
-## 5 steps lead from the surface (y=0) down to the tunnel floor (y=-5.5).
-## All geometry tops are at y<=-0.3 to stay below terrain and avoid z-fighting.
+## 4 steps lead from the surface (y=0) down to the tunnel floor (y=-6.0).
+## All X/Z dimensions snap to multiples of 3.0 (cell_size) so terrain skip zones
+## align perfectly with the cell grid, eliminating terrain gaps.
 ## Darkness is handled by CaveTransition when player enters the Area3D.
 
 signal resource_depleted(cave_id: int, node_name: String)
@@ -161,7 +162,7 @@ func _setup_visuals() -> void:
 	rng.seed = cave_id * 12345
 
 	# Entrance faces +Z. Player approaches from +Z, walks into -Z.
-	# Crater rim at y=0, stairway descends to y=-3.0, tunnel at y=-3 to y=0.
+	# Skip zone X:[-3,+3] Z:[-6,+6]. Stairway descends to Y=-6.0, tunnel Z:-6 to -24.
 
 	# ===== CRATER RIM AND SINKHOLE =====
 	_build_crater_rim(dark_mat, rng)
@@ -193,134 +194,119 @@ func _build_crater_rim(dark_mat: StandardMaterial3D, _rng: RandomNumberGenerator
 	darkness_mesh = MeshInstance3D.new()
 	darkness_mesh.name = "DarkOpening"
 	var dark_box := BoxMesh.new()
-	dark_box.size = Vector3(5.0, 0.1, 6.0)
+	dark_box.size = Vector3(6.0, 0.1, 12.0)
 	darkness_mesh.mesh = dark_box
 	darkness_mesh.material_override = dark_mat
-	darkness_mesh.position = Vector3(0, -4.9, -0.5)
+	darkness_mesh.position = Vector3(0, -6.0, 0)
 	add_child(darkness_mesh)
 
 	# Depth layers descending into pit (give visual depth from above)
 	for depth_i: int in range(3):
 		var depth_dark := MeshInstance3D.new()
 		var dd_mesh := BoxMesh.new()
-		var shrink: float = float(depth_i) * 0.3
-		dd_mesh.size = Vector3(4.5 - shrink, 0.1, 5.5 - shrink)
+		var shrink: float = float(depth_i) * 0.6
+		dd_mesh.size = Vector3(5.4 - shrink, 0.1, 11.4 - shrink)
 		depth_dark.mesh = dd_mesh
 		depth_dark.material_override = dark_mat
-		depth_dark.position = Vector3(0, -4.5 + float(depth_i) * 0.4, -0.5)
+		depth_dark.position = Vector3(0, -5.4 + float(depth_i) * 0.6, 0)
 		add_child(depth_dark)
 		arch_meshes.append(depth_dark)
 
-	# ===== INNER CRATER WALLS (earth/rock sides, tops at y=-0.3 to stay below terrain) =====
-	# No rim boulders or surface decorations — terrain generates naturally on top.
+	# ===== INNER CRATER WALLS (earth/rock sides, tops at y=0 to stay below terrain) =====
+	# Inner faces on grid: X=±3.0, Z=+6.0. Walls extend outward (1.5 thick).
 	var earth_mat: StandardMaterial3D = _get_earth_material()
-	# Left crater wall (top at y=-0.3, bottom at y=-5.3)
+	# Left crater wall: inner face at X=-3.0
 	_add_interior_rock(
-		Vector3(-2.8, -2.8, 0.0), Vector3(1.0, 5.0, 8.0), Vector3(0, 0, 0), earth_mat)
-	# Right crater wall
+		Vector3(-3.75, -3.0, 0), Vector3(1.5, 6.0, 12.0), Vector3(0, 0, 0), earth_mat)
+	# Right crater wall: inner face at X=+3.0
 	_add_interior_rock(
-		Vector3(2.8, -2.8, 0.0), Vector3(1.0, 5.0, 8.0), Vector3(0, 0, 0), earth_mat)
-	# Front crater wall (at +Z edge of skip zone)
+		Vector3(3.75, -3.0, 0), Vector3(1.5, 6.0, 12.0), Vector3(0, 0, 0), earth_mat)
+	# Front crater wall: inner face at Z=+6.0
 	_add_interior_rock(
-		Vector3(0, -2.8, 3.8), Vector3(6.6, 5.0, 1.0), Vector3(0, 0, 0), earth_mat)
+		Vector3(0, -3.0, 6.75), Vector3(9.0, 6.0, 1.5), Vector3(0, 0, 0), earth_mat)
 
 
-func _build_stairway(rng: RandomNumberGenerator) -> void:
-	## Build 5 steps descending from y=-0.5 to y=-5.0 (1.0 drop per step).
-	## Each step is a filled box from its tread height down to y=-5.5 (the tunnel floor).
+func _build_stairway(_rng: RandomNumberGenerator) -> void:
+	## Build 4 steps descending from y=-1.5 to y=-6.0 (1.5 drop per step).
+	## Each step is a solid fill from tread top to y=-6.0 (the tunnel floor).
+	## Z boundaries at multiples of 3.0, width 6.0 (matches opening).
 	var step_mat: StandardMaterial3D = _get_step_material()
-	var earth_mat: StandardMaterial3D = _get_earth_material()
 
-	# Each step: 1.0 unit drop, 1.5 units deep in Z
-	var steps: Array[Dictionary] = [
-		{"top": -1.0, "z": 2.25},   # Step 1: y=-1.0
-		{"top": -2.0, "z": 0.75},   # Step 2: y=-2.0
-		{"top": -3.0, "z": -0.75},  # Step 3: y=-3.0
-		{"top": -4.0, "z": -2.25},  # Step 4: y=-4.0
-		{"top": -5.0, "z": -3.75},  # Step 5: y=-5.0
-	]
-
-	for step: Dictionary in steps:
-		var top_y: float = step["top"]
-		var z_center: float = step["z"]
-		# Box extends from top_y down to -5.5 (tunnel floor)
-		var height: float = top_y - (-5.5)  # positive value
-		var y_center: float = top_y - height * 0.5
-		_add_interior_rock(
-			Vector3(0, y_center, z_center),
-			Vector3(4.6, height, 1.5),
-			Vector3(0, 0, 0),
-			step_mat
-		)
-
-	# Side earth walls along stairway (tops at y=-0.3, below terrain)
-	# Z-size 9.5 (center -1.75) covers Z:[-6.5,+3.0] to close visual gap with tunnel walls at Z:-6.
+	# Step 1: Z:[+3,+6], tread top Y=-1.5, fill height 4.5
 	_add_interior_rock(
-		Vector3(-2.8, -2.8, -1.75), Vector3(1.0, 5.0, 9.5), Vector3(0, 0, 0), earth_mat)
+		Vector3(0, -3.75, 4.5), Vector3(6.0, 4.5, 3.0), Vector3(0, 0, 0), step_mat)
+	# Step 2: Z:[0,+3], tread top Y=-3.0, fill height 3.0
 	_add_interior_rock(
-		Vector3(2.8, -2.8, -1.75), Vector3(1.0, 5.0, 9.5), Vector3(0, 0, 0), earth_mat)
+		Vector3(0, -4.5, 1.5), Vector3(6.0, 3.0, 3.0), Vector3(0, 0, 0), step_mat)
+	# Step 3: Z:[-3,0], tread top Y=-4.5, fill height 1.5
+	_add_interior_rock(
+		Vector3(0, -5.25, -1.5), Vector3(6.0, 1.5, 3.0), Vector3(0, 0, 0), step_mat)
+	# Step 4: Z:[-6,-3], tread top Y=-6.0, thin slab 0.3
+	_add_interior_rock(
+		Vector3(0, -6.15, -4.5), Vector3(6.0, 0.3, 3.0), Vector3(0, 0, 0), step_mat)
 
-	# Earth/rock overhang where tunnel begins (below terrain surface)
+	# Tunnel entrance overhang where tunnel begins (below terrain surface)
 	var ceiling_mat: StandardMaterial3D = _get_ceiling_material()
 	_add_interior_rock(
-		Vector3(0, -0.5, -4.0), Vector3(6.6, 0.6, 2.0), Vector3(0, 0, 0), ceiling_mat)
+		Vector3(0, -0.5, -6.0), Vector3(9.0, 1.0, 1.5), Vector3(0, 0, 0), ceiling_mat)
 
 
 func _build_tunnel(rng: RandomNumberGenerator) -> void:
-	## Build the underground tunnel from z=-6 to z=-24.
-	## Floor at y=-5.75, ceiling at y=-1.0, walls from floor to ceiling.
-	## All tops well below y=0 (terrain surface) to prevent z-fighting.
+	## Build the underground tunnel from Z=-6 to Z=-24.
+	## Floor at Y=-6.0, ceiling at Y=-0.5, walls inner faces at X:±3.0.
+	## All X/Z boundaries on multiples of 3.0 (cell_size grid).
 	var wall_mat: StandardMaterial3D = _get_wall_material()
 	var floor_mat: StandardMaterial3D = _get_floor_material()
 	var ceiling_mat: StandardMaterial3D = _get_ceiling_material()
 
-	# Tunnel: 5 wide (x=-2.5 to +2.5), ~5 tall (y=-5.5 to y=-0.5), 18 deep (z=-6 to -24)
+	# Tunnel: 6 wide (X=-3 to +3), 6 tall (Y=-6 to 0), 18 deep (Z=-6 to -24)
+	# 6 segments of 3.0 each: z_center = -7.5, -10.5, -13.5, -16.5, -19.5, -22.5
 
-	# -- LEFT WALL: segmented for visual interest --
+	# -- LEFT WALL: segmented, inner face at X=-3.0 --
 	for seg: int in range(6):
-		var z_start: float = -6.0 - float(seg) * 3.0
+		var z_center: float = -7.5 - float(seg) * 3.0
 		var width_var: float = rng.randf_range(-0.15, 0.15)
 		_add_interior_rock(
-			Vector3(-2.8 - width_var, -3.0, z_start - 1.5),
-			Vector3(1.0 + width_var * 2.0, 5.0, 3.0),
+			Vector3(-3.75, -3.5, z_center),
+			Vector3(1.5 + width_var, 5.0, 3.0),
 			Vector3(0, 0, 0),
 			wall_mat
 		)
 
-	# -- RIGHT WALL: segmented --
+	# -- RIGHT WALL: segmented, inner face at X=+3.0 --
 	for seg: int in range(6):
-		var z_start: float = -6.0 - float(seg) * 3.0
+		var z_center: float = -7.5 - float(seg) * 3.0
 		var width_var: float = rng.randf_range(-0.15, 0.15)
 		_add_interior_rock(
-			Vector3(2.8 + width_var, -3.0, z_start - 1.5),
-			Vector3(1.0 + width_var * 2.0, 5.0, 3.0),
+			Vector3(3.75, -3.5, z_center),
+			Vector3(1.5 + width_var, 5.0, 3.0),
 			Vector3(0, 0, 0),
 			wall_mat
 		)
 
-	# -- CEILING: well below terrain (y=-0.8, tops at ~y=-0.2) --
+	# -- CEILING: segmented --
 	for seg: int in range(6):
-		var z_start: float = -6.0 - float(seg) * 3.0
+		var z_center: float = -7.5 - float(seg) * 3.0
 		var height_var: float = rng.randf_range(-0.15, 0.15)
 		_add_interior_rock(
-			Vector3(0, -0.8 + height_var, z_start - 1.5),
-			Vector3(6.6, 0.8, 3.0),
+			Vector3(0, -0.75 + height_var, z_center),
+			Vector3(9.0, 0.5 + height_var, 3.0),
 			Vector3(0, 0, 0),
 			ceiling_mat
 		)
 
-	# -- FLOOR: continuous slab --
+	# -- FLOOR: continuous slab, top at Y=-6.0 --
 	_add_interior_rock(
-		Vector3(0, -5.75, -15.0),
-		Vector3(5.0, 0.5, 18.0),
+		Vector3(0, -6.25, -15.0),
+		Vector3(6.0, 0.5, 18.0),
 		Vector3(0, 0, 0),
 		floor_mat
 	)
 
-	# -- BACK WALL: seals the end of the tunnel --
+	# -- BACK WALL: seals the end of the tunnel, inner face at Z=-24.0 --
 	_add_interior_rock(
-		Vector3(0, -3.0, -24.5),
-		Vector3(6.6, 5.0, 1.0),
+		Vector3(0, -3.5, -24.75),
+		Vector3(9.0, 5.0, 1.5),
 		Vector3(0, 0, 0),
 		wall_mat
 	)
@@ -328,20 +314,20 @@ func _build_tunnel(rng: RandomNumberGenerator) -> void:
 
 func _build_interior_details(rng: RandomNumberGenerator) -> void:
 	## Add stalactites, wall outcrops, and rubble inside the deeper tunnel.
-	## Tunnel floor at y=-5.5, ceiling at y=-0.8.
+	## Tunnel floor at Y=-6.0, ceiling at Y=-0.75, walls at X:±3.0.
 	var palette: Array = _get_rock_palette()
 	var interior_stalac_mat: StandardMaterial3D = palette[5]  # darkest
 	var outcrop_mat: StandardMaterial3D = palette[4]  # interior outcrops
 	var rubble_mat: StandardMaterial3D = palette[4]  # interior rubble
 
-	# -- Stalactites hanging from ceiling (y=-0.8) --
+	# -- Stalactites hanging from ceiling (Y=-0.75) --
 	for i: int in range(8):
 		var s_h: float = rng.randf_range(0.3, 1.0)
 		rng.randf_range(-0.02, 0.02)
 		rng.randf_range(-0.02, 0.02)
 		rng.randf_range(-0.02, 0.02)
 		_add_interior_rock(
-			Vector3(rng.randf_range(-2.0, 2.0), -0.8 - s_h * 0.5, rng.randf_range(-22.0, -8.0)),
+			Vector3(rng.randf_range(-2.5, 2.5), -0.75 - s_h * 0.5, rng.randf_range(-22.0, -8.0)),
 			Vector3(rng.randf_range(0.12, 0.25), s_h, rng.randf_range(0.12, 0.25)),
 			Vector3(rng.randf_range(-5, 5), 0, rng.randf_range(-5, 5)),
 			interior_stalac_mat
@@ -351,33 +337,33 @@ func _build_interior_details(rng: RandomNumberGenerator) -> void:
 	for i: int in range(4):
 		var side: float = -1.0 if i % 2 == 0 else 1.0
 		var outcrop_z: float = rng.randf_range(-21.0, -8.0)
-		var outcrop_y: float = rng.randf_range(-4.5, -1.5)
+		var outcrop_y: float = rng.randf_range(-5.0, -2.0)
 		rng.randf_range(-0.03, 0.03)
 		_add_interior_rock(
-			Vector3(side * (2.2 + rng.randf_range(0.0, 0.3)), outcrop_y, outcrop_z),
+			Vector3(side * (2.5 + rng.randf_range(0.0, 0.3)), outcrop_y, outcrop_z),
 			Vector3(rng.randf_range(0.8, 1.5), rng.randf_range(0.8, 1.5), rng.randf_range(0.8, 1.5)),
 			Vector3(rng.randf_range(-5, 5), rng.randf_range(-5, 5), rng.randf_range(-3, 3)),
 			outcrop_mat
 		)
 
-	# -- Floor rubble (small rocks on floor at y=-5.5) --
+	# -- Floor rubble (small rocks on floor at Y=-6.0) --
 	for i: int in range(6):
 		var bsize: float = rng.randf_range(0.25, 0.7)
 		rng.randf_range(-0.03, 0.03)
 		rng.randf_range(-0.02, 0.02)
 		rng.randf_range(-0.02, 0.02)
 		_add_interior_rock(
-			Vector3(rng.randf_range(-1.8, 1.8), -5.5 + bsize * 0.25, rng.randf_range(-22.0, -8.0)),
+			Vector3(rng.randf_range(-2.5, 2.5), -6.0 + bsize * 0.25, rng.randf_range(-22.0, -8.0)),
 			Vector3(bsize, bsize * 0.5, bsize * 0.65),
 			Vector3(rng.randf_range(-8, 8), rng.randf_range(0, 45), rng.randf_range(-5, 5)),
 			rubble_mat
 		)
 
-	# -- Stalagmites rising from floor (y=-5.5) --
+	# -- Stalagmites rising from floor (Y=-6.0) --
 	for i: int in range(3):
 		var s_h: float = rng.randf_range(0.4, 1.0)
 		_add_interior_rock(
-			Vector3(rng.randf_range(-1.8, 1.8), -5.5 + s_h * 0.5, rng.randf_range(-21.0, -9.0)),
+			Vector3(rng.randf_range(-2.5, 2.5), -6.0 + s_h * 0.5, rng.randf_range(-21.0, -9.0)),
 			Vector3(rng.randf_range(0.2, 0.4), s_h, rng.randf_range(0.2, 0.4)),
 			Vector3(rng.randf_range(-3, 3), 0, rng.randf_range(-3, 3)),
 			rubble_mat
@@ -387,16 +373,15 @@ func _build_interior_details(rng: RandomNumberGenerator) -> void:
 
 func _build_cave_area() -> void:
 	## Create an Area3D covering the underground section for player detection.
-	## Starts at z=-3 (after descending stairs, when player is actually underground).
+	## Covers X:[-3,+3], Y:[-6,-1], Z:[-24,0].
 	cave_area = Area3D.new()
 	cave_area.name = "CaveInterior"
 
 	var col_shape := CollisionShape3D.new()
 	var box_shape := BoxShape3D.new()
-	# Cover underground volume: x=[-2.5,+2.5], y=[-5.5,-0.5], z=[-24,-3]
-	box_shape.size = Vector3(5.0, 5.0, 21.0)
+	box_shape.size = Vector3(6.0, 5.0, 24.0)
 	col_shape.shape = box_shape
-	col_shape.position = Vector3(0, -3.0, -13.5)
+	col_shape.position = Vector3(0, -3.5, -12.0)
 	cave_area.add_child(col_shape)
 
 	cave_area.body_entered.connect(_on_body_entered)
@@ -406,35 +391,28 @@ func _build_cave_area() -> void:
 
 
 func _build_collision() -> void:
-	# -- Stairway step collision (5 solid fills, 1.0 drop per step) --
-	# Each step: width 4.6, from step top down to y=-5.5
-	_add_collision(Vector3(0, -3.25, 2.25), Vector3(4.6, 4.5, 1.5))   # Step 1: top=-1.0
-	_add_collision(Vector3(0, -3.75, 0.75), Vector3(4.6, 3.5, 1.5))   # Step 2: top=-2.0
-	_add_collision(Vector3(0, -4.25, -0.75), Vector3(4.6, 2.5, 1.5))  # Step 3: top=-3.0
-	_add_collision(Vector3(0, -4.75, -2.25), Vector3(4.6, 1.5, 1.5))  # Step 4: top=-4.0
-	_add_collision(Vector3(0, -5.25, -3.75), Vector3(4.6, 0.5, 1.5))  # Step 5: top=-5.0
+	# -- Stairway step collision (4 solid fills, 1.5 drop per step) --
+	_add_collision(Vector3(0, -3.75, 4.5), Vector3(6.0, 4.5, 3.0))    # Step 1: top=-1.5
+	_add_collision(Vector3(0, -4.5, 1.5), Vector3(6.0, 3.0, 3.0))     # Step 2: top=-3.0
+	_add_collision(Vector3(0, -5.25, -1.5), Vector3(6.0, 1.5, 3.0))   # Step 3: top=-4.5
+	_add_collision(Vector3(0, -6.15, -4.5), Vector3(6.0, 0.3, 3.0))   # Step 4: top=-6.0
 
-	# -- Crater/stair side walls --
-	# Extended wide (2.8 units) to guarantee overlap with terrain cells regardless
-	# of grid alignment. The terrain skip zone is X:[-3,+3] but cell boundaries
-	# don't align to cave center, so walls must extend well past the skip zone edge.
-	# Center shifted outward; inner edge stays at ~±2.4 (stairway is 4.6 wide).
-	# Z-size 11.0 (center -1.5) covers Z:[-7,+4] to close gap with tunnel walls at Z:-6.
-	_add_collision(Vector3(-3.8, -2.55, -1.5), Vector3(2.8, 5.5, 11.0))
-	_add_collision(Vector3(3.8, -2.55, -1.5), Vector3(2.8, 5.5, 11.0))
-	# Front wall - widened to match side walls, extended forward to overlap terrain
-	_add_collision(Vector3(0, -2.55, 4.5), Vector3(10.4, 5.5, 2.2))
+	# -- Crater side walls (extend to Z:±7.5 to overlap with tunnel walls) --
+	_add_collision(Vector3(-3.75, -3.0, 0), Vector3(1.5, 6.0, 15.0))  # Left
+	_add_collision(Vector3(3.75, -3.0, 0), Vector3(1.5, 6.0, 15.0))   # Right
+	# Front wall (9.0 wide to cover corners)
+	_add_collision(Vector3(0, -3.0, 6.75), Vector3(9.0, 6.0, 1.5))
 
 	# -- Tunnel collision --
-	_add_collision(Vector3(-2.8, -3.0, -15.0), Vector3(0.8, 5.0, 18.0))
-	_add_collision(Vector3(2.8, -3.0, -15.0), Vector3(0.8, 5.0, 18.0))
+	_add_collision(Vector3(-3.75, -3.5, -15.0), Vector3(1.5, 5.0, 18.0))   # Left wall
+	_add_collision(Vector3(3.75, -3.5, -15.0), Vector3(1.5, 5.0, 18.0))    # Right wall
 	# Ceiling (below terrain surface)
-	_add_collision(Vector3(0, -0.2, -15.0), Vector3(6.4, 0.8, 18.0))
+	_add_collision(Vector3(0, -0.5, -15.0), Vector3(9.0, 1.0, 18.0))
 	# Back wall
-	_add_collision(Vector3(0, -3.0, -24.5), Vector3(6.4, 5.0, 1.0))
+	_add_collision(Vector3(0, -3.5, -24.75), Vector3(9.0, 5.0, 1.5))
 
-	# -- Floor slab covering crater area --
-	_add_collision(Vector3(0, -5.75, -1.0), Vector3(8.0, 0.5, 11.0))
+	# -- Floor slab covering crater + tunnel --
+	_add_collision(Vector3(0, -6.25, -9.0), Vector3(9.0, 0.5, 30.0))
 
 
 func _add_collision(pos: Vector3, size: Vector3) -> void:
@@ -455,11 +433,11 @@ func _spawn_resources() -> void:
 		push_warning("[CaveEntrance] Failed to load resource scripts")
 		return
 
-	# Crystal 1: left side, midway through tunnel (on the floor at y=-5.5)
+	# Crystal 1: left side, midway through tunnel (on the floor at Y=-6.0)
 	var crystal1: StaticBody3D = StaticBody3D.new()
 	crystal1.set_script(crystal_script)
 	crystal1.name = "CrystalNode_0"
-	crystal1.position = Vector3(-1.8, -5.5, -12.0)
+	crystal1.position = Vector3(-1.5, -6.0, -12.0)
 	crystal1.rotation_degrees = Vector3(0, 15, 0)
 	add_child(crystal1)
 	resource_nodes.append(crystal1)
@@ -468,7 +446,7 @@ func _spawn_resources() -> void:
 	var crystal2: StaticBody3D = StaticBody3D.new()
 	crystal2.set_script(crystal_script)
 	crystal2.name = "CrystalNode_1"
-	crystal2.position = Vector3(1.8, -5.5, -19.0)
+	crystal2.position = Vector3(1.5, -6.0, -19.5)
 	crystal2.rotation_degrees = Vector3(0, -20, 0)
 	add_child(crystal2)
 	resource_nodes.append(crystal2)
@@ -477,7 +455,7 @@ func _spawn_resources() -> void:
 	var ore: StaticBody3D = StaticBody3D.new()
 	ore.set_script(ore_script)
 	ore.name = "RareOreNode_0"
-	ore.position = Vector3(0.5, -5.0, -22.0)
+	ore.position = Vector3(0, -5.5, -22.5)
 	add_child(ore)
 	resource_nodes.append(ore)
 

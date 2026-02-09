@@ -3709,14 +3709,46 @@ When terrain generation removes cells based on point-in-zone checks, always acco
 
 ---
 
+## Session 46 - Snap Cave Dimensions to Cell Grid (2026-02-08)
+
+### Overview
+Complete redesign of cave geometry to snap all X/Z boundaries to multiples of `cell_size` (3.0). Previously, cave geometry used fractional dimensions (4.6-wide stairs, walls at X:±2.8, 1.5-deep steps) which never aligned with the 3.0-unit terrain grid, causing unpredictable terrain removal and recurring gap bugs. This session eliminates the root cause by making cave and terrain grids identical.
+
+### Key Changes
+- **Skip zone**: Now `X:[-3,+3], Z:[-6,+6]` (2×4 cells = 6 wide × 12 deep). With cave center snapped to grid, exactly 8 cells are always removed deterministically.
+- **Stairway**: 4 steps (was 5), each 3.0 deep in Z with 1.5 drop per step. Width 6.0. All Z boundaries on grid multiples. Tunnel floor at Y=-6.0 (was -5.5).
+- **Crater walls**: Inner faces at X:±3.0 and Z:+6.0 (on grid), 1.5 thick extending outward. Front wall 9.0 wide to cover corners.
+- **Tunnel**: Walls inner faces at X:±3.0 (on grid), 6 segments of 3.0 depth each. Floor at Y=-6.0, ceiling at Y=-0.75. Back wall at Z=-24.0.
+- **Cave center snapping**: `_generate_cave_entrances()` now rounds candidate positions to nearest `cell_size` multiple before storing.
+- **Grid alignment rule**: Added to CLAUDE.md — all terrain-interacting geometry must snap X/Z to cell_size multiples.
+
+### Design Principles
+1. Cave center snapped to cell edges (multiples of 3.0 in world coords)
+2. All X/Z outer boundaries at multiples of 3.0 from cave center
+3. Y-axis uses gameplay-appropriate values (doesn't interact with terrain grid)
+4. Interior details (stalactites, rubble) unchanged — purely decorative, no grid interaction
+
+### Files Modified
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/world/cave_entrance.gd` | Modified | Complete rewrite of all geometry functions with grid-snapped dimensions |
+| `scripts/world/chunk_manager.gd` | Modified | Snap cave center to cell grid, update skip zone to X:[-3,+3] Z:[-6,+6], update near-cave zone to X:[-6,+6] Z:[-27,+9] |
+| `CLAUDE.md` | Modified | Added Grid Alignment Rule section |
+
+### Test Results
+- All regression tests pass
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test cave entrance gap fix: approach cave from all sides, verify no fall-through or visual gaps
-2. Play-test birch bark harvesting: find birch trees, verify harvest and cooldown
-3. Play-test bark map: craft and open map, verify terrain/water/caves shown correctly
-4. Play-test auto step-up: walk across forest terrain, verify smooth traversal
-5. Add grappling hook sound effect audio files
+1. Play-test grid-snapped caves: approach from all sides, verify no terrain gaps
+2. Verify 4-step stairway: 1.5 drops are jumpable both down and up
+3. Play-test birch bark harvesting: find birch trees, verify harvest and cooldown
+4. Play-test bark map: craft and open map, verify terrain/water/caves shown correctly
+5. Play-test auto step-up: walk across forest terrain, verify smooth traversal
+6. Add grappling hook sound effect audio files
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

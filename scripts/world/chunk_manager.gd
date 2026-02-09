@@ -767,8 +767,14 @@ func _generate_cave_entrances() -> void:
 
 		var cave_type: String = cave_types[caves_generated % cave_types.size()]
 
+		# Snap cave center to nearest cell_size grid so all cave geometry
+		# aligns with terrain cell boundaries, eliminating terrain gaps.
+		var snapped_x: float = roundf(candidate.x / cell_size) * cell_size
+		var snapped_z: float = roundf(candidate.y / cell_size) * cell_size
+		var snapped_center := Vector2(snapped_x, snapped_z)
+
 		cave_entrances.append({
-			"center": candidate,
+			"center": snapped_center,
 			"cave_id": caves_generated,
 			"cave_type": cave_type
 		})
@@ -1540,34 +1546,33 @@ func is_near_any_pond(world_x: float, world_z: float, buffer: float = 2.0) -> bo
 
 
 func is_inside_cave_tunnel(world_x: float, world_z: float) -> bool:
-	## Check if a world position falls inside the cave CRATER/SINKHOLE area only.
-	## Only the crater opening (where stairs descend) skips terrain generation.
-	## The tunnel area (z < -5) is NOT skipped — normal terrain generates on top,
-	## giving the tunnel a natural grass surface like Minecraft caves.
+	## Check if a world position falls inside the cave skip zone (crater/stairway).
+	## Skip zone: X:[-3,+3], Z:[-6,+6] (2x4 cells = 6 wide x 12 deep).
+	## The tunnel area (Z < -6) is NOT skipped — terrain generates on top.
 	##
-	## This function receives cell CENTER coordinates. To prevent removing cells that
-	## only partially overlap the intended zone, we shrink the check boundaries by
-	## cell_size/2 on each side. A cell is only skipped if its ENTIRE footprint falls
-	## within the intended zone X:[-3,+3] Z:[-5,+4].
+	## Cave center is snapped to cell_size grid, so skip zone boundaries align
+	## exactly with cell edges. We shrink the check by half_cell since this
+	## receives cell CENTER coordinates — a cell is only skipped if its entire
+	## footprint falls within the zone.
 	var half_cell: float = cell_size / 2.0
 	for cave in cave_entrances:
 		var cave_center: Vector2 = cave["center"]
 		var local_x: float = world_x - cave_center.x
 		var local_z: float = world_z - cave_center.y
 		if (local_x >= -3.0 + half_cell and local_x <= 3.0 - half_cell
-				and local_z >= -5.0 + half_cell and local_z <= 4.0 - half_cell):
+				and local_z >= -6.0 + half_cell and local_z <= 6.0 - half_cell):
 			return true
 	return false
 
 
 func is_near_cave_entrance(world_x: float, world_z: float) -> bool:
 	## Check if a world position is near any cave entrance (wider area for tree/resource exclusion).
-	## Covers the crater, stairway, tunnel, and scattered rim boulders.
+	## 1-cell buffer around cave: X:[-6,+6], Z:[-27,+9].
 	for cave in cave_entrances:
 		var cave_center: Vector2 = cave["center"]
 		var local_x: float = world_x - cave_center.x
 		var local_z: float = world_z - cave_center.y
-		if local_x >= -6.0 and local_x <= 6.0 and local_z >= -26.0 and local_z <= 7.0:
+		if local_x >= -6.0 and local_x <= 6.0 and local_z >= -27.0 and local_z <= 9.0:
 			return true
 	return false
 

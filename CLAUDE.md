@@ -86,6 +86,10 @@ For iterative visual/geometry work (cave designs, structure art, UI layouts, loa
 
 For performance optimization in Godot, always profile and identify ALL bottlenecks before fixing any single one. Don't declare victory after fixing one bottleneck - check for remaining issues (height cache, mesh batching, collision sync, async readiness). Prefer comprehensive fixes over incremental band-aids.
 
+### Grid Alignment Rule
+
+All terrain-interacting geometry (caves, structures) must snap X/Z outer boundaries to multiples of `cell_size` (3.0). This ensures terrain skip zones align perfectly with cell edges, eliminating gaps. Interior decorative details (stalactites, rubble) are exempt.
+
 ### Common GDScript Pitfalls
 
 When editing GDScript files, be careful with: 1) Vector3 truthiness (use `vector != Vector3.ZERO` not `if vector`) 2) Dictionary `.has()` vs property access 3) Slot/index number mismatches between input handlers and inventory systems. Double-check these patterns.
