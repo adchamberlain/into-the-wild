@@ -37,8 +37,6 @@ var is_in_water: bool = false
 var is_climbing: bool = false
 var climbing_structure: Node = null  # The ladder we're climbing
 var is_grappling: bool = false  # Whether player is being pulled by grappling hook
-var thorn_slow_active: bool = false  # Whether player is slowed by thorns
-var thorn_slow_multiplier: float = 1.0  # Speed multiplier when in thorns
 
 # Performance: throttle raycast checks
 const INTERACTION_CHECK_INTERVAL: float = 0.1  # Check 10x/sec instead of 60x/sec
@@ -286,10 +284,6 @@ func _process_normal_movement(delta: float) -> void:
 	is_sprinting = Input.is_action_pressed("sprint") and is_on_floor()
 	current_speed = sprint_speed if is_sprinting else walk_speed
 
-	# Apply thorn slow effect
-	if thorn_slow_active:
-		current_speed *= thorn_slow_multiplier
-
 	# Get input direction from actions (supports both keyboard and controller)
 	var input_dir: Vector2 = _get_movement_input()
 
@@ -463,12 +457,6 @@ func set_grappling(grappling: bool) -> void:
 		# Clear interaction target while grappling
 		current_interaction_target = null
 		interaction_cleared.emit()
-
-
-## Set thorn slow effect on/off.
-func set_thorn_slow(active: bool, factor: float) -> void:
-	thorn_slow_active = active
-	thorn_slow_multiplier = factor if active else 1.0
 
 
 ## Set whether player is in water (swimming).

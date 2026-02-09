@@ -67,7 +67,7 @@ Build up your camp through three levels:
 | 6 | Storage Box | Place storage container |
 | 7 | Fishing Rod | Catch fish (50 durability) |
 | 8 | Crafting Bench Kit | Place a workbench |
-| 20 | Machete | Clear thorny obstacles (200 durability) |
+| 20 | Machete | Clear vegetation (200 durability) |
 | 21 | Lantern | Bright light source, 2x torch range |
 | 22 | Grappling Hook | Ascend cliff faces with arc-based traversal (100 durability) |
 | 23 | Lodestone | Placeable navigation beacon (pick up with E) |

@@ -52,13 +52,6 @@ var river_fishing_pool_width: float = 8.0
 var river_depth: float = 2.0
 var river_fishing_pool_spacing: float = 40.0  # Distance between fishing pools
 
-# Obstacle settings (thorny bushes that block paths)
-# Each: {center: Vector2, obstacle_id: int}
-var obstacles: Array[Dictionary] = []
-var obstacle_count: int = 3  # Target number of thorn obstacles (reduced for performance)
-var obstacle_min_spacing: float = 30.0  # Min distance between obstacles
-var obstacle_spawn_min_distance: float = 100.0  # Min distance from spawn (outside initial chunks)
-
 # Cave entrance settings
 # Each: {center: Vector2, cave_id: int, cave_type: String}
 var cave_entrances: Array[Dictionary] = []
@@ -176,11 +169,6 @@ var river_segment_scene: PackedScene
 var spawned_river_indices: Array[int] = []  # Track which rivers have been fully spawned
 var spawned_river_fishing_pools: Array[Vector2] = []  # Track spawned river fishing pools
 
-# Obstacle tracking
-var obstacle_thorns_script: GDScript
-var spawned_obstacle_indices: Array[int] = []  # Track which obstacles have been spawned
-var spawned_obstacles: Array[Node3D] = []  # References to spawned obstacle nodes
-
 # Cave entrance tracking
 var cave_entrance_script: GDScript
 var spawned_cave_indices: Array[int] = []  # Track which cave entrances have been spawned
@@ -209,7 +197,6 @@ func _ready() -> void:
 	add_to_group("chunk_manager")
 	_setup_noise()
 	_generate_water_bodies()
-	_generate_obstacles()
 	_generate_cave_entrances()
 	_setup_material()
 	_setup_world_floor()
@@ -726,72 +713,6 @@ func _place_fishing_pools(river_path: Array[Vector2]) -> Array[Vector2]:
 	return pools
 
 
-func _generate_obstacles() -> void:
-	## Generate thorny bush obstacles in HILLS/ROCKY regions to gate areas
-	obstacles.clear()
-
-	var obstacle_rng: RandomNumberGenerator = RandomNumberGenerator.new()
-	obstacle_rng.seed = noise_seed + 1111
-
-	var world_extent: float = 120.0
-	var attempts: int = 0
-	var max_attempts: int = obstacle_count * 100
-	var obstacles_generated: int = 0
-
-	while obstacles_generated < obstacle_count and attempts < max_attempts:
-		attempts += 1
-
-		# Generate random position
-		var candidate: Vector2 = Vector2(
-			obstacle_rng.randf_range(-world_extent, world_extent),
-			obstacle_rng.randf_range(-world_extent, world_extent)
-		)
-
-		# Must be far from spawn
-		if candidate.length() < obstacle_spawn_min_distance:
-			continue
-
-		# Obstacles only in HILLS or ROCKY regions
-		var region: RegionType = get_region_at(candidate.x, candidate.y)
-		if region != RegionType.HILLS and region != RegionType.ROCKY:
-			continue
-
-		# Check distance from existing obstacles
-		var too_close: bool = false
-		for existing in obstacles:
-			if candidate.distance_to(existing["center"]) < obstacle_min_spacing:
-				too_close = true
-				break
-
-		if too_close:
-			continue
-
-		# Check distance from water bodies
-		for body in water_bodies:
-			if candidate.distance_to(body["center"]) < body["radius"] + 15.0:
-				too_close = true
-				break
-
-		if too_close:
-			continue
-
-		# Prefer placement in path_noise valleys (blocking natural paths)
-		var path_value: float = path_noise.get_noise_2d(candidate.x, candidate.y)
-		# Give preference to path areas but don't require it
-		if path_value < 0.1 and obstacle_rng.randf() < 0.6:
-			continue  # 60% chance to skip non-path areas
-
-		obstacles.append({
-			"center": candidate,
-			"obstacle_id": obstacles_generated
-		})
-
-		obstacles_generated += 1
-		print("[ChunkManager] Generated obstacle #%d at (%.0f, %.0f) in %s" % [
-			obstacles_generated, candidate.x, candidate.y, RegionType.keys()[region]
-		])
-
-
 func _generate_cave_entrances() -> void:
 	## Generate cave entrances in ROCKY regions
 	cave_entrances.clear()
@@ -1049,8 +970,7 @@ func _load_scenes() -> void:
 	ore_scene = load("res://scenes/resources/ore_node.tscn")
 	osha_root_scene = load("res://scenes/resources/osha_root.tscn")
 
-	# Load obstacle and cave scripts
-	obstacle_thorns_script = load("res://scripts/world/obstacle_thorns.gd")
+	# Load cave entrance script
 	cave_entrance_script = load("res://scripts/world/cave_entrance.gd")
 
 	if not tree_scene:
@@ -1059,8 +979,6 @@ func _load_scenes() -> void:
 		push_warning("[ChunkManager] Failed to load ponderosa pine scene")
 	if not osha_root_scene:
 		push_warning("[ChunkManager] Failed to load osha root scene")
-	if not obstacle_thorns_script:
-		push_warning("[ChunkManager] Failed to load obstacle_thorns script")
 
 
 func get_terrain_material() -> StandardMaterial3D:
@@ -1509,9 +1427,6 @@ func _load_chunk(chunk_coord: Vector2i) -> void:
 	# Spawn river segments and fishing pools in this chunk
 	_spawn_river_features_in_chunk(chunk_coord, chunk_min_x, chunk_max_x, chunk_min_z, chunk_max_z)
 
-	# Spawn obstacles in this chunk
-	_spawn_obstacles_in_chunk(chunk_min_x, chunk_max_x, chunk_min_z, chunk_max_z)
-
 	# Spawn cave entrances in this chunk
 	_spawn_cave_entrances_in_chunk(chunk_min_x, chunk_max_x, chunk_min_z, chunk_max_z)
 
@@ -1918,45 +1833,6 @@ func _on_river_body_exited(body: Node3D) -> void:
 			body.set_in_water(false)
 
 
-func _spawn_obstacles_in_chunk(min_x: float, max_x: float, min_z: float, max_z: float) -> void:
-	## Spawn obstacle thorns in this chunk
-	if not obstacle_thorns_script:
-		return
-
-	for obs_idx in range(obstacles.size()):
-		if obs_idx in spawned_obstacle_indices:
-			continue
-
-		var obs_center: Vector2 = obstacles[obs_idx]["center"]
-		if obs_center.x >= min_x and obs_center.x < max_x and \
-		   obs_center.y >= min_z and obs_center.y < max_z:
-			_spawn_obstacle(obs_idx)
-
-
-func _spawn_obstacle(obs_idx: int) -> void:
-	## Spawn a single obstacle at the specified index
-	if obs_idx in spawned_obstacle_indices or obs_idx >= obstacles.size():
-		return
-
-	var obs_data: Dictionary = obstacles[obs_idx]
-	var obs_center: Vector2 = obs_data["center"]
-
-	# Create obstacle node
-	var obstacle: StaticBody3D = StaticBody3D.new()
-	obstacle.set_script(obstacle_thorns_script)
-	obstacle.name = "Thorns_%d" % obs_idx
-
-	# Position on terrain
-	var terrain_height: float = get_height_at(obs_center.x, obs_center.y)
-	obstacle.global_position = Vector3(obs_center.x, terrain_height, obs_center.y)
-
-	add_child(obstacle)
-	spawned_obstacle_indices.append(obs_idx)
-	spawned_obstacles.append(obstacle)
-
-	print("[ChunkManager] Spawned obstacle #%d at (%.0f, %.0f)" % [obs_idx, obs_center.x, obs_center.y])
-
-
 func _spawn_cave_entrances_in_chunk(min_x: float, max_x: float, min_z: float, max_z: float) -> void:
 	## Spawn cave entrances in this chunk
 	if not cave_entrance_script:
@@ -2000,29 +1876,6 @@ func _spawn_cave_entrance(cave_idx: int) -> void:
 	print("[ChunkManager] Spawned %s cave entrance #%d at (%.0f, %.0f)" % [
 		cave_type, cave_idx, cave_center.x, cave_center.y
 	])
-
-
-## Get all spawned obstacles for save/load
-func get_spawned_obstacles() -> Array[Node3D]:
-	return spawned_obstacles
-
-
-## Get obstacle data for saving
-func get_obstacles_save_data() -> Array[Dictionary]:
-	var data: Array[Dictionary] = []
-	for obstacle in spawned_obstacles:
-		if is_instance_valid(obstacle) and obstacle.has_method("get_save_data"):
-			var obs_data: Dictionary = obstacle.get_save_data()
-			data.append(obs_data)
-	return data
-
-
-## Load obstacle states from save data
-func load_obstacles_save_data(data: Array) -> void:
-	for i in range(min(data.size(), spawned_obstacles.size())):
-		var obstacle: Node3D = spawned_obstacles[i]
-		if is_instance_valid(obstacle) and obstacle.has_method("load_save_data"):
-			obstacle.load_save_data(data[i])
 
 
 # Debug info

@@ -128,7 +128,6 @@ Natural obstacles requiring creative problem-solving:
 - A river too wide to cross → build a raft or find materials for a rope bridge
 - A cliff face with rare minerals → craft climbing gear
 - A flooded cave → wait for dry weather or build a drainage channel
-- Dense thorns blocking a path → craft a machete or find another route
 - A bear's territory → craft noise makers to scare it off, or find bait to lure it elsewhere
 
 ---
