@@ -39,9 +39,6 @@ const VALIDATION_INTERVAL: float = 0.1  # Check 10x/sec instead of every frame
 var validation_timer: float = 0.0
 var last_preview_pos: Vector3 = Vector3.ZERO
 
-# Calculated rope ladder height (set during placement)
-var calculated_ladder_height: float = 4.0
-
 # Preview instance
 var preview_instance: Node3D = null
 var preview_material: StandardMaterial3D = null
@@ -500,129 +497,6 @@ func _get_ground_height(x: float, z: float, from_y: float = 50.0) -> float:
 	return 0.0
 
 
-## Check if there's a cliff face in front of the placement position.
-func _has_cliff_face(pos: Vector3) -> bool:
-	if not player or not preview_instance:
-		return false
-
-	var space_state: PhysicsDirectSpaceState3D = player.get_world_3d().direct_space_state
-	if not space_state:
-		return false
-
-	# Get forward direction (toward where the ladder would face)
-	var forward_dir: Vector3 = -preview_instance.global_transform.basis.z
-	forward_dir.y = 0
-	forward_dir = forward_dir.normalized()
-
-	# Check at multiple heights to detect both short (2-block) and tall cliffs.
-	# A single ray at y+1.0 can miss short obstacles entirely.
-	for check_height: float in [0.3, 0.8, 1.5]:
-		var ray_origin: Vector3 = pos - forward_dir * 0.5 + Vector3(0, check_height, 0)
-		var ray_end: Vector3 = pos + forward_dir * 3.0 + Vector3(0, check_height, 0)
-
-		var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.new()
-		query.from = ray_origin
-		query.to = ray_end
-		query.collision_mask = 1  # Terrain layer
-
-		var result: Dictionary = space_state.intersect_ray(query)
-		if not result.is_empty():
-			return true
-
-	return false
-
-
-## Snap a position to the nearest cliff face in the given direction.
-## Returns the position right against the cliff, or original position if no cliff found.
-func _snap_to_cliff_face(pos: Vector3, forward_dir: Vector3) -> Vector3:
-	if not player:
-		return pos
-
-	var space_state: PhysicsDirectSpaceState3D = player.get_world_3d().direct_space_state
-	if not space_state:
-		return pos
-
-	# Raycast forward from the position to find the cliff face.
-	# Try multiple heights to handle both short (2-block) and tall cliffs.
-	for check_height: float in [0.5, 1.0, 1.5]:
-		var ray_origin: Vector3 = pos - forward_dir * 1.0 + Vector3(0, check_height, 0)
-		var ray_end: Vector3 = pos + forward_dir * 5.0 + Vector3(0, check_height, 0)
-
-		var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.new()
-		query.from = ray_origin
-		query.to = ray_end
-		query.collision_mask = 1  # Terrain layer
-
-		var result: Dictionary = space_state.intersect_ray(query)
-		if result:
-			# Found cliff face - position ladder right against it (with small offset)
-			var cliff_pos: Vector3 = result.position
-			var snapped_pos: Vector3 = cliff_pos - forward_dir * 0.15  # Small offset from cliff
-			snapped_pos.y = pos.y  # Keep original ground height
-			return snapped_pos
-
-	# No cliff found, return original position
-	return pos
-
-
-## Calculate the cliff height behind a position (for rope ladder sizing).
-## Returns the height difference between the placement position and the terrain above/behind it.
-func _calculate_cliff_height(pos: Vector3, forward_dir: Vector3) -> float:
-	if not player:
-		return 4.0  # Default fallback
-
-	var space_state: PhysicsDirectSpaceState3D = player.get_world_3d().direct_space_state
-	if not space_state:
-		return 4.0
-
-	# The ladder faces away from player, so "behind" the ladder is toward the cliff
-	# forward_dir points away from player (toward cliff)
-	var check_pos: Vector3 = pos + forward_dir * 0.5  # Slightly into the cliff
-
-	# Find ground height at ladder base
-	var base_height: float = pos.y
-
-	# Raycast up from behind the ladder to find cliff top
-	# Start from the placement position and go up
-	var ray_origin: Vector3 = Vector3(check_pos.x, base_height + 0.5, check_pos.z)
-	var ray_end: Vector3 = Vector3(check_pos.x, base_height + 20.0, check_pos.z)
-
-	# Check if there's terrain directly behind/above by raycasting horizontally
-	# into the cliff at regular 1-unit intervals (no gaps that miss short cliffs).
-	var cliff_top_height: float = base_height
-
-	# Sample every 1.0 unit up to 15 units - consistent spacing ensures
-	# 2-block and other short cliffs aren't missed by sampling gaps.
-	var test_height: float = 1.0
-	while test_height <= 15.0:
-		var test_y: float = base_height + test_height
-		var horizontal_origin: Vector3 = Vector3(pos.x - forward_dir.x * 0.5, test_y, pos.z - forward_dir.z * 0.5)
-		var horizontal_end: Vector3 = Vector3(pos.x + forward_dir.x * 3.0, test_y, pos.z + forward_dir.z * 3.0)
-
-		var h_query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.new()
-		h_query.from = horizontal_origin
-		h_query.to = horizontal_end
-		h_query.collision_mask = 1
-
-		var h_result: Dictionary = space_state.intersect_ray(h_query)
-		if h_result:
-			# There's terrain at this height, cliff continues
-			cliff_top_height = test_y
-		else:
-			# No terrain at this height - we've found the top
-			break
-
-		test_height += 1.0
-
-	# Calculate ladder height (from base to just above cliff top)
-	var ladder_height: float = cliff_top_height - base_height + 1.0  # +1 to reach over the top
-
-	# Clamp to reasonable values
-	ladder_height = clampf(ladder_height, 2.0, 15.0)
-
-	return ladder_height
-
-
 ## Update preview position based on player aim.
 func _update_preview_position(delta: float) -> void:
 	if not player or not camera or not preview_instance:
@@ -649,13 +523,6 @@ func _update_preview_position(delta: float) -> void:
 	# Get terrain height at this position using raycast
 	# Sink slightly into ground (-0.04) to prevent visual floating seam
 	target_pos.y = _get_ground_height(target_pos.x, target_pos.z) - 0.04
-
-	# Rope ladders must be placed at the cliff BASE, not on top.
-	# If the preview ground is higher than the player's ground, snap down to the lower height.
-	if current_structure_type == "rope_ladder":
-		var player_ground_y: float = _get_ground_height(player.global_position.x, player.global_position.z)
-		if target_pos.y > player_ground_y + 0.5:
-			target_pos.y = player_ground_y - 0.04
 
 	preview_instance.global_position = target_pos
 
@@ -703,11 +570,6 @@ func _validate_placement(pos: Vector3) -> bool:
 	# For large structures (footprint > 2), player must be outside footprint or at the doorway
 	if footprint > 2.0 and player_dist_2d < footprint - 0.5:
 		return false
-
-	# Rope ladders require a cliff face
-	if current_structure_type == "rope_ladder":
-		if not _has_cliff_face(pos):
-			return false
 
 	# Check for collisions with existing objects
 	var space_state: PhysicsDirectSpaceState3D = player.get_world_3d().direct_space_state
@@ -822,19 +684,6 @@ func _confirm_placement() -> void:
 	var place_pos: Vector3 = preview_instance.global_position
 	var place_rotation: Vector3 = preview_instance.rotation
 
-	# For rope ladders, calculate cliff height and snap to cliff face
-	if current_structure_type == "rope_ladder":
-		var forward_dir: Vector3 = -preview_instance.global_transform.basis.z
-		forward_dir.y = 0
-		forward_dir = forward_dir.normalized()
-
-		# Snap position to cliff face
-		place_pos = _snap_to_cliff_face(place_pos, forward_dir)
-
-		# Calculate height based on snapped position
-		calculated_ladder_height = _calculate_cliff_height(place_pos, forward_dir)
-		print("[PlacementSystem] Ladder snapped to cliff, height: %.1f" % calculated_ladder_height)
-
 	# Get the actual scene
 	var scene_path: String = StructureData.get_scene_path(current_structure_type)
 	var structure: Node3D = null
@@ -907,8 +756,6 @@ func _create_structure_programmatically() -> Node3D:
 			return _create_canvas_tent()
 		"cabin":
 			return _create_cabin()
-		"rope_ladder":
-			return _create_rope_ladder(calculated_ladder_height)
 		"snare_trap":
 			return _create_snare_trap()
 		"smithing_station":
@@ -2746,84 +2593,6 @@ func _create_cabin_kitchen() -> StaticBody3D:
 	kitchen.add_child(collision)
 
 	return kitchen
-
-
-func _create_rope_ladder(custom_height: float = -1.0) -> StaticBody3D:
-	var ladder: StaticBody3D = StaticBody3D.new()
-	ladder.name = "RopeLadder"
-	ladder.set_script(load("res://scripts/campsite/structure_rope_ladder.gd"))
-
-	var rope_mat: StandardMaterial3D = StandardMaterial3D.new()
-	rope_mat.albedo_color = Color(0.55, 0.45, 0.3)  # Tan rope color
-
-	var wood_mat: StandardMaterial3D = StandardMaterial3D.new()
-	wood_mat.albedo_color = Color(0.5, 0.35, 0.2)  # Wood rungs
-
-	# Use custom height if provided, otherwise default
-	var ladder_height: float = custom_height if custom_height > 0 else 8.0
-	var rung_spacing: float = 0.5
-	var ladder_width: float = 0.6
-
-	# Collision (thin box along the ladder)
-	var collision: CollisionShape3D = CollisionShape3D.new()
-	var box_shape: BoxShape3D = BoxShape3D.new()
-	box_shape.size = Vector3(ladder_width + 0.2, ladder_height, 0.3)
-	collision.shape = box_shape
-	collision.position.y = ladder_height / 2
-	ladder.add_child(collision)
-
-	# Left rope
-	var rope_left: MeshInstance3D = MeshInstance3D.new()
-	var rope_mesh: BoxMesh = BoxMesh.new()
-	rope_mesh.size = Vector3(0.05, ladder_height, 0.05)
-	rope_left.mesh = rope_mesh
-	rope_left.position = Vector3(-ladder_width / 2, ladder_height / 2, 0)
-	rope_left.material_override = rope_mat
-	ladder.add_child(rope_left)
-
-	# Right rope
-	var rope_right: MeshInstance3D = MeshInstance3D.new()
-	rope_right.mesh = rope_mesh
-	rope_right.position = Vector3(ladder_width / 2, ladder_height / 2, 0)
-	rope_right.material_override = rope_mat
-	ladder.add_child(rope_right)
-
-	# Rungs
-	var rung_mesh: BoxMesh = BoxMesh.new()
-	rung_mesh.size = Vector3(ladder_width, 0.06, 0.08)
-
-	var num_rungs: int = int(ladder_height / rung_spacing)
-	for i: int in range(num_rungs):
-		var rung: MeshInstance3D = MeshInstance3D.new()
-		rung.mesh = rung_mesh
-		rung.position = Vector3(0, 0.25 + i * rung_spacing, 0)
-		rung.material_override = wood_mat
-		ladder.add_child(rung)
-
-	# Top anchor (hook/knot visual)
-	var anchor: MeshInstance3D = MeshInstance3D.new()
-	var anchor_mesh: BoxMesh = BoxMesh.new()
-	anchor_mesh.size = Vector3(0.2, 0.15, 0.15)
-	anchor.mesh = anchor_mesh
-	anchor.position = Vector3(0, ladder_height + 0.1, 0)
-	anchor.material_override = rope_mat
-	ladder.add_child(anchor)
-
-	# Climb detection area - larger than collision so player can grab it
-	var climb_area: Area3D = Area3D.new()
-	climb_area.name = "ClimbArea"
-	var area_collision: CollisionShape3D = CollisionShape3D.new()
-	var area_shape: BoxShape3D = BoxShape3D.new()
-	area_shape.size = Vector3(ladder_width + 0.8, ladder_height + 1.0, 0.8)
-	area_collision.shape = area_shape
-	area_collision.position.y = ladder_height / 2
-	climb_area.add_child(area_collision)
-	ladder.add_child(climb_area)
-
-	# Set the ladder_height on the script so climbing logic uses correct height
-	ladder.set("ladder_height", ladder_height)
-
-	return ladder
 
 
 func _create_snare_trap() -> StaticBody3D:

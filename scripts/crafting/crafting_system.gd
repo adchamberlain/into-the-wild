@@ -149,14 +149,6 @@ func _load_recipes() -> void:
 			"requires_bench": true,
 			"min_camp_level": 3
 		},
-		"rope_ladder_kit": {
-			"name": "Rope Ladder",
-			"inputs": {"rope": 2, "branch": 4},
-			"output_type": "rope_ladder_kit",
-			"output_amount": 1,
-			"description": "A portable ladder for climbing steep cliffs.",
-			"requires_bench": true
-		},
 		"snare_trap_kit": {
 			"name": "Snare Trap Kit",
 			"inputs": {"rope": 2, "branch": 4},

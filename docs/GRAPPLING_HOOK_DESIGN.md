@@ -2,7 +2,7 @@
 
 ## Overview
 
-A craftable climbing tool that allows players to ascend steep cliff faces in MOUNTAIN and ROCKY regions. Unlike rope ladders (placed infrastructure), the grappling hook is an **active traversal tool** - equip it, aim at a cliff, and pull yourself up.
+A craftable climbing tool that allows players to ascend steep cliff faces in MOUNTAIN and ROCKY regions. The grappling hook is an **active traversal tool** - equip it, aim at a cliff, and pull yourself up.
 
 **Design Goal:** Reward exploration of the new MOUNTAIN biome by gating the highest peaks behind a mid-to-late game tool that feels satisfying to use.
 
@@ -291,9 +291,7 @@ func get_cell_at_world_pos(world_x: float, world_z: float) -> Dictionary:
 | Level 2 | Rope ladder (placed), **Grappling hook (active)** |
 | Level 3 | Lantern for cave exploration |
 
-The grappling hook becomes available at the same tier as rope ladders but serves a different purpose:
-- **Rope Ladder**: Permanent installation for frequently-used routes
-- **Grappling Hook**: Exploration tool for first-time ascents, temporary access
+The grappling hook is the primary vertical traversal tool for exploration and cliff ascents.
 
 ### Durability
 
@@ -469,7 +467,7 @@ These ideas are interesting but not part of the initial implementation:
 
 ## Summary
 
-The grappling hook is a **mid-game exploration tool** that rewards players who've progressed through the smithing chain. It complements rope ladders by providing **spontaneous vertical traversal** rather than placed infrastructure.
+The grappling hook is a **mid-game exploration tool** that rewards players who've progressed through the smithing chain, providing **vertical traversal** for reaching high-altitude resources and biomes.
 
 **Key design principles:**
 1. **Tween-based movement** for reliability and feel
