@@ -413,11 +413,15 @@ func _build_collision() -> void:
 	_add_collision(Vector3(0, -4.75, -2.25), Vector3(4.6, 1.5, 1.5))  # Step 4: top=-4.0
 	_add_collision(Vector3(0, -5.25, -3.75), Vector3(4.6, 0.5, 1.5))  # Step 5: top=-5.0
 
-	# -- Crater/stair side walls (deeper, tighter) --
-	_add_collision(Vector3(-2.8, -2.8, -0.5), Vector3(0.8, 5.0, 9.0))
-	_add_collision(Vector3(2.8, -2.8, -0.5), Vector3(0.8, 5.0, 9.0))
-	# Front wall
-	_add_collision(Vector3(0, -2.8, 3.8), Vector3(6.4, 5.0, 0.8))
+	# -- Crater/stair side walls --
+	# Extended wide (2.8 units) to guarantee overlap with terrain cells regardless
+	# of grid alignment. The terrain skip zone is X:[-3,+3] but cell boundaries
+	# don't align to cave center, so walls must extend well past the skip zone edge.
+	# Center shifted outward; inner edge stays at ~±2.4 (stairway is 4.6 wide).
+	_add_collision(Vector3(-3.8, -2.55, -0.5), Vector3(2.8, 5.5, 9.0))
+	_add_collision(Vector3(3.8, -2.55, -0.5), Vector3(2.8, 5.5, 9.0))
+	# Front wall - widened to match side walls, extended forward to overlap terrain
+	_add_collision(Vector3(0, -2.55, 4.5), Vector3(10.4, 5.5, 2.2))
 
 	# -- Tunnel collision --
 	_add_collision(Vector3(-2.8, -3.0, -15.0), Vector3(0.8, 5.0, 18.0))

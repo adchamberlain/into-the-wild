@@ -569,9 +569,20 @@ func _update_fall_protection(delta: float) -> void:
 func _recover_from_fall() -> void:
 	velocity = Vector3.ZERO
 
-	# Try to use last safe position if valid (use flag instead of Vector3.ZERO check
-	# since campsite center IS at origin)
-	if _has_safe_position and last_safe_position.y > -10:
+	# Determine recovery XZ from last safe position or current position
+	var recover_x: float = last_safe_position.x if _has_safe_position else global_position.x
+	var recover_z: float = last_safe_position.z if _has_safe_position else global_position.z
+
+	# Use chunk_manager.get_height_at() to find actual terrain surface height,
+	# so we always recover ABOVE terrain even if last safe position was underground
+	var chunk_manager: Node = _find_chunk_manager()
+	if chunk_manager and chunk_manager.has_method("get_height_at"):
+		var terrain_y: float = chunk_manager.get_height_at(recover_x, recover_z)
+		global_position = Vector3(recover_x, terrain_y + 1.0, recover_z)
+		last_safe_position = global_position
+		_has_safe_position = true
+		print("[Player] Recovered to terrain surface: %s (terrain_y=%.1f)" % [global_position, terrain_y])
+	elif _has_safe_position and last_safe_position.y > -10:
 		global_position = last_safe_position + Vector3(0, 0.5, 0)
 		print("[Player] Recovered to last safe position: %s" % global_position)
 	else:
@@ -580,6 +591,13 @@ func _recover_from_fall() -> void:
 		last_safe_position = global_position
 		_has_safe_position = true
 		print("[Player] Recovered to spawn point.")
+
+
+func _find_chunk_manager() -> Node:
+	var terrain: Node = get_node_or_null("/root/Main/Terrain")
+	if terrain and terrain.has_method("get_height_at"):
+		return terrain
+	return null
 
 
 ## Update footstep sounds based on movement.
