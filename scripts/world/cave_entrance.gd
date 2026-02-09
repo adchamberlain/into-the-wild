@@ -26,9 +26,6 @@ static var _ceiling_mat: StandardMaterial3D = null
 static var _moss_mat: StandardMaterial3D = null
 static var _earth_mat: StandardMaterial3D = null
 static var _step_mat: StandardMaterial3D = null
-# Terrain surface materials for the ground above the tunnel (blends with surrounding terrain)
-static var _terrain_surface_mat: StandardMaterial3D = null
-static var _terrain_surface_mat2: StandardMaterial3D = null
 # Rock material palette: 6 shared tints from lightest to darkest
 static var _rock_palette: Array = []  # Array[StandardMaterial3D]
 
@@ -89,23 +86,6 @@ static func _get_step_material() -> StandardMaterial3D:
 		_step_mat.roughness = 0.95
 	return _step_mat
 
-
-static func _get_terrain_surface_material() -> StandardMaterial3D:
-	if not _terrain_surface_mat:
-		# Blend of rocky (0.45, 0.42, 0.38) and hills (0.38, 0.45, 0.35) grass colors
-		_terrain_surface_mat = StandardMaterial3D.new()
-		_terrain_surface_mat.albedo_color = Color(0.40, 0.44, 0.34)
-		_terrain_surface_mat.roughness = 0.95
-	return _terrain_surface_mat
-
-
-static func _get_terrain_surface_material2() -> StandardMaterial3D:
-	if not _terrain_surface_mat2:
-		# Slightly different shade for variation
-		_terrain_surface_mat2 = StandardMaterial3D.new()
-		_terrain_surface_mat2.albedo_color = Color(0.43, 0.41, 0.36)
-		_terrain_surface_mat2.roughness = 0.95
-	return _terrain_surface_mat2
 
 
 static func _get_rock_palette() -> Array:
@@ -193,9 +173,6 @@ func _setup_visuals() -> void:
 
 	# ===== INTERIOR DETAILS =====
 	_build_interior_details(rng)
-
-	# ===== TERRAIN SURFACE ABOVE TUNNEL =====
-	_build_terrain_surface()
 
 	# ===== CAVE AREA3D (player detection) =====
 	_build_cave_area()
@@ -462,34 +439,6 @@ func _build_interior_details(rng: RandomNumberGenerator) -> void:
 		)
 
 
-func _build_terrain_surface() -> void:
-	## Terrain-colored visual panels above the tunnel so it looks like natural ground
-	## from above, not a dark slab. Leaves the stairway opening clear.
-	## The dark ceiling underneath remains for the interior cave view.
-	var terrain_mat: StandardMaterial3D = _get_terrain_surface_material()
-	var terrain_mat2: StandardMaterial3D = _get_terrain_surface_material2()
-
-	# All panels at Y=0.0 to match surrounding terrain height (cave node sits at Y=2.0,
-	# so local Y=0 = world Y=2.0 = terrain platform height). Height 0.3 provides coverage
-	# without protruding above terrain. Bottom at Y=-0.15 is above ceiling tops (max ~Y=-0.2).
-
-	# Main panel over the tunnel: z=-5 to z=-25, full width
-	_add_interior_rock(
-		Vector3(0, 0.0, -15.0), Vector3(8.0, 0.3, 20.0), Vector3(0, 0, 0), terrain_mat)
-	# Left side panel: covers margin from crater to tunnel, z=+4.5 to z=-5
-	_add_interior_rock(
-		Vector3(-4.0, 0.0, -0.25), Vector3(3.0, 0.3, 9.5), Vector3(0, 0, 0), terrain_mat2)
-	# Right side panel: covers margin from crater to tunnel, z=+4.5 to z=-5
-	_add_interior_rock(
-		Vector3(4.0, 0.0, -0.25), Vector3(3.0, 0.3, 9.5), Vector3(0, 0, 0), terrain_mat2)
-	# Front panel: in front of stairway opening, z=+3 to z=+4.5
-	_add_interior_rock(
-		Vector3(0, 0.0, 3.75), Vector3(5.0, 0.3, 1.5), Vector3(0, 0, 0), terrain_mat)
-
-	# Stairway overhang surface — terrain-colored cover over the overhang piece
-	_add_interior_rock(
-		Vector3(0, 0.0, -4.0), Vector3(5.0, 0.3, 2.0), Vector3(0, 0, 0), terrain_mat)
-
 
 func _build_cave_area() -> void:
 	## Create an Area3D covering the underground section for player detection.
@@ -538,20 +487,16 @@ func _build_collision() -> void:
 	# Back wall
 	_add_collision(Vector3(0, -1.5, -24.5), Vector3(7.6, 3.5, 1.0))
 
-	# -- Floor slab covering entire terrain skip zone --
-	# Terrain skip zone: X:[-5,+5] Z:[-25,+4] — must prevent all fall-through.
-	# Extra 0.5 margin on each side for cell-center rounding safety.
-	_add_collision(Vector3(0, -3.25, -10.5), Vector3(11.0, 0.5, 30.0))
+	# -- Floor slab covering crater skip zone --
+	# Crater skip zone: X:[-4,+4] Z:[-6,+4]. Tunnel area has terrain collision above.
+	_add_collision(Vector3(0, -3.25, -1.0), Vector3(11.0, 0.5, 11.0))
 
-	# -- Surface terrain replacement panels --
-	# These fill the terrain skip zone at y=0 EXCEPT where the stairway opening is.
-	# The stairway opening is roughly x=[-2.5,+2.5] z=[+3,-4.5]
-	# Left panel: x=-5.5 to -2.5, z=+4 to -25
-	_add_collision(Vector3(-4.0, 0.0, -10.5), Vector3(3.0, 0.4, 30.0))
-	# Right panel: x=+2.5 to +5.5, z=+4 to -25
-	_add_collision(Vector3(4.0, 0.0, -10.5), Vector3(3.0, 0.4, 30.0))
-	# Back panel: full width behind the stairway opening, z=-5 to -25
-	_add_collision(Vector3(0, 0.0, -15.0), Vector3(5.0, 0.4, 20.0))
+	# -- Surface collision panels around crater opening --
+	# These fill the crater skip zone at y=0 EXCEPT where the stairway opening is.
+	# Left panel: covers crater sides
+	_add_collision(Vector3(-4.0, 0.0, -1.0), Vector3(3.0, 0.4, 11.0))
+	# Right panel: covers crater sides
+	_add_collision(Vector3(4.0, 0.0, -1.0), Vector3(3.0, 0.4, 11.0))
 	# Front panel: full width in front of stairway opening, z=+3 to +4.5
 	_add_collision(Vector3(0, 0.0, 3.75), Vector3(5.0, 0.4, 1.5))
 

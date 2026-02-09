@@ -1636,14 +1636,15 @@ func is_near_any_pond(world_x: float, world_z: float, buffer: float = 2.0) -> bo
 
 
 func is_inside_cave_tunnel(world_x: float, world_z: float) -> bool:
-	## Check if a world position falls inside any cave tunnel volume.
-	## Covers crater (z=+4), stairway, and deeper tunnel (z=-25).
-	## Slightly wider than the 6-unit tunnel to prevent partial overlap.
+	## Check if a world position falls inside the cave CRATER/SINKHOLE area only.
+	## Only the crater opening (where stairs descend) skips terrain generation.
+	## The tunnel area (z < -6) is NOT skipped — normal terrain generates on top,
+	## giving the tunnel a natural grass surface like Minecraft caves.
 	for cave in cave_entrances:
 		var cave_center: Vector2 = cave["center"]
 		var local_x: float = world_x - cave_center.x
 		var local_z: float = world_z - cave_center.y
-		if local_x >= -4.0 and local_x <= 4.0 and local_z >= -25.0 and local_z <= 4.0:
+		if local_x >= -4.0 and local_x <= 4.0 and local_z >= -6.0 and local_z <= 4.0:
 			return true
 	return false
 
