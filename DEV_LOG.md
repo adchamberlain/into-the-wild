@@ -3676,38 +3676,43 @@ Safety checks prevent step-up when: no obstacle ahead, ceiling above, still bloc
 
 ---
 
-## Session 45 - Fix Cave Terrain Gaps with Surface Caps (2026-02-08)
+## Session 45 - Fix Cave Terrain Gaps (2026-02-08)
 
 ### Problem
-Players fall through terrain near cave entrances — both inside and outside. Previous fixes (widening cave walls in Session 38) didn't work because they addressed symptoms, not the root cause.
+Players fall through terrain near cave entrances — both inside and outside. Previous fixes (widening cave walls in Session 38) addressed symptoms, not the root cause. Visual gaps also visible: terrain removal zone larger than cave geometry, and a gap between stair side walls and tunnel walls.
 
 ### Root Cause
-`is_inside_cave_tunnel()` checks **cell centers** against a rectangular skip zone `X:[-3,+3], Z:[-5,+4]`. With `cell_size=3.0`, a cell whose center lands on the boundary gets fully removed — but its half extends **outside** the boundary. This expands the effective terrain removal zone by up to 1.5 units on each side (X: up to ±4.5, Z: up to [-6.5, +5.5]). The cave's underground collision shapes only covered the intended skip zone, leaving gaps at the expanded edges.
+`is_inside_cave_tunnel()` checks **cell centers** against a rectangular skip zone `X:[-3,+3], Z:[-5,+4]`. With `cell_size=3.0`, a cell whose center lands on the boundary gets fully removed — but its half extends **outside** the boundary. This expands the effective terrain removal zone by up to 1.5 units on each side. The cave's visual and collision geometry only covered the intended zone, leaving both visual holes and fall-through gaps at the expanded edges.
 
-### Solution
-Two changes to `_build_collision()`:
+### Solution (Two Iterations)
 
-1. **Surface-level terrain cap collisions** — Four flat collision slabs at Y=0 (terrain surface level) around the stairway opening. These fill gaps where terrain was removed beyond the cave's underground collision, while leaving the stairway opening (X:[-2.3,+2.3], Z:[-4.5,+3.0]) clear for player descent:
-   - Left cap: `pos(-4.0, -0.25, -1.0)`, `size(4.0, 0.5, 14.0)`
-   - Right cap: `pos(4.0, -0.25, -1.0)`, `size(4.0, 0.5, 14.0)`
-   - Back cap: `pos(0, -0.25, -6.0)`, `size(4.6, 0.5, 3.0)`
-   - Front cap: `pos(0, -0.25, 4.5)`, `size(4.6, 0.5, 3.0)`
+**First attempt** — collision-only band-aids: added surface-level collision cap slabs and extended side wall collision Z-size. This prevented fall-through but didn't fix the visual gaps (terrain still removed too far, earth wall meshes still had gaps).
 
-2. **Extended side wall collision** — Changed Z-size from 9.0 to 11.0 (center shifted from -0.5 to -1.5), now covering Z:[-7, +4]. This closes the 1-unit gap between side walls (previously ending at Z:-5) and tunnel walls (starting at Z:-6).
+**Root cause fix** — three changes:
+
+1. **`is_inside_cave_tunnel()` now checks cell edges, not centers** — Shrinks check boundaries by `cell_size / 2.0` (1.5 units) so a cell is only skipped if its **entire footprint** falls within the intended zone. Effective center check becomes `X:[-1.5, +1.5], Z:[-3.5, +2.5]`, guaranteeing removal never exceeds `X:[-3,+3], Z:[-5,+4]`.
+
+2. **Extended stair side earth wall visual meshes** — Z-size from 7.5 to 9.5 (center shifted from -0.75 to -1.75), now covering Z:[-6.5, +3.0]. Closes the visible gap between stair walls (were ending at Z:-4.5) and tunnel walls (starting at Z:-6.0).
+
+3. **Removed surface collision caps** — No longer needed since terrain removal matches cave geometry. Side wall collision stays extended (Z-size 11.0) as a safety margin.
 
 | File | Type | Changes |
 |------|------|---------|
-| `scripts/world/cave_entrance.gd` | Modified | Extended side wall Z-size from 9→11 in `_build_collision()`, added 4 surface-level terrain cap collision slabs |
+| `scripts/world/chunk_manager.gd` | Modified | `is_inside_cave_tunnel()` shrinks boundaries by `cell_size / 2.0` to check cell edges |
+| `scripts/world/cave_entrance.gd` | Modified | Extended stair side earth wall Z-size 7.5→9.5, extended side wall collision Z-size 9→11, removed surface cap collisions |
 
 ### Test Results
 - All 479 regression tests pass
+
+### Lesson Learned
+When terrain generation removes cells based on point-in-zone checks, always account for cell extent (half cell_size) to avoid removing cells that only partially overlap the zone. Fix the generation logic rather than patching gaps with extra geometry.
 
 ---
 
 ## Next Session
 
 ### Planned Tasks
-1. Play-test cave entrance gap fix: approach cave from all sides, verify no fall-through
+1. Play-test cave entrance gap fix: approach cave from all sides, verify no fall-through or visual gaps
 2. Play-test birch bark harvesting: find birch trees, verify harvest and cooldown
 3. Play-test bark map: craft and open map, verify terrain/water/caves shown correctly
 4. Play-test auto step-up: walk across forest terrain, verify smooth traversal
