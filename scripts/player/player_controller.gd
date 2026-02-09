@@ -15,6 +15,12 @@ signal interaction_cleared()
 @export var camera_pitch_min: float = -89.0
 @export var camera_pitch_max: float = 89.0
 
+# Camera collision - prevents clipping into terrain/ceilings/roofs
+const CAMERA_DEFAULT_Y: float = 1.6  # Default eye height (matches scene)
+const CAMERA_MIN_Y: float = 0.6  # Lowest the camera can go (crouch level)
+const CAMERA_COLLISION_MARGIN: float = 0.15  # Buffer below ceiling hit point
+const CAMERA_COLLISION_LERP_SPEED: float = 12.0  # Smoothing speed
+
 # Interaction settings
 @export var interaction_distance: float = 3.0
 
@@ -218,6 +224,9 @@ func _physics_process(delta: float) -> void:
 
 	# Fall-through protection: track safe position and recover if fallen
 	_update_fall_protection(delta)
+
+	# Camera collision: prevent clipping into ceilings/terrain (runs every frame)
+	_update_camera_collision(delta)
 
 	# Skip movement processing while resting, climbing, or grappling
 	if is_resting or is_climbing or is_grappling:
@@ -626,6 +635,36 @@ func _get_surface_type() -> String:
 	# Default to grass for forest, plains, meadow
 	return "grass"
 
+
+
+## Prevent camera from clipping into ceilings, terrain, and roofs.
+## Casts a ray from waist height upward to detect overhead obstructions,
+## then smoothly lowers the camera to avoid clipping.
+func _update_camera_collision(delta: float) -> void:
+	var space_state: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+	if not space_state:
+		return
+
+	var target_y: float = CAMERA_DEFAULT_Y
+
+	# Cast ray from waist height upward past default camera position
+	# to detect ceilings, sloped roofs, and overhanging terrain
+	var ray_start: Vector3 = global_position + Vector3(0, CAMERA_MIN_Y, 0)
+	var ray_end: Vector3 = global_position + Vector3(0, CAMERA_DEFAULT_Y + CAMERA_COLLISION_MARGIN, 0)
+
+	var query := PhysicsRayQueryParameters3D.create(ray_start, ray_end)
+	query.collision_mask = 1  # Terrain and structures only
+	query.exclude = [get_rid()]  # Exclude player body
+
+	var result: Dictionary = space_state.intersect_ray(query)
+	if result.size() > 0:
+		# Ceiling hit - position camera below the obstruction
+		var hit_local_y: float = result.position.y - global_position.y
+		target_y = hit_local_y - CAMERA_COLLISION_MARGIN
+		target_y = clampf(target_y, CAMERA_MIN_Y, CAMERA_DEFAULT_Y)
+
+	# Smoothly interpolate to target height for natural feel
+	camera.position.y = lerpf(camera.position.y, target_y, CAMERA_COLLISION_LERP_SPEED * delta)
 
 
 ## Check if any UI menu is open and blocking player input.
