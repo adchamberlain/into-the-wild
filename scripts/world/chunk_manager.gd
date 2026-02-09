@@ -1122,6 +1122,18 @@ func get_height_at(x: float, z: float, skip_pit_check: bool = false) -> float:
 	var cave_flat_outer: float = 46.0  # Ramp falloff radius (wide enough for gradual climb)
 	var cave_platform_height: float = 2.0  # Low walkable platform height
 	var cave_max_slope: float = 0.67  # Max height per world unit (2.0 per cell) - ensures climbability
+
+	# Rectangular flat zone: ensures terrain at skip zone boundaries is flat at platform height.
+	# The skip zone (X:[-4,+4] Z:[-25,+4]) extends beyond the circular flat radius at the back,
+	# so without this check, terrain at Z=-25 would be at ramp height instead of 2.0.
+	for cave in cave_entrances:
+		var cave_center: Vector2 = cave["center"]
+		var local_x: float = snapped_x - cave_center.x
+		var local_z: float = snapped_z - cave_center.y
+		# 1 unit margin beyond skip zone for seamless terrain edge
+		if local_x >= -5.0 and local_x <= 5.0 and local_z >= -26.0 and local_z <= 5.0:
+			return cave_platform_height
+
 	for cave in cave_entrances:
 		var cave_center: Vector2 = cave["center"]
 		var dist_to_cave: float = Vector2(snapped_x - cave_center.x, snapped_z - cave_center.y).length()

@@ -272,12 +272,12 @@ func _build_crater_rim(dark_mat: StandardMaterial3D, rng: RandomNumberGenerator)
 
 	# ===== INNER CRATER WALLS (earth/rock sides descending from y=0 to y=-3) =====
 	var earth_mat: StandardMaterial3D = _get_earth_material()
-	# Left crater wall (extended to Z=+4 to cover full skip zone boundary)
+	# Left crater wall (wide enough to reach skip zone boundary at X=-4)
 	_add_interior_rock(
-		Vector3(-3.0, -1.5, 0.5), Vector3(0.8, 3.0, 7.0), Vector3(0, 0, 0), earth_mat)
-	# Right crater wall (extended to Z=+4 to cover full skip zone boundary)
+		Vector3(-3.5, -1.5, 0.5), Vector3(1.2, 3.0, 7.0), Vector3(0, 0, 0), earth_mat)
+	# Right crater wall (wide enough to reach skip zone boundary at X=+4)
 	_add_interior_rock(
-		Vector3(3.0, -1.5, 0.5), Vector3(0.8, 3.0, 7.0), Vector3(0, 0, 0), earth_mat)
+		Vector3(3.5, -1.5, 0.5), Vector3(1.2, 3.0, 7.0), Vector3(0, 0, 0), earth_mat)
 	# Front crater wall (below the stairway entrance, at +Z edge)
 	# Extended to Z=4.6 to cover the full terrain skip zone boundary (skip zone ends at Z=+4)
 	_add_interior_rock(
@@ -327,18 +327,18 @@ func _build_stairway(rng: RandomNumberGenerator) -> void:
 			step_mat
 		)
 
-	# Side earth walls along stairway (left)
+	# Side earth walls along stairway (left, wide enough to reach skip zone at X=-4)
 	_add_interior_rock(
-		Vector3(-3.0, -1.5, -0.75), Vector3(0.8, 3.0, 7.5), Vector3(0, 0, 0), earth_mat)
-	# Side earth walls along stairway (right)
+		Vector3(-3.5, -1.5, -0.75), Vector3(1.2, 3.0, 7.5), Vector3(0, 0, 0), earth_mat)
+	# Side earth walls along stairway (right, wide enough to reach skip zone at X=+4)
 	_add_interior_rock(
-		Vector3(3.0, -1.5, -0.75), Vector3(0.8, 3.0, 7.5), Vector3(0, 0, 0), earth_mat)
+		Vector3(3.5, -1.5, -0.75), Vector3(1.2, 3.0, 7.5), Vector3(0, 0, 0), earth_mat)
 
 	# Earth/rock overhang at ~z=-3 representing the ground surface over the tunnel
 	# Lowered to Y=-0.5 to avoid z-fighting with terrain surface panels above
 	var ceiling_mat: StandardMaterial3D = _get_ceiling_material()
 	_add_interior_rock(
-		Vector3(0, -0.5, -4.0), Vector3(7.6, 0.5, 2.0), Vector3(0, 0, 0), ceiling_mat)
+		Vector3(0, -0.5, -4.0), Vector3(8.4, 0.5, 2.0), Vector3(0, 0, 0), ceiling_mat)
 
 
 func _build_tunnel(rng: RandomNumberGenerator) -> void:
@@ -350,24 +350,24 @@ func _build_tunnel(rng: RandomNumberGenerator) -> void:
 
 	# Tunnel dimensions: 6 wide (x=-3 to +3), 3 tall (y=-3 to 0), 18 deep (z=-6 to -24)
 
-	# -- LEFT WALL: segmented for visual interest --
+	# -- LEFT WALL: segmented for visual interest (wide enough to reach skip zone at X=-4) --
 	for seg: int in range(6):
 		var z_start: float = -6.0 - float(seg) * 3.0
 		var width_var: float = rng.randf_range(-0.15, 0.15)
 		_add_interior_rock(
-			Vector3(-3.0 - width_var, -1.5, z_start - 1.5),
-			Vector3(0.8 + width_var * 2.0, 3.0, 3.0),
+			Vector3(-3.5 - width_var, -1.5, z_start - 1.5),
+			Vector3(1.2 + width_var * 2.0, 3.0, 3.0),
 			Vector3(0, 0, 0),
 			wall_mat
 		)
 
-	# -- RIGHT WALL: segmented --
+	# -- RIGHT WALL: segmented (wide enough to reach skip zone at X=+4) --
 	for seg: int in range(6):
 		var z_start: float = -6.0 - float(seg) * 3.0
 		var width_var: float = rng.randf_range(-0.15, 0.15)
 		_add_interior_rock(
-			Vector3(3.0 + width_var, -1.5, z_start - 1.5),
-			Vector3(0.8 + width_var * 2.0, 3.0, 3.0),
+			Vector3(3.5 + width_var, -1.5, z_start - 1.5),
+			Vector3(1.2 + width_var * 2.0, 3.0, 3.0),
 			Vector3(0, 0, 0),
 			wall_mat
 		)
@@ -380,7 +380,7 @@ func _build_tunnel(rng: RandomNumberGenerator) -> void:
 		var height_var: float = rng.randf_range(-0.2, 0.2)
 		_add_interior_rock(
 			Vector3(0, -0.8 + height_var, z_start - 1.5),
-			Vector3(7.6, 0.8, 3.0),
+			Vector3(8.4, 0.8, 3.0),
 			Vector3(0, 0, 0),
 			ceiling_mat
 		)
@@ -396,7 +396,7 @@ func _build_tunnel(rng: RandomNumberGenerator) -> void:
 	# -- BACK WALL: seals the end of the tunnel --
 	_add_interior_rock(
 		Vector3(0, -1.5, -24.5),
-		Vector3(7.6, 3.5, 1.0),
+		Vector3(8.4, 3.5, 1.0),
 		Vector3(0, 0, 0),
 		wall_mat
 	)
@@ -574,21 +574,21 @@ func _spawn_resources() -> void:
 		push_warning("[CaveEntrance] Failed to load resource scripts")
 		return
 
-	# Crystal 1: left wall, midway through tunnel
+	# Crystal 1: left side, midway through tunnel (on the floor)
 	var crystal1: StaticBody3D = StaticBody3D.new()
 	crystal1.set_script(crystal_script)
 	crystal1.name = "CrystalNode_0"
-	crystal1.position = Vector3(-2.2, -2.0, -12.0)
-	crystal1.rotation_degrees = Vector3(0, 15, 10)
+	crystal1.position = Vector3(-2.2, -3.0, -12.0)
+	crystal1.rotation_degrees = Vector3(0, 15, 0)
 	add_child(crystal1)
 	resource_nodes.append(crystal1)
 
-	# Crystal 2: right wall, deeper in tunnel
+	# Crystal 2: right side, deeper in tunnel (on the floor)
 	var crystal2: StaticBody3D = StaticBody3D.new()
 	crystal2.set_script(crystal_script)
 	crystal2.name = "CrystalNode_1"
-	crystal2.position = Vector3(2.0, -1.5, -19.0)
-	crystal2.rotation_degrees = Vector3(0, -20, -8)
+	crystal2.position = Vector3(2.0, -3.0, -19.0)
+	crystal2.rotation_degrees = Vector3(0, -20, 0)
 	add_child(crystal2)
 	resource_nodes.append(crystal2)
 
