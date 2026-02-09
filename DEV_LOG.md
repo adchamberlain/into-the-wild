@@ -3676,15 +3676,42 @@ Safety checks prevent step-up when: no obstacle ahead, ceiling above, still bloc
 
 ---
 
+## Session 45 - Fix Cave Terrain Gaps with Surface Caps (2026-02-08)
+
+### Problem
+Players fall through terrain near cave entrances — both inside and outside. Previous fixes (widening cave walls in Session 38) didn't work because they addressed symptoms, not the root cause.
+
+### Root Cause
+`is_inside_cave_tunnel()` checks **cell centers** against a rectangular skip zone `X:[-3,+3], Z:[-5,+4]`. With `cell_size=3.0`, a cell whose center lands on the boundary gets fully removed — but its half extends **outside** the boundary. This expands the effective terrain removal zone by up to 1.5 units on each side (X: up to ±4.5, Z: up to [-6.5, +5.5]). The cave's underground collision shapes only covered the intended skip zone, leaving gaps at the expanded edges.
+
+### Solution
+Two changes to `_build_collision()`:
+
+1. **Surface-level terrain cap collisions** — Four flat collision slabs at Y=0 (terrain surface level) around the stairway opening. These fill gaps where terrain was removed beyond the cave's underground collision, while leaving the stairway opening (X:[-2.3,+2.3], Z:[-4.5,+3.0]) clear for player descent:
+   - Left cap: `pos(-4.0, -0.25, -1.0)`, `size(4.0, 0.5, 14.0)`
+   - Right cap: `pos(4.0, -0.25, -1.0)`, `size(4.0, 0.5, 14.0)`
+   - Back cap: `pos(0, -0.25, -6.0)`, `size(4.6, 0.5, 3.0)`
+   - Front cap: `pos(0, -0.25, 4.5)`, `size(4.6, 0.5, 3.0)`
+
+2. **Extended side wall collision** — Changed Z-size from 9.0 to 11.0 (center shifted from -0.5 to -1.5), now covering Z:[-7, +4]. This closes the 1-unit gap between side walls (previously ending at Z:-5) and tunnel walls (starting at Z:-6).
+
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/world/cave_entrance.gd` | Modified | Extended side wall Z-size from 9→11 in `_build_collision()`, added 4 surface-level terrain cap collision slabs |
+
+### Test Results
+- All 479 regression tests pass
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test birch bark harvesting: find birch trees, verify harvest and cooldown
-2. Play-test bark map: craft and open map, verify terrain/water/caves shown correctly
-3. Play-test cave entrance gap fix: approach cave from all sides, verify no fall-through
-4. Play-test fall recovery: verify recovery lands on terrain surface
-5. Add camera collision to prevent clipping into terrain
-6. Add grappling hook sound effect audio files
+1. Play-test cave entrance gap fix: approach cave from all sides, verify no fall-through
+2. Play-test birch bark harvesting: find birch trees, verify harvest and cooldown
+3. Play-test bark map: craft and open map, verify terrain/water/caves shown correctly
+4. Play-test auto step-up: walk across forest terrain, verify smooth traversal
+5. Add grappling hook sound effect audio files
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.
