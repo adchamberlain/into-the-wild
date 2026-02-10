@@ -3766,11 +3766,29 @@ Updated README.md with recent feature additions:
 
 ---
 
+## Session 48 - Cave Z-Fighting Fix and Camp Level Progression Bug (2026-02-09)
+
+### Cave Entrance Overhang Z-Fighting Fix
+Fixed z-fighting on the exterior surface of caves at the far end where dark and green terrain were flashing. The tunnel entrance overhang mesh at the skip zone boundary had its top face at exactly local Y=0.0, which equals terrain_height in world space — coplanar with the terrain top faces. Since the overhang is 9.0 units wide but the skip zone is only 6.0 wide, terrain cells generated outside the skip zone had top faces at the exact same Y as the overhang, causing z-fighting. Lowered the overhang center from Y=-0.5 to Y=-0.75, placing its top face 0.25 units below terrain surface.
+
+### Camp Level 2→3 Day Counter Off-By-One Fix
+Fixed camp level progression being stuck at level 2 despite days passing. The HUD displayed `days_at_level_2 + 1` as "Day X/3" (so "Day 3/3" appeared when `days_at_level_2 = 2`), but the requirement checked `days_at_level_2 >= 3`. This meant the player had to wait one extra day beyond the "Day 3/3" display before the requirement was satisfied. Since the HUD was capped at "Day 3/3" via `min()`, that extra day was invisible — it looked permanently stuck. Changed the threshold from `>= 3` to `>= 2` so the level-up triggers when the HUD shows "Day 3/3".
+
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/world/cave_entrance.gd` | Modified | Lowered tunnel entrance overhang Y from -0.5 to -0.75 to fix z-fighting with terrain |
+| `scripts/campsite/campsite_manager.gd` | Modified | Changed day requirement from `>= 3` to `>= 2` to align with HUD display |
+
+### Test Results
+- All 479 regression tests pass
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test cave stairway seam fix: verify no visible seams on steps
-2. Play-test decoration exclusion: verify no floating flowers/grass over cave openings
+1. Play-test cave z-fighting fix: verify no dark/green flashing on cave exterior
+2. Play-test camp level progression: verify level 2→3 triggers when HUD shows "Day 3/3"
 3. Play-test birch bark harvesting: find birch trees, verify harvest and cooldown
 4. Play-test bark map: craft and open map, verify terrain/water/caves shown correctly
 5. Play-test auto step-up: walk across forest terrain, verify smooth traversal
