@@ -237,9 +237,11 @@ func _build_stairway(_rng: RandomNumberGenerator) -> void:
 		Vector3(0, -6.15, -4.5), Vector3(6.0, 0.3, 3.1), Vector3(0, 0, 0), step_mat)
 
 	# Tunnel entrance overhang where tunnel begins (below terrain surface)
+	# Top must be below terrain_height to avoid z-fighting with terrain top faces.
+	# Center Y=-0.75 with height 1.0 → top at Y=-0.25 (0.25 below terrain surface).
 	var ceiling_mat: StandardMaterial3D = _get_ceiling_material()
 	_add_interior_rock(
-		Vector3(0, -0.5, -6.0), Vector3(9.0, 1.0, 1.5), Vector3(0, 0, 0), ceiling_mat)
+		Vector3(0, -0.75, -6.0), Vector3(9.0, 1.0, 1.5), Vector3(0, 0, 0), ceiling_mat)
 
 
 func _build_tunnel(rng: RandomNumberGenerator) -> void:
