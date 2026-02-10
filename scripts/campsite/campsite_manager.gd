@@ -287,7 +287,10 @@ func _check_requirement(requirement: String) -> bool:
 		"has_multiple_structures":
 			return get_total_structure_count() >= 3
 		"survived_three_days_at_level_2":
-			return days_at_level_2 >= 3
+			# days_at_level_2 counts day transitions since reaching level 2.
+			# HUD displays days+1 as "Day X/3", so days_at_level_2=2 shows "Day 3/3".
+			# Use >= 2 so the requirement triggers when the HUD shows "Day 3/3".
+			return days_at_level_2 >= 2
 	return false
 
 
