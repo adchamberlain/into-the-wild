@@ -1309,7 +1309,6 @@ func _create_flower(pos: Vector3, petal_color: Color, rng: RandomNumberGenerator
 
 func _spawn_chunk_animals() -> void:
 	## Spawn ambient wildlife based on region type
-	## Animals are sparse - only ~30% of chunks have any animals
 	var cell_size: float = chunk_manager.cell_size
 	var chunk_size_cells: int = chunk_manager.chunk_size_cells
 	var chunk_world_size: float = chunk_size_cells * cell_size
@@ -1322,8 +1321,8 @@ func _spawn_chunk_animals() -> void:
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = chunk_seed
 
-	# Only 15% of chunks have any animals - reduced for performance
-	if rng.randf() > 0.15:
+	# 40% of chunks have animals
+	if rng.randf() > 0.40:
 		return
 
 	# Get the dominant region for this chunk (sample center)
@@ -1331,29 +1330,29 @@ func _spawn_chunk_animals() -> void:
 	var center_z: float = chunk_world_z + chunk_world_size / 2.0
 	var region: ChunkManager.RegionType = chunk_manager.get_region_at(center_x, center_z)
 
-	# Determine spawn counts based on region (reduced counts)
+	# Determine spawn counts based on region
 	var rabbit_count: int = 0
 	var bird_count: int = 0
 
 	match region:
 		ChunkManager.RegionType.MEADOW:
-			rabbit_count = rng.randi_range(0, 1)
-			bird_count = rng.randi_range(0, 1)
+			rabbit_count = rng.randi_range(1, 2)
+			bird_count = rng.randi_range(1, 2)
 		ChunkManager.RegionType.FOREST:
-			rabbit_count = rng.randi_range(0, 1)
-			bird_count = rng.randi_range(0, 1)
+			rabbit_count = rng.randi_range(1, 2)
+			bird_count = rng.randi_range(0, 2)
 		ChunkManager.RegionType.HILLS:
-			rabbit_count = 0
-			bird_count = rng.randi_range(0, 1)
+			rabbit_count = rng.randi_range(0, 1)
+			bird_count = rng.randi_range(1, 2)
 		ChunkManager.RegionType.ROCKY:
 			rabbit_count = 0
 			bird_count = rng.randi_range(0, 1)
 		ChunkManager.RegionType.MOUNTAIN:
 			rabbit_count = 0
-			bird_count = rng.randi_range(0, 1)  # Alpine birds (eagles soaring)
+			bird_count = rng.randi_range(1, 2)
 
 	# Cap total animals per chunk for performance
-	var max_animals: int = 2
+	var max_animals: int = 4
 	var total_requested: int = rabbit_count + bird_count
 	if total_requested > max_animals:
 		# Scale down proportionally
