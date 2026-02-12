@@ -3784,6 +3784,36 @@ Fixed camp level progression being stuck at level 2 despite days passing. The HU
 
 ---
 
+## Session 49 - Grappling Hook Sounds & Animal Spawn Rates (2026-02-11)
+
+### Grappling Hook Sound Effects
+Added three procedurally-generated audio files for the grappling hook. The SFXManager entries and gameplay code already existed from Session 49 (grapple_fire, grapple_attach, grapple_land) but the audio files were missing, causing silent playback. Generated sounds using Python/numpy synthesis:
+- **grapple_fire.mp3** - Rising-pitch whoosh with metallic zing (plays on launch)
+- **grapple_attach.mp3** - Sharp metallic clank with rock scrape (plays 150ms after fire)
+- **grapple_land.mp3** - Low thud with dirt crunch (plays on cliff landing)
+
+### Ambient Animal Spawn Rate Increase
+Animals were extremely rare due to cascading spawn filters. Increased visibility ~4-5x:
+- Chunk spawn gate: 15% → 40% of chunks can have animals
+- Per-chunk cap: 2 → 4 animals maximum
+- Meadow: 0-1 rabbit/bird → 1-2 each (guaranteed at least 1)
+- Forest: 0-1 rabbit/bird → 1-2 rabbits, 0-2 birds
+- Hills: birds only → 0-1 rabbit, 1-2 birds
+- Mountain: 0-1 bird → 1-2 birds
+- Rocky: unchanged (0-1 bird)
+
+| File | Type | Changes |
+|------|------|---------|
+| `assets/audio/sfx/tools/grapple_fire.mp3` | New | Hook launch sound |
+| `assets/audio/sfx/tools/grapple_attach.mp3` | New | Hook attach impact sound |
+| `assets/audio/sfx/tools/grapple_land.mp3` | New | Landing thud sound |
+| `scripts/world/terrain_chunk.gd` | Modified | Increased animal spawn rates and per-biome counts |
+
+### Test Results
+- All 479 regression tests pass
+
+---
+
 ## Next Session
 
 ### Planned Tasks
@@ -3792,7 +3822,8 @@ Fixed camp level progression being stuck at level 2 despite days passing. The HU
 3. Play-test birch bark harvesting: find birch trees, verify harvest and cooldown
 4. Play-test bark map: craft and open map, verify terrain/water/caves shown correctly
 5. Play-test auto step-up: walk across forest terrain, verify smooth traversal
-6. Add grappling hook sound effect audio files
+6. Play-test grappling hook sounds: verify fire/attach/land sounds play correctly
+7. Play-test animal spawn rates: verify noticeably more birds and rabbits
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.
