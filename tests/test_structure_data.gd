@@ -90,11 +90,11 @@ func test_spacing_prevents_overlap() -> void:
 
 
 func test_known_structure_count() -> void:
-	# 14 structure types as of current build
-	assert_equal(StructureData.STRUCTURES.size(), 14,
-		"Expected 14 structure types")
-	assert_equal(StructureData.PLACEABLE_ITEMS.size(), 14,
-		"Expected 14 placeable items")
+	# 15 structure types as of current build (added placed_lantern)
+	assert_equal(StructureData.STRUCTURES.size(), 15,
+		"Expected 15 structure types")
+	assert_equal(StructureData.PLACEABLE_ITEMS.size(), 15,
+		"Expected 15 placeable items")
 
 
 func test_cabin_is_largest() -> void:

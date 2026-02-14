@@ -469,6 +469,52 @@ func get_next_weather() -> String:
 	return _weather_to_string(next_weather)
 
 
+## Get a multi-day forecast (array of weather name strings).
+func get_forecast(days: int = 5) -> Array[String]:
+	var forecast: Array[String] = []
+	# Day 1 is always the known next weather
+	forecast.append(_weather_to_string(next_weather))
+
+	# Subsequent days are simulated predictions
+	var prev: Weather = next_weather
+	for i: int in range(days - 1):
+		# Simulate: if previous was not clear, chance it persists
+		if prev != Weather.CLEAR and randf() < weather_persistence_chance:
+			forecast.append(_weather_to_string(prev))
+		else:
+			# Roll for new weather
+			var roll: float = randf()
+			var cumulative: float = 0.0
+			var predicted: Weather = Weather.CLEAR
+
+			cumulative += rain_chance
+			if roll < cumulative:
+				predicted = Weather.RAIN
+			else:
+				cumulative += fog_chance
+				if roll < cumulative:
+					predicted = Weather.FOG
+				else:
+					cumulative += heat_wave_chance
+					if roll < cumulative:
+						predicted = Weather.HEAT_WAVE
+					else:
+						cumulative += cold_snap_chance
+						if roll < cumulative:
+							predicted = Weather.COLD_SNAP
+
+			# Apply forecast inaccuracy (gets worse further out)
+			var accuracy: float = forecast_accuracy - i * 0.1
+			if randf() > accuracy:
+				var weathers: Array[Weather] = [Weather.CLEAR, Weather.RAIN, Weather.FOG, Weather.STORM]
+				predicted = weathers[randi() % weathers.size()]
+
+			forecast.append(_weather_to_string(predicted))
+			prev = predicted
+
+	return forecast
+
+
 ## Convert Weather enum to string.
 func _weather_to_string(weather: Weather) -> String:
 	match weather:

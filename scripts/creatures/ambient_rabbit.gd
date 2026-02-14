@@ -314,9 +314,10 @@ func _start_single_hop() -> void:
 	var hop_dir: Vector3 = move_direction.normalized()
 	var target_pos: Vector3 = global_position + hop_dir * hop_distance
 
-	# Sample terrain height at target (only once for performance)
+	# Sample terrain height at target using max of nearby samples
+	# to avoid clipping into adjacent terrain block corners
 	if chunk_manager and chunk_manager.has_method("get_height_at"):
-		var terrain_height: float = chunk_manager.get_height_at(target_pos.x, target_pos.z)
+		var terrain_height: float = _get_smoothed_terrain_height(target_pos.x, target_pos.z)
 		# Avoid water - turn around but use current height instead of resampling
 		if terrain_height < 0:
 			move_direction = -move_direction

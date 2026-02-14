@@ -149,13 +149,13 @@ func _wake_up(player: Node) -> void:
 	is_player_sleeping = false
 	sleeping_player = null
 
-	# Position player standing next to the bed
-	var exit_offset: Vector3 = Vector3(-1.0, 0, 0).rotated(Vector3.UP, rotation.y)
+	# Position player standing next to the bed (forward/+Z = toward cabin interior)
+	var exit_offset: Vector3 = Vector3(0, 0, 1.0).rotated(Vector3.UP, rotation.y)
 	player.global_position = global_position + exit_offset
 	player.global_position.y = global_position.y + 1.0  # Stand height
 
-	# Face the player toward the bed
-	player.rotation.y = rotation.y + PI / 2
+	# Face the player away from the bed (looking into the cabin)
+	player.rotation.y = rotation.y
 
 	# Reset camera to neutral
 	if player.has_node("Camera3D"):

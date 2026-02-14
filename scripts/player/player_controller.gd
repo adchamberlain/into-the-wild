@@ -89,6 +89,7 @@ const FOOD_VALUES: Dictionary = {
 	"osha_root": 20.0,  # Alpine medicinal plant - also restores hunger
 	# Processed
 	"berry_pouch": 40.0,
+	"waterskin": 35.0,  # Carries water, restores hunger/thirst
 	# Cooked (fire pit)
 	"cooked_berries": 25.0,
 	"cooked_mushroom": 20.0,
@@ -107,6 +108,7 @@ const FOOD_VALUES: Dictionary = {
 const HEALING_ITEMS: Dictionary = {
 	"healing_salve": 30.0,
 	"osha_root": 25.0,  # Alpine medicinal plant - potent healer
+	"hide_bedroll": 40.0,  # Portable bedroll for resting
 }
 
 
@@ -448,8 +450,12 @@ func _get_interaction_text(target: Node) -> String:
 func _try_interact() -> void:
 	if current_interaction_target and current_interaction_target.has_method("interact"):
 		current_interaction_target.interact(self)
-		# Refresh interaction text in case it changed (e.g., drying rack progress)
-		if current_interaction_target:
+		# Check if target was freed (e.g., picked up torch) and clear HUD
+		if not is_instance_valid(current_interaction_target):
+			current_interaction_target = null
+			interaction_cleared.emit()
+		elif current_interaction_target:
+			# Refresh interaction text in case it changed (e.g., drying rack progress)
 			var interaction_text: String = _get_interaction_text(current_interaction_target)
 			interaction_target_changed.emit(current_interaction_target, interaction_text)
 	else:
@@ -559,7 +565,7 @@ func _try_move_structure() -> void:
 	if current_interaction_target and current_interaction_target.is_in_group("structure"):
 		# Torches and lodestones can only be picked up, not moved
 		var stype: String = current_interaction_target.get("structure_type") if current_interaction_target.get("structure_type") else ""
-		if stype == "placed_torch" or stype == "lodestone":
+		if stype == "placed_torch" or stype == "lodestone" or stype == "placed_lantern":
 			return
 		var placement_system: Node = get_node_or_null("PlacementSystem")
 		if placement_system and placement_system.has_method("start_move"):

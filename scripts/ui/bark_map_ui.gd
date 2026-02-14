@@ -9,7 +9,7 @@ const MAP_EXTENT: float = 150.0
 # Sample interval (world units between each terrain sample)
 const SAMPLE_INTERVAL: float = 6.0
 # Map display size (pixels)
-const MAP_SIZE: float = 700.0
+const MAP_SIZE: float = 1400.0
 # Map padding from edges
 const MAP_PADDING: float = 40.0
 
@@ -194,10 +194,18 @@ func _on_map_draw() -> void:
 	map_control.draw_circle(camp_pos, 7.0, Color(1.0, 0.85, 0.3, 1))
 	map_control.draw_circle(camp_pos, 7.0, Color(0.8, 0.65, 0.1, 1), false, 2.0)
 
-	# Draw player position
+	# Draw player position as X marker
 	var player_map_pos: Vector2 = _world_to_map(player_pos.x, player_pos.z)
-	map_control.draw_circle(player_map_pos, 5.0, Color(1, 1, 1, 1))
-	map_control.draw_circle(player_map_pos, 5.0, Color(0.3, 0.3, 0.3, 1), false, 1.5)
+	var x_size: float = 8.0
+	var x_width: float = 3.0
+	var x_color: Color = Color(1, 1, 1, 1)
+	var x_outline: Color = Color(0.2, 0.2, 0.2, 1)
+	# Draw outline first (slightly thicker)
+	map_control.draw_line(player_map_pos + Vector2(-x_size, -x_size), player_map_pos + Vector2(x_size, x_size), x_outline, x_width + 2.0)
+	map_control.draw_line(player_map_pos + Vector2(x_size, -x_size), player_map_pos + Vector2(-x_size, x_size), x_outline, x_width + 2.0)
+	# Draw X
+	map_control.draw_line(player_map_pos + Vector2(-x_size, -x_size), player_map_pos + Vector2(x_size, x_size), x_color, x_width)
+	map_control.draw_line(player_map_pos + Vector2(x_size, -x_size), player_map_pos + Vector2(-x_size, x_size), x_color, x_width)
 
 	# Draw legend
 	_draw_legend()
@@ -224,8 +232,16 @@ func _draw_legend() -> void:
 	for i: int in range(entries.size()):
 		var entry: Dictionary = entries[i]
 		var y: float = legend_y + i * line_height
-		var swatch_rect: Rect2 = Rect2(legend_x, y, swatch_size, swatch_size)
-		map_control.draw_rect(swatch_rect, entry["color"])
+		if entry["label"] == "You":
+			# Draw X marker in legend
+			var cx: float = legend_x + swatch_size / 2.0
+			var cy: float = y + swatch_size / 2.0
+			var s: float = swatch_size / 2.0 - 1.0
+			map_control.draw_line(Vector2(cx - s, cy - s), Vector2(cx + s, cy + s), entry["color"], 2.0)
+			map_control.draw_line(Vector2(cx + s, cy - s), Vector2(cx - s, cy + s), entry["color"], 2.0)
+		else:
+			var swatch_rect: Rect2 = Rect2(legend_x, y, swatch_size, swatch_size)
+			map_control.draw_rect(swatch_rect, entry["color"])
 		map_control.draw_string(HUD_FONT, Vector2(legend_x + swatch_size + 6, y + swatch_size),
 			entry["label"], HORIZONTAL_ALIGNMENT_LEFT, -1, 14,
 			Color(0.8, 0.8, 0.8, 1))

@@ -46,27 +46,31 @@ func interact(player: Node) -> bool:
 	if not is_active:
 		return false
 
-	var current: String = "Unknown"
-	var forecast: String = "Unknown"
-
-	if weather_manager:
-		if weather_manager.has_method("get_current_weather_name"):
-			current = weather_manager.get_current_weather_name()
-		if weather_manager.has_method("get_next_weather"):
-			forecast = weather_manager.get_next_weather()
-	else:
-		# Try to find weather manager again
+	# Try to find weather manager if not cached
+	if not weather_manager:
 		_find_weather_manager()
-		if weather_manager:
-			if weather_manager.has_method("get_current_weather_name"):
-				current = weather_manager.get_current_weather_name()
-			if weather_manager.has_method("get_next_weather"):
-				forecast = weather_manager.get_next_weather()
 
-	print("[WeatherVane] Current weather: %s" % current)
-	print("[WeatherVane] Forecast: %s expected next" % forecast)
+	var current: String = "Unknown"
+	if weather_manager and weather_manager.has_method("get_current_weather_name"):
+		current = weather_manager.get_current_weather_name()
 
-	# Point the arrow based on weather (just visual feedback)
+	# Build forecast display
+	var forecast_lines: Array[String] = []
+	forecast_lines.append("Now: %s" % current)
+
+	if weather_manager and weather_manager.has_method("get_forecast"):
+		var forecast: Array[String] = weather_manager.get_forecast(5)
+		for i: int in range(forecast.size()):
+			forecast_lines.append("Day +%d: %s" % [i + 1, forecast[i]])
+	elif weather_manager and weather_manager.has_method("get_next_weather"):
+		forecast_lines.append("Tomorrow: %s" % weather_manager.get_next_weather())
+
+	var forecast_text: String = " | ".join(forecast_lines)
+	_show_notification(forecast_text, Color(0.7, 0.85, 1.0))
+
+	print("[WeatherVane] Forecast: %s" % forecast_text)
+
+	# Point the arrow based on weather (visual feedback)
 	_point_to_weather(current)
 
 	return true
@@ -94,3 +98,16 @@ func _point_to_weather(weather: String) -> void:
 
 func get_interaction_text() -> String:
 	return "Check Weather"
+
+
+func _show_notification(message: String, color: Color) -> void:
+	var hud: Node = _find_hud()
+	if hud and hud.has_method("show_notification"):
+		hud.show_notification(message, color)
+
+
+func _find_hud() -> Node:
+	var root: Node = get_tree().root
+	if root.has_node("Main/HUD"):
+		return root.get_node("Main/HUD")
+	return null

@@ -173,4 +173,4 @@ func get_interaction_text() -> String:
 		if equipment and equipment.has_tool_equipped(required_tool):
 			return "Mine Rare Ore (%d/%d)" % [chop_progress, chops_required]
 
-	return "Rare Ore (Need Pickaxe)"
+	return "Rare Ore (Need Axe)"

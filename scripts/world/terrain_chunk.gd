@@ -1090,14 +1090,14 @@ func _spawn_chunk_resources() -> void:
 func _spawn_resource(scene: PackedScene, x: float, y: float, z: float, rng: RandomNumberGenerator) -> void:
 	var resource: Node3D = scene.instantiate()
 
-	# Sample terrain heights at multiple points around the resource to handle cell boundaries
-	# Resource could extend up to 0.5 units in any direction, so check those points
+	# Sample terrain heights at multiple points around the resource to handle cell boundaries.
+	# Cell size is 3.0, so sample at 1.5 (half cell) to catch adjacent cells in rocky terrain.
 	var sample_offsets: Array[Vector2] = [
-		Vector2(0.0, 0.0),    # Center
-		Vector2(0.5, 0.0),    # East
-		Vector2(-0.5, 0.0),   # West
-		Vector2(0.0, 0.5),    # South
-		Vector2(0.0, -0.5),   # North
+		Vector2(0.0, 0.0),     # Center
+		Vector2(1.5, 0.0),     # East (adjacent cell)
+		Vector2(-1.5, 0.0),    # West
+		Vector2(0.0, 1.5),     # South
+		Vector2(0.0, -1.5),    # North
 	]
 
 	var max_height: float = y
@@ -1106,8 +1106,8 @@ func _spawn_resource(scene: PackedScene, x: float, y: float, z: float, rng: Rand
 		if sample_height > max_height:
 			max_height = sample_height
 
-	# Add small offset so resource sits on TOP of terrain, not half-buried
-	var height_offset: float = 0.1  # Half the resource height (0.2)
+	# Place resource ON the highest nearby terrain surface
+	var height_offset: float = 0.1
 
 	resource.position = Vector3(x, max_height + height_offset, z)
 	resource.rotation.y = rng.randf() * TAU

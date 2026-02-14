@@ -172,9 +172,10 @@ func _move_animal(delta: float, speed: float) -> void:
 	var movement: Vector3 = move_direction * speed * delta
 	var new_pos: Vector3 = global_position + movement
 
-	# Sample terrain height at new position
+	# Sample terrain height at new position using max of nearby samples
+	# to avoid clipping into adjacent terrain block edges
 	if chunk_manager and chunk_manager.has_method("get_height_at"):
-		var terrain_height: float = chunk_manager.get_height_at(new_pos.x, new_pos.z)
+		var terrain_height: float = _get_smoothed_terrain_height(new_pos.x, new_pos.z)
 		# Skip water (negative height)
 		if terrain_height < 0:
 			# Turn around
@@ -189,6 +190,16 @@ func _move_animal(delta: float, speed: float) -> void:
 		rotation_timer = 0.0
 		var look_target: Vector3 = global_position + move_direction
 		mesh_container.look_at(look_target, Vector3.UP)
+
+
+## Get terrain height using max of nearby samples to prevent clipping at block edges.
+func _get_smoothed_terrain_height(x: float, z: float) -> float:
+	var h_center: float = chunk_manager.get_height_at(x, z)
+	var h_east: float = chunk_manager.get_height_at(x + 0.4, z)
+	var h_west: float = chunk_manager.get_height_at(x - 0.4, z)
+	var h_north: float = chunk_manager.get_height_at(x, z - 0.4)
+	var h_south: float = chunk_manager.get_height_at(x, z + 0.4)
+	return maxf(h_center, maxf(maxf(h_east, h_west), maxf(h_north, h_south)))
 
 
 ## Override in subclasses to build animal-specific mesh

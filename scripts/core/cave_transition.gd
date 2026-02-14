@@ -135,11 +135,8 @@ func _check_player_light() -> void:
 		darkness_changed.emit(is_dark)
 
 		if is_dark:
-			_show_notification("It's pitch black! Equip a light source!", Color(1.0, 0.5, 0.5))
 			time_in_darkness = 0.0
 			darkness_damage_timer = 0.0
-		else:
-			_show_notification("You can see now.", Color(0.7, 0.9, 0.7))
 
 
 func _update_darkness_overlay(dark: bool) -> void:

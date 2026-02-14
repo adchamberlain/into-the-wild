@@ -8,7 +8,7 @@ signal animal_caught(animal_type: String, loot: Dictionary)
 const VALID_BAIT: Array[String] = ["berry", "mushroom", "herb"]
 
 # Catch chances and loot tables
-const CATCH_CHANCE: float = 0.15  # 15% chance per check
+const CATCH_CHANCE: float = 0.075  # 7.5% chance per check
 const CHECK_INTERVAL: float = 60.0  # Check every game hour (60 seconds at default speed)
 
 # Catch table: type -> {weight, loot: {item: amount}}

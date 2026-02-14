@@ -217,8 +217,8 @@ func _on_period_changed(period: String) -> void:
 
 
 func _on_day_changed(_day: int) -> void:
-	# Update campsite level display to show new day progress
-	_update_campsite_level_display()
+	# Defer update so campsite_manager processes the day change first
+	call_deferred("_update_campsite_level_display")
 
 
 func _on_interaction_target_changed(target: Node, interaction_text: String) -> void:
@@ -233,7 +233,7 @@ func _on_interaction_target_changed(target: Node, interaction_text: String) -> v
 		# Add move hint if target is a structure (except torches/lodestones - pick up only)
 		if target and target.is_in_group("structure"):
 			var stype: String = target.get("structure_type") if target.get("structure_type") else ""
-			var is_pickup_only: bool = stype == "placed_torch" or stype == "lodestone"
+			var is_pickup_only: bool = stype == "placed_torch" or stype == "lodestone" or stype == "placed_lantern"
 			if not is_pickup_only:
 				var move_key: String = _get_button_prompt("move_structure")
 				prompt_text += "  [%s] Move" % move_key

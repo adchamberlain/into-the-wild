@@ -43,14 +43,14 @@ var sky_colors: Dictionary = {
 	"dawn": Color(0.95, 0.7, 0.5),
 	"day": Color(0.4, 0.6, 0.9),
 	"dusk": Color(0.9, 0.5, 0.4),
-	"night": Color(0.05, 0.05, 0.15)
+	"night": Color(0.08, 0.08, 0.18)
 }
 
 var ambient_colors: Dictionary = {
 	"dawn": Color(0.8, 0.6, 0.5),
 	"day": Color(1.0, 1.0, 1.0),
 	"dusk": Color(0.8, 0.5, 0.4),
-	"night": Color(0.1, 0.1, 0.2)
+	"night": Color(0.25, 0.25, 0.4)
 }
 
 var sun_colors: Dictionary = {
@@ -64,7 +64,7 @@ var sun_intensities: Dictionary = {
 	"dawn": 0.55,
 	"day": 1.1,
 	"dusk": 0.45,
-	"night": 0.12
+	"night": 0.25
 }
 
 var time_manager: Node
@@ -85,7 +85,7 @@ var fog_colors: Dictionary = {
 	"dawn": Color(0.95, 0.75, 0.6),
 	"day": Color(0.65, 0.75, 0.9),
 	"dusk": Color(0.9, 0.6, 0.5),
-	"night": Color(0.1, 0.1, 0.2)
+	"night": Color(0.12, 0.12, 0.22)
 }
 
 # Weather overlay
@@ -304,13 +304,14 @@ func _setup_sun() -> void:
 	box.size = Vector3(sun_size, sun_size, sun_size * 0.2)  # Flat square
 	sun_mesh.mesh = box
 
-	# Sun material (bright yellow-white, unshaded and emissive)
+	# Sun material (bright yellow-white, unshaded and emissive, billboard)
 	var sun_material := StandardMaterial3D.new()
 	sun_material.albedo_color = Color(1.0, 0.95, 0.7)
 	sun_material.emission_enabled = true
 	sun_material.emission = Color(1.0, 0.9, 0.6)
 	sun_material.emission_energy_multiplier = 2.0
 	sun_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	sun_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
 	sun_mesh.material_override = sun_material
 
 	# Initial position (will be updated based on time)
@@ -431,14 +432,8 @@ func _update_sun_position(progress: float) -> void:
 
 
 func _update_celestial_facing() -> void:
-	# Make sun and moon face camera position (at origin of their containers)
-	# This creates a billboard effect while keeping the blocky aesthetic
-	if sun_mesh and sun_mesh.visible:
-		# Look at the container origin (where camera is)
-		var dir_to_camera: Vector3 = -sun_mesh.position.normalized()
-		if dir_to_camera.length() > 0.1:
-			sun_mesh.look_at(sun_mesh.position + dir_to_camera * 10.0, Vector3.UP)
-
+	# Sun uses material billboard mode for reliable camera-facing.
+	# Moon still uses look_at since it has a child shadow overlay.
 	if moon_mesh and moon_mesh.visible:
 		var dir_to_camera: Vector3 = -moon_mesh.position.normalized()
 		if dir_to_camera.length() > 0.1:
@@ -614,7 +609,7 @@ func _update_night_sky() -> void:
 
 	# Update moon light
 	if moon_light:
-		moon_light.light_energy = night_alpha * 0.15
+		moon_light.light_energy = night_alpha * 0.35
 		# Point moon light downward from moon direction
 		if moon_mesh:
 			moon_light.look_at_from_position(moon_mesh.position, Vector3.ZERO)

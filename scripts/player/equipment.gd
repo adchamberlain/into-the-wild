@@ -1297,6 +1297,14 @@ func _place_item() -> bool:
 				return true
 		return false
 
+	# Lantern: instant placement without preview mode
+	if equipped_item == "lantern":
+		if placement_system and placement_system.has_method("place_lantern_instant"):
+			if placement_system.place_lantern_instant():
+				unequip()
+				return true
+		return false
+
 	# Lodestone: instant placement without preview mode
 	if equipped_item == "lodestone":
 		if placement_system and placement_system.has_method("place_lodestone_instant"):

@@ -778,6 +778,8 @@ func _create_structure_programmatically(structure_type: String) -> Node3D:
 			return _create_placed_torch()
 		"lodestone":
 			return _create_lodestone()
+		"placed_lantern":
+			return _create_placed_lantern()
 	return null
 
 
@@ -832,20 +834,23 @@ func _create_fire_pit() -> StaticBody3D:
 	log2.material_override = log_mat
 	fire_pit.add_child(log2)
 
-	# --- Fire: 3 layers (base, mid, tip) ---
+	# --- Fire: 3 layers (base, mid, tip) in a container for toggling ---
+	var fire_container: Node3D = Node3D.new()
+	fire_container.name = "FireMesh"
+	fire_pit.add_child(fire_container)
+
 	var base_flame_mat: StandardMaterial3D = StandardMaterial3D.new()
 	base_flame_mat.albedo_color = Color(1.0, 0.35, 0.0)
 	base_flame_mat.emission_enabled = true
 	base_flame_mat.emission = Color(0.95, 0.3, 0.0)
 	base_flame_mat.emission_energy_multiplier = 2.5
 	var base_flame: MeshInstance3D = MeshInstance3D.new()
-	base_flame.name = "FireMesh"
 	var bf_mesh: BoxMesh = BoxMesh.new()
 	bf_mesh.size = Vector3(0.28, 0.22, 0.24)
 	base_flame.mesh = bf_mesh
 	base_flame.position = Vector3(0, 0.30, 0)
 	base_flame.material_override = base_flame_mat
-	fire_pit.add_child(base_flame)
+	fire_container.add_child(base_flame)
 
 	var mid_mat: StandardMaterial3D = StandardMaterial3D.new()
 	mid_mat.albedo_color = Color(1.0, 0.55, 0.05)
@@ -858,7 +863,7 @@ func _create_fire_pit() -> StaticBody3D:
 	mid_flame.mesh = mf_mesh
 	mid_flame.position = Vector3(0, 0.48, 0)
 	mid_flame.material_override = mid_mat
-	fire_pit.add_child(mid_flame)
+	fire_container.add_child(mid_flame)
 
 	var tip_mat: StandardMaterial3D = StandardMaterial3D.new()
 	tip_mat.albedo_color = Color(1.0, 0.82, 0.25)
@@ -871,13 +876,14 @@ func _create_fire_pit() -> StaticBody3D:
 	tip_flame.mesh = tf_mesh
 	tip_flame.position = Vector3(0, 0.62, 0)
 	tip_flame.material_override = tip_mat
-	fire_pit.add_child(tip_flame)
+	fire_container.add_child(tip_flame)
 
 	var light: OmniLight3D = OmniLight3D.new()
 	light.name = "FireLight"
-	light.light_color = Color(1.0, 0.6, 0.2)
-	light.light_energy = 3.0
-	light.omni_range = 8.0
+	light.light_color = Color(1.0, 0.7, 0.35)
+	light.light_energy = 2.2
+	light.omni_range = 10.0
+	light.omni_attenuation = 1.5
 	light.position.y = 0.5
 	fire_pit.add_child(light)
 
@@ -2632,3 +2638,107 @@ func _create_lodestone() -> StaticBody3D:
 	lodestone.add_child(light)
 
 	return lodestone
+
+
+func _create_placed_lantern() -> StaticBody3D:
+	var lantern: StaticBody3D = StaticBody3D.new()
+	lantern.name = "PlacedLantern"
+	lantern.set_script(load("res://scripts/campsite/structure_placed_lantern.gd"))
+
+	var metal_mat: StandardMaterial3D = StandardMaterial3D.new()
+	metal_mat.albedo_color = Color(0.45, 0.45, 0.48)
+	metal_mat.metallic = 0.6
+	metal_mat.roughness = 0.4
+
+	var metal_dark_mat: StandardMaterial3D = StandardMaterial3D.new()
+	metal_dark_mat.albedo_color = Color(0.3, 0.3, 0.32)
+	metal_dark_mat.metallic = 0.5
+	metal_dark_mat.roughness = 0.5
+
+	var glass_mat: StandardMaterial3D = StandardMaterial3D.new()
+	glass_mat.albedo_color = Color(0.8, 0.9, 1.0, 0.4)
+	glass_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	glass_mat.metallic = 0.1
+	glass_mat.roughness = 0.05
+
+	var glow_mat: StandardMaterial3D = StandardMaterial3D.new()
+	glow_mat.albedo_color = Color(0.9, 0.95, 1.0)
+	glow_mat.emission_enabled = true
+	glow_mat.emission = Color(0.8, 0.9, 1.0)
+	glow_mat.emission_energy_multiplier = 3.0
+
+	# Collision
+	var collision: CollisionShape3D = CollisionShape3D.new()
+	var box_shape: BoxShape3D = BoxShape3D.new()
+	box_shape.size = Vector3(0.25, 0.6, 0.25)
+	collision.shape = box_shape
+	collision.position.y = 0.3
+	lantern.add_child(collision)
+
+	# Base
+	var base: MeshInstance3D = MeshInstance3D.new()
+	var base_mesh: BoxMesh = BoxMesh.new()
+	base_mesh.size = Vector3(0.22, 0.04, 0.22)
+	base.mesh = base_mesh
+	base.position = Vector3(0, 0.02, 0)
+	base.material_override = metal_dark_mat
+	lantern.add_child(base)
+
+	# Glass housing
+	var glass: MeshInstance3D = MeshInstance3D.new()
+	var glass_mesh: BoxMesh = BoxMesh.new()
+	glass_mesh.size = Vector3(0.16, 0.32, 0.16)
+	glass.mesh = glass_mesh
+	glass.position = Vector3(0, 0.2, 0)
+	glass.material_override = glass_mat
+	lantern.add_child(glass)
+
+	# Crystal core
+	var core: MeshInstance3D = MeshInstance3D.new()
+	var core_mesh: BoxMesh = BoxMesh.new()
+	core_mesh.size = Vector3(0.06, 0.14, 0.06)
+	core.mesh = core_mesh
+	core.position = Vector3(0, 0.2, 0)
+	core.material_override = glow_mat
+	lantern.add_child(core)
+
+	# Top cap
+	var cap: MeshInstance3D = MeshInstance3D.new()
+	var cap_mesh: BoxMesh = BoxMesh.new()
+	cap_mesh.size = Vector3(0.2, 0.04, 0.2)
+	cap.mesh = cap_mesh
+	cap.position = Vector3(0, 0.38, 0)
+	cap.material_override = metal_mat
+	lantern.add_child(cap)
+
+	# Handle loop
+	var handle: MeshInstance3D = MeshInstance3D.new()
+	var handle_mesh: BoxMesh = BoxMesh.new()
+	handle_mesh.size = Vector3(0.12, 0.06, 0.03)
+	handle.mesh = handle_mesh
+	handle.position = Vector3(0, 0.43, 0)
+	handle.material_override = metal_mat
+	lantern.add_child(handle)
+
+	# Corner posts
+	for dx: float in [-1.0, 1.0]:
+		for dz: float in [-1.0, 1.0]:
+			var post: MeshInstance3D = MeshInstance3D.new()
+			var post_mesh: BoxMesh = BoxMesh.new()
+			post_mesh.size = Vector3(0.02, 0.32, 0.02)
+			post.mesh = post_mesh
+			post.position = Vector3(dx * 0.08, 0.2, dz * 0.08)
+			post.material_override = metal_dark_mat
+			lantern.add_child(post)
+
+	# Light source
+	var light: OmniLight3D = OmniLight3D.new()
+	light.name = "LanternLight"
+	light.light_color = Color(0.9, 0.95, 1.0)
+	light.light_energy = 16.0
+	light.omni_range = 30.0
+	light.shadow_enabled = true
+	light.position = Vector3(0, 0.25, 0)
+	lantern.add_child(light)
+
+	return lantern

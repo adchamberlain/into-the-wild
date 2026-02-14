@@ -55,6 +55,9 @@ func _ready() -> void:
 	# Create swimming fish
 	_create_swimming_fish()
 
+	# Connect to day_changed to restock fish daily
+	call_deferred("_connect_day_changed")
+
 
 func _process(delta: float) -> void:
 	# Animate swimming fish
@@ -668,3 +671,15 @@ func _find_hud() -> Node:
 	if root.has_node("Main/HUD"):
 		return root.get_node("Main/HUD")
 	return null
+
+
+func _connect_day_changed() -> void:
+	var tm: Node = _find_time_manager()
+	if tm and tm.has_signal("day_changed") and not tm.day_changed.is_connected(_on_day_changed):
+		tm.day_changed.connect(_on_day_changed)
+
+
+func _on_day_changed(_day: int) -> void:
+	if is_depleted:
+		respawn()
+		print("[FishingSpot] Fish restocked for new day")

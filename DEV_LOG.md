@@ -3814,16 +3814,94 @@ Animals were extremely rare due to cascading spawn filters. Increased visibility
 
 ---
 
+## Session 50 - Bug Fix Marathon: 20 Gameplay Bugs (2026-02-14)
+
+Fixed all 20 bugs reported from gameplay testing session. Changes span combat, UI, structures, crafting, weather, environment, and creatures.
+
+### Bug Fixes
+
+**1. Rare ore "Need Pickaxe" text** - Changed to "Need Axe" to match `required_tool = "axe"` (`rare_ore_node.gd`)
+
+**2. Bunnies jumping at terrain block corners** - Added `_get_smoothed_terrain_height()` to `ambient_animal_base.gd` that samples 5 points (center + 4 offsets) and returns max height, preventing clipping at cell edges
+
+**3. Torch pickup HUD persistence** - Added `is_instance_valid` check after `interact()` in `player_controller.gd` to clear stale targets when objects are freed
+
+**4. Cave "need a light" notification** - Removed notification messages from `cave_transition.gd`, darkness damage still works silently
+
+**5. Structure placement inside caves** - Added `cave_entrance` group skip in `placement_system.gd` validation so cave colliders don't block placement
+
+**6. Cave 3D stones replaced with wall designs** - Replaced all 3D stalactites/rubble/outcrops in `cave_entrance.gd` with flat 0.02-thick panels (mineral streaks, crack patterns, moss patches)
+
+**7. Campfire light coloring** - Adjusted fire light to warmer color `(1.0, 0.7, 0.35)`, energy `2.2`, range `10.0`, attenuation `1.5` in both `save_load.gd` and `structure_fire_pit.gd`
+
+**8. Night too dark** - Increased night ambient `(0.25, 0.25, 0.4)`, sun intensity `0.25`, moon light `0.35`, sky/fog colors in `environment_manager.gd`
+
+**9. Day counter HUD after sleeping** - Changed HUD `day_changed` handler to use `call_deferred("_update_campsite_level_display")` to ensure campsite_manager processes first
+
+**10. Sun billboard** - Added `billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED` to sun material, removed manual `look_at` in `environment_manager.gd`
+
+**11. Floating herbs/stones in rocky areas** - Increased terrain sample offsets from 0.5 to 1.5 (half cell_size) in `terrain_chunk.gd`
+
+**12. Cabin bed exit position** - Changed exit offset from `Vector3(-1.0, 0, 0)` to `Vector3(0, 0, 1.0)` (toward cabin interior) in `cabin_bed.gd`
+
+**13. Cabin "Press L2" does nothing** - Changed `get_interaction_text()` to return empty string since player walks through door and interior objects handle interactions
+
+**14. Campfire visual stays on when fuel runs out** - Grouped 3 flame layers into container Node3D named "FireMesh" in `save_load.gd`, changed `fire_mesh` type to `Node3D` in `structure_fire_pit.gd`
+
+**15. Hide has no crafting use** - Added 3 new recipes: Waterskin (2 hide + 1 rope, hunger 35), Hide Bedroll (3 hide + 2 branch, heals 40), Leather Strips (1 hide = 2 strips)
+
+**16. Lake fish restocking** - Connected fishing spots to `day_changed` signal for automatic daily respawn when depleted
+
+**17. Weather station forecast** - Added `get_forecast(days)` method to `weather_manager.gd` for multi-day predictions. Weather vane now shows HUD notification with current weather + 5-day forecast
+
+**18. Birch bark map** - Doubled map size from 700px to 1400px. Replaced player white circle with X marker (drawn as two crossed lines with dark outline)
+
+**19. Lantern place/pickup** - Full lantern placement system: `structure_placed_lantern.gd` (pickup on interact), `_create_placed_lantern()` mesh (glass housing, metal frame, crystal core, corner posts), `place_lantern_instant()` in placement_system, save/load support, HUD pickup-only mode
+
+**20. Snare trap catch rate** - Halved from 15% to 7.5% per check (`CATCH_CHANCE = 0.075`)
+
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/resources/rare_ore_node.gd` | Modified | "Need Axe" text |
+| `scripts/creatures/ambient_animal_base.gd` | Modified | Smoothed terrain height sampling |
+| `scripts/creatures/ambient_rabbit.gd` | Modified | Use smoothed height in hops |
+| `scripts/player/player_controller.gd` | Modified | Post-interact validity check, hide_bedroll/waterskin items, lantern pickup-only |
+| `scripts/core/cave_transition.gd` | Modified | Removed HUD notifications |
+| `scripts/campsite/placement_system.gd` | Modified | Cave group skip, lantern instant placement, lantern mesh creation |
+| `scripts/world/cave_entrance.gd` | Modified | Flat wall decorations instead of 3D rocks |
+| `scripts/core/save_load.gd` | Modified | Fire mesh container, fire light tuning, lantern creation |
+| `scripts/campsite/structure_fire_pit.gd` | Modified | Light values, fire_mesh type Node3D |
+| `scripts/world/environment_manager.gd` | Modified | Night brightness, sun billboard |
+| `scripts/ui/hud.gd` | Modified | Deferred day counter update, lantern pickup-only |
+| `scripts/world/terrain_chunk.gd` | Modified | Resource spawn sample offsets |
+| `scripts/campsite/cabin_bed.gd` | Modified | Exit position toward cabin interior |
+| `scripts/campsite/structure_cabin.gd` | Modified | Empty interaction text |
+| `scripts/crafting/crafting_system.gd` | Modified | 3 new hide recipes |
+| `scripts/resources/fishing_spot.gd` | Modified | Daily respawn via day_changed |
+| `scripts/world/weather_manager.gd` | Modified | Multi-day forecast method |
+| `scripts/campsite/structure_weather_vane.gd` | Modified | HUD forecast display |
+| `scripts/ui/bark_map_ui.gd` | Modified | 2x larger map, X player marker |
+| `scripts/player/equipment.gd` | Modified | Lantern instant placement |
+| `scripts/campsite/structure_data.gd` | Modified | placed_lantern structure + lantern placeable |
+| `scripts/campsite/structure_snare_trap.gd` | Modified | Halved catch chance |
+| `scripts/campsite/structure_placed_lantern.gd` | New | Placed lantern with pickup support |
+| `tests/test_structure_data.gd` | Modified | Updated structure count to 15 |
+
+### Test Results
+- All 506 regression tests pass
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test cave z-fighting fix: verify no dark/green flashing on cave exterior
-2. Play-test camp level progression: verify level 2→3 triggers when HUD shows "Day 3/3"
-3. Play-test birch bark harvesting: find birch trees, verify harvest and cooldown
-4. Play-test bark map: craft and open map, verify terrain/water/caves shown correctly
-5. Play-test auto step-up: walk across forest terrain, verify smooth traversal
-6. Play-test grappling hook sounds: verify fire/attach/land sounds play correctly
-7. Play-test animal spawn rates: verify noticeably more birds and rabbits
+1. Play-test all 20 bug fixes in-game
+2. Verify lantern placement/pickup cycle works smoothly
+3. Verify weather vane shows readable 5-day forecast
+4. Verify enlarged map with X marker is usable
+5. Test hide crafting recipes (waterskin, bedroll, leather strips)
+6. Verify fish respawn on new day
+7. Verify snare trap catch rate feels balanced at 7.5%
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

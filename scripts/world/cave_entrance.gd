@@ -306,60 +306,83 @@ func _build_tunnel(rng: RandomNumberGenerator) -> void:
 
 
 func _build_interior_details(rng: RandomNumberGenerator) -> void:
-	## Add stalactites, wall outcrops, and rubble inside the deeper tunnel.
-	## Tunnel floor at Y=-6.0, ceiling at Y=-0.75, walls at X:±3.0.
-	var palette: Array = _get_rock_palette()
-	var interior_stalac_mat: StandardMaterial3D = palette[5]  # darkest
-	var outcrop_mat: StandardMaterial3D = palette[4]  # interior outcrops
-	var rubble_mat: StandardMaterial3D = palette[4]  # interior rubble
+	## Add flat wall decorations (mineral streaks, moss patches, crack patterns)
+	## instead of 3D objects. These sit flush against walls/ceiling/floor.
+	## Tunnel floor at Y=-6.0, ceiling at Y=-0.75, walls at X:+-3.0.
+	var moss_mat: StandardMaterial3D = _get_moss_material()
 
-	# -- Stalactites hanging from ceiling (Y=-0.75) --
-	for i: int in range(8):
-		var s_h: float = rng.randf_range(0.3, 1.0)
-		rng.randf_range(-0.02, 0.02)
-		rng.randf_range(-0.02, 0.02)
-		rng.randf_range(-0.02, 0.02)
+	# Mineral streak materials (varied earth tones, slightly lighter/darker than walls)
+	var streak_light_mat := StandardMaterial3D.new()
+	streak_light_mat.albedo_color = Color(0.28, 0.25, 0.20)
+	streak_light_mat.roughness = 0.95
+
+	var streak_dark_mat := StandardMaterial3D.new()
+	streak_dark_mat.albedo_color = Color(0.12, 0.11, 0.09)
+	streak_dark_mat.roughness = 0.95
+
+	var streak_rust_mat := StandardMaterial3D.new()
+	streak_rust_mat.albedo_color = Color(0.30, 0.18, 0.12)
+	streak_rust_mat.roughness = 0.95
+
+	var streak_mineral_mat := StandardMaterial3D.new()
+	streak_mineral_mat.albedo_color = Color(0.20, 0.22, 0.25)
+	streak_mineral_mat.roughness = 0.90
+
+	var streak_mats: Array[StandardMaterial3D] = [streak_light_mat, streak_dark_mat, streak_rust_mat, streak_mineral_mat]
+
+	# -- Wall mineral streaks (horizontal bands on left and right walls) --
+	for i: int in range(10):
+		var side: float = -1.0 if i % 2 == 0 else 1.0
+		var streak_z: float = rng.randf_range(-22.0, -8.0)
+		var streak_y: float = rng.randf_range(-5.5, -1.5)
+		var streak_w: float = rng.randf_range(1.5, 4.0)
+		var streak_h: float = rng.randf_range(0.08, 0.25)
+		var mat_idx: int = rng.randi_range(0, streak_mats.size() - 1)
+		# Flat panel flush against wall (0.02 thick, offset 0.01 from wall surface)
 		_add_interior_rock(
-			Vector3(rng.randf_range(-2.5, 2.5), -0.75 - s_h * 0.5, rng.randf_range(-22.0, -8.0)),
-			Vector3(rng.randf_range(0.12, 0.25), s_h, rng.randf_range(0.12, 0.25)),
-			Vector3(rng.randf_range(-5, 5), 0, rng.randf_range(-5, 5)),
-			interior_stalac_mat
+			Vector3(side * 2.99, streak_y, streak_z),
+			Vector3(0.02, streak_h, streak_w),
+			Vector3(0, 0, 0),
+			streak_mats[mat_idx]
 		)
 
-	# -- Wall outcrops (bulges from walls) --
+	# -- Ceiling crack patterns (thin dark lines on ceiling) --
+	for i: int in range(6):
+		var crack_x: float = rng.randf_range(-2.0, 2.0)
+		var crack_z: float = rng.randf_range(-21.0, -8.0)
+		var crack_len: float = rng.randf_range(1.0, 3.0)
+		var crack_rot: float = rng.randf_range(-30, 30)
+		_add_interior_rock(
+			Vector3(crack_x, -0.74, crack_z),
+			Vector3(crack_len, 0.02, rng.randf_range(0.03, 0.08)),
+			Vector3(0, crack_rot, 0),
+			streak_dark_mat
+		)
+
+	# -- Floor stain patterns (darker patches on cave floor) --
+	for i: int in range(5):
+		var stain_x: float = rng.randf_range(-2.0, 2.0)
+		var stain_z: float = rng.randf_range(-21.0, -8.0)
+		var stain_size: float = rng.randf_range(0.5, 1.5)
+		_add_interior_rock(
+			Vector3(stain_x, -5.99, stain_z),
+			Vector3(stain_size, 0.02, stain_size * rng.randf_range(0.6, 1.4)),
+			Vector3(0, rng.randf_range(0, 45), 0),
+			streak_dark_mat if i % 2 == 0 else streak_rust_mat
+		)
+
+	# -- Moss patches on walls (green semi-transparent, near entrance) --
 	for i: int in range(4):
 		var side: float = -1.0 if i % 2 == 0 else 1.0
-		var outcrop_z: float = rng.randf_range(-21.0, -8.0)
-		var outcrop_y: float = rng.randf_range(-5.0, -2.0)
-		rng.randf_range(-0.03, 0.03)
+		var moss_z: float = rng.randf_range(-12.0, -7.0)
+		var moss_y: float = rng.randf_range(-4.0, -1.5)
+		var moss_w: float = rng.randf_range(0.8, 2.0)
+		var moss_h: float = rng.randf_range(0.4, 1.2)
 		_add_interior_rock(
-			Vector3(side * (2.5 + rng.randf_range(0.0, 0.3)), outcrop_y, outcrop_z),
-			Vector3(rng.randf_range(0.8, 1.5), rng.randf_range(0.8, 1.5), rng.randf_range(0.8, 1.5)),
-			Vector3(rng.randf_range(-5, 5), rng.randf_range(-5, 5), rng.randf_range(-3, 3)),
-			outcrop_mat
-		)
-
-	# -- Floor rubble (small rocks on floor at Y=-6.0) --
-	for i: int in range(6):
-		var bsize: float = rng.randf_range(0.25, 0.7)
-		rng.randf_range(-0.03, 0.03)
-		rng.randf_range(-0.02, 0.02)
-		rng.randf_range(-0.02, 0.02)
-		_add_interior_rock(
-			Vector3(rng.randf_range(-2.5, 2.5), -6.0 + bsize * 0.25, rng.randf_range(-22.0, -8.0)),
-			Vector3(bsize, bsize * 0.5, bsize * 0.65),
-			Vector3(rng.randf_range(-8, 8), rng.randf_range(0, 45), rng.randf_range(-5, 5)),
-			rubble_mat
-		)
-
-	# -- Stalagmites rising from floor (Y=-6.0) --
-	for i: int in range(3):
-		var s_h: float = rng.randf_range(0.4, 1.0)
-		_add_interior_rock(
-			Vector3(rng.randf_range(-2.5, 2.5), -6.0 + s_h * 0.5, rng.randf_range(-21.0, -9.0)),
-			Vector3(rng.randf_range(0.2, 0.4), s_h, rng.randf_range(0.2, 0.4)),
-			Vector3(rng.randf_range(-3, 3), 0, rng.randf_range(-3, 3)),
-			rubble_mat
+			Vector3(side * 2.99, moss_y, moss_z),
+			Vector3(0.02, moss_h, moss_w),
+			Vector3(0, 0, 0),
+			moss_mat
 		)
 
 

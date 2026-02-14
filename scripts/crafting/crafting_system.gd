@@ -238,6 +238,32 @@ func _load_recipes() -> void:
 			"description": "A hand-drawn map of the surrounding wilderness.",
 			"requires_bench": true,
 			"min_camp_level": 2
+		},
+		"waterskin": {
+			"name": "Waterskin",
+			"inputs": {"hide": 2, "rope": 1},
+			"output_type": "waterskin",
+			"output_amount": 1,
+			"description": "Carries water. Restores thirst when used.",
+			"requires_bench": true,
+			"min_camp_level": 2
+		},
+		"hide_bedroll": {
+			"name": "Hide Bedroll",
+			"inputs": {"hide": 3, "branch": 2},
+			"output_type": "hide_bedroll",
+			"output_amount": 1,
+			"description": "A portable bedroll for resting outdoors.",
+			"requires_bench": true,
+			"min_camp_level": 2
+		},
+		"leather_strips": {
+			"name": "Leather Strips",
+			"inputs": {"hide": 1},
+			"output_type": "leather_strips",
+			"output_amount": 2,
+			"description": "Useful binding material for advanced crafting.",
+			"requires_bench": true
 		}
 	}
 

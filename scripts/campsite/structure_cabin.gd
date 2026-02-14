@@ -39,7 +39,9 @@ func interact(player: Node) -> bool:
 
 
 func get_interaction_text() -> String:
-	return "Your Cabin"
+	# No direct interaction prompt - player walks in through the door
+	# Interior objects (bed, kitchen) show their own interaction prompts
+	return ""
 
 
 ## Check if player is inside the cabin.

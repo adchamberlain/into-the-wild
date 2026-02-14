@@ -338,6 +338,73 @@ func place_lodestone_instant() -> bool:
 	return true
 
 
+## Place a lantern instantly at the crosshair position (no preview mode).
+func place_lantern_instant() -> bool:
+	if not player or not camera or not inventory:
+		return false
+
+	if not inventory.has_item("lantern"):
+		return false
+
+	# Raycast from camera crosshair to find where player is aiming
+	var hit_pos: Vector3 = _get_crosshair_terrain_hit(placement_distance + 2.0)
+
+	var target_pos: Vector3
+	if hit_pos != Vector3.ZERO:
+		target_pos = hit_pos
+	else:
+		var forward: Vector3 = -camera.global_transform.basis.z
+		forward.y = 0
+		forward = forward.normalized()
+		target_pos = player.global_position + forward * placement_distance
+
+	var in_overworld: bool = is_instance_valid(chunk_manager) and chunk_manager.has_method("get_height_at")
+
+	if in_overworld:
+		var cell_sz: float = chunk_manager.cell_size
+		target_pos.x = (floor(target_pos.x / cell_sz) + 0.5) * cell_sz
+		target_pos.z = (floor(target_pos.z / cell_sz) + 0.5) * cell_sz
+
+		var terrain_height: float = chunk_manager.get_height_at(target_pos.x, target_pos.z)
+
+		var player_terrain: float = chunk_manager.get_height_at(player.global_position.x, player.global_position.z)
+		if absf(terrain_height - player_terrain) > 1.5:
+			print("[PlacementSystem] Lantern placement rejected: height difference too large")
+			return false
+
+		target_pos.y = terrain_height - 0.04
+	else:
+		target_pos.x = round(target_pos.x / grid_size) * grid_size
+		target_pos.z = round(target_pos.z / grid_size) * grid_size
+		target_pos.y = _get_ground_height(target_pos.x, target_pos.z, player.global_position.y + 2.0) - 0.04
+
+	var structure: Node3D = _create_placed_lantern()
+	if not structure:
+		print("[PlacementSystem] Failed to create lantern")
+		return false
+
+	structure.global_position = target_pos
+
+	var structures_container: Node = player.get_parent().get_node_or_null("Structures")
+	if structures_container:
+		structures_container.add_child(structure)
+	else:
+		player.get_parent().add_child(structure)
+
+	if structure.has_method("on_placed"):
+		structure.on_placed()
+
+	inventory.remove_item("lantern", 1)
+
+	if campsite_manager and campsite_manager.has_method("register_structure"):
+		campsite_manager.register_structure(structure, "placed_lantern")
+
+	SFXManager.play_sfx("place_confirm")
+	placement_confirmed.emit("placed_lantern", target_pos)
+	print("[PlacementSystem] Instantly placed lantern at %s" % target_pos)
+	return true
+
+
 ## Cancel placement mode.
 func cancel_placement() -> void:
 	if not is_placing:
@@ -591,7 +658,7 @@ func _validate_placement(pos: Vector3) -> bool:
 
 	var results: Array[Dictionary] = space_state.intersect_shape(query)
 
-	# Check each collision - ignore ground/terrain
+	# Check each collision - ignore ground/terrain/cave walls
 	for result: Dictionary in results:
 		var collider: Object = result.get("collider")
 		if not collider is Node:
@@ -599,6 +666,9 @@ func _validate_placement(pos: Vector3) -> bool:
 		var collider_node: Node = collider as Node
 		# Skip terrain and ground
 		if collider_node.is_in_group("terrain"):
+			continue
+		# Skip cave entrances (walls, floor, ceiling are part of the cave)
+		if collider_node.is_in_group("cave_entrance"):
 			continue
 		# Skip if it's a floor/ground (named Floor or Ground, or at y=0)
 		if collider_node.name == "Floor" or collider_node.name == "Ground":
@@ -766,6 +836,8 @@ func _create_structure_programmatically() -> Node3D:
 			return _create_weather_vane()
 		"placed_torch":
 			return _create_placed_torch()
+		"placed_lantern":
+			return _create_placed_lantern()
 	return null
 
 
@@ -3351,3 +3423,108 @@ func _create_lodestone() -> StaticBody3D:
 	lodestone.add_child(light)
 
 	return lodestone
+
+
+func _create_placed_lantern() -> StaticBody3D:
+	var lantern: StaticBody3D = StaticBody3D.new()
+	lantern.name = "PlacedLantern"
+	lantern.set_script(load("res://scripts/campsite/structure_placed_lantern.gd"))
+
+	# Materials
+	var metal_mat: StandardMaterial3D = StandardMaterial3D.new()
+	metal_mat.albedo_color = Color(0.45, 0.45, 0.48)
+	metal_mat.metallic = 0.6
+	metal_mat.roughness = 0.4
+
+	var metal_dark_mat: StandardMaterial3D = StandardMaterial3D.new()
+	metal_dark_mat.albedo_color = Color(0.3, 0.3, 0.32)
+	metal_dark_mat.metallic = 0.5
+	metal_dark_mat.roughness = 0.5
+
+	var glass_mat: StandardMaterial3D = StandardMaterial3D.new()
+	glass_mat.albedo_color = Color(0.8, 0.9, 1.0, 0.4)
+	glass_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	glass_mat.metallic = 0.1
+	glass_mat.roughness = 0.05
+
+	var glow_mat: StandardMaterial3D = StandardMaterial3D.new()
+	glow_mat.albedo_color = Color(0.9, 0.95, 1.0)
+	glow_mat.emission_enabled = true
+	glow_mat.emission = Color(0.8, 0.9, 1.0)
+	glow_mat.emission_energy_multiplier = 3.0
+
+	# Collision
+	var collision: CollisionShape3D = CollisionShape3D.new()
+	var box_shape: BoxShape3D = BoxShape3D.new()
+	box_shape.size = Vector3(0.25, 0.6, 0.25)
+	collision.shape = box_shape
+	collision.position.y = 0.3
+	lantern.add_child(collision)
+
+	# Base (metal bottom plate)
+	var base: MeshInstance3D = MeshInstance3D.new()
+	var base_mesh: BoxMesh = BoxMesh.new()
+	base_mesh.size = Vector3(0.22, 0.04, 0.22)
+	base.mesh = base_mesh
+	base.position = Vector3(0, 0.02, 0)
+	base.material_override = metal_dark_mat
+	lantern.add_child(base)
+
+	# Glass housing (translucent box)
+	var glass: MeshInstance3D = MeshInstance3D.new()
+	var glass_mesh: BoxMesh = BoxMesh.new()
+	glass_mesh.size = Vector3(0.16, 0.32, 0.16)
+	glass.mesh = glass_mesh
+	glass.position = Vector3(0, 0.2, 0)
+	glass.material_override = glass_mat
+	lantern.add_child(glass)
+
+	# Crystal/flame core (glow source inside glass)
+	var core: MeshInstance3D = MeshInstance3D.new()
+	var core_mesh: BoxMesh = BoxMesh.new()
+	core_mesh.size = Vector3(0.06, 0.14, 0.06)
+	core.mesh = core_mesh
+	core.position = Vector3(0, 0.2, 0)
+	core.material_override = glow_mat
+	lantern.add_child(core)
+
+	# Top cap (metal lid)
+	var cap: MeshInstance3D = MeshInstance3D.new()
+	var cap_mesh: BoxMesh = BoxMesh.new()
+	cap_mesh.size = Vector3(0.2, 0.04, 0.2)
+	cap.mesh = cap_mesh
+	cap.position = Vector3(0, 0.38, 0)
+	cap.material_override = metal_mat
+	lantern.add_child(cap)
+
+	# Handle loop (small box on top)
+	var handle: MeshInstance3D = MeshInstance3D.new()
+	var handle_mesh: BoxMesh = BoxMesh.new()
+	handle_mesh.size = Vector3(0.12, 0.06, 0.03)
+	handle.mesh = handle_mesh
+	handle.position = Vector3(0, 0.43, 0)
+	handle.material_override = metal_mat
+	lantern.add_child(handle)
+
+	# Corner posts (4 metal strips connecting base to cap)
+	for dx: float in [-1.0, 1.0]:
+		for dz: float in [-1.0, 1.0]:
+			var post: MeshInstance3D = MeshInstance3D.new()
+			var post_mesh: BoxMesh = BoxMesh.new()
+			post_mesh.size = Vector3(0.02, 0.32, 0.02)
+			post.mesh = post_mesh
+			post.position = Vector3(dx * 0.08, 0.2, dz * 0.08)
+			post.material_override = metal_dark_mat
+			lantern.add_child(post)
+
+	# Light source
+	var light: OmniLight3D = OmniLight3D.new()
+	light.name = "LanternLight"
+	light.light_color = Color(0.9, 0.95, 1.0)
+	light.light_energy = 16.0
+	light.omni_range = 30.0
+	light.shadow_enabled = true
+	light.position = Vector3(0, 0.25, 0)
+	lantern.add_child(light)
+
+	return lantern
