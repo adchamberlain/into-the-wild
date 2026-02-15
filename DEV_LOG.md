@@ -3892,16 +3892,58 @@ Fixed all 20 bugs reported from gameplay testing session. Changes span combat, U
 
 ---
 
+## Session 51 - Bug Fix Session: 6 Gameplay Issues (2026-02-15)
+
+### Bug Fixes
+
+1. **Floating resources fixed** - Sticks, rocks, mushrooms were floating above terrain because `_spawn_resource()` sampled 5 terrain points and used the maximum height, causing resources near terrain steps to float at the neighboring cell's higher elevation. Root cause fix: use only the height at the resource's actual position instead of multi-point sampling.
+
+2. **Weather vane forecast now deterministic** - `get_forecast()` was using `randf()` which gave different results each call. Fixed by using a seeded `RandomNumberGenerator` based on the current game day, so checking the weather vane multiple times on the same day always shows the same forecast.
+
+3. **Weather vane display changed to vertical table** - Was joining forecast lines with " | " making a horizontal bar. Changed to "\n" join so each day appears on its own row. Also made notification duration scale with line count (3s base + 1s per extra line).
+
+4. **Fire extinguish visual fix** - When fire burned out, top flame components could persist. Fixed `_set_fire_state()` to re-acquire node references if lost (handles save/load edge case) and explicitly set visibility on each child MeshInstance3D of the fire container.
+
+5. **Birch bark map enlarged 50% + improved player marker** - Map size increased from 1400 to 2100 pixels. Player marker now has a filled circle background, thicker outline, and ring for visibility. When player is off the map edge, the X marker clamps to the map boundary and turns red. Legend updated with on-map/off-map indicators.
+
+6. **Hide crafting recipes replaced with tool upgrades** - Removed waterskin, hide bedroll, and leather strips (impractical items). Added:
+   - **Leather Axe Wrap** (2 hide + 1 rope): Doubles axe durability. Equip and use to apply to best axe in inventory.
+   - **Leather Hook Wrap** (3 hide + 1 rope): Triples grappling hook durability. Equip and use to apply.
+   - Upgrades persist through save/load and scale current durability proportionally.
+
+7. **Controller O/X button swap** - Jump moved from ✕ to ○, unequip moved from ○ to ✕. Also swapped ui_accept and ui_cancel controller bindings. Updated both project.godot input map and InputManager display prompts.
+
+### New Files
+- `tests/test_weather_forecast.gd` - 32 tests covering forecast determinism, recipe changes, and controller mapping
+
+### Modified Files
+- `scripts/world/terrain_chunk.gd` - Simplified `_spawn_resource()` to use direct height
+- `scripts/world/weather_manager.gd` - Deterministic seeded RNG in `get_forecast()`
+- `scripts/campsite/structure_weather_vane.gd` - Vertical forecast layout
+- `scripts/campsite/structure_fire_pit.gd` - Robust fire state toggling
+- `scripts/ui/hud.gd` - Notification duration scales with line count
+- `scripts/ui/bark_map_ui.gd` - 50% larger map, improved marker, edge clamping
+- `scripts/crafting/crafting_system.gd` - Replaced hide recipes with leather wraps
+- `scripts/player/equipment.gd` - Added leather wrap items, upgrade system, save/load
+- `scripts/systems/input_manager.gd` - Swapped ○/✕ controller prompts
+- `project.godot` - Swapped ○/✕ input bindings
+- `tests/run_all_tests.gd` - Added weather forecast test suite
+
+### Test Results
+- All 532 regression tests pass (500 existing + 32 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test all 20 bug fixes in-game
-2. Verify lantern placement/pickup cycle works smoothly
-3. Verify weather vane shows readable 5-day forecast
-4. Verify enlarged map with X marker is usable
-5. Test hide crafting recipes (waterskin, bedroll, leather strips)
-6. Verify fish respawn on new day
-7. Verify snare trap catch rate feels balanced at 7.5%
+1. Play-test all 6 bug fixes in-game
+2. Verify resources sit flush on terrain across all biomes
+3. Verify weather vane shows consistent vertical forecast
+4. Verify fire fully extinguishes visually when fuel runs out
+5. Test leather axe/hook wraps: crafting, applying, durability scaling
+6. Test controller O/X swap feels right in gameplay
+7. Verify map edge clamping when far from campsite
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

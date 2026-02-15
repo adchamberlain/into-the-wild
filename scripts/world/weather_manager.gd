@@ -470,20 +470,30 @@ func get_next_weather() -> String:
 
 
 ## Get a multi-day forecast (array of weather name strings).
+## Uses a deterministic seed based on the current game day so the forecast
+## is consistent every time the player checks the weather vane on the same day.
 func get_forecast(days: int = 5) -> Array[String]:
 	var forecast: Array[String] = []
+
+	# Create a deterministic RNG seeded by the current game day
+	var current_day: int = 1
+	if time_manager and time_manager.has_method("get_current_day"):
+		current_day = time_manager.get_current_day()
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = current_day * 48271 + 12345  # Deterministic seed from day
+
 	# Day 1 is always the known next weather
 	forecast.append(_weather_to_string(next_weather))
 
-	# Subsequent days are simulated predictions
+	# Subsequent days are simulated predictions using deterministic RNG
 	var prev: Weather = next_weather
 	for i: int in range(days - 1):
 		# Simulate: if previous was not clear, chance it persists
-		if prev != Weather.CLEAR and randf() < weather_persistence_chance:
+		if prev != Weather.CLEAR and rng.randf() < weather_persistence_chance:
 			forecast.append(_weather_to_string(prev))
 		else:
 			# Roll for new weather
-			var roll: float = randf()
+			var roll: float = rng.randf()
 			var cumulative: float = 0.0
 			var predicted: Weather = Weather.CLEAR
 
@@ -505,9 +515,9 @@ func get_forecast(days: int = 5) -> Array[String]:
 
 			# Apply forecast inaccuracy (gets worse further out)
 			var accuracy: float = forecast_accuracy - i * 0.1
-			if randf() > accuracy:
+			if rng.randf() > accuracy:
 				var weathers: Array[Weather] = [Weather.CLEAR, Weather.RAIN, Weather.FOG, Weather.STORM]
-				predicted = weathers[randi() % weathers.size()]
+				predicted = weathers[rng.randi() % weathers.size()]
 
 			forecast.append(_weather_to_string(predicted))
 			prev = predicted

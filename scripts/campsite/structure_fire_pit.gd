@@ -172,10 +172,21 @@ func flare() -> void:
 func _set_fire_state(lit: bool) -> void:
 	is_lit = lit
 
+	# Re-acquire references if they were lost (can happen after save/load)
+	if not fire_light:
+		fire_light = get_node_or_null("FireLight")
+	if not fire_mesh:
+		fire_mesh = get_node_or_null("FireMesh")
+
 	if fire_light:
 		fire_light.visible = lit
 	if fire_mesh:
 		fire_mesh.visible = lit
+		# Also explicitly set visibility on all flame children to ensure
+		# no child overrides the parent's visibility state
+		for child: Node in fire_mesh.get_children():
+			if child is MeshInstance3D:
+				child.visible = lit
 
 	if lit:
 		fire_lit.emit()

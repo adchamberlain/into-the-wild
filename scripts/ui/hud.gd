@@ -554,14 +554,16 @@ func _reset_damage_flash() -> void:
 	_update_protection_display()
 
 
-## Show a notification message.
+## Show a notification message. Duration scales with line count for multi-line messages.
 func show_notification(message: String, color: Color = Color.WHITE) -> void:
 	if notification_label and notification_panel:
 		notification_label.text = message
 		notification_label.add_theme_color_override("font_color", color)
 		notification_panel.visible = true
-		# Hide after 3 seconds
-		get_tree().create_timer(3.0).timeout.connect(func(): notification_panel.visible = false)
+		# Duration scales with content: 3s base + 1s per extra line
+		var line_count: int = message.count("\n") + 1
+		var duration: float = 3.0 + max(0, line_count - 1) * 1.0
+		get_tree().create_timer(duration).timeout.connect(func(): notification_panel.visible = false)
 
 
 func _on_game_saved(_filepath: String, slot: int) -> void:

@@ -9,7 +9,7 @@ const MAP_EXTENT: float = 150.0
 # Sample interval (world units between each terrain sample)
 const SAMPLE_INTERVAL: float = 6.0
 # Map display size (pixels)
-const MAP_SIZE: float = 1400.0
+const MAP_SIZE: float = 2100.0
 # Map padding from edges
 const MAP_PADDING: float = 40.0
 
@@ -194,18 +194,38 @@ func _on_map_draw() -> void:
 	map_control.draw_circle(camp_pos, 7.0, Color(1.0, 0.85, 0.3, 1))
 	map_control.draw_circle(camp_pos, 7.0, Color(0.8, 0.65, 0.1, 1), false, 2.0)
 
-	# Draw player position as X marker
-	var player_map_pos: Vector2 = _world_to_map(player_pos.x, player_pos.z)
-	var x_size: float = 8.0
-	var x_width: float = 3.0
-	var x_color: Color = Color(1, 1, 1, 1)
-	var x_outline: Color = Color(0.2, 0.2, 0.2, 1)
-	# Draw outline first (slightly thicker)
-	map_control.draw_line(player_map_pos + Vector2(-x_size, -x_size), player_map_pos + Vector2(x_size, x_size), x_outline, x_width + 2.0)
-	map_control.draw_line(player_map_pos + Vector2(x_size, -x_size), player_map_pos + Vector2(-x_size, x_size), x_outline, x_width + 2.0)
-	# Draw X
+	# Draw player position as detailed marker with edge clamping
+	var raw_player_pos: Vector2 = _world_to_map(player_pos.x, player_pos.z)
+	var map_min: float = MAP_PADDING
+	var map_max: float = MAP_SIZE - MAP_PADDING
+
+	# Check if player is within map bounds
+	var is_off_map: bool = (player_pos.x < -MAP_EXTENT or player_pos.x > MAP_EXTENT
+		or player_pos.z < -MAP_EXTENT or player_pos.z > MAP_EXTENT)
+
+	# Clamp marker position to map edges
+	var player_map_pos: Vector2 = Vector2(
+		clamp(raw_player_pos.x, map_min, map_max),
+		clamp(raw_player_pos.y, map_min, map_max)
+	)
+
+	var x_size: float = 12.0
+	var x_width: float = 4.0
+	var x_color: Color = Color(1, 0.3, 0.3, 1) if is_off_map else Color(1, 1, 1, 1)
+	var x_outline: Color = Color(0.1, 0.1, 0.1, 1)
+
+	# Draw filled circle behind the X for visibility
+	map_control.draw_circle(player_map_pos, x_size + 3.0, Color(0.1, 0.1, 0.1, 0.7))
+
+	# Draw X outline (thicker for contrast)
+	map_control.draw_line(player_map_pos + Vector2(-x_size, -x_size), player_map_pos + Vector2(x_size, x_size), x_outline, x_width + 3.0)
+	map_control.draw_line(player_map_pos + Vector2(x_size, -x_size), player_map_pos + Vector2(-x_size, x_size), x_outline, x_width + 3.0)
+	# Draw X in color
 	map_control.draw_line(player_map_pos + Vector2(-x_size, -x_size), player_map_pos + Vector2(x_size, x_size), x_color, x_width)
 	map_control.draw_line(player_map_pos + Vector2(x_size, -x_size), player_map_pos + Vector2(-x_size, x_size), x_color, x_width)
+
+	# Draw pulsing ring around marker for extra visibility
+	map_control.draw_circle(player_map_pos, x_size + 3.0, x_color, false, 2.0)
 
 	# Draw legend
 	_draw_legend()
@@ -226,13 +246,14 @@ func _draw_legend() -> void:
 		{"color": Color(0.2, 0.45, 0.75, 0.9), "label": "Water"},
 		{"color": Color(0.15, 0.1, 0.1, 1), "label": "Cave"},
 		{"color": Color(1.0, 0.85, 0.3, 1), "label": "Camp"},
-		{"color": Color(1, 1, 1, 1), "label": "You"},
+		{"color": Color(1, 1, 1, 1), "label": "You (on map)"},
+		{"color": Color(1, 0.3, 0.3, 1), "label": "You (off map)"},
 	]
 
 	for i: int in range(entries.size()):
 		var entry: Dictionary = entries[i]
 		var y: float = legend_y + i * line_height
-		if entry["label"] == "You":
+		if entry["label"].begins_with("You"):
 			# Draw X marker in legend
 			var cx: float = legend_x + swatch_size / 2.0
 			var cy: float = y + swatch_size / 2.0

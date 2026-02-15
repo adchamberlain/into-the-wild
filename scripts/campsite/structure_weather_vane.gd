@@ -54,18 +54,18 @@ func interact(player: Node) -> bool:
 	if weather_manager and weather_manager.has_method("get_current_weather_name"):
 		current = weather_manager.get_current_weather_name()
 
-	# Build forecast display
+	# Build forecast display as vertical table (one row per day)
 	var forecast_lines: Array[String] = []
-	forecast_lines.append("Now: %s" % current)
+	forecast_lines.append("Today:    %s" % current)
 
 	if weather_manager and weather_manager.has_method("get_forecast"):
 		var forecast: Array[String] = weather_manager.get_forecast(5)
 		for i: int in range(forecast.size()):
-			forecast_lines.append("Day +%d: %s" % [i + 1, forecast[i]])
+			forecast_lines.append("Day +%d:   %s" % [i + 1, forecast[i]])
 	elif weather_manager and weather_manager.has_method("get_next_weather"):
 		forecast_lines.append("Tomorrow: %s" % weather_manager.get_next_weather())
 
-	var forecast_text: String = " | ".join(forecast_lines)
+	var forecast_text: String = "\n".join(forecast_lines)
 	_show_notification(forecast_text, Color(0.7, 0.85, 1.0))
 
 	print("[WeatherVane] Forecast: %s" % forecast_text)

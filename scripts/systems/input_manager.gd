@@ -27,18 +27,18 @@ const KEYBOARD_PROMPTS: Dictionary = {
 # Using recognizable labels: Share (left button), Pad (touchpad), Menu (right button)
 const CONTROLLER_PROMPTS: Dictionary = {
 	"interact": "L2",
-	"jump": "✕",
+	"jump": "○",
 	"sprint": "L3",
 	"eat": "△",
 	"use_equipped": "R2",
-	"unequip": "○",
+	"unequip": "✕",
 	"open_crafting": "Pad",
 	"open_inventory": "Share",
 	"pause": "Menu",
 	"next_slot": "R1",
 	"prev_slot": "L1",
-	"ui_accept": "✕",
-	"ui_cancel": "○",
+	"ui_accept": "○",
+	"ui_cancel": "✕",
 	"move_structure": "D-Up",
 }
 

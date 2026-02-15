@@ -1090,26 +1090,13 @@ func _spawn_chunk_resources() -> void:
 func _spawn_resource(scene: PackedScene, x: float, y: float, z: float, rng: RandomNumberGenerator) -> void:
 	var resource: Node3D = scene.instantiate()
 
-	# Sample terrain heights at multiple points around the resource to handle cell boundaries.
-	# Cell size is 3.0, so sample at 1.5 (half cell) to catch adjacent cells in rocky terrain.
-	var sample_offsets: Array[Vector2] = [
-		Vector2(0.0, 0.0),     # Center
-		Vector2(1.5, 0.0),     # East (adjacent cell)
-		Vector2(-1.5, 0.0),    # West
-		Vector2(0.0, 1.5),     # South
-		Vector2(0.0, -1.5),    # North
-	]
+	# Place resource at the terrain height of its own cell position.
+	# The y parameter is already get_height_at(x, z) which snaps to cell centers internally,
+	# so it gives the correct height for the cell the resource is actually on.
+	# A small offset prevents z-fighting with the terrain surface.
+	var height_offset: float = 0.05
 
-	var max_height: float = y
-	for offset in sample_offsets:
-		var sample_height: float = chunk_manager.get_height_at(x + offset.x, z + offset.y)
-		if sample_height > max_height:
-			max_height = sample_height
-
-	# Place resource ON the highest nearby terrain surface
-	var height_offset: float = 0.1
-
-	resource.position = Vector3(x, max_height + height_offset, z)
+	resource.position = Vector3(x, y + height_offset, z)
 	resource.rotation.y = rng.randf() * TAU
 	resources_container.add_child(resource)
 	spawned_resources.append(resource)

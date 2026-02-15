@@ -156,6 +156,22 @@ const EQUIPPABLE_ITEMS: Dictionary = {
 		"slot": 24,
 		"has_light": false,
 		"tool_type": "map"
+	},
+	"leather_axe_wrap": {
+		"name": "Leather Axe Wrap",
+		"slot": 25,
+		"has_light": false,
+		"tool_type": "upgrade",
+		"upgrade_target": "axe",
+		"durability_multiplier": 2
+	},
+	"leather_hook_wrap": {
+		"name": "Leather Hook Wrap",
+		"slot": 26,
+		"has_light": false,
+		"tool_type": "upgrade",
+		"upgrade_target": "grappling_hook",
+		"durability_multiplier": 3
 	}
 }
 
@@ -420,6 +436,8 @@ func use_equipped() -> bool:
 			return _use_grappling_hook()
 		elif tool_type == "map":
 			return _use_map()
+		elif tool_type == "upgrade":
+			return _use_upgrade(equipped_item, item_data)
 		else:
 			return _use_tool()
 
@@ -1463,20 +1481,35 @@ func get_equipped_durability() -> int:
 
 
 ## Get max durability of equipped tool (returns -1 if no durability system).
+## Respects leather wrap upgrades if applied.
 func get_equipped_max_durability() -> int:
 	if equipped_item == "" or not TOOL_MAX_DURABILITY.has(equipped_item):
 		return -1
+	# Check for upgrade
+	if has_meta("durability_upgrades"):
+		var upgrades: Dictionary = get_meta("durability_upgrades")
+		if upgrades.has(equipped_item):
+			return upgrades[equipped_item]
 	return TOOL_MAX_DURABILITY[equipped_item]
 
 
-## Get all tool durability data for saving.
+## Get all tool durability data for saving (includes upgrade info).
 func get_durability_data() -> Dictionary:
-	return tool_durability.duplicate()
+	var data: Dictionary = tool_durability.duplicate()
+	# Include upgrade multipliers
+	if has_meta("durability_upgrades"):
+		data["_upgrades"] = get_meta("durability_upgrades").duplicate()
+	return data
 
 
 ## Load tool durability data from save.
 func load_durability_data(data: Dictionary) -> void:
-	tool_durability = data.duplicate()
+	var data_copy: Dictionary = data.duplicate()
+	# Extract and restore upgrades separately
+	if data_copy.has("_upgrades"):
+		set_meta("durability_upgrades", data_copy["_upgrades"].duplicate())
+		data_copy.erase("_upgrades")
+	tool_durability = data_copy
 
 
 ## Harvest birch bark from a birch tree using machete.
@@ -1539,6 +1572,72 @@ func _use_map() -> bool:
 	# Open map overlay
 	var map_ui: CanvasLayer = BarkMapUI.new()
 	player.get_tree().root.add_child(map_ui)
+	return true
+
+
+## Apply a leather upgrade to a matching tool in inventory.
+## Finds the best matching tool, multiplies its max durability, and consumes the wrap.
+func _use_upgrade(upgrade_item: String, upgrade_data: Dictionary) -> bool:
+	if not inventory:
+		return false
+
+	var target_type: String = upgrade_data.get("upgrade_target", "")
+	var multiplier: int = upgrade_data.get("durability_multiplier", 2)
+
+	# Find the best matching tool in inventory
+	var target_tool: String = ""
+	if target_type == "axe":
+		# Prefer better axes: metal > stone > primitive
+		for axe_type: String in ["metal_axe", "stone_axe", "primitive_axe"]:
+			if inventory.has_item(axe_type):
+				target_tool = axe_type
+				break
+	elif target_type == "grappling_hook":
+		if inventory.has_item("grappling_hook"):
+			target_tool = "grappling_hook"
+
+	if target_tool == "":
+		# No matching tool found - notify player
+		var hud: Node = player.get_tree().root.get_node_or_null("Main/HUD")
+		if hud and hud.has_method("show_notification"):
+			var tool_name: String = "an axe" if target_type == "axe" else "a grappling hook"
+			hud.show_notification("Need %s in inventory to apply!" % tool_name, Color(1.0, 0.4, 0.4))
+		return false
+
+	# Apply the durability upgrade
+	var base_max: int = TOOL_MAX_DURABILITY.get(target_tool, 100)
+	var new_max: int = base_max * multiplier
+
+	# Initialize durability if not yet tracked
+	if not tool_durability.has(target_tool):
+		tool_durability[target_tool] = base_max
+
+	# Scale current durability proportionally
+	var current: int = tool_durability[target_tool]
+	var ratio: float = float(current) / float(base_max)
+	tool_durability[target_tool] = int(new_max * ratio)
+
+	# Update the max durability reference (store in upgrade tracking)
+	if not has_meta("durability_upgrades"):
+		set_meta("durability_upgrades", {})
+	var upgrades: Dictionary = get_meta("durability_upgrades")
+	upgrades[target_tool] = new_max
+	set_meta("durability_upgrades", upgrades)
+
+	# Consume the upgrade item
+	inventory.remove_item(upgrade_item, 1)
+	unequip()
+
+	# Emit durability change signal
+	durability_changed.emit(target_tool, tool_durability[target_tool], new_max)
+
+	# Notify player
+	var hud: Node = player.get_tree().root.get_node_or_null("Main/HUD")
+	if hud and hud.has_method("show_notification"):
+		var tool_display: String = target_tool.capitalize().replace("_", " ")
+		hud.show_notification("%s upgraded! Durability x%d" % [tool_display, multiplier], Color(0.6, 1.0, 0.6))
+
+	print("[Equipment] Applied %s to %s: durability now %d/%d" % [upgrade_item, target_tool, tool_durability[target_tool], new_max])
 	return true
 
 

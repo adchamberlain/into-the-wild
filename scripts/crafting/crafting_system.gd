@@ -239,31 +239,23 @@ func _load_recipes() -> void:
 			"requires_bench": true,
 			"min_camp_level": 2
 		},
-		"waterskin": {
-			"name": "Waterskin",
+		"leather_axe_wrap": {
+			"name": "Leather Axe Wrap",
 			"inputs": {"hide": 2, "rope": 1},
-			"output_type": "waterskin",
+			"output_type": "leather_axe_wrap",
 			"output_amount": 1,
-			"description": "Carries water. Restores thirst when used.",
+			"description": "Wraps axe handle in leather. Doubles axe durability.",
 			"requires_bench": true,
 			"min_camp_level": 2
 		},
-		"hide_bedroll": {
-			"name": "Hide Bedroll",
-			"inputs": {"hide": 3, "branch": 2},
-			"output_type": "hide_bedroll",
+		"leather_hook_wrap": {
+			"name": "Leather Hook Wrap",
+			"inputs": {"hide": 3, "rope": 1},
+			"output_type": "leather_hook_wrap",
 			"output_amount": 1,
-			"description": "A portable bedroll for resting outdoors.",
+			"description": "Reinforces grappling hook rope. Triples hook durability.",
 			"requires_bench": true,
 			"min_camp_level": 2
-		},
-		"leather_strips": {
-			"name": "Leather Strips",
-			"inputs": {"hide": 1},
-			"output_type": "leather_strips",
-			"output_amount": 2,
-			"description": "Useful binding material for advanced crafting.",
-			"requires_bench": true
 		}
 	}
 

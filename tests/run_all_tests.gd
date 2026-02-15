@@ -22,6 +22,7 @@ func _init() -> void:
 		"res://tests/test_cave_transition.gd",
 		"res://tests/test_save_load.gd",
 		"res://tests/test_ui_constants.gd",
+		"res://tests/test_weather_forecast.gd",
 	]
 
 	for test_path in test_files:
