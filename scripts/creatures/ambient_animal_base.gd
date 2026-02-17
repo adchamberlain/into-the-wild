@@ -178,7 +178,10 @@ func _move_animal(delta: float, speed: float) -> void:
 		var terrain_height: float = _get_smoothed_terrain_height(new_pos.x, new_pos.z)
 		# Skip water (negative height)
 		if terrain_height < 0:
-			# Turn around
+			move_direction = -move_direction
+			return
+		# Avoid steep terrain (walls/cliffs)
+		if terrain_height - global_position.y > 1.0:
 			move_direction = -move_direction
 			return
 		new_pos.y = terrain_height

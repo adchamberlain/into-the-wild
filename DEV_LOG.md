@@ -3934,16 +3934,52 @@ Fixed all 20 bugs reported from gameplay testing session. Changes span combat, U
 
 ---
 
+## Session 52 - Bug Fix Session: 8 Gameplay Issues (2026-02-17)
+
+### Bug Fixes
+
+**1. Axe sound on collectibles** - When chopping single-hit collectibles (branches, stones), the wood chop impact sound no longer plays. Only the swing sound plays for pickup items; the chop sound is reserved for multi-hit resources like trees and ore.
+
+**2. Cave torches appearing on surface after reload** - Torches and lanterns placed inside caves were teleported to the surface on reload because `_recreate_structure()` unconditionally overwrote Y position with terrain height. Fixed by adding `is_cave` flag to structure save data and skipping Y recalculation for cave structures.
+
+**3. Missing structures after save/reload** - Smithing station, weather vane, snare trap, and smoker all failed to load because `_create_structure_programmatically()` in save_load.gd was missing match cases for these 4 structure types. Added all 4 creation functions with complete visual meshes matching the placement system versions.
+
+**4. Cabin bed exit position** - Changed wake-up exit offset from `Vector3(0, 0, 1.0)` (forward) to `Vector3(1.0, 0, 0)` (right side of bed), rotated by bed orientation.
+
+**5. Leather wrap visual indicators** - When leather axe wrap or leather hook wrap upgrades are applied, the equipped tool now shows visible leather wrapping: brown leather strips around the handle and a leather guard/pad near the tool head. Visuals check for durability upgrade metadata when creating the model.
+
+**6. Fall damage system** - Player now takes damage from falls. Tracks Y position when fall begins, calculates damage on landing. Threshold: 4 units (no damage below), 8 HP per unit beyond threshold, capped at 80 HP max. Shows red HUD notification on impact.
+
+**7. Death/respawn system** - When HP reaches zero, player auto-respawns at their latest shelter (cabin > tent > basic shelter) with 50% health/hunger, all inventory and structures intact. Game auto-saves after respawn. Shows notification explaining what happened. Respawn point updates when structures are loaded.
+
+**8. Bunny terrain collision** - Rabbits no longer clip through terrain or trees when fleeing. Added steep terrain detection (>1 unit height difference triggers direction change), physics raycast obstacle checking before each hop, and perpendicular direction fallback when blocked. Also added terrain steepness check to base animal class `_move_animal()`.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/player/equipment.gd` | Modified | Collectible swing sound, leather wrap visuals for axe/hook |
+| `scripts/core/save_load.gd` | Modified | 4 new structure creators, cave flag in save data, skip Y recalc for caves |
+| `scripts/campsite/cabin_bed.gd` | Modified | Exit to right side of bed |
+| `scripts/player/player_controller.gd` | Modified | Fall damage system, death/respawn system |
+| `scripts/creatures/ambient_rabbit.gd` | Modified | Terrain steepness check, physics raycast obstacle avoidance |
+| `scripts/creatures/ambient_animal_base.gd` | Modified | Steep terrain avoidance in base movement |
+
+### Test Results
+- All 532 regression tests pass
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test all 6 bug fixes in-game
-2. Verify resources sit flush on terrain across all biomes
-3. Verify weather vane shows consistent vertical forecast
-4. Verify fire fully extinguishes visually when fuel runs out
-5. Test leather axe/hook wraps: crafting, applying, durability scaling
-6. Test controller O/X swap feels right in gameplay
-7. Verify map edge clamping when far from campsite
+1. Play-test all 8 bug fixes in-game
+2. Test fall damage from various heights (cliffs, terrain steps, cave drops)
+3. Test death/respawn cycle — verify inventory preserved, shelter selection works
+4. Verify all structures persist after save/reload (especially smithing, vane, snare, smoker)
+5. Place torches in caves, save/reload, verify they stay on cave floor
+6. Test leather wrap visuals — craft and apply, verify visual change on equip
+7. Verify bunnies navigate around terrain and trees without clipping
+8. Test cabin bed exit position feels correct
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

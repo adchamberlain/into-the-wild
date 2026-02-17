@@ -19,13 +19,16 @@ A solo camping adventure game built in Godot 4.5. Survive in the wilderness by g
 
 ### Survival Systems
 - **Health & Hunger** - Manage your vital stats to stay alive
+- **Fall Damage** - Falls beyond 4 units deal escalating damage (8 HP per unit, max 80 HP)
+- **Death & Respawn** - When HP reaches zero, respawn at your latest shelter with 50% health/hunger, all inventory and structures intact
 - **Weather System** - Dynamic weather including rain, storms, fog, heat waves, and cold snaps with GPU-accelerated particle effects
 - **Day/Night Cycle** - 20-minute real-time days with dynamic sky, stars, and moon
 - **Swimming** - Explore underwater with breath mechanics
 - **Save System** - 3 save slots with camp level and timestamp display
-- **Traps** - Place traps to catch rabbits for food
+- **Traps** - Place snare traps to catch rabbits and birds for food
 - **Compass Navigation** - Craft a compass and lodestone from rare ore; place the lodestone as a beacon and the HUD shows a directional arrow with distance back to it
 - **Birch Bark Map** - Harvest birch bark with a machete, craft a wilderness map showing terrain regions, water bodies, caves, and your position
+- **Tool Upgrades** - Craft leather wraps from hide to multiply axe and grappling hook durability (with visible wrap on the tool model)
 
 ### Gathering & Crafting
 - **Resource Gathering** - Collect branches, rocks, berries, mushrooms, herbs, and wood
@@ -56,6 +59,10 @@ Build up your camp through three levels:
 | Herb Garden | Passive herb production |
 | Canvas Tent | Better weather protection |
 | Log Cabin | Walkable interior with bed (full restore) and kitchen (5 advanced recipes) |
+| Snare Trap | Baited trap that catches rabbits and birds |
+| Smithing Station | Forge for smelting ore into metal ingots |
+| Smoker | Smoke meat and fish for preservation |
+| Weather Vane | Shows current weather and 5-day forecast |
 | Lodestone | Navigation beacon — place anywhere, compass points back to it |
 
 ### Tools & Equipment

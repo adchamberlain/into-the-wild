@@ -484,8 +484,12 @@ func _use_tool() -> bool:
 		var success: bool = target.receive_chop(player)
 		if success:
 			# Play appropriate sound based on target type
+			# Obstacles and single-hit collectibles (branches, stones) just get swing sound
+			# Multi-chop resources (trees, ore) get the wood chop impact sound
 			if target.is_in_group("obstacle"):
-				SFXManager.play_sfx("swing")  # Use swing sound for clearing
+				pass  # Swing sound already played by _play_swing_animation()
+			elif target is ResourceNode and target.chops_required <= 1:
+				pass  # Single-hit collectible — swing sound already played
 			else:
 				SFXManager.play_sfx("chop")
 			item_used.emit(equipped_item)
@@ -741,6 +745,12 @@ func _create_axe_model(axe_type: String) -> void:
 		_:
 			_add_stone_axe_head(stone_axe_model)  # Default to stone
 
+	# Add leather wrap visuals if upgraded
+	if has_meta("durability_upgrades"):
+		var upgrades: Dictionary = get_meta("durability_upgrades")
+		if upgrades.has(axe_type):
+			_add_leather_wrap_to_axe(stone_axe_model)
+
 	# Position: held in right hand, vertical with natural 18 degree clockwise tilt
 	stone_axe_model.position = AXE_REST_POSITION
 	stone_axe_model.rotation_degrees = AXE_REST_ROTATION
@@ -888,6 +898,62 @@ func _add_metal_axe_head(axe_model: Node3D) -> void:
 	collar.position = Vector3(0, 0.22, 0)
 
 	axe_model.add_child(collar)
+
+
+## Add leather wrapping strips to axe handle to show durability upgrade.
+func _add_leather_wrap_to_axe(axe_model: Node3D) -> void:
+	var leather_mat: StandardMaterial3D = StandardMaterial3D.new()
+	leather_mat.albedo_color = Color(0.55, 0.30, 0.15)  # Rich leather brown
+	leather_mat.roughness = 0.8
+
+	# Three leather strips wrapped around the handle at different heights
+	for i: int in range(3):
+		var wrap: MeshInstance3D = MeshInstance3D.new()
+		wrap.name = "LeatherWrap%d" % i
+		var wrap_mesh: BoxMesh = BoxMesh.new()
+		wrap_mesh.size = Vector3(0.075, 0.04, 0.075)
+		wrap.mesh = wrap_mesh
+		wrap.position = Vector3(0, -0.08 + i * 0.10, 0)
+		wrap.material_override = leather_mat
+		axe_model.add_child(wrap)
+
+	# Leather guard piece near the axe head
+	var guard: MeshInstance3D = MeshInstance3D.new()
+	guard.name = "LeatherGuard"
+	var guard_mesh: BoxMesh = BoxMesh.new()
+	guard_mesh.size = Vector3(0.085, 0.06, 0.085)
+	guard.mesh = guard_mesh
+	guard.position = Vector3(0, 0.16, 0)
+	guard.material_override = leather_mat
+	axe_model.add_child(guard)
+
+
+## Add leather wrapping strips to grappling hook handle to show durability upgrade.
+func _add_leather_wrap_to_hook(hook_model: Node3D) -> void:
+	var leather_mat: StandardMaterial3D = StandardMaterial3D.new()
+	leather_mat.albedo_color = Color(0.55, 0.30, 0.15)  # Rich leather brown
+	leather_mat.roughness = 0.8
+
+	# Leather grip wrap around handle
+	for i: int in range(3):
+		var wrap: MeshInstance3D = MeshInstance3D.new()
+		wrap.name = "LeatherWrap%d" % i
+		var wrap_mesh: BoxMesh = BoxMesh.new()
+		wrap_mesh.size = Vector3(0.055, 0.03, 0.055)
+		wrap.mesh = wrap_mesh
+		wrap.position = Vector3(0, -0.04 + i * 0.06, 0)
+		wrap.material_override = leather_mat
+		hook_model.add_child(wrap)
+
+	# Leather pad where rope meets handle
+	var pad: MeshInstance3D = MeshInstance3D.new()
+	pad.name = "LeatherPad"
+	var pad_mesh: BoxMesh = BoxMesh.new()
+	pad_mesh.size = Vector3(0.07, 0.04, 0.07)
+	pad.mesh = pad_mesh
+	pad.position = Vector3(0, 0.08, 0)
+	pad.material_override = leather_mat
+	hook_model.add_child(pad)
 
 
 func _remove_stone_axe() -> void:
@@ -1285,6 +1351,12 @@ func _create_grappling_hook_model() -> void:
 	prong3.rotation_degrees = Vector3(30, 0, 0)
 
 	grappling_hook_model.add_child(prong3)
+
+	# Add leather wrap visuals if upgraded
+	if has_meta("durability_upgrades"):
+		var upgrades: Dictionary = get_meta("durability_upgrades")
+		if upgrades.has("grappling_hook"):
+			_add_leather_wrap_to_hook(grappling_hook_model)
 
 	# Position: held in right hand
 	grappling_hook_model.position = GRAPPLING_HOOK_REST_POSITION

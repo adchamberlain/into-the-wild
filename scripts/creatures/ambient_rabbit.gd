@@ -318,14 +318,49 @@ func _start_single_hop() -> void:
 	# to avoid clipping into adjacent terrain block corners
 	if chunk_manager and chunk_manager.has_method("get_height_at"):
 		var terrain_height: float = _get_smoothed_terrain_height(target_pos.x, target_pos.z)
-		# Avoid water - turn around but use current height instead of resampling
+		# Avoid water - turn around
 		if terrain_height < 0:
 			move_direction = -move_direction
 			hop_dir = move_direction.normalized()
 			target_pos = global_position + hop_dir * hop_distance
-			# Use current Y position instead of expensive second terrain sample
 			terrain_height = global_position.y
+
+		# Avoid steep terrain (walls/cliffs) — if target is much higher, pick new direction
+		var height_diff: float = terrain_height - global_position.y
+		if height_diff > 1.0:
+			# Terrain too steep ahead, try a perpendicular direction
+			move_direction = Vector3(-hop_dir.z, 0, hop_dir.x)  # Rotate 90 degrees
+			hop_dir = move_direction.normalized()
+			target_pos = global_position + hop_dir * hop_distance
+			terrain_height = _get_smoothed_terrain_height(target_pos.x, target_pos.z)
+			# If still blocked, just stay in place
+			if terrain_height < 0 or (terrain_height - global_position.y) > 1.0:
+				target_pos = global_position
+				terrain_height = global_position.y
+
 		target_pos.y = terrain_height
+
+	# Check for obstacles (trees, structures) via physics raycast
+	if is_inside_tree():
+		var space_state: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+		if space_state:
+			var ray_origin: Vector3 = global_position + Vector3(0, 0.2, 0)
+			var ray_end: Vector3 = target_pos + Vector3(0, 0.2, 0)
+			var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(ray_origin, ray_end)
+			query.collision_mask = 1  # Default collision layer (terrain, structures, trees)
+			var result: Dictionary = space_state.intersect_ray(query)
+			if not result.is_empty():
+				# Obstacle in the way — hop to just before the obstacle
+				var hit_pos: Vector3 = result["position"]
+				var dist_to_hit: float = global_position.distance_to(hit_pos)
+				if dist_to_hit < hop_distance * 0.5:
+					# Too close to obstacle, don't hop — stay in place
+					target_pos = global_position
+				else:
+					# Land short of the obstacle
+					target_pos = global_position + hop_dir * (dist_to_hit - 0.3)
+					if chunk_manager and chunk_manager.has_method("get_height_at"):
+						target_pos.y = _get_smoothed_terrain_height(target_pos.x, target_pos.z)
 
 	hop_end_pos = target_pos
 

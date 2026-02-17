@@ -67,6 +67,17 @@ var _has_safe_position: bool = false  # Whether last_safe_position has been set 
 var safe_position_update_timer: float = 0.0
 const SAFE_POSITION_UPDATE_INTERVAL: float = 0.5  # Update safe position every 0.5 seconds
 
+# Fall damage
+var fall_start_y: float = 0.0  # Y position when player started falling
+var is_falling: bool = false  # Whether player is currently in a fall
+const FALL_DAMAGE_THRESHOLD: float = 4.0  # Minimum fall distance before damage (units)
+const FALL_DAMAGE_PER_UNIT: float = 8.0  # HP damage per unit fallen beyond threshold
+const FALL_DAMAGE_MAX: float = 80.0  # Maximum fall damage cap
+
+# Death/respawn
+var respawn_position: Vector3 = Vector3(0, 5, 0)  # Default spawn, updated when shelter is built
+var has_respawn_shelter: bool = false  # Whether player has a shelter to respawn at
+
 
 # Footstep sound timing
 var footstep_timer: float = 0.0
@@ -128,11 +139,18 @@ func _ready() -> void:
 	# Initialize fall-through protection with spawn position
 	call_deferred("_init_safe_position")
 
+	# Connect death signal for respawn
+	if stats:
+		stats.player_died.connect(_on_player_died)
+
 
 
 func _init_safe_position() -> void:
 	last_safe_position = global_position
 	_has_safe_position = true
+	respawn_position = global_position  # Default to spawn position
+	# Try to find an existing shelter for respawn
+	_update_respawn_from_structures()
 	print("[Player] Initial safe position: %s" % last_safe_position)
 
 
@@ -292,12 +310,24 @@ func _process_normal_movement(delta: float) -> void:
 	# Apply gravity
 	if not is_on_floor():
 		velocity.y -= gravity * delta
+		# Track fall start position
+		if not is_falling and velocity.y < -1.0:
+			is_falling = true
+			fall_start_y = global_position.y
+	else:
+		# Just landed — check for fall damage
+		if is_falling:
+			_apply_fall_damage()
+			is_falling = false
 
 	# Handle jump (works with both keyboard and controller via action)
 	# Using is_action_pressed allows holding the button to jump repeatedly when landing
 	# Don't jump if a UI menu is open (X button used for ui_accept)
 	if Input.is_action_pressed("jump") and is_on_floor() and not _is_ui_blocking_input():
 		velocity.y = jump_velocity
+		# Record jump start for fall damage calculation
+		fall_start_y = global_position.y
+		is_falling = false  # Will be set when actually falling
 
 	# Handle sprint (works with both keyboard and controller via action)
 	is_sprinting = Input.is_action_pressed("sprint") and is_on_floor()
@@ -648,6 +678,86 @@ func _recover_from_fall() -> void:
 		last_safe_position = global_position
 		_has_safe_position = true
 		print("[Player] Recovered to spawn point.")
+
+
+## Apply fall damage based on distance fallen.
+func _apply_fall_damage() -> void:
+	var fall_distance: float = fall_start_y - global_position.y
+	if fall_distance <= FALL_DAMAGE_THRESHOLD:
+		return  # Short fall, no damage
+
+	var damage: float = (fall_distance - FALL_DAMAGE_THRESHOLD) * FALL_DAMAGE_PER_UNIT
+	damage = minf(damage, FALL_DAMAGE_MAX)
+
+	if stats:
+		stats.take_damage(damage)
+		# Show damage notification via HUD
+		var hud: Node = get_tree().get_first_node_in_group("hud")
+		if hud and hud.has_method("show_notification"):
+			hud.show_notification("Fall damage! -%.0f HP" % damage, Color(1.0, 0.4, 0.4, 1))
+		print("[Player] Fall damage: %.1f HP (fell %.1f units)" % [damage, fall_distance])
+
+
+## Handle player death: auto-save and respawn at latest shelter.
+func _on_player_died() -> void:
+	print("[Player] Player died! Respawning...")
+
+	# Find the latest shelter/bed to respawn at
+	_update_respawn_from_structures()
+
+	# Restore health and hunger to partial values
+	if stats:
+		stats.health = stats.max_health * 0.5
+		stats.health_changed.emit(stats.health, stats.max_health)
+		stats.hunger = stats.max_hunger * 0.5
+		stats.hunger_changed.emit(stats.hunger, stats.max_hunger)
+
+	# Teleport player to respawn point
+	velocity = Vector3.ZERO
+	is_falling = false
+	global_position = respawn_position
+
+	# Show respawn notification
+	var hud: Node = get_tree().get_first_node_in_group("hud")
+	if hud and hud.has_method("show_notification"):
+		if has_respawn_shelter:
+			hud.show_notification("You blacked out and woke up at your shelter", Color(1.0, 0.85, 0.3, 1))
+		else:
+			hud.show_notification("You blacked out and woke up at camp", Color(1.0, 0.85, 0.3, 1))
+
+	# Auto-save after respawn
+	var save_load: Node = get_node_or_null("/root/Main/SaveLoad")
+	if save_load and save_load.has_method("save_game"):
+		# Defer to let position update first
+		save_load.call_deferred("save_game")
+		print("[Player] Auto-saved after respawn")
+
+
+## Update respawn position from the latest shelter/bed structure.
+func _update_respawn_from_structures() -> void:
+	var campsite_mgr: Node = get_node_or_null("/root/Main/CampsiteManager")
+	if not campsite_mgr:
+		return
+
+	# Check structures in priority order: cabin > canvas_tent > basic_shelter
+	for shelter_type: String in ["cabin", "canvas_tent", "basic_shelter"]:
+		if campsite_mgr.has_method("get_structures_of_type"):
+			var shelters: Array = campsite_mgr.get_structures_of_type(shelter_type)
+			if not shelters.is_empty():
+				var shelter: Node = shelters.back()  # Latest built
+				if is_instance_valid(shelter):
+					# Position next to the shelter, slightly offset
+					respawn_position = shelter.global_position + Vector3(1.5, 1.0, 0)
+					has_respawn_shelter = true
+					print("[Player] Respawn point set to %s at %s" % [shelter_type, respawn_position])
+					return
+
+
+## Set respawn position directly (called when structures are built).
+func set_respawn_point(pos: Vector3) -> void:
+	respawn_position = pos + Vector3(1.5, 1.0, 0)
+	has_respawn_shelter = true
+	print("[Player] Respawn point updated: %s" % respawn_position)
 
 
 func _find_chunk_manager() -> Node:
