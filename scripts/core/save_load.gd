@@ -445,10 +445,14 @@ func _collect_campsite_data() -> Dictionary:
 	}
 
 	# Collect placed structures
-	# Determine if we're currently in a cave (no chunk_manager means underground)
-	var in_overworld: bool = is_instance_valid(chunk_manager) and chunk_manager.has_method("get_height_at")
+	var has_terrain: bool = is_instance_valid(chunk_manager) and chunk_manager.has_method("get_height_at")
 	for structure: Node in campsite_manager.placed_structures:
 		if is_instance_valid(structure):
+			# Determine per-structure if it's underground by comparing Y to terrain height
+			var is_cave_structure: bool = false
+			if has_terrain:
+				var terrain_y: float = chunk_manager.get_height_at(structure.global_position.x, structure.global_position.z)
+				is_cave_structure = structure.global_position.y < terrain_y - 1.0
 			var struct_data: Dictionary = {
 				"type": structure.structure_type if "structure_type" in structure else "unknown",
 				"position": {
@@ -457,7 +461,7 @@ func _collect_campsite_data() -> Dictionary:
 					"z": structure.global_position.z
 				},
 				"rotation_y": structure.rotation.y,
-				"is_cave": not in_overworld
+				"is_cave": is_cave_structure
 			}
 
 			# Save fire state if it's a fire pit

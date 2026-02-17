@@ -3969,16 +3969,21 @@ Fixed all 20 bugs reported from gameplay testing session. Changes span combat, U
 
 ---
 
-## Session 53 - Bug Fix: Canvas Tent Collision (2026-02-17)
+## Session 53 - Bug Fix Session: 3 Gameplay Issues (2026-02-17)
 
 ### Bug Fixes
 
 **1. Canvas tent missing collision** - Player could walk through the canvas tent in all directions. The tent collision box in `save_load.gd` was only 0.1 units tall (a floor slab at ground level), while `placement_system.gd` had the correct 1.8-unit tall collision. Fixed by updating `save_load.gd` to match: `Vector3(3.0, 1.8, 2.5)` at `y=0.9`.
 
+**2. Cave torches relocated to surface after save/reload** - The `is_cave` flag was set using a single global check (`not in_overworld`) that only checked if `chunk_manager` exists. Since the player is in the overworld when saving, every structure got `is_cave: false`. Fixed by comparing each structure's Y position to terrain height at that X/Z — if more than 1 unit below terrain, it's flagged as a cave structure and its Y is preserved on reload.
+
+**3. Persistent "Pick Up Torch" HUD prompt after pickup** - After picking up a torch, the interaction prompt stayed on screen. `destroy()` calls `queue_free()` which doesn't free the node until end of frame, so `is_instance_valid()` still returned true. Fixed by adding `is_queued_for_deletion()` checks in both `_try_interact()` and `_update_interaction_target()`. Applies to all pickup-on-interact items (torch, lantern, lodestone).
+
 ### Modified Files
 | File | Type | Changes |
 |------|------|---------|
-| `scripts/core/save_load.gd` | Modified | Tent collision box height 0.1→1.8, position y 0.05→0.9 |
+| `scripts/core/save_load.gd` | Modified | Tent collision box height 0.1→1.8; per-structure cave detection via terrain Y comparison |
+| `scripts/player/player_controller.gd` | Modified | Added `is_queued_for_deletion()` checks for interaction target cleanup |
 
 ### Test Results
 - All 532 regression tests pass

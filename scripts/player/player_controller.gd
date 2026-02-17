@@ -457,8 +457,8 @@ func _update_interaction_target() -> void:
 		if collider and collider.is_in_group("interactable"):
 			new_target = collider
 
-	# Clear stale reference to freed node (e.g., after cave transition)
-	if current_interaction_target and not is_instance_valid(current_interaction_target):
+	# Clear stale reference to freed or deletion-queued node (e.g., after cave transition or pickup)
+	if current_interaction_target and (not is_instance_valid(current_interaction_target) or current_interaction_target.is_queued_for_deletion()):
 		current_interaction_target = null
 
 	# Only emit signals if target changed
@@ -480,8 +480,8 @@ func _get_interaction_text(target: Node) -> String:
 func _try_interact() -> void:
 	if current_interaction_target and current_interaction_target.has_method("interact"):
 		current_interaction_target.interact(self)
-		# Check if target was freed (e.g., picked up torch) and clear HUD
-		if not is_instance_valid(current_interaction_target):
+		# Check if target was freed or queued for deletion (e.g., picked up torch) and clear HUD
+		if not is_instance_valid(current_interaction_target) or current_interaction_target.is_queued_for_deletion():
 			current_interaction_target = null
 			interaction_cleared.emit()
 		elif current_interaction_target:
