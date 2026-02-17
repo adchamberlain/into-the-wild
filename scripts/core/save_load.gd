@@ -1680,9 +1680,9 @@ func _create_canvas_tent() -> StaticBody3D:
 
 	var collision: CollisionShape3D = CollisionShape3D.new()
 	var box_shape: BoxShape3D = BoxShape3D.new()
-	box_shape.size = Vector3(3.0, 0.1, 2.5)
+	box_shape.size = Vector3(3.0, 1.8, 2.5)
 	collision.shape = box_shape
-	collision.position.y = 0.05
+	collision.position.y = 0.9
 	tent.add_child(collision)
 
 	# Canvas panels (A-frame)

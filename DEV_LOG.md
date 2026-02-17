@@ -3969,17 +3969,26 @@ Fixed all 20 bugs reported from gameplay testing session. Changes span combat, U
 
 ---
 
+## Session 53 - Bug Fix: Canvas Tent Collision (2026-02-17)
+
+### Bug Fixes
+
+**1. Canvas tent missing collision** - Player could walk through the canvas tent in all directions. The tent collision box in `save_load.gd` was only 0.1 units tall (a floor slab at ground level), while `placement_system.gd` had the correct 1.8-unit tall collision. Fixed by updating `save_load.gd` to match: `Vector3(3.0, 1.8, 2.5)` at `y=0.9`.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/core/save_load.gd` | Modified | Tent collision box height 0.1→1.8, position y 0.05→0.9 |
+
+### Test Results
+- All 532 regression tests pass
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test all 8 bug fixes in-game
-2. Test fall damage from various heights (cliffs, terrain steps, cave drops)
-3. Test death/respawn cycle — verify inventory preserved, shelter selection works
-4. Verify all structures persist after save/reload (especially smithing, vane, snare, smoker)
-5. Place torches in caves, save/reload, verify they stay on cave floor
-6. Test leather wrap visuals — craft and apply, verify visual change on equip
-7. Verify bunnies navigate around terrain and trees without clipping
-8. Test cabin bed exit position feels correct
+1. Continue play-testing and bug fixing
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.
