@@ -603,8 +603,8 @@ func _apply_player_data(data: Dictionary) -> void:
 	# Position
 	if data.has("position"):
 		var pos: Dictionary = data["position"]
-		var load_x: float = pos["x"]
-		var load_z: float = pos["z"]
+		var load_x: float = pos.get("x", 0.0)
+		var load_z: float = pos.get("z", 0.0)
 
 		# Calculate correct Y position based on terrain height
 		# This prevents spawning below terrain when loading

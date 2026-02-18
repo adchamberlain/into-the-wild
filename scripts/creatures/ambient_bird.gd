@@ -376,7 +376,7 @@ func _fold_wings() -> void:
 func _chirp() -> void:
 	# Only chirp if player is nearby (sounds are 2D, not spatial)
 	# Uses cached sfx_manager from base class for performance
-	if player and global_position.distance_to(player.global_position) < 15.0:
+	if is_instance_valid(player) and global_position.distance_to(player.global_position) < 15.0:
 		if sfx_manager and sfx_manager.has_method("play_sfx"):
 			sfx_manager.play_sfx("bird_chirp")
 
@@ -440,7 +440,7 @@ func _on_enter_fleeing() -> void:
 	bird_state = BirdState.FLYING
 
 	# Flee direction (away from player)
-	if player:
+	if is_instance_valid(player):
 		var flee_dir: Vector2 = Vector2(global_position.x - player.global_position.x,
 										 global_position.z - player.global_position.z).normalized()
 
@@ -481,7 +481,7 @@ func _process_moving(delta: float) -> void:
 func _process_fleeing(delta: float) -> void:
 	# Continue fleeing until timer expires
 	if state_timer <= 0:
-		if player and global_position.distance_to(player.global_position) < flee_distance:
+		if is_instance_valid(player) and global_position.distance_to(player.global_position) < flee_distance:
 			_start_fleeing()
 		else:
 			_enter_state(State.IDLE)

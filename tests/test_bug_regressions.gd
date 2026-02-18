@@ -44,6 +44,9 @@ func run_tests() -> Dictionary:
 	test_sleep_callbacks_check_player_validity()
 	test_garden_state_saved_and_restored()
 	test_shelter_resting_player_uses_instance_valid()
+	test_creature_player_uses_instance_valid()
+	test_darkness_tween_kills_previous()
+	test_save_position_uses_safe_access()
 
 	return get_results()
 
@@ -1072,3 +1075,95 @@ func test_shelter_resting_player_uses_instance_valid() -> void:
 
 	assert_true(fn_body.find("is_instance_valid(resting_player)") != -1,
 		"_on_period_changed() checks is_instance_valid(resting_player)")
+
+
+func test_creature_player_uses_instance_valid() -> void:
+	## Bug: Creature scripts used "if player and ..." (truthiness) instead of
+	## is_instance_valid(player) when checking player proximity for fleeing and
+	## sound effects. If the player died or was freed, accessing global_position
+	## on the freed reference would crash. Affected base class, bird, and rabbit.
+
+	# Check base class
+	var base_script: GDScript = load("res://scripts/creatures/ambient_animal_base.gd") as GDScript
+	if base_script:
+		var source: String = base_script.source_code
+		var fn_start: int = source.find("func _process_fleeing(")
+		var fn_end: int = source.find("\nfunc ", fn_start + 1)
+		if fn_end == -1:
+			fn_end = source.length()
+		var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+		assert_true(fn_body.find("is_instance_valid(player)") != -1,
+			"Base _process_fleeing() uses is_instance_valid(player)")
+
+	# Check bird chirp
+	var bird_script: GDScript = load("res://scripts/creatures/ambient_bird.gd") as GDScript
+	if bird_script:
+		var source: String = bird_script.source_code
+		var fn_start: int = source.find("func _chirp()")
+		var fn_end: int = source.find("\nfunc ", fn_start + 1)
+		if fn_end == -1:
+			fn_end = source.length()
+		var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+		assert_true(fn_body.find("is_instance_valid(player)") != -1,
+			"Bird _chirp() uses is_instance_valid(player)")
+
+	# Check rabbit hop sound
+	var rabbit_script: GDScript = load("res://scripts/creatures/ambient_rabbit.gd") as GDScript
+	if rabbit_script:
+		var source: String = rabbit_script.source_code
+		assert_true(source.find("is_instance_valid(player) and global_position.distance_to(player.global_position) < 8.0") != -1,
+			"Rabbit hop sound uses is_instance_valid(player)")
+
+
+func test_darkness_tween_kills_previous() -> void:
+	## Bug: cave_transition.gd _update_darkness_overlay() created a new tween on
+	## every call without killing the previous one. When rapidly entering/exiting
+	## darkness (equip/unequip torch), multiple tweens animated the same color:a
+	## property simultaneously, causing conflicting/stuttering visual effects.
+	var cave_script: GDScript = load("res://scripts/core/cave_transition.gd") as GDScript
+	if not cave_script:
+		assert_true(false, "Could not load cave_transition.gd")
+		return
+
+	var source: String = cave_script.source_code
+	var fn_start: int = source.find("func _update_darkness_overlay(")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+
+	# Must kill previous tween before creating new one
+	assert_true(fn_body.find(".kill()") != -1,
+		"_update_darkness_overlay() kills previous tween before creating new one")
+	# Must store tween reference for later cleanup
+	assert_true(source.find("darkness_tween") != -1,
+		"Cave transition tracks darkness tween in member variable")
+
+
+func test_save_position_uses_safe_access() -> void:
+	## Bug: save_load.gd _apply_player_data() accessed position dictionary with
+	## direct bracket notation pos["x"] and pos["z"]. If the save file was
+	## corrupted or from an old version missing these keys, this would crash
+	## with KeyError. Must use .get() with defaults.
+	var save_script: GDScript = load("res://scripts/core/save_load.gd") as GDScript
+	if not save_script:
+		assert_true(false, "Could not load save_load.gd")
+		return
+
+	var source: String = save_script.source_code
+	var fn_start: int = source.find("func _apply_player_data(")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+
+	# Must use .get() for safe access on position data
+	assert_true(fn_body.find('pos.get("x"') != -1,
+		"_apply_player_data() uses safe .get() for position X")
+	assert_true(fn_body.find('pos.get("z"') != -1,
+		"_apply_player_data() uses safe .get() for position Z")
+	# Must NOT use direct bracket access for position keys
+	assert_false(fn_body.find('pos["x"]') != -1,
+		"_apply_player_data() does NOT use unsafe pos[\"x\"] bracket access")
+	assert_false(fn_body.find('pos["z"]') != -1,
+		"_apply_player_data() does NOT use unsafe pos[\"z\"] bracket access")

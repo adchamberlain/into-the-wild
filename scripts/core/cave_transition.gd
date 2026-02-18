@@ -23,6 +23,7 @@ var is_dark: bool = false
 var time_in_darkness: float = 0.0
 var darkness_damage_timer: float = 0.0
 var light_check_timer: float = 0.0
+var darkness_tween: Tween = null
 
 # Cave resource respawn settings (in game hours) - 168 hours = 7 game days
 const CAVE_RESOURCE_RESPAWN_HOURS: float = 168.0
@@ -142,9 +143,12 @@ func _check_player_light() -> void:
 func _update_darkness_overlay(dark: bool) -> void:
 	if not darkness_overlay:
 		return
+	# Kill previous tween to prevent overlapping animations
+	if darkness_tween and darkness_tween.is_valid():
+		darkness_tween.kill()
 	var target_alpha: float = DARKNESS_ALPHA if dark else 0.0
-	var tween: Tween = create_tween()
-	tween.tween_property(darkness_overlay, "color:a", target_alpha, 0.3)
+	darkness_tween = create_tween()
+	darkness_tween.tween_property(darkness_overlay, "color:a", target_alpha, 0.3)
 
 
 func _apply_darkness_damage() -> void:

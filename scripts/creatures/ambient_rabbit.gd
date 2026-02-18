@@ -279,7 +279,7 @@ func _process_hop(delta: float) -> void:
 
 		# Play hop sound only if player is very close (sounds are 2D, not spatial)
 		# Uses cached sfx_manager from base class for performance
-		if player and global_position.distance_to(player.global_position) < 8.0:
+		if is_instance_valid(player) and global_position.distance_to(player.global_position) < 8.0:
 			if sfx_manager and sfx_manager.has_method("play_sfx"):
 				sfx_manager.play_sfx("rabbit_hop")
 
@@ -417,7 +417,7 @@ func _process_fleeing(delta: float) -> void:
 	# Don't use base movement - we hop instead
 	if state_timer <= 0 and not is_hopping:
 		# Check if still need to flee
-		if player and global_position.distance_to(player.global_position) < flee_distance:
+		if is_instance_valid(player) and global_position.distance_to(player.global_position) < flee_distance:
 			_start_fleeing()
 		else:
 			_enter_state(State.IDLE)

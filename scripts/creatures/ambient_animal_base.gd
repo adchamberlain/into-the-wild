@@ -161,7 +161,7 @@ func _process_fleeing(delta: float) -> void:
 
 	if state_timer <= 0:
 		# Check if still need to flee
-		if player and global_position.distance_to(player.global_position) < flee_distance:
+		if is_instance_valid(player) and global_position.distance_to(player.global_position) < flee_distance:
 			_start_fleeing()  # Continue fleeing
 		else:
 			_enter_state(State.IDLE)

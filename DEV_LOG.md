@@ -4284,6 +4284,31 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ---
 
+## Session 67 - Code Audit Bug Fixes Round 13 (2026-02-17)
+
+### Bug Fixes
+
+**1. Creature freed-player crashes in base class, bird, and rabbit** - `ambient_animal_base.gd`, `ambient_bird.gd`, and `ambient_rabbit.gd` all used `if player and` or `if player:` to check the cached player reference, but freed nodes pass truthiness in GDScript. If the player died while creatures were active (fleeing, chirping, hopping), accessing methods on the freed reference would crash. Changed 6 locations across 3 files to use `is_instance_valid(player)`.
+
+**2. Cave darkness overlay tween accumulation** - `cave_transition.gd` `_update_darkness_overlay()` created a new tween every call without killing the previous one. Rapid light source toggling (equipping/unequipping torch) accumulated orphan tweens fighting over the overlay alpha, causing visual glitches. Added a `darkness_tween` member variable and `kill()` call before creating each new tween.
+
+**3. Save/load position dictionary unsafe access** - `save_load.gd` accessed campsite position with `pos["x"]` and `pos["z"]` which crashes if the key is missing (corrupted save data). Changed to `pos.get("x", 0.0)` and `pos.get("z", 0.0)` for safe fallback.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/creatures/ambient_animal_base.gd` | Modified | `is_instance_valid(player)` in `_process()` proximity check |
+| `scripts/creatures/ambient_bird.gd` | Modified | `is_instance_valid(player)` in `_chirp()`, `_on_enter_fleeing()`, `_process_fleeing()` |
+| `scripts/creatures/ambient_rabbit.gd` | Modified | `is_instance_valid(player)` in hop sound and `_process_fleeing()` |
+| `scripts/core/cave_transition.gd` | Modified | Track darkness tween, kill before creating new |
+| `scripts/core/save_load.gd` | Modified | Safe `.get()` access for position dictionary |
+| `tests/test_bug_regressions.gd` | Modified | Added 3 regression tests (9 new assertions, 120 total) |
+
+### Test Results
+- All 652 regression tests pass (9 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks
