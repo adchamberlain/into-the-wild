@@ -67,6 +67,13 @@ func _process(delta: float) -> void:
 	if not is_fishing:
 		return
 
+	# Cancel fishing if player reference became invalid (death, scene change)
+	if not is_instance_valid(current_player):
+		is_fishing = false
+		waiting_for_catch = false
+		current_player = null
+		return
+
 	if waiting_for_catch:
 		catch_window_timer -= delta
 		if catch_window_timer <= 0:

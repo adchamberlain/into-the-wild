@@ -548,17 +548,17 @@ func _apply_save_data(data: Dictionary) -> void:
 	elif data.has("campsite"):
 		push_warning("[SaveLoad] Skipping campsite data - campsite_manager is null")
 
+	# Cave state BEFORE player (player position restore reads is_in_cave)
+	if data.has("cave"):
+		var cave_transition: Node = get_node_or_null("/root/CaveTransition")
+		if cave_transition and cave_transition.has_method("load_save_data"):
+			cave_transition.load_save_data(data["cave"])
+
 	# Player last (position, stats, inventory)
 	if data.has("player") and player:
 		_apply_player_data(data["player"])
 	elif data.has("player"):
 		push_error("[SaveLoad] Cannot apply player data - player is null!")
-
-	# Cave state
-	if data.has("cave"):
-		var cave_transition: Node = get_node_or_null("/root/CaveTransition")
-		if cave_transition and cave_transition.has_method("load_save_data"):
-			cave_transition.load_save_data(data["cave"])
 
 	# Config settings
 	if data.has("config"):
@@ -692,9 +692,24 @@ func _apply_weather_data(data: Dictionary) -> void:
 	if data.has("weather_enabled"):
 		weather_manager.weather_enabled = data["weather_enabled"]
 
-	# Update visuals
+	# Replay side effects that _set_weather() normally handles:
+	# 1. Hunger multiplier
+	if weather_manager.player_stats:
+		if weather_type == weather_manager.Weather.HEAT_WAVE:
+			weather_manager.player_stats.hunger_multiplier = weather_manager.heat_wave_hunger_multiplier
+		else:
+			weather_manager.player_stats.hunger_multiplier = 1.0
+
+	# 2. Fire effectiveness
+	if weather_manager.has_method("_update_fire_effectiveness"):
+		weather_manager._update_fire_effectiveness()
+
+	# 3. Update environment visuals
 	if weather_manager.environment_manager:
 		weather_manager.environment_manager.set_weather_overlay(weather_manager.get_weather_name())
+
+	# 4. Emit weather_changed signal (triggers weather particles etc.)
+	weather_manager.weather_changed.emit(weather_manager.get_weather_name())
 
 
 func _apply_resource_data(data: Dictionary) -> void:

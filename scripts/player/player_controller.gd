@@ -758,6 +758,16 @@ func _on_player_died() -> void:
 		stats.hunger = stats.max_hunger * 0.5
 		stats.hunger_changed.emit(stats.hunger, stats.max_hunger)
 
+	# Reset structure resting state before clearing player reference
+	# (prevents phantom time skips from shelter/bed _on_period_changed)
+	if is_instance_valid(resting_in_structure):
+		if "is_player_resting" in resting_in_structure:
+			resting_in_structure.is_player_resting = false
+			resting_in_structure.resting_player = null
+		if "is_player_sleeping" in resting_in_structure:
+			resting_in_structure.is_player_sleeping = false
+			resting_in_structure.sleeping_player = null
+
 	# Reset movement state flags (player may die while resting, climbing, or grappling)
 	is_resting = false
 	is_climbing = false
@@ -775,6 +785,12 @@ func _on_player_died() -> void:
 	if is_grappling and grapple_node and grapple_node.has_method("cancel_grapple"):
 		grapple_node.cancel_grapple()
 	is_grappling = false
+
+	# Cancel active placement to remove ghost preview mesh
+	var placement: Node = get_node_or_null("PlacementSystem")
+	if placement and "is_placing" in placement and placement.is_placing:
+		if placement.has_method("cancel_placement"):
+			placement.cancel_placement()
 
 	# Close any open UI menus and restore mouse capture
 	_close_all_menus()

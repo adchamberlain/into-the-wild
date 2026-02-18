@@ -179,6 +179,16 @@ func run_tests() -> Dictionary:
 	test_crafting_restore_focus_checks_is_open()
 	test_storage_ui_checks_instance_valid()
 
+	# Round 8 regression tests
+	test_cave_state_loaded_before_player_data()
+	test_weather_load_replays_side_effects()
+	test_death_resets_shelter_resting_state()
+	test_death_resets_cabin_bed_sleeping_state()
+	test_death_cancels_active_placement()
+	test_fishing_spot_cancels_on_invalid_player()
+	test_chunk_queue_filters_stale_entries()
+	test_height_cache_key_uses_floor()
+
 	return get_results()
 
 
@@ -2680,7 +2690,7 @@ func test_death_resets_water_state() -> void:
 	file.close()
 	var death_idx: int = src.find("func _on_player_died")
 	assert_true(death_idx != -1, "player_controller has _on_player_died")
-	var death_body: String = src.substr(death_idx, 800)
+	var death_body: String = src.substr(death_idx, 1500)
 	assert_true(death_body.find("is_in_water") != -1,
 		"_on_player_died resets is_in_water")
 	assert_true(death_body.find("_water_area_count") != -1,
@@ -2698,7 +2708,7 @@ func test_death_closes_menus() -> void:
 	file.close()
 	var death_idx: int = src.find("func _on_player_died")
 	assert_true(death_idx != -1, "player_controller has _on_player_died")
-	var death_body: String = src.substr(death_idx, 1200)
+	var death_body: String = src.substr(death_idx, 2000)
 	assert_true(death_body.find("_close_all_menus") != -1,
 		"_on_player_died calls _close_all_menus")
 	assert_true(src.find("func _close_all_menus") != -1,
@@ -3626,3 +3636,147 @@ func test_storage_ui_checks_instance_valid() -> void:
 	var body: String = src.substr(open_idx, 800)
 	assert_true(body.find("is_instance_valid(storage)") != -1,
 		"open_storage checks storage validity before accessing inventory")
+
+
+# ===== Round 8 regression tests =====
+
+
+func test_cave_state_loaded_before_player_data() -> void:
+	## Bug: save_load.gd loaded player data (which reads cave_transition.is_in_cave)
+	## BEFORE loading cave state, so is_in_cave was always false on load.
+	## Player would fall through cave floor after loading a cave save.
+	var file: FileAccess = FileAccess.open("res://scripts/core/save_load.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open save_load.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var cave_idx: int = src.find("cave_transition.load_save_data")
+	var player_idx: int = src.find("_apply_player_data")
+	assert_true(cave_idx != -1, "save_load has cave_transition.load_save_data")
+	assert_true(player_idx != -1, "save_load has _apply_player_data call")
+	assert_true(cave_idx < player_idx,
+		"cave state loaded BEFORE player data (player reads is_in_cave)")
+
+
+func test_weather_load_replays_side_effects() -> void:
+	## Bug: _apply_weather_data() assigned current_weather directly without calling
+	## _set_weather(), skipping hunger_multiplier, fire effectiveness, and weather_changed.
+	var file: FileAccess = FileAccess.open("res://scripts/core/save_load.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open save_load.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var weather_idx: int = src.find("func _apply_weather_data")
+	assert_true(weather_idx != -1, "save_load has _apply_weather_data")
+	var body: String = src.substr(weather_idx, 1500)
+	assert_true(body.find("hunger_multiplier") != -1,
+		"_apply_weather_data restores hunger_multiplier")
+	assert_true(body.find("_update_fire_effectiveness") != -1,
+		"_apply_weather_data restores fire effectiveness")
+	assert_true(body.find("weather_changed.emit") != -1,
+		"_apply_weather_data emits weather_changed signal")
+
+
+func test_death_resets_shelter_resting_state() -> void:
+	## Bug: shelter is_player_resting stayed true after death, causing phantom
+	## time skips via _on_period_changed handler.
+	var file: FileAccess = FileAccess.open("res://scripts/player/player_controller.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open player_controller.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var death_idx: int = src.find("func _on_player_died")
+	assert_true(death_idx != -1, "player_controller has _on_player_died")
+	var body: String = src.substr(death_idx, 1500)
+	assert_true(body.find("is_player_resting") != -1,
+		"_on_player_died resets shelter is_player_resting")
+	assert_true(body.find("resting_player") != -1,
+		"_on_player_died clears shelter resting_player reference")
+
+
+func test_death_resets_cabin_bed_sleeping_state() -> void:
+	## Bug: cabin bed is_player_sleeping stayed true after death.
+	var file: FileAccess = FileAccess.open("res://scripts/player/player_controller.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open player_controller.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var death_idx: int = src.find("func _on_player_died")
+	assert_true(death_idx != -1, "player_controller has _on_player_died")
+	var body: String = src.substr(death_idx, 1500)
+	assert_true(body.find("is_player_sleeping") != -1,
+		"_on_player_died resets cabin bed is_player_sleeping")
+	assert_true(body.find("sleeping_player") != -1,
+		"_on_player_died clears cabin bed sleeping_player reference")
+
+
+func test_death_cancels_active_placement() -> void:
+	## Bug: PlacementSystem is_placing stayed true and ghost preview persisted after death.
+	var file: FileAccess = FileAccess.open("res://scripts/player/player_controller.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open player_controller.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var death_idx: int = src.find("func _on_player_died")
+	assert_true(death_idx != -1, "player_controller has _on_player_died")
+	var body: String = src.substr(death_idx, 2000)
+	assert_true(body.find("PlacementSystem") != -1,
+		"_on_player_died checks PlacementSystem node")
+	assert_true(body.find("cancel_placement") != -1,
+		"_on_player_died calls cancel_placement on death")
+
+
+func test_fishing_spot_cancels_on_invalid_player() -> void:
+	## Bug: FishingSpot is_fishing/waiting_for_catch/current_player persisted after
+	## player death, causing timers to fire on an invalid player reference.
+	var file: FileAccess = FileAccess.open("res://scripts/resources/fishing_spot.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open fishing_spot.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var process_idx: int = src.find("func _process")
+	assert_true(process_idx != -1, "fishing_spot has _process")
+	var body: String = src.substr(process_idx, 800)
+	assert_true(body.find("is_instance_valid(current_player)") != -1,
+		"_process checks current_player validity when fishing")
+
+
+func test_chunk_queue_filters_stale_entries() -> void:
+	## Bug: chunk_manager didn't filter stale entries from load/unload queues
+	## when player oscillated at chunk boundaries, causing brief terrain holes.
+	var file: FileAccess = FileAccess.open("res://scripts/world/chunk_manager.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open chunk_manager.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var load_around_idx: int = src.find("func _load_chunks_around")
+	assert_true(load_around_idx != -1, "chunk_manager has _load_chunks_around")
+	var body: String = src.substr(load_around_idx, 1500)
+	assert_true(body.find("chunks_to_unload") != -1 and body.find(".filter(") != -1,
+		"_load_chunks_around filters stale entries from chunk queues")
+
+
+func test_height_cache_key_uses_floor() -> void:
+	## Bug: height cache key used int() which truncates toward zero instead of
+	## floor() which rounds toward -infinity. At negative coords, int(-0.5)=0
+	## but floor(-0.5)=-1, causing different cells to share cache keys.
+	var file: FileAccess = FileAccess.open("res://scripts/world/chunk_manager.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open chunk_manager.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var func_idx: int = src.find("func _limit_height_difference")
+	assert_true(func_idx != -1, "chunk_manager has _limit_height_difference")
+	var body: String = src.substr(func_idx, 500)
+	assert_true(body.find("floor(x / cell_size)") != -1,
+		"height cache key uses floor() for X coordinate (not int())")
+	assert_true(body.find("floor(z / cell_size)") != -1,
+		"height cache key uses floor() for Z coordinate (not int())")

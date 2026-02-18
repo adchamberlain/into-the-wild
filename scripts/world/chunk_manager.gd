@@ -817,7 +817,7 @@ func _limit_height_difference(x: float, z: float, height: float, max_diff: float
 	## Returns the adjusted height.
 
 	# Create cache key for this position
-	var cache_key: String = "%d_%d" % [int(x / cell_size), int(z / cell_size)]
+	var cache_key: String = "%d_%d" % [int(floor(x / cell_size)), int(floor(z / cell_size))]
 
 	# If we've already calculated this position, return cached result
 	if _height_limit_cache.has(cache_key):
@@ -1365,6 +1365,12 @@ func _load_chunks_around(center_chunk: Vector2i) -> void:
 		for dz in range(-render_distance, render_distance + 1):
 			var chunk_coord: Vector2i = Vector2i(center_chunk.x + dx, center_chunk.y + dz)
 			should_be_loaded[chunk_coord] = true
+
+	# Filter stale entries: remove from unload queue if now needed again,
+	# and remove from load queue if no longer needed (prevents terrain holes
+	# when player oscillates at chunk boundaries)
+	chunks_to_unload = chunks_to_unload.filter(func(c: Vector2i) -> bool: return not should_be_loaded.has(c))
+	chunks_to_load = chunks_to_load.filter(func(c: Vector2i) -> bool: return should_be_loaded.has(c))
 
 	# Queue chunks to unload (loaded but shouldn't be)
 	for chunk_coord in loaded_chunks.keys():

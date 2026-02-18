@@ -4897,6 +4897,42 @@ Seventh round of bug fixes targeting world/terrain and UI systems. Found by para
 
 ---
 
+## Session 86 — Round 8 Bug Fixes (8 Bugs)
+
+### Overview
+Eighth round of bug fixes targeting cross-system interactions: death/respawn cleanup, save/load data integrity, chunk management, and terrain height. Found by 5 parallel agents investigating death/respawn, save/load, placement/structures, fishing/weather/fire, and terrain/chunk/cave interactions. Fixed 8 bugs across 6 source files. Added 8 regression tests.
+
+### Bugs Fixed
+
+#### Critical
+1. **Cave save/load order** — `_apply_player_data()` read `cave_transition.is_in_cave` BEFORE cave state was loaded, so it was always `false`. Player saved inside a cave would have Y position overwritten by terrain height on load, falling through the cave floor. Moved cave state loading before player data.
+2. **Weather effects not restored on load** — `_apply_weather_data()` directly assigned `current_weather` without calling `_set_weather()`, skipping hunger_multiplier, fire effectiveness, and weather_changed signal. Loading a save during rain/storm/heat_wave would not restore gameplay effects or weather particles. Added explicit side-effect replay.
+
+#### High Priority
+3. **Shelter `is_player_resting` not reset on death** — When player died while resting in a shelter, the shelter's `is_player_resting` stayed `true`. Later `_on_period_changed` would fire `_trigger_sleep_sequence`, causing a phantom time skip to dawn. Added structure state cleanup in `_on_player_died()`.
+4. **CabinBed `is_player_sleeping` not reset on death** — Same issue: `is_player_sleeping` persisted after death. Added cleanup in same block.
+5. **PlacementSystem preview not cancelled on death** — Dying while in placement mode left `is_placing = true` and the ghost preview mesh in the scene. Added `cancel_placement()` call in death handler.
+6. **FishingSpot state persists after death** — `is_fishing`/`waiting_for_catch`/`current_player` not reset when player died mid-fishing. Timers would fire on an invalid player reference. Added `is_instance_valid(current_player)` check in `_process()`.
+
+#### Medium Priority
+7. **Stale chunk queue entries cause terrain holes** — `_load_chunks_around()` didn't filter stale entries from load/unload queues when player oscillated at chunk boundaries. A chunk queued for unload would be removed even though the player moved back and it was needed again, causing brief terrain holes. Added queue filtering.
+8. **Height cache key collision at negative coords** — Cache key used `int(x / cell_size)` which truncates toward zero, while terrain snapping uses `floor()`. At negative coordinates, `int(-0.5)=0` but `floor(-0.5)=-1`, causing different terrain cells to share cache keys and produce wrong heights. Changed to `int(floor())`.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/core/save_load.gd` | Modified | Moved cave state loading before player data; added weather side-effect replay |
+| `scripts/player/player_controller.gd` | Modified | Death handler: reset shelter/bed state, cancel placement |
+| `scripts/resources/fishing_spot.gd` | Modified | `is_instance_valid(current_player)` guard in `_process` |
+| `scripts/world/chunk_manager.gd` | Modified | Queue stale entry filtering; `floor()` in height cache key |
+| `tests/test_bug_regressions.gd` | Modified | Added 8 regression tests; widened 2 existing search windows |
+
+### Test Results
+- All 955 regression tests pass (23 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks
