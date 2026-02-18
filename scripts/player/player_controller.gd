@@ -610,7 +610,9 @@ func _try_eat() -> void:
 	if stats.health < stats.max_health:
 		for heal_type: String in HEALING_ITEMS:
 			if inventory.has_item(heal_type):
-				inventory.remove_item(heal_type, 1)
+				var removed: bool = inventory.remove_item(heal_type, 1)
+				if not removed:
+					continue
 				stats.heal(HEALING_ITEMS[heal_type])
 				return
 
@@ -626,8 +628,9 @@ func _try_eat() -> void:
 	if best_food != "":
 		# Only eat if not already full
 		if stats.hunger < stats.max_hunger:
-			inventory.remove_item(best_food, 1)
-			stats.eat(best_value)
+			var removed: bool = inventory.remove_item(best_food, 1)
+			if removed:
+				stats.eat(best_value)
 
 
 func _notification(what: int) -> void:

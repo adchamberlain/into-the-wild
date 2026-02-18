@@ -1432,7 +1432,11 @@ func _legacy_place_campfire() -> bool:
 		player.get_parent().add_child(campfire)
 
 		# Remove from inventory and unequip
-		inventory.remove_item("campfire_kit", 1)
+		var removed: bool = inventory.remove_item("campfire_kit", 1)
+		if not removed:
+			# Removal failed - clean up the placed campfire
+			campfire.queue_free()
+			return false
 		unequip()
 
 		print("[Equipment] Placed campfire at %s" % place_pos)

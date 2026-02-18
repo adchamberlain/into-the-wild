@@ -4540,6 +4540,29 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ---
 
+## Session 78 - Code Audit Bug Fixes Round 24 (2026-02-17)
+
+### Bug Fixes
+
+**1. Canvas tent sleep crash on freed time_manager** - `structure_canvas_tent.gd` `_skip_to_dawn()` overrides the parent shelter method but forgot the `is_instance_valid(time_manager)` guard. We fixed this in `structure_shelter.gd` and `cabin_bed.gd` in Round 21 but missed the canvas tent override. The callback fires after a 1-second fade delay via tween, during which a scene transition could free the time_manager.
+
+**2. Free healing/food via unchecked remove_item in _try_eat** - `player_controller.gd` `_try_eat()` called `remove_item()` for both healing items (line 613) and food (line 629) without checking the return value. If removal failed, `stats.heal()` or `stats.eat()` still executed, giving the player free healing/hunger without consuming items.
+
+**3. Free campfire via unchecked remove_item** - `equipment.gd` `_legacy_place_campfire()` placed the campfire in the scene (`add_child`) BEFORE calling `remove_item("campfire_kit", 1)` and didn't check the return value. If removal failed, the player got a free campfire without consuming the kit. Now checks return and cleans up the campfire on failure.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/campsite/structure_canvas_tent.gd` | Modified | Add `is_instance_valid(time_manager)` guard in `_skip_to_dawn()` |
+| `scripts/player/player_controller.gd` | Modified | Check `remove_item` return in `_try_eat()` for both healing and food |
+| `scripts/player/equipment.gd` | Modified | Check `remove_item` return in `_legacy_place_campfire()`, cleanup on failure |
+| `tests/test_bug_regressions.gd` | Modified | Added 3 regression tests (4 new assertions, 178 total) |
+
+### Test Results
+- All 710 regression tests pass (4 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks

@@ -77,6 +77,9 @@ func run_tests() -> Dictionary:
 	test_fire_pit_light_uses_instance_valid_in_process()
 	test_fire_pit_flare_uses_instance_valid()
 	test_fire_pit_light_wood_checks_removal()
+	test_canvas_tent_skip_to_dawn_validates_time_manager()
+	test_try_eat_checks_removal()
+	test_campfire_kit_checks_removal()
 
 	return get_results()
 
@@ -1865,3 +1868,74 @@ func test_fire_pit_light_wood_checks_removal() -> void:
 		"Fire pit interact() captures remove_item return value for wood")
 	assert_true(fn_body.find("if not removed") != -1,
 		"Fire pit interact() checks remove_item return and aborts on failure")
+
+
+func test_canvas_tent_skip_to_dawn_validates_time_manager() -> void:
+	## Bug: structure_canvas_tent.gd _skip_to_dawn() overrides the parent shelter
+	## method but forgot to add the is_instance_valid(time_manager) guard. We fixed
+	## this in structure_shelter.gd and cabin_bed.gd but missed the canvas tent
+	## override. The callback fires after a 1-second fade delay via tween, during
+	## which a scene transition could free the time_manager.
+	var script: GDScript = load("res://scripts/campsite/structure_canvas_tent.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load structure_canvas_tent.gd")
+		return
+
+	var source: String = script.source_code
+	var fn_start: int = source.find("func _skip_to_dawn(")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+
+	assert_true(fn_body.find("is_instance_valid(time_manager)") != -1,
+		"CanvasTent _skip_to_dawn validates time_manager before access")
+
+
+func test_try_eat_checks_removal() -> void:
+	## Bug: player_controller.gd _try_eat() called remove_item() for healing items
+	## and food without checking the return value. If removal failed, stats.heal()
+	## or stats.eat() still executed, giving free healing/hunger without consuming
+	## the item — item duplication via race condition.
+	var script: GDScript = load("res://scripts/player/player_controller.gd") as GDScript
+	if not script:
+		# player_controller won't compile in headless (SFXManager dependency)
+		# so we skip gracefully
+		return
+
+	var source: String = script.source_code
+	var fn_start: int = source.find("func _try_eat()")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+
+	# Must capture remove_item return for both healing and food paths
+	var remove_count: int = fn_body.count("var removed: bool = inventory.remove_item")
+	assert_true(remove_count >= 2,
+		"_try_eat checks remove_item return in both healing and food paths")
+
+
+func test_campfire_kit_checks_removal() -> void:
+	## Bug: equipment.gd _use_campfire_kit() placed the campfire in the scene
+	## (add_child) BEFORE calling remove_item("campfire_kit", 1), and didn't
+	## check the return value. If removal failed, the player got a free campfire
+	## without consuming the kit item.
+	var script: GDScript = load("res://scripts/player/equipment.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load equipment.gd")
+		return
+
+	var source: String = script.source_code
+	var fn_start: int = source.find("func _legacy_place_campfire()")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+
+	# Must capture remove_item return value
+	assert_true(fn_body.find("var removed") != -1,
+		"_legacy_place_campfire captures remove_item return value")
+	# Must clean up campfire if removal fails
+	assert_true(fn_body.find("queue_free()") != -1,
+		"_legacy_place_campfire cleans up campfire if item removal fails")
