@@ -4737,6 +4737,45 @@ Third round of systematic bug hunting using 5 parallel specialized agents: resou
 
 ---
 
+## Session 83 — Round 5 Bug Fixes (6 Bugs)
+
+### Overview
+Fifth round of bug hunting with 6 parallel agents covering: interaction systems, weather/time, campsite structure lifecycle, crafting/inventory, terrain/world gen, and player stats/survival. Found and fixed 6 bugs across 11 source files. Added 9 regression tests (22 assertions).
+
+### Bugs Fixed
+
+#### High Priority
+1. **Death signal fires multiple times** — `player_stats.gd` `_update_health()` and `take_damage()` both emitted `player_died` every frame health was <=0 with no guard. Caused multiple death sequences, double XP loss, UI flickering. Added `is_dead` flag that gates all damage processing and signal emission. Reset on respawn in `player_controller.gd`.
+2. **Save/load doesn't emit time_changed** — `save_load.gd` `_apply_time_data()` set `current_hour`/`current_minute`/`current_day` on TimeManager but never emitted `time_changed` or `day_changed` signals. HUD time display showed stale time until next in-game minute tick.
+3. **Double structure unregistration** — `structure_placed_torch.gd`, `structure_placed_lantern.gd`, `structure_lodestone.gd` all called `_unregister_from_campsite()` manually before `destroy()`. But `destroy()` emits `structure_destroyed` signal which the campsite manager already listens to for unregistration — causing double-unregister and potential errors.
+4. **Structures can be placed in water** — `placement_system.gd` `_validate_placement()` checked terrain height and slope but never checked if the position was submerged. Players could place campfire, shelter, etc. in ponds/rivers. Added `is_in_water()` check.
+
+#### Medium Priority
+5. **Direct hunger assignment bypasses signals** — `structure_shelter.gd`, `structure_canvas_tent.gd`, `cabin_bed.gd`, `cabin_kitchen.gd` all set `stats.hunger` directly instead of calling `stats.eat()`. This skipped the `hunger_changed` signal, so HUD hunger bar didn't update after sleeping or cooking until next `_process` tick.
+6. **Cabin bed direct hunger in both rest paths** — Both `_do_rest()` (daytime) and `_do_full_restore()` (nighttime) used direct assignment. Fixed both to use `stats.eat()`.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/player/player_stats.gd` | Modified | Added `is_dead` guard flag, gates `_update_health`, `take_damage`, signal emission |
+| `scripts/player/player_controller.gd` | Modified | Reset `stats.is_dead = false` on respawn |
+| `scripts/core/save_load.gd` | Modified | Emit `time_changed` and `day_changed` in `_apply_time_data` |
+| `scripts/campsite/structure_placed_torch.gd` | Modified | Removed manual `_unregister_from_campsite()` before `destroy()` |
+| `scripts/campsite/structure_placed_lantern.gd` | Modified | Same fix as torch |
+| `scripts/campsite/structure_lodestone.gd` | Modified | Same fix as torch |
+| `scripts/campsite/placement_system.gd` | Modified | Added `is_in_water()` check in `_validate_placement` |
+| `scripts/campsite/structure_shelter.gd` | Modified | `stats.eat(30.0)` instead of direct hunger assignment |
+| `scripts/campsite/structure_canvas_tent.gd` | Modified | `stats.eat(SLEEP_HUNGER_RESTORE)` instead of direct assignment |
+| `scripts/campsite/cabin_bed.gd` | Modified | `stats.eat()` in both `_do_rest` and `_do_full_restore` |
+| `scripts/campsite/cabin_kitchen.gd` | Modified | `player_stats.eat(hunger_restore)` instead of direct assignment |
+| `tests/test_bug_regressions.gd` | Modified | Added 9 regression tests (22 new assertions) |
+
+### Test Results
+- All 881 regression tests pass (22 new)
+
+---
+
 ## Session 82 — Round 4 Bug Fixes (9 Bugs)
 
 ### Overview
