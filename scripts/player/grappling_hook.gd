@@ -378,7 +378,10 @@ func _on_grapple_complete() -> void:
 	# Give small forward velocity
 	var forward: Vector3 = -player.global_transform.basis.z
 	forward.y = 0
-	forward = forward.normalized()
+	if forward.length_squared() > 0.001:
+		forward = forward.normalized()
+	else:
+		forward = Vector3.FORWARD
 	player.velocity = forward * DISMOUNT_FORWARD_VELOCITY
 
 	# Clean up visuals
@@ -437,7 +440,10 @@ func _create_rope_visual(from: Vector3, to: Vector3) -> void:
 	mat.roughness = 0.85
 	rope_mesh.material_override = mat
 
-	get_tree().current_scene.add_child(rope_mesh)
+	var scene: Node = get_tree().current_scene
+	if not scene:
+		return
+	scene.add_child(rope_mesh)
 	_update_rope_visual(from, to)
 
 
@@ -561,7 +567,10 @@ func _create_hook_visual(position: Vector3) -> void:
 		hook_mesh.add_child(barb)
 
 	hook_mesh.global_position = position
-	get_tree().current_scene.add_child(hook_mesh)
+	var scene: Node = get_tree().current_scene
+	if not scene:
+		return
+	scene.add_child(hook_mesh)
 
 
 func _remove_hook_visual() -> void:

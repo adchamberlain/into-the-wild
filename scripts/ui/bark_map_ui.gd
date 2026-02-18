@@ -175,11 +175,13 @@ func _on_map_draw() -> void:
 
 	# Draw rivers
 	for river in rivers_data:
-		var start: Vector2 = river.get("start", Vector2.ZERO)
-		var end: Vector2 = river.get("end", Vector2.ZERO)
-		var map_start: Vector2 = _world_to_map(start.x, start.y)
-		var map_end: Vector2 = _world_to_map(end.x, end.y)
-		map_control.draw_line(map_start, map_end, Color(0.2, 0.45, 0.75, 0.9), 3.0)
+		var path: Array = river.get("path", [])
+		for i in range(1, path.size()):
+			var seg_start: Vector2 = path[i - 1]
+			var seg_end: Vector2 = path[i]
+			var map_start: Vector2 = _world_to_map(seg_start.x, seg_start.y)
+			var map_end: Vector2 = _world_to_map(seg_end.x, seg_end.y)
+			map_control.draw_line(map_start, map_end, Color(0.2, 0.45, 0.75, 0.9), 3.0)
 
 	# Draw cave entrances
 	for cave in cave_entrances_data:

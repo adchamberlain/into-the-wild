@@ -80,6 +80,16 @@ func run_tests() -> Dictionary:
 	test_canvas_tent_skip_to_dawn_validates_time_manager()
 	test_try_eat_checks_removal()
 	test_campfire_kit_checks_removal()
+	test_zero_vector_normalize_guards()
+	test_weather_manager_uses_instance_valid()
+	test_chunk_manager_uses_instance_valid()
+	test_bark_map_uses_path_key_for_rivers()
+	test_resting_clears_when_structure_freed()
+	test_grappling_hook_checks_current_scene()
+	test_osha_root_restores_hunger_when_healing()
+	test_resource_node_timer_checks_self_validity()
+	test_signal_connections_use_is_connected_guard()
+	test_config_menu_float_comparison()
 
 	return get_results()
 
@@ -1939,3 +1949,268 @@ func test_campfire_kit_checks_removal() -> void:
 	# Must clean up campfire if removal fails
 	assert_true(fn_body.find("queue_free()") != -1,
 		"_legacy_place_campfire cleans up campfire if item removal fails")
+
+
+func test_zero_vector_normalize_guards() -> void:
+	## Bug: Normalizing a zero vector (e.g. camera forward with y=0 when looking
+	## straight up/down) produces NaN. All normalize calls on potentially-zero
+	## vectors must check length_squared() > 0.001 first.
+
+	# grappling_hook.gd - dismount forward velocity
+	var hook_script: GDScript = load("res://scripts/player/grappling_hook.gd") as GDScript
+	if hook_script:
+		var src: String = hook_script.source_code
+		# Find the dismount section (after "Give small forward velocity")
+		var dismount_idx: int = src.find("Give small forward velocity")
+		if dismount_idx != -1:
+			var section: String = src.substr(dismount_idx, 200)
+			assert_true(section.find("length_squared") != -1,
+				"grappling_hook dismount checks length before normalize")
+
+	# placement_system.gd - structure placement forward
+	var placement_script: GDScript = load("res://scripts/campsite/placement_system.gd") as GDScript
+	if placement_script:
+		var src: String = placement_script.source_code
+		var preview_idx: int = src.find("func _update_preview_position")
+		if preview_idx != -1:
+			var section: String = src.substr(preview_idx, 500)
+			assert_true(section.find("length_squared") != -1,
+				"placement_system preview checks length before normalize")
+
+	# hud.gd - compass direction
+	var hud_script: GDScript = load("res://scripts/ui/hud.gd") as GDScript
+	if hud_script:
+		var src: String = hud_script.source_code
+		var compass_idx: int = src.find("cam_forward.y = 0")
+		if compass_idx != -1:
+			var section: String = src.substr(compass_idx, 200)
+			assert_true(section.find("length_squared") != -1,
+				"hud compass checks length before normalize")
+
+	# ambient_animal_base.gd - flee direction
+	var animal_script: GDScript = load("res://scripts/creatures/ambient_animal_base.gd") as GDScript
+	if animal_script:
+		var src: String = animal_script.source_code
+		var flee_idx: int = src.find("func _start_fleeing")
+		if flee_idx != -1:
+			var section: String = src.substr(flee_idx, 400)
+			assert_true(section.find("length_squared") != -1,
+				"ambient_animal_base flee checks length before normalize")
+
+	# ambient_bird.gd - flight direction
+	var bird_script: GDScript = load("res://scripts/creatures/ambient_bird.gd") as GDScript
+	if bird_script:
+		var src: String = bird_script.source_code
+		var fly_idx: int = src.find("func _process_flying")
+		if fly_idx != -1:
+			var section: String = src.substr(fly_idx, 400)
+			assert_true(section.find("length_squared") != -1,
+				"ambient_bird flight checks length before normalize")
+
+	# ambient_rabbit.gd - hop direction
+	var rabbit_script: GDScript = load("res://scripts/creatures/ambient_rabbit.gd") as GDScript
+	if rabbit_script:
+		var src: String = rabbit_script.source_code
+		var hop_idx: int = src.find("func _start_single_hop")
+		if hop_idx != -1:
+			var section: String = src.substr(hop_idx, 400)
+			assert_true(section.find("length_squared") != -1,
+				"ambient_rabbit hop checks length before normalize")
+
+
+func test_weather_manager_uses_instance_valid() -> void:
+	## Bug: weather_manager.gd used truthiness checks (if not player) instead of
+	## is_instance_valid(player) for freed node safety.
+	var script: GDScript = load("res://scripts/world/weather_manager.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load weather_manager.gd")
+		return
+	var src: String = script.source_code
+
+	# _apply_weather_effects must use is_instance_valid
+	var fn_idx: int = src.find("func _apply_weather_effects")
+	var fn_end: int = src.find("\nfunc ", fn_idx + 1)
+	var fn_body: String = src.substr(fn_idx, fn_end - fn_idx)
+	assert_true(fn_body.find("is_instance_valid(player)") != -1,
+		"_apply_weather_effects uses is_instance_valid for player")
+
+	# is_player_protected must use is_instance_valid
+	fn_idx = src.find("func is_player_protected")
+	fn_end = src.find("\nfunc ", fn_idx + 1)
+	fn_body = src.substr(fn_idx, fn_end - fn_idx)
+	assert_true(fn_body.find("is_instance_valid(player)") != -1,
+		"is_player_protected uses is_instance_valid for player")
+
+	# get_protection_status must use is_instance_valid
+	fn_idx = src.find("func get_protection_status")
+	fn_end = src.find("\nfunc ", fn_idx + 1)
+	fn_body = src.substr(fn_idx, fn_end - fn_idx)
+	assert_true(fn_body.find("is_instance_valid(player)") != -1,
+		"get_protection_status uses is_instance_valid for player")
+
+
+func test_chunk_manager_uses_instance_valid() -> void:
+	## Bug: chunk_manager.gd _process used truthiness check instead of
+	## is_instance_valid for the player reference.
+	var script: GDScript = load("res://scripts/world/chunk_manager.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load chunk_manager.gd")
+		return
+	var src: String = script.source_code
+	var fn_idx: int = src.find("func _process(")
+	var fn_end: int = src.find("\nfunc ", fn_idx + 1)
+	var fn_body: String = src.substr(fn_idx, fn_end - fn_idx)
+	assert_true(fn_body.find("is_instance_valid(player)") != -1,
+		"chunk_manager _process uses is_instance_valid for player")
+
+
+func test_bark_map_uses_path_key_for_rivers() -> void:
+	## Bug: bark_map_ui.gd used river.get("start")/river.get("end") but river
+	## dicts use "path" (Array[Vector2]), not "start"/"end". Rivers were invisible.
+	var script: GDScript = load("res://scripts/ui/bark_map_ui.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load bark_map_ui.gd")
+		return
+	var src: String = script.source_code
+	var river_idx: int = src.find("# Draw rivers")
+	var cave_idx: int = src.find("# Draw cave")
+	var river_section: String = src.substr(river_idx, cave_idx - river_idx)
+	assert_true(river_section.find("\"path\"") != -1,
+		"bark_map river drawing uses 'path' key")
+	assert_true(river_section.find("\"start\"") == -1,
+		"bark_map river drawing does not use wrong 'start' key")
+	assert_true(river_section.find("\"end\"") == -1,
+		"bark_map river drawing does not use wrong 'end' key")
+
+
+func test_resting_clears_when_structure_freed() -> void:
+	## Bug: If the structure a player was resting in gets freed, is_resting
+	## stayed true forever, permanently disabling movement (soft-lock).
+	var script: GDScript = load("res://scripts/player/player_controller.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load player_controller.gd")
+		return
+	var src: String = script.source_code
+	# Find the resting check in _physics_process (after "Skip movement")
+	var skip_idx: int = src.find("Skip movement processing while resting")
+	if skip_idx != -1:
+		var section: String = src.substr(skip_idx, 300)
+		assert_true(section.find("is_instance_valid(resting_in_structure)") != -1,
+			"resting check validates structure is still valid")
+		assert_true(section.find("is_resting = false") != -1,
+			"resting is cleared when structure becomes invalid")
+
+
+func test_grappling_hook_checks_current_scene() -> void:
+	## Bug: grappling_hook.gd called get_tree().current_scene.add_child()
+	## without null check, crashing during scene transitions.
+	var script: GDScript = load("res://scripts/player/grappling_hook.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load grappling_hook.gd")
+		return
+	var src: String = script.source_code
+	# Should not have bare current_scene.add_child
+	var bare_pattern: String = "current_scene.add_child"
+	var scene_check: String = "var scene"
+	var idx: int = 0
+	while idx < src.length():
+		var found: int = src.find(bare_pattern, idx)
+		if found == -1:
+			break
+		# Check that there's a scene null check nearby (within 200 chars before)
+		var context: String = src.substr(max(0, found - 200), 200)
+		assert_true(context.find(scene_check) != -1,
+			"grappling_hook checks current_scene before add_child")
+		idx = found + 1
+
+
+func test_osha_root_restores_hunger_when_healing() -> void:
+	## Bug: osha_root was in both HEALING_ITEMS and FOOD_VALUES, but healing
+	## was checked first, so the hunger restore was never applied.
+	var script: GDScript = load("res://scripts/player/player_controller.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load player_controller.gd")
+		return
+	var src: String = script.source_code
+	# Find the healing section in _try_eat
+	var heal_idx: int = src.find("for heal_type: String in HEALING_ITEMS")
+	if heal_idx != -1:
+		var fn_end: int = src.find("\nfunc ", heal_idx)
+		var section: String = src.substr(heal_idx, fn_end - heal_idx)
+		assert_true(section.find("FOOD_VALUES.has(heal_type)") != -1,
+			"_try_eat checks if healing item is also food")
+		assert_true(section.find("stats.eat") != -1,
+			"_try_eat applies food value for dual-use healing items")
+
+
+func test_resource_node_timer_checks_self_validity() -> void:
+	## Bug: resource_node.gd used create_timer().timeout.connect(_complete_harvest)
+	## which would crash if the node was freed during the timer delay.
+	var script: GDScript = load("res://scripts/resources/resource_node.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load resource_node.gd")
+		return
+	var src: String = script.source_code
+	# Find the timer section near _complete_harvest
+	var timer_idx: int = src.find("create_timer(0.2)")
+	if timer_idx != -1:
+		var section: String = src.substr(timer_idx, 200)
+		assert_true(section.find("is_instance_valid") != -1,
+			"resource_node harvest timer checks node validity before callback")
+
+
+func test_signal_connections_use_is_connected_guard() -> void:
+	## Bug: Several signal connections lacked is_connected() guards,
+	## risking double-connection if _ready() runs twice.
+
+	# structure_shelter.gd
+	var shelter_script: GDScript = load("res://scripts/campsite/structure_shelter.gd") as GDScript
+	if shelter_script:
+		var src: String = shelter_script.source_code
+		var fn_idx: int = src.find("func _connect_to_time_manager")
+		if fn_idx != -1:
+			var fn_end: int = src.find("\nfunc ", fn_idx + 1)
+			var fn_body: String = src.substr(fn_idx, fn_end - fn_idx)
+			assert_true(fn_body.find("is_connected") != -1,
+				"structure_shelter _connect_to_time_manager uses is_connected guard")
+
+	# campsite_manager.gd
+	var cm_script: GDScript = load("res://scripts/campsite/campsite_manager.gd") as GDScript
+	if cm_script:
+		var src: String = cm_script.source_code
+		# Check crafting system connection
+		var craft_idx: int = src.find("recipe_crafted.connect")
+		if craft_idx != -1:
+			var context: String = src.substr(max(0, craft_idx - 100), 100)
+			assert_true(context.find("is_connected") != -1,
+				"campsite_manager crafting signal uses is_connected guard")
+		# Check time manager connection
+		var time_idx: int = src.find("day_changed.connect")
+		if time_idx != -1:
+			var context: String = src.substr(max(0, time_idx - 100), 100)
+			assert_true(context.find("is_connected") != -1,
+				"campsite_manager time signal uses is_connected guard")
+
+	# weather_manager.gd
+	var wm_script: GDScript = load("res://scripts/world/weather_manager.gd") as GDScript
+	if wm_script:
+		var src: String = wm_script.source_code
+		var period_idx: int = src.find("period_changed.connect")
+		if period_idx != -1:
+			var context: String = src.substr(max(0, period_idx - 100), 100)
+			assert_true(context.find("is_connected") != -1,
+				"weather_manager period signal uses is_connected guard")
+
+
+func test_config_menu_float_comparison() -> void:
+	## Bug: config_menu.gd compared float value with != 1.0 for pluralization,
+	## which can fail due to floating-point imprecision. Should use is_equal_approx.
+	var script: GDScript = load("res://scripts/ui/config_menu.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load config_menu.gd")
+		return
+	var src: String = script.source_code
+	assert_true(src.find("is_equal_approx") != -1,
+		"config_menu uses is_equal_approx for float comparison")
+	assert_true(src.find("tree_respawn_days != 1.0") == -1,
+		"config_menu does not use bare != 1.0 float comparison")

@@ -253,7 +253,13 @@ func _physics_process(delta: float) -> void:
 	_update_camera_collision(delta)
 
 	# Skip movement processing while resting, climbing, or grappling
-	if is_resting or is_climbing or is_grappling:
+	if is_resting:
+		if not is_instance_valid(resting_in_structure):
+			is_resting = false
+		else:
+			velocity = Vector3.ZERO
+			return
+	if is_climbing or is_grappling:
 		velocity = Vector3.ZERO
 		return
 
@@ -614,6 +620,9 @@ func _try_eat() -> void:
 				if not removed:
 					continue
 				stats.heal(HEALING_ITEMS[heal_type])
+				# If item is also food, restore hunger too
+				if FOOD_VALUES.has(heal_type) and stats.hunger < stats.max_hunger:
+					stats.eat(FOOD_VALUES[heal_type])
 				return
 
 	# Try to eat any available food, prioritizing items with most hunger restore

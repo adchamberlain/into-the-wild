@@ -70,7 +70,8 @@ func _ready() -> void:
 	if time_manager_path:
 		time_manager = get_node_or_null(time_manager_path)
 		if time_manager:
-			time_manager.period_changed.connect(_on_period_changed)
+			if not time_manager.period_changed.is_connected(_on_period_changed):
+				time_manager.period_changed.connect(_on_period_changed)
 
 	if player_path:
 		player = get_node_or_null(player_path)
@@ -111,7 +112,7 @@ func _process(delta: float) -> void:
 
 
 func _apply_weather_effects(delta: float) -> void:
-	if not player or not player_stats:
+	if not is_instance_valid(player) or not is_instance_valid(player_stats):
 		return
 
 	# Don't apply damage effects if weather is disabled
@@ -372,7 +373,7 @@ func is_dangerous_weather() -> bool:
 
 ## Check if player is currently protected from weather effects.
 func is_player_protected() -> bool:
-	if not player or not campsite_manager:
+	if not is_instance_valid(player) or not is_instance_valid(campsite_manager):
 		return false
 
 	var player_pos: Vector3 = player.global_position
@@ -388,7 +389,7 @@ func is_player_protected() -> bool:
 
 ## Get protection status text for HUD.
 func get_protection_status() -> String:
-	if not player or not campsite_manager:
+	if not is_instance_valid(player) or not is_instance_valid(campsite_manager):
 		return ""
 
 	var player_pos: Vector3 = player.global_position

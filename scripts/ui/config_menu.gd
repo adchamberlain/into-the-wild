@@ -135,7 +135,7 @@ func _init_ui() -> void:
 	if resource_manager and "tree_respawn_time_hours" in resource_manager:
 		tree_respawn_days = resource_manager.tree_respawn_time_hours / 24.0
 	tree_respawn_slider.value = tree_respawn_days
-	tree_respawn_label.text = "%.0f day%s" % [tree_respawn_days, "s" if tree_respawn_days != 1.0 else ""]
+	tree_respawn_label.text = "%.0f day%s" % [tree_respawn_days, "s" if not is_equal_approx(tree_respawn_days, 1.0) else ""]
 
 	# Set music controls
 	if music_toggle:
@@ -530,7 +530,7 @@ func _on_day_length_changed(value: float) -> void:
 
 func _on_tree_respawn_changed(value: float) -> void:
 	tree_respawn_days = value
-	tree_respawn_label.text = "%.0f day%s" % [value, "s" if value != 1.0 else ""]
+	tree_respawn_label.text = "%.0f day%s" % [value, "s" if not is_equal_approx(value, 1.0) else ""]
 	_apply_config()
 	print("[ConfigMenu] Tree respawn time: %.0f days" % value)
 

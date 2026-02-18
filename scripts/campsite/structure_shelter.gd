@@ -117,7 +117,8 @@ func _find_time_manager() -> Node:
 func _connect_to_time_manager() -> void:
 	var time_manager: Node = _find_time_manager()
 	if time_manager and time_manager.has_signal("period_changed"):
-		time_manager.period_changed.connect(_on_period_changed)
+		if not time_manager.period_changed.is_connected(_on_period_changed):
+			time_manager.period_changed.connect(_on_period_changed)
 
 
 func _on_period_changed(period: String) -> void:

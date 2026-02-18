@@ -311,7 +311,11 @@ func _start_single_hop() -> void:
 	hop_start_pos = global_position
 
 	# Calculate hop end position
-	var hop_dir: Vector3 = move_direction.normalized()
+	var hop_dir: Vector3
+	if move_direction.length_squared() > 0.001:
+		hop_dir = move_direction.normalized()
+	else:
+		hop_dir = Vector3(rng.randf_range(-1, 1), 0, rng.randf_range(-1, 1)).normalized()
 	var target_pos: Vector3 = global_position + hop_dir * hop_distance
 
 	# Sample terrain height at target using max of nearby samples

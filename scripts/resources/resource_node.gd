@@ -180,7 +180,11 @@ func receive_chop(player: Node) -> bool:
 	# Check if fully harvested (using float for precision)
 	if chop_progress_float >= float(chops_required):
 		# Delay the gather to let chop animation play
-		get_tree().create_timer(0.2).timeout.connect(_complete_harvest.bind(player))
+		var self_ref: Node = self
+		get_tree().create_timer(0.2).timeout.connect(func() -> void:
+			if is_instance_valid(self_ref):
+				self_ref._complete_harvest(player)
+		)
 
 	return true
 

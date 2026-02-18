@@ -293,14 +293,17 @@ func _process_flying(delta: float) -> void:
 	_flap_wings(delta)
 
 	# Move toward target
-	var direction: Vector3 = (flight_target - global_position).normalized()
+	var to_target: Vector3 = flight_target - global_position
+	if to_target.length_squared() < 0.01:
+		return
+	var direction: Vector3 = to_target.normalized()
 	var current_speed: float = flee_flight_speed if current_state == State.FLEEING else flight_speed
 	var movement: Vector3 = direction * current_speed * delta
 
 	global_position += movement
 
 	# Face flight direction (throttled for performance)
-	if direction.length() > 0.1 and rotation_timer >= ROTATION_UPDATE_INTERVAL:
+	if rotation_timer >= ROTATION_UPDATE_INTERVAL:
 		rotation_timer = 0.0
 		var look_target: Vector3 = global_position + direction
 		mesh_container.look_at(look_target, Vector3.UP)

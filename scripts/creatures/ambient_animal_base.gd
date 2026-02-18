@@ -114,10 +114,12 @@ func _start_fleeing() -> void:
 		return
 
 	# Calculate flee direction (directly away from player)
-	var flee_dir: Vector3 = (global_position - player.global_position).normalized()
-	flee_dir.y = 0  # Keep horizontal
-
-	if flee_dir.length() < 0.1:
+	var flee_raw: Vector3 = global_position - player.global_position
+	flee_raw.y = 0  # Keep horizontal
+	var flee_dir: Vector3
+	if flee_raw.length_squared() > 0.01:
+		flee_dir = flee_raw.normalized()
+	else:
 		flee_dir = Vector3(rng.randf_range(-1, 1), 0, rng.randf_range(-1, 1)).normalized()
 
 	move_direction = flee_dir

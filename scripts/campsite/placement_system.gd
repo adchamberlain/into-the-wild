@@ -187,7 +187,10 @@ func place_torch_instant() -> bool:
 		# Fallback: project forward from player if crosshair doesn't hit terrain
 		var forward: Vector3 = -camera.global_transform.basis.z
 		forward.y = 0
-		forward = forward.normalized()
+		if forward.length_squared() > 0.001:
+			forward = forward.normalized()
+		else:
+			forward = Vector3.FORWARD
 		target_pos = player.global_position + forward * placement_distance
 
 	# Check if we're in a cave (ChunkManager doesn't exist there)
@@ -277,7 +280,10 @@ func place_lodestone_instant() -> bool:
 		# Fallback: project forward from player if crosshair doesn't hit terrain
 		var forward: Vector3 = -camera.global_transform.basis.z
 		forward.y = 0
-		forward = forward.normalized()
+		if forward.length_squared() > 0.001:
+			forward = forward.normalized()
+		else:
+			forward = Vector3.FORWARD
 		target_pos = player.global_position + forward * placement_distance
 
 	# Check if we're in a cave (ChunkManager doesn't exist there)
@@ -363,7 +369,10 @@ func place_lantern_instant() -> bool:
 	else:
 		var forward: Vector3 = -camera.global_transform.basis.z
 		forward.y = 0
-		forward = forward.normalized()
+		if forward.length_squared() > 0.001:
+			forward = forward.normalized()
+		else:
+			forward = Vector3.FORWARD
 		target_pos = player.global_position + forward * placement_distance
 
 	var in_overworld: bool = is_instance_valid(chunk_manager) and chunk_manager.has_method("get_height_at")
@@ -584,7 +593,10 @@ func _update_preview_position(delta: float) -> void:
 	# Get position in front of player
 	var forward: Vector3 = -camera.global_transform.basis.z
 	forward.y = 0  # Keep horizontal
-	forward = forward.normalized()
+	if forward.length_squared() > 0.001:
+		forward = forward.normalized()
+	else:
+		forward = Vector3.FORWARD
 
 	# Adjust placement distance for large structures (cabin, etc.)
 	var footprint: float = StructureData.get_footprint_radius(current_structure_type)

@@ -103,7 +103,8 @@ func _connect_to_crafting_system() -> void:
 
 	# Connect to crafting system signals
 	if crafting_system and crafting_system.has_signal("recipe_crafted"):
-		crafting_system.recipe_crafted.connect(_on_recipe_crafted)
+		if not crafting_system.recipe_crafted.is_connected(_on_recipe_crafted):
+			crafting_system.recipe_crafted.connect(_on_recipe_crafted)
 		print("[CampsiteManager] Connected to CraftingSystem recipe_crafted signal")
 	else:
 		print("[CampsiteManager] WARNING: Could not connect to CraftingSystem - level progression for crafted items won't work!")
@@ -116,7 +117,8 @@ func _connect_to_time_manager() -> void:
 		time_manager = get_parent().get_node_or_null("TimeManager")
 
 	if time_manager and time_manager.has_signal("day_changed"):
-		time_manager.day_changed.connect(_on_day_changed)
+		if not time_manager.day_changed.is_connected(_on_day_changed):
+			time_manager.day_changed.connect(_on_day_changed)
 		print("[CampsiteManager] Connected to TimeManager")
 
 

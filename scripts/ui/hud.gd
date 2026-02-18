@@ -887,6 +887,8 @@ func _update_compass_display() -> void:
 
 	var cam_forward: Vector3 = -camera.global_transform.basis.z
 	cam_forward.y = 0
+	if cam_forward.length_squared() < 0.001:
+		return
 	cam_forward = cam_forward.normalized()
 
 	var dx: float = to_target.x
