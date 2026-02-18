@@ -327,10 +327,11 @@ func _input(event: InputEvent) -> void:
 
 	# Keyboard shortcuts
 	if event is InputEventKey and event.pressed:
-		# Toggle menu with Tab key
+		# Toggle menu with Tab key (only when visible, or not paused)
 		if event.physical_keycode == KEY_TAB:
-			toggle_menu()
-			_handle_input()
+			if is_visible or not get_tree().paused:
+				toggle_menu()
+				_handle_input()
 			return
 		# Escape to close slot panel or menu
 		elif event.physical_keycode == KEY_ESCAPE:
@@ -749,10 +750,16 @@ func _hide_slot_panel() -> void:
 func _on_slot_button_pressed(slot: int) -> void:
 	if selecting_slot_for_save:
 		save_load.save_game_slot(slot)
+		_hide_slot_panel()
 	elif selecting_slot_for_load:
-		save_load.load_game_slot(slot)
-
-	_hide_slot_panel()
+		_hide_slot_panel()
+		var success: bool = await save_load.load_game_slot(slot)
+		if not success:
+			# Show config menu again on failure
+			if is_visible:
+				panel.visible = true
+	else:
+		_hide_slot_panel()
 
 
 ## Handle cancel button press.

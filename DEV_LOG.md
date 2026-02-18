@@ -4933,6 +4933,72 @@ Eighth round of bug fixes targeting cross-system interactions: death/respawn cle
 
 ---
 
+## Session 84 - Round 9: Bug Fixes (2026-02-18)
+
+### Summary
+Found and fixed 18 bugs across equipment, campsite structures, cave resources, terrain, UI menus, and player stats. Skipped 2 architectural/performance issues (chunk boundary seams, batched collision timing). Total test count: **1000 tests passing**.
+
+### Bugs Fixed
+
+#### Equipment System (6 bugs)
+1. **`use_durability()` used raw max instead of upgraded max** — Signal emitted `TOOL_MAX_DURABILITY[item]` instead of `get_equipped_max_durability()`, giving wrong percentage when leather wrap upgrade was applied. Fixed.
+2. **Axe swing tween kept running after tool broke** — `_remove_stone_axe()` and `_remove_machete()` didn't kill `axe_swing_tween` before freeing the model node, causing errors on freed node. Added tween kill.
+3. **Fishing cast/catch tweens were local vars** — Old tweens couldn't be killed when starting new ones, causing overlapping animations. Added `fishing_cast_tween` and `fish_caught_tween` member vars with kill-on-replace logic.
+4. **`_harvest_birch_bark` signal after durability** — `use_durability(1)` was called before `item_used.emit()`, but durability can clear `equipped_item` to `""`, so signal carried wrong item. Swapped order.
+5. **Equipment menu missing 11 items** — `EQUIPMENT_SLOTS` only had 14 of 25 equippable items, making metal_axe, machete, lantern, smoker_kit, etc. unequippable for controller users. Added all missing items.
+6. **Equipment menu display for items without keyboard shortcut** — Added graceful handling for empty key labels (indented display instead of `[]`).
+
+#### Campsite Structures (3 bugs)
+7. **Processing structures silently lost products** — Drying rack, smoker, and smithing station discarded finished products when player inventory was unreachable. Added `pending_output` field that stores the product for later pickup on next interaction, persisted in save data.
+8. **Shelter double sleep sequence** — `_on_period_changed` could fire `_trigger_sleep_sequence` while already sleeping (during fade), causing double time skip and double heal. Added `_is_sleeping` guard flag.
+9. **Canvas tent `_skip_to_dawn` could access freed self** — Fade callback executed after tent was freed during cave transition. Added `is_instance_valid(self)` check.
+
+#### Cave System (2 bugs)
+10. **Cave resource collision stays active after depleted load** — Crystal and rare ore nodes create collision shapes in deferred setup, but `_set_depleted_state(true)` ran before shapes existed, leaving invisible walls. Added post-creation `is_depleted` check to disable collision.
+11. **Darkness notification threshold unreachable** — Threshold used `* 0.5` (65s) but first damage was at ~70s, so notification was never shown. Changed to `* 1.5` (75s).
+
+#### Terrain (2 bugs)
+12. **Trees placed underwater** — Terrain chunk tree placement didn't check for negative Y heights, placing trees in water bodies. Added `tree_y < 0` guard.
+13. **`_get_raw_mountain_height` missing carved neighbor check** — Applied path carving unconditionally, while `get_height_at` required `_has_carved_neighbor`. Height limiter got wrong neighbor data, causing terrain artifacts. Added matching check.
+
+#### UI/Menu (3 bugs)
+14. **Config menu Tab during pause got stuck** — Tab key could open config menu during game pause without setting `opened_from_pause_menu`, causing menu to get stuck on close. Added visibility/pause guard.
+15. **Pause menu load didn't await async function** — `load_game_slot()` is async but wasn't awaited, causing race condition. Added await with failure handling.
+16. **Config menu load didn't await async function** — Same issue as pause menu. Added await with failure handling.
+
+#### Player Stats (1 bug)
+17. **`heal()` and `eat()` on dead player** — Shelter sleep sequence could call heal/eat after player death, restoring health/hunger and corrupting dead state. Added `is_dead` guard to both functions.
+
+#### Test (1 fix)
+18. **Cave test used wrong respawn constant** — Test used `RESPAWN_HOURS = 72.0` but production uses `CAVE_RESOURCE_RESPAWN_HOURS = 168.0`. Updated to 168h with corrected test values.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/player/equipment.gd` | Modified | Durability signal, tween lifecycle, birch bark signal order, fishing tweens |
+| `scripts/player/player_stats.gd` | Modified | `is_dead` guards in `heal()` and `eat()` |
+| `scripts/ui/equipment_menu.gd` | Modified | Added 11 missing items, empty key label handling |
+| `scripts/ui/config_menu.gd` | Modified | Tab key guard, await load_game_slot |
+| `scripts/ui/pause_menu.gd` | Modified | Await load_game_slot with failure handling |
+| `scripts/campsite/structure_drying_rack.gd` | Modified | `pending_output` field for product storage |
+| `scripts/campsite/structure_smoker.gd` | Modified | `pending_output` field for product storage |
+| `scripts/campsite/structure_smithing_station.gd` | Modified | `pending_output` field for product storage |
+| `scripts/campsite/structure_shelter.gd` | Modified | `_is_sleeping` double sleep guard |
+| `scripts/campsite/structure_canvas_tent.gd` | Modified | `is_instance_valid(self)` in `_skip_to_dawn` |
+| `scripts/resources/crystal_node.gd` | Modified | Disable collision when loaded as depleted |
+| `scripts/resources/rare_ore_node.gd` | Modified | Disable collision when loaded as depleted |
+| `scripts/core/cave_transition.gd` | Modified | Darkness notification threshold fix |
+| `scripts/world/terrain_chunk.gd` | Modified | Tree underwater guard |
+| `scripts/world/chunk_manager.gd` | Modified | `_has_carved_neighbor` in `_get_raw_mountain_height` |
+| `tests/test_cave_transition.gd` | Modified | Updated to 168h respawn constant |
+| `tests/test_bug_regressions.gd` | Modified | Added 18 regression tests |
+
+### Test Results
+- All 1000 regression tests pass (45 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks

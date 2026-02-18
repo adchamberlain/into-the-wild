@@ -216,6 +216,8 @@ var fishing_line: MeshInstance3D = null
 var line_pivot: Node3D = null  # Pivot at rod tip for line attachment
 var caught_fish_model: Node3D = null
 var is_line_cast: bool = false
+var fishing_cast_tween: Tween = null
+var fish_caught_tween: Tween = null
 
 
 func _ready() -> void:
@@ -971,6 +973,9 @@ func _add_leather_wrap_to_hook(hook_model: Node3D) -> void:
 
 
 func _remove_stone_axe() -> void:
+	if axe_swing_tween and axe_swing_tween.is_valid():
+		axe_swing_tween.kill()
+	axe_swing_tween = null
 	if stone_axe_model:
 		stone_axe_model.queue_free()
 		stone_axe_model = null
@@ -1062,6 +1067,9 @@ func _create_machete_model() -> void:
 
 
 func _remove_machete() -> void:
+	if axe_swing_tween and axe_swing_tween.is_valid():
+		axe_swing_tween.kill()
+	axe_swing_tween = null
 	if machete_model:
 		machete_model.queue_free()
 		machete_model = null
@@ -1140,6 +1148,12 @@ func _create_fishing_rod() -> void:
 
 
 func _remove_fishing_rod() -> void:
+	if fishing_cast_tween and fishing_cast_tween.is_valid():
+		fishing_cast_tween.kill()
+	fishing_cast_tween = null
+	if fish_caught_tween and fish_caught_tween.is_valid():
+		fish_caught_tween.kill()
+	fish_caught_tween = null
 	if fishing_rod_model:
 		fishing_rod_model.queue_free()
 		fishing_rod_model = null
@@ -1196,9 +1210,11 @@ func show_fishing_cast() -> void:
 
 	# Casting animation - rod swings forward (rotate around X in degrees)
 	var original_rot: Vector3 = fishing_rod_model.rotation_degrees
-	var tween: Tween = player.create_tween()
-	tween.tween_property(fishing_rod_model, "rotation_degrees:x", original_rot.x - 25, 0.15)
-	tween.tween_property(fishing_rod_model, "rotation_degrees:x", original_rot.x, 0.3)
+	if fishing_cast_tween and fishing_cast_tween.is_valid():
+		fishing_cast_tween.kill()
+	fishing_cast_tween = player.create_tween()
+	fishing_cast_tween.tween_property(fishing_rod_model, "rotation_degrees:x", original_rot.x - 25, 0.15)
+	fishing_cast_tween.tween_property(fishing_rod_model, "rotation_degrees:x", original_rot.x, 0.3)
 
 
 ## Show caught fish animation.
@@ -1219,16 +1235,18 @@ func show_fish_caught() -> void:
 
 	# Animate fish being reeled in
 	var original_rot: Vector3 = fishing_rod_model.rotation_degrees
-	var tween: Tween = player.create_tween()
+	if fish_caught_tween and fish_caught_tween.is_valid():
+		fish_caught_tween.kill()
+	fish_caught_tween = player.create_tween()
 
 	# Pull rod up while reeling fish closer
-	tween.tween_property(fishing_rod_model, "rotation_degrees:x", original_rot.x + 20, 0.3)
-	tween.parallel().tween_property(caught_fish_model, "position", Vector3(0, 0.8, 0), 0.5)
-	tween.parallel().tween_property(caught_fish_model, "rotation:y", TAU, 0.5)  # Fish spins
+	fish_caught_tween.tween_property(fishing_rod_model, "rotation_degrees:x", original_rot.x + 20, 0.3)
+	fish_caught_tween.parallel().tween_property(caught_fish_model, "position", Vector3(0, 0.8, 0), 0.5)
+	fish_caught_tween.parallel().tween_property(caught_fish_model, "rotation:y", TAU, 0.5)  # Fish spins
 
 	# Hide fish and line after animation
-	tween.tween_callback(_hide_fishing_visuals)
-	tween.tween_property(fishing_rod_model, "rotation_degrees:x", original_rot.x, 0.2)
+	fish_caught_tween.tween_callback(_hide_fishing_visuals)
+	fish_caught_tween.tween_property(fishing_rod_model, "rotation_degrees:x", original_rot.x, 0.2)
 
 
 func _create_caught_fish() -> Node3D:
@@ -1526,7 +1544,7 @@ func use_durability(amount: int = 1) -> bool:
 	# Reduce durability (clamp to 0 to prevent negative values in signal)
 	tool_durability[equipped_item] = max(tool_durability[equipped_item] - amount, 0)
 	var current: int = tool_durability[equipped_item]
-	var max_dur: int = TOOL_MAX_DURABILITY[equipped_item]
+	var max_dur: int = get_equipped_max_durability()
 
 	durability_changed.emit(equipped_item, current, max_dur)
 	print("[Equipment] %s durability: %d/%d" % [equipped_item, current, max_dur])
@@ -1639,8 +1657,8 @@ func _harvest_birch_bark(target: Node) -> bool:
 	SFXManager.play_sfx("chop")
 	inventory.add_item("birch_bark", 1)
 	bark_harvest_tracker[pos_key] = current_day
-	use_durability(1)
 	item_used.emit(equipped_item)
+	use_durability(1)
 
 	# Show notification
 	var hud: Node = player.get_tree().get_first_node_in_group("hud") if player else null

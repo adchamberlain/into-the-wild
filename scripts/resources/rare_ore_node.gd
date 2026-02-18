@@ -161,6 +161,10 @@ func _setup_ore_visual() -> void:
 	collision.position = Vector3(0, 0.4, 0)
 	add_child(collision)
 
+	# If loaded as depleted, disable collision (shapes didn't exist during _set_depleted_state)
+	if is_depleted:
+		collision.disabled = true
+
 
 func get_interaction_text() -> String:
 	if is_depleted:

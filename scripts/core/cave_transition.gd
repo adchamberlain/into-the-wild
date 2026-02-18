@@ -156,7 +156,7 @@ func _apply_darkness_damage() -> void:
 	if not player:
 		return
 
-	if time_in_darkness < DARKNESS_DAMAGE_DELAY + DARKNESS_DAMAGE_INTERVAL * 0.5:
+	if time_in_darkness < DARKNESS_DAMAGE_DELAY + DARKNESS_DAMAGE_INTERVAL * 1.5:
 		_show_notification("You stumble in the darkness!", Color(1.0, 0.6, 0.4))
 
 	var stats: Node = player.get_node_or_null("PlayerStats")

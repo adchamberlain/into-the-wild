@@ -17,7 +17,7 @@ func _ready() -> void:
 
 
 func _skip_to_dawn(player: Node, time_manager: Node) -> void:
-	if not is_instance_valid(time_manager):
+	if not is_instance_valid(self) or not is_instance_valid(time_manager):
 		return
 	# Advance to next day at 6 AM (dawn)
 	time_manager.current_day += 1

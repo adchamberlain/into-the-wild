@@ -19,6 +19,7 @@ var current_ore: String = ""
 var smelt_progress: float = 0.0
 var has_fuel: bool = false
 var player_inventory: Node = null
+var pending_output: String = ""  # Product awaiting player pickup
 
 
 func _ready() -> void:
@@ -42,6 +43,14 @@ func interact(player: Node) -> bool:
 	player_inventory = null
 	if player.has_method("get_inventory"):
 		player_inventory = player.get_inventory()
+
+	# Deliver pending output first
+	if pending_output != "" and player_inventory:
+		player_inventory.add_item(pending_output, 1)
+		print("[SmithingStation] Collected: +1 %s" % pending_output)
+		pending_output = ""
+		interaction_text = "Use Smithing Station"
+		return true
 
 	if is_smelting:
 		# Show smelting progress
@@ -103,7 +112,9 @@ func _complete_smelting() -> void:
 		player_inventory.add_item(output_type, 1)
 		print("[SmithingStation] Smelting complete! +1 %s" % output_type)
 	else:
-		print("[SmithingStation] Smelting complete! %s ready for pickup" % output_type)
+		# Store product for later pickup instead of losing it
+		pending_output = output_type
+		print("[SmithingStation] Smelting complete! %s stored for pickup" % output_type)
 
 	smelting_complete.emit(output_type, 1)
 
@@ -112,7 +123,7 @@ func _complete_smelting() -> void:
 	has_fuel = false
 	current_ore = ""
 	smelt_progress = 0.0
-	interaction_text = "Use Smithing Station"
+	interaction_text = "Collect Ingot" if pending_output != "" else "Use Smithing Station"
 
 
 func get_save_data() -> Dictionary:
@@ -121,6 +132,7 @@ func get_save_data() -> Dictionary:
 	data["current_ore"] = current_ore
 	data["smelt_progress"] = smelt_progress
 	data["has_fuel"] = has_fuel
+	data["pending_output"] = pending_output
 	return data
 
 
@@ -130,7 +142,10 @@ func load_save_data(data: Dictionary) -> void:
 	current_ore = data.get("current_ore", "")
 	smelt_progress = data.get("smelt_progress", 0.0)
 	has_fuel = data.get("has_fuel", false)
-	if is_smelting:
+	pending_output = data.get("pending_output", "")
+	if pending_output != "":
+		interaction_text = "Collect Ingot"
+	elif is_smelting:
 		interaction_text = "Check Smelting Progress"
 
 

@@ -858,6 +858,11 @@ func _spawn_chunk_trees() -> void:
 
 				var tree_y: float = chunk_manager.get_height_at(tree_x, tree_z)
 
+				# Skip trees in water (negative height = inside water body)
+				if tree_y < 0:
+					z += tree_grid_size
+					continue
+
 				# Choose tree type based on region and elevation
 				var tree: Node3D
 				var tree_type_roll: float = rng.randf()

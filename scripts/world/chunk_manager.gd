@@ -878,13 +878,15 @@ func _get_raw_mountain_height(x: float, z: float) -> float:
 	var detail: float = detail_noise.get_noise_2d(snapped_x * 1.5, snapped_z * 1.5)
 	height += detail * 1.0
 
-	# Apply path carving
+	# Apply path carving (only if neighbor also carved, matching get_height_at logic)
 	var path_value: float = path_noise.get_noise_2d(snapped_x, snapped_z)
 	var mountain_path_threshold: float = 0.25
 	if path_value > mountain_path_threshold:
-		var path_strength: float = (path_value - mountain_path_threshold) / (1.0 - mountain_path_threshold)
-		var path_reduction: float = path_strength * height * 0.55
-		height -= path_reduction
+		var has_carved_neighbor: bool = _has_carved_neighbor(snapped_x, snapped_z, mountain_path_threshold)
+		if has_carved_neighbor:
+			var path_strength: float = (path_value - mountain_path_threshold) / (1.0 - mountain_path_threshold)
+			var path_reduction: float = path_strength * height * 0.55
+			height -= path_reduction
 
 	# Minimum height
 	height = max(4.0, height)

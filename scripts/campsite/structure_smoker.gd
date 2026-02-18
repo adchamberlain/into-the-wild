@@ -20,6 +20,7 @@ var current_meat: String = ""
 var smoke_progress: float = 0.0
 var has_fuel: bool = false
 var player_inventory: Node = null
+var pending_output: String = ""  # Product awaiting player pickup
 
 
 func _ready() -> void:
@@ -43,6 +44,14 @@ func interact(player: Node) -> bool:
 	player_inventory = null
 	if player.has_method("get_inventory"):
 		player_inventory = player.get_inventory()
+
+	# Deliver pending output first
+	if pending_output != "" and player_inventory:
+		player_inventory.add_item(pending_output, 1)
+		print("[Smoker] Collected: +1 %s" % pending_output)
+		pending_output = ""
+		interaction_text = "Use Smoker"
+		return true
 
 	if is_smoking:
 		# Show smoking progress
@@ -105,7 +114,9 @@ func _complete_smoking() -> void:
 		player_inventory.add_item(output_type, 1)
 		print("[Smoker] Smoking complete! +1 %s" % output_type)
 	else:
-		print("[Smoker] Smoking complete! %s ready for pickup" % output_type)
+		# Store product for later pickup instead of losing it
+		pending_output = output_type
+		print("[Smoker] Smoking complete! %s stored for pickup" % output_type)
 
 	smoking_complete.emit(output_type, 1)
 
@@ -114,7 +125,7 @@ func _complete_smoking() -> void:
 	has_fuel = false
 	current_meat = ""
 	smoke_progress = 0.0
-	interaction_text = "Use Smoker"
+	interaction_text = "Collect Smoked Food" if pending_output != "" else "Use Smoker"
 
 
 func get_save_data() -> Dictionary:
@@ -123,6 +134,7 @@ func get_save_data() -> Dictionary:
 	data["current_meat"] = current_meat
 	data["smoke_progress"] = smoke_progress
 	data["has_fuel"] = has_fuel
+	data["pending_output"] = pending_output
 	return data
 
 
@@ -132,7 +144,10 @@ func load_save_data(data: Dictionary) -> void:
 	current_meat = data.get("current_meat", "")
 	smoke_progress = data.get("smoke_progress", 0.0)
 	has_fuel = data.get("has_fuel", false)
-	if is_smoking:
+	pending_output = data.get("pending_output", "")
+	if pending_output != "":
+		interaction_text = "Collect Smoked Food"
+	elif is_smoking:
 		interaction_text = "Check Smoking Progress"
 
 

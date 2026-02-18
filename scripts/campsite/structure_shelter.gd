@@ -17,6 +17,7 @@ signal resting_ended(player: Node)
 # State
 var player_inside: bool = false
 var is_player_resting: bool = false
+var _is_sleeping: bool = false  # Guard against double sleep sequence
 var resting_player: Node = null
 var player_original_position: Vector3
 var player_original_rotation: Vector3
@@ -123,9 +124,12 @@ func _connect_to_time_manager() -> void:
 
 func _on_period_changed(period: String) -> void:
 	# If player is resting and night has arrived, trigger sleep sequence
+	if _is_sleeping:
+		return
 	if is_player_resting and is_instance_valid(resting_player):
 		var time_manager: Node = _find_time_manager()
 		if time_manager and _is_nighttime(time_manager):
+			_is_sleeping = true
 			print("[Shelter] Night has fallen while resting - sleeping until dawn...")
 			_trigger_sleep_sequence(resting_player, time_manager)
 
@@ -177,6 +181,7 @@ func _skip_to_dawn(player: Node, time_manager: Node) -> void:
 
 func _exit_rest_mode(player: Node) -> void:
 	is_player_resting = false
+	_is_sleeping = false
 
 	# Move player back outside (to the open/front side of shelter - positive local Z)
 	# The opening is at +Z, so exit there without the PI rotation

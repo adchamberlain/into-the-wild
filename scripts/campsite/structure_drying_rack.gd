@@ -18,6 +18,7 @@ var is_drying: bool = false
 var current_food: String = ""
 var drying_progress: float = 0.0
 var player_inventory: Node = null
+var pending_output: String = ""  # Product awaiting player pickup
 
 
 func _ready() -> void:
@@ -41,6 +42,14 @@ func interact(player: Node) -> bool:
 	player_inventory = null
 	if player.has_method("get_inventory"):
 		player_inventory = player.get_inventory()
+
+	# Deliver pending output first
+	if pending_output != "" and player_inventory:
+		player_inventory.add_item(pending_output, 1)
+		print("[DryingRack] Collected: +1 %s" % pending_output)
+		pending_output = ""
+		interaction_text = "Use Drying Rack"
+		return true
 
 	if is_drying:
 		# Show drying progress
@@ -86,7 +95,9 @@ func _complete_drying() -> void:
 		player_inventory.add_item(dried_type, 1)
 		print("[DryingRack] Drying complete! +1 %s" % dried_type)
 	else:
-		print("[DryingRack] Drying complete! %s ready for pickup" % dried_type)
+		# Store product for later pickup instead of losing it
+		pending_output = dried_type
+		print("[DryingRack] Drying complete! %s stored for pickup" % dried_type)
 
 	food_dried.emit(current_food, dried_type)
 
@@ -94,7 +105,7 @@ func _complete_drying() -> void:
 	is_drying = false
 	current_food = ""
 	drying_progress = 0.0
-	interaction_text = "Use Drying Rack"
+	interaction_text = "Collect Dried Food" if pending_output != "" else "Use Drying Rack"
 
 
 func get_save_data() -> Dictionary:
@@ -102,6 +113,7 @@ func get_save_data() -> Dictionary:
 	data["is_drying"] = is_drying
 	data["current_food"] = current_food
 	data["drying_progress"] = drying_progress
+	data["pending_output"] = pending_output
 	return data
 
 
@@ -110,7 +122,10 @@ func load_save_data(data: Dictionary) -> void:
 	is_drying = data.get("is_drying", false)
 	current_food = data.get("current_food", "")
 	drying_progress = data.get("drying_progress", 0.0)
-	if is_drying:
+	pending_output = data.get("pending_output", "")
+	if pending_output != "":
+		interaction_text = "Collect Dried Food"
+	elif is_drying:
 		interaction_text = "Check Drying Progress"
 
 

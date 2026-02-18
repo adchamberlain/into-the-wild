@@ -32,6 +32,17 @@ const EQUIPMENT_SLOTS: Array = [
 	{"key": "=", "type": "cabin_kit", "name": "Cabin Kit"},
 	{"key": "[", "type": "grappling_hook", "name": "Grappling Hook"},
 	{"key": "]", "type": "bark_map", "name": "Birch Bark Map"},
+	{"key": "", "type": "metal_axe", "name": "Metal Axe"},
+	{"key": "", "type": "snare_trap_kit", "name": "Snare Trap Kit"},
+	{"key": "", "type": "smithing_station_kit", "name": "Smithing Station Kit"},
+	{"key": "", "type": "smoker_kit", "name": "Smoker Kit"},
+	{"key": "", "type": "weather_vane_kit", "name": "Weather Vane Kit"},
+	{"key": "", "type": "machete", "name": "Machete"},
+	{"key": "", "type": "lantern", "name": "Lantern"},
+	{"key": "", "type": "primitive_axe", "name": "Primitive Axe"},
+	{"key": "", "type": "lodestone", "name": "Lodestone"},
+	{"key": "", "type": "leather_axe_wrap", "name": "Leather Axe Wrap"},
+	{"key": "", "type": "leather_hook_wrap", "name": "Leather Hook Wrap"},
 ]
 
 # Cached labels for each slot
@@ -134,8 +145,10 @@ func _update_display() -> void:
 		var text: String
 		if using_controller:
 			text = name  # No key hints for controller (use L1/R1 to cycle)
-		else:
+		elif key != "":
 			text = "[%s] %s" % [key, name]
+		else:
+			text = "    %s" % name  # No keyboard shortcut for this item
 
 		if count > 0:
 			text += " (x%d)" % count

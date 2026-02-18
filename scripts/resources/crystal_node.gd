@@ -187,6 +187,10 @@ func _setup_crystal_visual() -> void:
 	collision.position = Vector3(0, 0.5, 0)
 	add_child(collision)
 
+	# If loaded as depleted, disable collision (shapes didn't exist during _set_depleted_state)
+	if is_depleted:
+		collision.disabled = true
+
 
 ## Override interaction for crystal-specific behavior.
 func interact(player: Node) -> bool:

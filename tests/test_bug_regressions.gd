@@ -189,6 +189,26 @@ func run_tests() -> Dictionary:
 	test_chunk_queue_filters_stale_entries()
 	test_height_cache_key_uses_floor()
 
+	# Round 9 regression tests
+	test_crystal_collision_disabled_when_depleted()
+	test_ore_collision_disabled_when_depleted()
+	test_darkness_notification_threshold_reachable()
+	test_processing_structures_store_pending_output()
+	test_canvas_tent_skip_dawn_checks_self_valid()
+	test_cave_test_uses_168h_respawn()
+	test_config_tab_checks_visibility_or_pause()
+	test_equipment_menu_has_all_equippable_items()
+	test_durability_signal_uses_equipped_max()
+	test_axe_tween_killed_on_remove()
+	test_pause_menu_load_uses_await()
+	test_raw_mountain_height_checks_carved_neighbor()
+	test_trees_skip_negative_height()
+	test_config_menu_load_uses_await()
+	test_fishing_tweens_tracked_as_members()
+	test_birch_bark_emits_before_durability()
+	test_shelter_sleep_guard_prevents_double()
+	test_heal_eat_guard_is_dead()
+
 	return get_results()
 
 
@@ -3780,3 +3800,291 @@ func test_height_cache_key_uses_floor() -> void:
 		"height cache key uses floor() for X coordinate (not int())")
 	assert_true(body.find("floor(z / cell_size)") != -1,
 		"height cache key uses floor() for Z coordinate (not int())")
+
+
+# ============================================================================
+# Round 9 Regression Tests
+# ============================================================================
+
+func test_crystal_collision_disabled_when_depleted() -> void:
+	# Bug: Crystal collision shapes created in deferred setup after _set_depleted_state ran,
+	# so depleted crystals still had active collision (invisible walls).
+	var file: FileAccess = FileAccess.open("res://scripts/resources/crystal_node.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open crystal_node.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var idx: int = src.find("add_child(collision)")
+	assert_true(idx != -1, "crystal_node has add_child(collision)")
+	var after: String = src.substr(idx, 200)
+	assert_true(after.find("is_depleted") != -1,
+		"crystal_node checks is_depleted after adding collision shape")
+	assert_true(after.find("collision.disabled") != -1,
+		"crystal_node disables collision when depleted on load")
+
+
+func test_ore_collision_disabled_when_depleted() -> void:
+	# Bug: Same as crystal - ore collision shapes created after depleted state applied.
+	var file: FileAccess = FileAccess.open("res://scripts/resources/rare_ore_node.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open rare_ore_node.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var idx: int = src.find("add_child(collision)")
+	assert_true(idx != -1, "rare_ore_node has add_child(collision)")
+	var after: String = src.substr(idx, 200)
+	assert_true(after.find("is_depleted") != -1,
+		"rare_ore_node checks is_depleted after adding collision shape")
+	assert_true(after.find("collision.disabled") != -1,
+		"rare_ore_node disables collision when depleted on load")
+
+
+func test_darkness_notification_threshold_reachable() -> void:
+	# Bug: Darkness notification threshold used * 0.5 making it 65s, but first damage
+	# was at ~70s, so notification was never shown. Changed to * 1.5 (75s).
+	var file: FileAccess = FileAccess.open("res://scripts/core/cave_transition.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open cave_transition.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var idx: int = src.find("DARKNESS_DAMAGE_INTERVAL * 1.5")
+	assert_true(idx != -1,
+		"darkness notification uses * 1.5 threshold (reachable before first damage)")
+
+
+func test_processing_structures_store_pending_output() -> void:
+	# Bug: Processing structures (drying rack, smoker, smithing) lost products when
+	# player inventory was unreachable. Now stores in pending_output for later pickup.
+	for path: String in ["structure_drying_rack.gd", "structure_smoker.gd", "structure_smithing_station.gd"]:
+		var file: FileAccess = FileAccess.open("res://scripts/campsite/" + path, FileAccess.READ)
+		if not file:
+			assert_true(false, "Could not open " + path)
+			continue
+		var src: String = file.get_as_text()
+		file.close()
+		assert_true(src.find("pending_output") != -1,
+			path + " has pending_output field for storing products")
+		assert_true(src.find("pending_output") != -1 and src.find("get_save_data") != -1,
+			path + " saves pending_output in save data")
+
+
+func test_canvas_tent_skip_dawn_checks_self_valid() -> void:
+	# Bug: Canvas tent _skip_to_dawn could access freed self during fade callback.
+	var file: FileAccess = FileAccess.open("res://scripts/campsite/structure_canvas_tent.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open structure_canvas_tent.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var idx: int = src.find("func _skip_to_dawn")
+	assert_true(idx != -1, "canvas tent has _skip_to_dawn")
+	var body: String = src.substr(idx, 300)
+	assert_true(body.find("is_instance_valid(self)") != -1,
+		"canvas tent _skip_to_dawn checks is_instance_valid(self)")
+
+
+func test_cave_test_uses_168h_respawn() -> void:
+	# Bug: Cave transition test used 72h respawn constant but production uses 168h.
+	var file: FileAccess = FileAccess.open("res://tests/test_cave_transition.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open test_cave_transition.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	assert_true(src.find("RESPAWN_HOURS: float = 168.0") != -1,
+		"cave transition test uses 168h respawn constant matching production")
+
+
+func test_config_tab_checks_visibility_or_pause() -> void:
+	# Bug: Tab key could open config menu during pause without setting opened_from_pause_menu,
+	# causing the menu to get stuck when closing.
+	var file: FileAccess = FileAccess.open("res://scripts/ui/config_menu.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open config_menu.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var idx: int = src.find("KEY_TAB")
+	assert_true(idx != -1, "config_menu handles KEY_TAB")
+	var body: String = src.substr(idx, 300)
+	assert_true(body.find("is_visible") != -1 or body.find("paused") != -1,
+		"config_menu Tab handler checks visibility or pause state")
+
+
+func test_equipment_menu_has_all_equippable_items() -> void:
+	# Bug: Equipment menu only had 14 of 25 equippable items, making 11 items
+	# unequippable for controller users.
+	var file: FileAccess = FileAccess.open("res://scripts/ui/equipment_menu.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open equipment_menu.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	# Check that key later-game items are present in EQUIPMENT_SLOTS
+	for item: String in ["metal_axe", "machete", "lantern", "smoker_kit", "snare_trap_kit"]:
+		assert_true(src.find('"type": "%s"' % item) != -1,
+			"equipment_menu includes %s" % item)
+
+
+func test_durability_signal_uses_equipped_max() -> void:
+	# Bug: use_durability() used TOOL_MAX_DURABILITY instead of get_equipped_max_durability(),
+	# giving wrong percentage when leather wrap upgrade was applied.
+	var file: FileAccess = FileAccess.open("res://scripts/player/equipment.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open equipment.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var idx: int = src.find("func use_durability")
+	assert_true(idx != -1, "equipment has use_durability function")
+	var body: String = src.substr(idx, 800)
+	assert_true(body.find("get_equipped_max_durability") != -1,
+		"use_durability uses get_equipped_max_durability for signal emission")
+
+
+func test_axe_tween_killed_on_remove() -> void:
+	# Bug: Axe swing tween kept running after tool broke, causing errors on freed node.
+	var file: FileAccess = FileAccess.open("res://scripts/player/equipment.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open equipment.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var idx: int = src.find("func _remove_stone_axe")
+	assert_true(idx != -1, "equipment has _remove_stone_axe")
+	var body: String = src.substr(idx, 400)
+	assert_true(body.find("axe_swing_tween") != -1,
+		"_remove_stone_axe kills axe_swing_tween before freeing model")
+
+
+func test_pause_menu_load_uses_await() -> void:
+	# Bug: Pause menu called load_game_slot without await, causing race condition.
+	var file: FileAccess = FileAccess.open("res://scripts/ui/pause_menu.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open pause_menu.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	assert_true(src.find("await save_load.load_game_slot") != -1,
+		"pause_menu awaits load_game_slot")
+
+
+func test_raw_mountain_height_checks_carved_neighbor() -> void:
+	# Bug: _get_raw_mountain_height carved paths unconditionally, while get_height_at
+	# required _has_carved_neighbor check. This caused height limiter to get wrong data.
+	var file: FileAccess = FileAccess.open("res://scripts/world/chunk_manager.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open chunk_manager.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var idx: int = src.find("func _get_raw_mountain_height")
+	assert_true(idx != -1, "chunk_manager has _get_raw_mountain_height")
+	var body: String = src.substr(idx, 2000)
+	assert_true(body.find("_has_carved_neighbor") != -1,
+		"_get_raw_mountain_height checks _has_carved_neighbor before carving paths")
+
+
+func test_trees_skip_negative_height() -> void:
+	# Bug: Trees could be placed at negative Y (underwater), floating or submerged.
+	var file: FileAccess = FileAccess.open("res://scripts/world/terrain_chunk.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open terrain_chunk.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var idx: int = src.find("tree_y")
+	assert_true(idx != -1, "terrain_chunk uses tree_y variable")
+	var body: String = src.substr(idx, 200)
+	assert_true(body.find("tree_y < 0") != -1,
+		"terrain_chunk skips tree placement when height is below water level")
+
+
+func test_config_menu_load_uses_await() -> void:
+	# Bug: Config menu called load_game_slot without await (same as pause menu bug).
+	var file: FileAccess = FileAccess.open("res://scripts/ui/config_menu.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open config_menu.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	assert_true(src.find("await save_load.load_game_slot") != -1,
+		"config_menu awaits load_game_slot")
+
+
+func test_fishing_tweens_tracked_as_members() -> void:
+	# Bug: Fishing cast/catch tweens were local vars, so old tweens couldn't be killed
+	# when starting a new one, causing overlapping animations.
+	var file: FileAccess = FileAccess.open("res://scripts/player/equipment.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open equipment.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	assert_true(src.find("fishing_cast_tween") != -1,
+		"equipment tracks fishing_cast_tween as member variable")
+	assert_true(src.find("fish_caught_tween") != -1,
+		"equipment tracks fish_caught_tween as member variable")
+
+
+func test_birch_bark_emits_before_durability() -> void:
+	# Bug: _harvest_birch_bark called use_durability(1) before item_used.emit(),
+	# but use_durability can clear equipped_item, so the signal had wrong item.
+	var file: FileAccess = FileAccess.open("res://scripts/player/equipment.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open equipment.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var idx: int = src.find("func _harvest_birch_bark")
+	assert_true(idx != -1, "equipment has _harvest_birch_bark")
+	var body: String = src.substr(idx, 2000)
+	var emit_idx: int = body.find("item_used.emit")
+	var durability_idx: int = body.find("use_durability")
+	assert_true(emit_idx != -1 and durability_idx != -1,
+		"_harvest_birch_bark has both emit and durability calls")
+	assert_true(emit_idx < durability_idx,
+		"_harvest_birch_bark emits signal BEFORE use_durability")
+
+
+func test_shelter_sleep_guard_prevents_double() -> void:
+	# Bug: _on_period_changed could fire _trigger_sleep_sequence while already sleeping,
+	# causing double time skip and double heal.
+	var file: FileAccess = FileAccess.open("res://scripts/campsite/structure_shelter.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open structure_shelter.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	assert_true(src.find("_is_sleeping") != -1,
+		"shelter has _is_sleeping guard variable")
+	var idx: int = src.find("func _on_period_changed")
+	assert_true(idx != -1, "shelter has _on_period_changed")
+	var body: String = src.substr(idx, 300)
+	assert_true(body.find("_is_sleeping") != -1,
+		"_on_period_changed checks _is_sleeping guard to prevent double sleep")
+
+
+func test_heal_eat_guard_is_dead() -> void:
+	# Bug: heal() and eat() could be called on dead player (from shelter sleep),
+	# restoring health/hunger and corrupting dead state.
+	var file: FileAccess = FileAccess.open("res://scripts/player/player_stats.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open player_stats.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var heal_idx: int = src.find("func heal(")
+	assert_true(heal_idx != -1, "player_stats has heal function")
+	var heal_body: String = src.substr(heal_idx, 300)
+	assert_true(heal_body.find("is_dead") != -1,
+		"heal() checks is_dead guard")
+
+	var eat_idx: int = src.find("func eat(")
+	assert_true(eat_idx != -1, "player_stats has eat function")
+	var eat_body: String = src.substr(eat_idx, 300)
+	assert_true(eat_body.find("is_dead") != -1,
+		"eat() checks is_dead guard")

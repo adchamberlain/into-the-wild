@@ -92,6 +92,8 @@ func _update_health(delta: float) -> void:
 
 ## Restore hunger by eating food. Returns actual amount restored.
 func eat(amount: float) -> float:
+	if is_dead:
+		return 0.0
 	var old_hunger: float = hunger
 	hunger = min(max_hunger, hunger + amount)
 	var restored: float = hunger - old_hunger
@@ -124,6 +126,8 @@ func take_damage(amount: float) -> float:
 
 ## Heal health directly. Returns actual amount healed.
 func heal(amount: float) -> float:
+	if is_dead:
+		return 0.0
 	var old_health: float = health
 	health = min(max_health, health + amount)
 	var healed: float = health - old_health
