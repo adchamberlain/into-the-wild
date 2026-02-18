@@ -4473,6 +4473,31 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ## Next Session
 
+## Session 75 - Code Audit Bug Fixes Round 21 (2026-02-17)
+
+### Bug Fixes
+
+**1. Shelter sleep crash on freed time_manager** - `structure_shelter.gd` `_skip_to_dawn()` accessed `time_manager` properties (current_day, current_hour, etc.) without `is_instance_valid()` check. This function is called as a tween callback after a 1-second fade delay. If the scene transitions during the fade, `time_manager` could be freed, and all property accesses would crash.
+
+**2. Cabin bed sleep crash on freed time_manager** - `cabin_bed.gd` `_skip_to_dawn()` had the same issue — accessed `time_manager` properties without validity check in a deferred tween callback. Same 1-second window where scene transitions could free the time_manager.
+
+**3. Player stats division by zero in percent getters** - `player_stats.gd` `get_health_percent()` and `get_hunger_percent()` divided by `max_health` and `max_hunger` without zero guards. If save data is corrupted or values reset to 0, division by zero produces NaN that propagates through HUD progress bars and warmth calculations. Added `<= 0.0` guard returning 0.0.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/campsite/structure_shelter.gd` | Modified | Add `is_instance_valid(time_manager)` guard in `_skip_to_dawn()` |
+| `scripts/campsite/cabin_bed.gd` | Modified | Add `is_instance_valid(time_manager)` guard in `_skip_to_dawn()` |
+| `scripts/player/player_stats.gd` | Modified | Add zero guards in `get_health_percent()` and `get_hunger_percent()` |
+| `tests/test_bug_regressions.gd` | Modified | Added 3 regression tests (4 new assertions, 167 total) |
+
+### Test Results
+- All 699 regression tests pass (4 new)
+
+---
+
+## Next Session
+
 ### Planned Tasks
 1. Continue play-testing and bug fixing
 

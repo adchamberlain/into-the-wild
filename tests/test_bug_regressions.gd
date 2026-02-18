@@ -68,6 +68,9 @@ func run_tests() -> Dictionary:
 	test_hud_interaction_target_uses_instance_valid()
 	test_storage_ui_transfer_checks_removal()
 	test_storm_tending_uses_instance_valid()
+	test_shelter_skip_to_dawn_validates_time_manager()
+	test_cabin_bed_skip_to_dawn_validates_time_manager()
+	test_player_stats_percent_guards_zero()
 
 	return get_results()
 
@@ -1659,3 +1662,68 @@ func test_storm_tending_uses_instance_valid() -> void:
 	# The is_tending line should use is_instance_valid, not plain truthiness
 	assert_true(func_body.find("is_instance_valid(player) and fire.global_position") != -1,
 		"Storm tending check uses is_instance_valid for player")
+
+
+func test_shelter_skip_to_dawn_validates_time_manager() -> void:
+	## Bug: structure_shelter.gd _skip_to_dawn accessed time_manager properties
+	## without checking is_instance_valid(). The callback is bound to a tween that
+	## fires after a 1s fade delay. If the scene transitions during the fade,
+	## time_manager could be freed, crashing on property access.
+	var script: GDScript = load("res://scripts/campsite/structure_shelter.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load structure_shelter.gd")
+		return
+
+	var source: String = script.source_code
+	var func_start: int = source.find("func _skip_to_dawn(")
+	var func_end: int = source.find("\nfunc ", func_start + 1)
+	if func_end == -1:
+		func_end = source.length()
+	var func_body: String = source.substr(func_start, func_end - func_start)
+	assert_true(func_body.find("is_instance_valid(time_manager)") != -1,
+		"Shelter _skip_to_dawn validates time_manager before access")
+
+
+func test_cabin_bed_skip_to_dawn_validates_time_manager() -> void:
+	## Bug: cabin_bed.gd _skip_to_dawn accessed time_manager properties
+	## without checking is_instance_valid(). Same tween callback issue as shelter.
+	var script: GDScript = load("res://scripts/campsite/cabin_bed.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load cabin_bed.gd")
+		return
+
+	var source: String = script.source_code
+	var func_start: int = source.find("func _skip_to_dawn(")
+	var func_end: int = source.find("\nfunc ", func_start + 1)
+	if func_end == -1:
+		func_end = source.length()
+	var func_body: String = source.substr(func_start, func_end - func_start)
+	assert_true(func_body.find("is_instance_valid(time_manager)") != -1,
+		"CabinBed _skip_to_dawn validates time_manager before access")
+
+
+func test_player_stats_percent_guards_zero() -> void:
+	## Bug: get_health_percent() and get_hunger_percent() divided by max_health
+	## and max_hunger without checking for zero. If save data is corrupted or
+	## values reset, division by zero produces NaN that propagates to HUD.
+	var script: GDScript = load("res://scripts/player/player_stats.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load player_stats.gd")
+		return
+
+	var source: String = script.source_code
+	# Check get_health_percent has a zero guard
+	var health_start: int = source.find("func get_health_percent()")
+	var health_end: int = source.find("\nfunc ", health_start + 1)
+	var health_body: String = source.substr(health_start, health_end - health_start)
+	assert_true(health_body.find("max_health <= 0") != -1,
+		"get_health_percent guards against zero max_health")
+
+	# Check get_hunger_percent has a zero guard
+	var hunger_start: int = source.find("func get_hunger_percent()")
+	var hunger_end: int = source.find("\nfunc ", hunger_start + 1)
+	if hunger_end == -1:
+		hunger_end = source.length()
+	var hunger_body: String = source.substr(hunger_start, hunger_end - hunger_start)
+	assert_true(hunger_body.find("max_hunger <= 0") != -1,
+		"get_hunger_percent guards against zero max_hunger")

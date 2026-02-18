@@ -130,9 +130,13 @@ func heal(amount: float) -> float:
 
 ## Get health as a percentage (0.0 - 1.0)
 func get_health_percent() -> float:
+	if max_health <= 0.0:
+		return 0.0
 	return health / max_health
 
 
 ## Get hunger as a percentage (0.0 - 1.0)
 func get_hunger_percent() -> float:
+	if max_hunger <= 0.0:
+		return 0.0
 	return hunger / max_hunger
