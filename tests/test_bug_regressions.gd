@@ -131,6 +131,18 @@ func run_tests() -> Dictionary:
 	test_menu_overlap_prevention()
 	test_water_ref_counting()
 
+	# Round 4 regression tests
+	test_player_position_uses_saved_y_in_cave()
+	test_equipment_tween_created_on_self()
+	test_loading_screen_checks_validity_after_await()
+	test_notification_timer_uses_is_connected()
+	test_celebration_tween_uses_is_valid()
+	test_config_saves_music_settings()
+	test_config_restores_music_settings()
+	test_cave_light_check_timer_reset_on_load()
+	test_health_hunger_clamped_on_load()
+	test_structure_position_defaults_are_float()
+
 	return get_results()
 
 
@@ -2883,3 +2895,179 @@ func test_water_ref_counting() -> void:
 	var set_body: String = src.substr(set_idx, 400)
 	assert_true(set_body.find("_water_area_count") != -1,
 		"set_in_water uses _water_area_count")
+
+
+# ============================================================
+# Round 4 regression tests
+# ============================================================
+
+func test_player_position_uses_saved_y_in_cave() -> void:
+	## Bug: Player Y position was always recalculated from terrain on load,
+	## ignoring saved Y. This broke cave respawning where the player is underground.
+	var file: FileAccess = FileAccess.open("res://scripts/core/save_load.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open save_load.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var apply_idx: int = src.find("func _apply_player_data")
+	assert_true(apply_idx != -1, "save_load has _apply_player_data")
+	var apply_body: String = src.substr(apply_idx, 1200)
+	# Must check for cave state before overriding Y
+	assert_true(apply_body.find("was_in_cave") != -1 or apply_body.find("is_in_cave") != -1,
+		"_apply_player_data checks cave state before overriding Y position")
+	# Must use saved Y (load_y)
+	assert_true(apply_body.find("load_y") != -1,
+		"_apply_player_data reads saved Y position")
+
+
+func test_equipment_tween_created_on_self() -> void:
+	## Bug: axe_swing_tween was created on player.create_tween() but animated
+	## Equipment child nodes. If Equipment freed, tween operated on invalid nodes.
+	var file: FileAccess = FileAccess.open("res://scripts/player/equipment.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open equipment.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	# Should NOT find player.create_tween for axe swing
+	assert_true(src.find("axe_swing_tween = player.create_tween()") == -1,
+		"axe_swing_tween should not be created on player node")
+	# Should find create_tween() (on self)
+	assert_true(src.find("axe_swing_tween = create_tween()") != -1,
+		"axe_swing_tween should be created on self (Equipment node)")
+
+
+func test_loading_screen_checks_validity_after_await() -> void:
+	## Bug: Loading screen resumed coroutine after await without checking if
+	## the node was still valid, causing create_tween on freed node.
+	var file: FileAccess = FileAccess.open("res://scripts/ui/loading_screen.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open loading_screen.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var finish_idx: int = src.find("func _finish_loading")
+	assert_true(finish_idx != -1, "loading_screen has _finish_loading")
+	var finish_body: String = src.substr(finish_idx, 400)
+	assert_true(finish_body.find("is_instance_valid") != -1,
+		"_finish_loading checks is_instance_valid after await")
+
+
+func test_notification_timer_uses_is_connected() -> void:
+	## Bug: HUD notification timer disconnect called without checking
+	## is_connected first, causing error if signal already fired.
+	var file: FileAccess = FileAccess.open("res://scripts/ui/hud.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open hud.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var notif_idx: int = src.find("func show_notification")
+	assert_true(notif_idx != -1, "hud has show_notification")
+	var notif_body: String = src.substr(notif_idx, 500)
+	assert_true(notif_body.find("is_connected") != -1,
+		"show_notification checks is_connected before disconnecting timer")
+
+
+func test_celebration_tween_uses_is_valid() -> void:
+	## Bug: celebration_tween.kill() called without is_valid() check,
+	## inconsistent with fire_pit and other tween patterns.
+	var file: FileAccess = FileAccess.open("res://scripts/ui/hud.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open hud.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var celeb_idx: int = src.find("func _show_level_celebration")
+	assert_true(celeb_idx != -1, "hud has _show_level_celebration")
+	var celeb_body: String = src.substr(celeb_idx, 1800)
+	assert_true(celeb_body.find("is_valid") != -1,
+		"_show_level_celebration checks celebration_tween.is_valid() before kill")
+
+
+func test_config_saves_music_settings() -> void:
+	## Bug: music_enabled and music_volume were not included in get_config(),
+	## losing music preferences on save/load.
+	var file: FileAccess = FileAccess.open("res://scripts/ui/config_menu.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open config_menu.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var config_idx: int = src.find("func get_config")
+	assert_true(config_idx != -1, "config_menu has get_config")
+	var config_body: String = src.substr(config_idx, 600)
+	assert_true(config_body.find("music_enabled") != -1,
+		"get_config includes music_enabled")
+	assert_true(config_body.find("music_volume") != -1,
+		"get_config includes music_volume")
+
+
+func test_config_restores_music_settings() -> void:
+	## Bug: apply_config did not restore music_enabled or music_volume.
+	var file: FileAccess = FileAccess.open("res://scripts/ui/config_menu.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open config_menu.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var apply_idx: int = src.find("func apply_config")
+	assert_true(apply_idx != -1, "config_menu has apply_config")
+	var apply_body: String = src.substr(apply_idx, 1200)
+	assert_true(apply_body.find("music_enabled") != -1,
+		"apply_config restores music_enabled")
+	assert_true(apply_body.find("music_volume") != -1,
+		"apply_config restores music_volume")
+
+
+func test_cave_light_check_timer_reset_on_load() -> void:
+	## Bug: light_check_timer was not reset in load_save_data, causing
+	## darkness checks to be delayed after loading in a cave.
+	var script: GDScript = load("res://scripts/core/cave_transition.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load cave_transition.gd")
+		return
+	var src: String = script.source_code
+	var load_idx: int = src.find("func load_save_data")
+	assert_true(load_idx != -1, "cave_transition has load_save_data")
+	var load_body: String = src.substr(load_idx, 400)
+	assert_true(load_body.find("light_check_timer") != -1,
+		"load_save_data resets light_check_timer")
+
+
+func test_health_hunger_clamped_on_load() -> void:
+	## Bug: Health and hunger loaded from save data were not clamped to valid
+	## ranges, allowing corrupted saves to set negative or above-max values.
+	var file: FileAccess = FileAccess.open("res://scripts/core/save_load.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open save_load.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var apply_idx: int = src.find("func _apply_player_data")
+	assert_true(apply_idx != -1, "save_load has _apply_player_data")
+	var apply_body: String = src.substr(apply_idx, 1500)
+	assert_true(apply_body.find("clampf") != -1,
+		"_apply_player_data clamps health/hunger values")
+
+
+func test_structure_position_defaults_are_float() -> void:
+	## Bug: Structure position defaults used int 0 instead of float 0.0,
+	## causing type inconsistency in Vector3 construction.
+	var file: FileAccess = FileAccess.open("res://scripts/core/save_load.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open save_load.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var recreate_idx: int = src.find("func _recreate_structure")
+	assert_true(recreate_idx != -1, "save_load has _recreate_structure")
+	var recreate_body: String = src.substr(recreate_idx, 400)
+	# Check that defaults are 0.0 (float) not 0 (int)
+	assert_true(recreate_body.find('get("x", 0.0)') != -1,
+		"structure position X default is float 0.0")
+	assert_true(recreate_body.find('get("y", 0.0)') != -1,
+		"structure position Y default is float 0.0")
+	assert_true(recreate_body.find('get("z", 0.0)') != -1,
+		"structure position Z default is float 0.0")

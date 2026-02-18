@@ -564,7 +564,7 @@ func show_notification(message: String, color: Color = Color.WHITE) -> void:
 		notification_label.add_theme_color_override("font_color", color)
 		notification_panel.visible = true
 		# Cancel previous notification timer so it doesn't hide this one early
-		if _notification_timer and _notification_timer.time_left > 0:
+		if _notification_timer and _notification_timer.time_left > 0 and _notification_timer.timeout.is_connected(_hide_notification):
 			_notification_timer.timeout.disconnect(_hide_notification)
 		# Duration scales with content: 3s base + 1s per extra line
 		var line_count: int = message.count("\n") + 1
@@ -708,7 +708,7 @@ func _show_level_celebration(level: int) -> void:
 	celebration_panel.modulate.a = 0.0
 
 	# Animate in
-	if celebration_tween:
+	if celebration_tween and celebration_tween.is_valid():
 		celebration_tween.kill()
 	celebration_tween = create_tween()
 	celebration_tween.set_parallel(true)
@@ -730,7 +730,7 @@ func _hide_celebration() -> void:
 
 	is_celebrating = false
 
-	if celebration_tween:
+	if celebration_tween and celebration_tween.is_valid():
 		celebration_tween.kill()
 
 	# Animate out

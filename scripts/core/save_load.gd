@@ -617,29 +617,35 @@ func _apply_player_data(data: Dictionary) -> void:
 	if data.has("position"):
 		var pos: Dictionary = data["position"]
 		var load_x: float = pos.get("x", 0.0)
+		var load_y: float = pos.get("y", 0.0)
 		var load_z: float = pos.get("z", 0.0)
 
-		# Calculate correct Y position based on terrain height
-		# This prevents spawning below terrain when loading
-		var terrain_y: float = 0.0
-		if chunk_manager and chunk_manager.has_method("get_height_at"):
-			terrain_y = chunk_manager.get_height_at(load_x, load_z)
+		# Check if player was in a cave when they saved
+		var cave_transition: Node = get_node_or_null("/root/CaveTransition")
+		var was_in_cave: bool = false
+		if cave_transition and "is_in_cave" in cave_transition:
+			was_in_cave = cave_transition.is_in_cave
 
-		# Player height offset (spawn slightly above terrain)
-		var player_height_offset: float = 2.0
-		var final_y: float = terrain_y + player_height_offset
+		var final_y: float = load_y
+		if not was_in_cave:
+			# Recalculate Y from terrain height to prevent spawning below terrain
+			var terrain_y: float = 0.0
+			if chunk_manager and chunk_manager.has_method("get_height_at"):
+				terrain_y = chunk_manager.get_height_at(load_x, load_z)
+			var player_height_offset: float = 2.0
+			final_y = terrain_y + player_height_offset
 
 		player.global_position = Vector3(load_x, final_y, load_z)
-		print("[SaveLoad] Player positioned at (%.1f, %.1f, %.1f) - terrain height: %.1f" % [load_x, final_y, load_z, terrain_y])
+		print("[SaveLoad] Player positioned at (%.1f, %.1f, %.1f)%s" % [load_x, final_y, load_z, " (cave)" if was_in_cave else ""])
 
 	# Stats
 	var stats: Node = player.get_node_or_null("PlayerStats")
 	if stats:
 		if data.has("health"):
-			stats.health = data["health"]
+			stats.health = clampf(float(data["health"]), 0.0, stats.max_health)
 			stats.health_changed.emit(stats.health, stats.max_health)
 		if data.has("hunger"):
-			stats.hunger = data["hunger"]
+			stats.hunger = clampf(float(data["hunger"]), 0.0, stats.max_hunger)
 			stats.hunger_changed.emit(stats.hunger, stats.max_hunger)
 
 	# Inventory
@@ -750,9 +756,9 @@ func _recreate_structure(struct_data: Dictionary, container: Node) -> void:
 	var structure_type: String = struct_data.get("type", "")
 	var pos_data: Dictionary = struct_data.get("position", {})
 	var pos: Vector3 = Vector3(
-		pos_data.get("x", 0),
-		pos_data.get("y", 0),
-		pos_data.get("z", 0)
+		pos_data.get("x", 0.0),
+		pos_data.get("y", 0.0),
+		pos_data.get("z", 0.0)
 	)
 
 	# Get scene path from StructureData

@@ -593,7 +593,7 @@ func _play_swing_animation() -> void:
 			stone_axe_model.position = AXE_REST_POSITION
 			stone_axe_model.rotation_degrees = AXE_REST_ROTATION
 
-		axe_swing_tween = player.create_tween()
+		axe_swing_tween = create_tween()
 		axe_swing_tween.set_trans(Tween.TRANS_QUAD)
 		axe_swing_tween.set_ease(Tween.EASE_OUT)
 
@@ -621,7 +621,7 @@ func _play_swing_animation() -> void:
 			machete_model.position = MACHETE_REST_POSITION
 			machete_model.rotation_degrees = MACHETE_REST_ROTATION
 
-		axe_swing_tween = player.create_tween()
+		axe_swing_tween = create_tween()
 		axe_swing_tween.set_trans(Tween.TRANS_QUAD)
 		axe_swing_tween.set_ease(Tween.EASE_OUT)
 

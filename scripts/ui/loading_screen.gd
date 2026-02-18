@@ -623,6 +623,8 @@ func _finish_loading() -> void:
 	progress_label.text = "Ready!"
 
 	await get_tree().create_timer(0.4).timeout
+	if not is_instance_valid(self):
+		return
 
 	var tween: Tween = create_tween()
 	tween.tween_property(root_control, "modulate:a", 0.0, 0.6)

@@ -254,6 +254,7 @@ func load_save_data(data: Dictionary) -> void:
 	is_dark = data.get("is_dark", false)
 	time_in_darkness = 0.0
 	darkness_damage_timer = 0.0
+	light_check_timer = 0.0
 	if darkness_overlay:
 		darkness_overlay.color.a = DARKNESS_ALPHA if is_dark else 0.0
 

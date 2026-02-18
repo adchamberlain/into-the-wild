@@ -588,6 +588,11 @@ func _apply_config() -> void:
 	if hud and "show_coordinates" in hud:
 		hud.show_coordinates = show_coordinates_enabled
 
+	# Apply music settings
+	if music_manager:
+		music_manager.set_music_enabled(music_enabled)
+		music_manager.set_volume(music_volume / 100.0)
+
 	config_changed.emit()
 
 
@@ -601,7 +606,9 @@ func get_config() -> Dictionary:
 		"unlimited_fire_enabled": unlimited_fire_enabled,
 		"show_coordinates_enabled": show_coordinates_enabled,
 		"tree_respawn_days": tree_respawn_days,
-		"day_length_minutes": day_length_minutes
+		"day_length_minutes": day_length_minutes,
+		"music_enabled": music_enabled,
+		"music_volume": music_volume
 	}
 
 
@@ -615,6 +622,8 @@ func apply_config(data: Dictionary) -> void:
 	show_coordinates_enabled = data.get("show_coordinates_enabled", true)
 	tree_respawn_days = data.get("tree_respawn_days", 7.0)
 	day_length_minutes = data.get("day_length_minutes", 20.0)
+	music_enabled = data.get("music_enabled", true)
+	music_volume = data.get("music_volume", 50.0)
 	# Update UI sliders/toggles
 	if hunger_toggle:
 		hunger_toggle.button_pressed = hunger_enabled
@@ -636,6 +645,12 @@ func apply_config(data: Dictionary) -> void:
 		day_length_slider.value = day_length_minutes
 	if day_length_label:
 		day_length_label.text = "%.0f min" % day_length_minutes
+	if music_toggle:
+		music_toggle.button_pressed = music_enabled
+	if music_volume_slider:
+		music_volume_slider.value = music_volume
+	if music_volume_label:
+		music_volume_label.text = "%.0f%%" % music_volume
 	_apply_config()
 
 
