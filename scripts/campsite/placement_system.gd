@@ -241,7 +241,11 @@ func place_torch_instant() -> bool:
 		structure.on_placed()
 
 	# Consume from inventory
-	inventory.remove_item("torch", 1)
+	var removed: bool = inventory.remove_item("torch", 1)
+	if not removed:
+		structure.queue_free()
+		print("[PlacementSystem] Failed to consume torch from inventory - removing placed structure")
+		return false
 
 	# Register with campsite manager
 	if campsite_manager and campsite_manager.has_method("register_structure"):
@@ -325,7 +329,11 @@ func place_lodestone_instant() -> bool:
 		structure.on_placed()
 
 	# Consume from inventory
-	inventory.remove_item("lodestone", 1)
+	var removed: bool = inventory.remove_item("lodestone", 1)
+	if not removed:
+		structure.queue_free()
+		print("[PlacementSystem] Failed to consume lodestone from inventory - removing placed structure")
+		return false
 
 	# Register with campsite manager
 	if campsite_manager and campsite_manager.has_method("register_structure"):
@@ -394,7 +402,11 @@ func place_lantern_instant() -> bool:
 	if structure.has_method("on_placed"):
 		structure.on_placed()
 
-	inventory.remove_item("lantern", 1)
+	var removed: bool = inventory.remove_item("lantern", 1)
+	if not removed:
+		structure.queue_free()
+		print("[PlacementSystem] Failed to consume lantern from inventory - removing placed structure")
+		return false
 
 	if campsite_manager and campsite_manager.has_method("register_structure"):
 		campsite_manager.register_structure(structure, "placed_lantern")
@@ -787,7 +799,11 @@ func _confirm_placement() -> void:
 
 	# Consume item from inventory
 	if inventory:
-		inventory.remove_item(current_item_type, 1)
+		var removed: bool = inventory.remove_item(current_item_type, 1)
+		if not removed:
+			structure.queue_free()
+			print("[PlacementSystem] Failed to consume %s from inventory - removing placed structure" % current_item_type)
+			return
 
 	# Notify campsite manager
 	if campsite_manager and campsite_manager.has_method("register_structure"):

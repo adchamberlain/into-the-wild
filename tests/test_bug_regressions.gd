@@ -32,6 +32,9 @@ func run_tests() -> Dictionary:
 	test_grapple_complete_checks_player_validity()
 	test_death_cancels_active_grapple()
 	test_fire_pit_extinguish_before_dimming()
+	test_durability_clamped_to_zero()
+	test_upgrade_verifies_item_removal()
+	test_placement_verifies_item_removal()
 
 	return get_results()
 
@@ -707,3 +710,111 @@ func test_fire_pit_extinguish_before_dimming() -> void:
 	assert_true(dim_pos != -1, "Fire pit has dimming calculation")
 	assert_true(extinguish_pos < dim_pos,
 		"Extinguish check comes BEFORE dimming calculation (prevents negative dim_factor)")
+
+
+func test_durability_clamped_to_zero() -> void:
+	## Bug: equipment.gd use_durability() subtracted amount from durability without
+	## clamping, allowing negative values. The durability_changed signal emitted
+	## negative durability to the HUD before the break check caught it.
+	var equip_script: GDScript = load("res://scripts/player/equipment.gd") as GDScript
+	if not equip_script:
+		assert_true(false, "Could not load equipment.gd")
+		return
+
+	var source: String = equip_script.source_code
+	var dur_start: int = source.find("func use_durability(")
+	var dur_end: int = source.find("\nfunc ", dur_start + 1)
+	if dur_end == -1:
+		dur_end = source.length()
+	var dur_body: String = source.substr(dur_start, dur_end - dur_start)
+
+	# Durability must be clamped to prevent negative values
+	assert_true(dur_body.find("max(") != -1,
+		"use_durability() clamps durability with max() to prevent negative values")
+	# The clamp should be to 0
+	assert_true(dur_body.find(", 0)") != -1,
+		"use_durability() clamps durability to minimum of 0")
+
+
+func test_upgrade_verifies_item_removal() -> void:
+	## Bug: equipment.gd _use_upgrade() applied durability upgrades (modifying
+	## tool_durability and meta) but never checked the return value of
+	## remove_item() for the upgrade item. If removal failed, the player got
+	## a free upgrade without consuming the leather wrap.
+	var equip_script: GDScript = load("res://scripts/player/equipment.gd") as GDScript
+	if not equip_script:
+		assert_true(false, "Could not load equipment.gd")
+		return
+
+	var source: String = equip_script.source_code
+	var upgrade_start: int = source.find("func _use_upgrade(")
+	var upgrade_end: int = source.find("\nfunc ", upgrade_start + 1)
+	if upgrade_end == -1:
+		upgrade_end = source.length()
+	var upgrade_body: String = source.substr(upgrade_start, upgrade_end - upgrade_start)
+
+	# Must capture remove_item return value
+	assert_true(upgrade_body.find("var removed") != -1,
+		"_use_upgrade() captures remove_item return value")
+	# Must check removal success
+	assert_true(upgrade_body.find("if not removed") != -1,
+		"_use_upgrade() checks if upgrade item removal failed")
+	# Must revert upgrade on failure
+	assert_true(upgrade_body.find("return false") != -1,
+		"_use_upgrade() returns false when upgrade item cannot be consumed")
+
+
+func test_placement_verifies_item_removal() -> void:
+	## Bug: placement_system.gd placed structures (added to scene tree, activated)
+	## then called remove_item() without checking the return value. If removal
+	## failed, the player got a free structure without losing the inventory item.
+	var placement_script: GDScript = load("res://scripts/campsite/placement_system.gd") as GDScript
+	if not placement_script:
+		assert_true(false, "Could not load placement_system.gd")
+		return
+
+	var source: String = placement_script.source_code
+
+	# Torch placement must check remove_item return
+	var torch_start: int = source.find("func place_torch_instant()")
+	var torch_end: int = source.find("\nfunc ", torch_start + 1)
+	if torch_end == -1:
+		torch_end = source.length()
+	var torch_body: String = source.substr(torch_start, torch_end - torch_start)
+	assert_true(torch_body.find("var removed") != -1,
+		"place_torch_instant() captures remove_item return value")
+	assert_true(torch_body.find("queue_free()") != -1,
+		"place_torch_instant() cleans up structure if item removal fails")
+
+	# Lodestone placement must check remove_item return
+	var lode_start: int = source.find("func place_lodestone_instant()")
+	var lode_end: int = source.find("\nfunc ", lode_start + 1)
+	if lode_end == -1:
+		lode_end = source.length()
+	var lode_body: String = source.substr(lode_start, lode_end - lode_start)
+	assert_true(lode_body.find("var removed") != -1,
+		"place_lodestone_instant() captures remove_item return value")
+	assert_true(lode_body.find("queue_free()") != -1,
+		"place_lodestone_instant() cleans up structure if item removal fails")
+
+	# Lantern placement must check remove_item return
+	var lantern_start: int = source.find("func place_lantern_instant()")
+	var lantern_end: int = source.find("\nfunc ", lantern_start + 1)
+	if lantern_end == -1:
+		lantern_end = source.length()
+	var lantern_body: String = source.substr(lantern_start, lantern_end - lantern_start)
+	assert_true(lantern_body.find("var removed") != -1,
+		"place_lantern_instant() captures remove_item return value")
+	assert_true(lantern_body.find("queue_free()") != -1,
+		"place_lantern_instant() cleans up structure if item removal fails")
+
+	# General _confirm_placement must check remove_item return
+	var confirm_start: int = source.find("func _confirm_placement()")
+	var confirm_end: int = source.find("\nfunc ", confirm_start + 1)
+	if confirm_end == -1:
+		confirm_end = source.length()
+	var confirm_body: String = source.substr(confirm_start, confirm_end - confirm_start)
+	assert_true(confirm_body.find("var removed") != -1,
+		"_confirm_placement() captures remove_item return value")
+	assert_true(confirm_body.find("queue_free()") != -1,
+		"_confirm_placement() cleans up structure if item removal fails")

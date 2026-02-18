@@ -1505,8 +1505,8 @@ func use_durability(amount: int = 1) -> bool:
 	if not tool_durability.has(equipped_item):
 		tool_durability[equipped_item] = TOOL_MAX_DURABILITY[equipped_item]
 
-	# Reduce durability
-	tool_durability[equipped_item] -= amount
+	# Reduce durability (clamp to 0 to prevent negative values in signal)
+	tool_durability[equipped_item] = max(tool_durability[equipped_item] - amount, 0)
 	var current: int = tool_durability[equipped_item]
 	var max_dur: int = TOOL_MAX_DURABILITY[equipped_item]
 
@@ -1530,7 +1530,9 @@ func _break_tool() -> void:
 
 	# Remove from inventory
 	if inventory:
-		inventory.remove_item(broken_item, 1)
+		var removed: bool = inventory.remove_item(broken_item, 1)
+		if not removed:
+			print("[Equipment] Warning: Could not remove broken %s from inventory" % broken_item)
 
 	# Remove durability tracking
 	tool_durability.erase(broken_item)
@@ -1697,7 +1699,14 @@ func _use_upgrade(upgrade_item: String, upgrade_data: Dictionary) -> bool:
 	set_meta("durability_upgrades", upgrades)
 
 	# Consume the upgrade item
-	inventory.remove_item(upgrade_item, 1)
+	var removed: bool = inventory.remove_item(upgrade_item, 1)
+	if not removed:
+		# Revert the upgrade - restore original durability
+		tool_durability[target_tool] = current
+		upgrades.erase(target_tool)
+		set_meta("durability_upgrades", upgrades)
+		print("[Equipment] Warning: Could not consume %s - reverting upgrade" % upgrade_item)
+		return false
 	unequip()
 
 	# Emit durability change signal

@@ -4192,6 +4192,28 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ---
 
+## Session 63 - Code Audit Bug Fixes Round 9 (2026-02-17)
+
+### Bug Fixes
+
+**1. Equipment durability goes negative before break check** - `equipment.gd` `use_durability()` subtracted the damage amount without clamping, allowing negative durability values. The `durability_changed` signal emitted these negative values to the HUD before the `<= 0` break check caught them. Fixed by clamping with `max(durability - amount, 0)`. Also added return value check on `remove_item()` in `_break_tool()`.
+
+**2. Equipment upgrade consumes nothing on removal failure** - `equipment.gd` `_use_upgrade()` applied the full durability upgrade (modified `tool_durability`, stored upgrade metadata) then called `remove_item()` without checking its return. If removal failed, the player got a free upgrade. Now checks return value and reverts all upgrade changes on failure.
+
+**3. Placement system places structures without consuming items** - `placement_system.gd` had 4 locations (`place_torch_instant`, `place_lodestone_instant`, `place_lantern_instant`, `_confirm_placement`) that added structures to the scene tree and activated them before calling `remove_item()` without checking the return. If item removal failed, the player got a free structure. Now checks return value and calls `queue_free()` on the placed structure if consumption fails.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/player/equipment.gd` | Modified | Clamp durability to 0, check `remove_item()` in `_break_tool()` and `_use_upgrade()` with revert on failure |
+| `scripts/campsite/placement_system.gd` | Modified | Check `remove_item()` return in 4 placement functions, clean up structures on failure |
+| `tests/test_bug_regressions.gd` | Modified | Added 3 regression tests (13 new assertions, 89 total) |
+
+### Test Results
+- All 621 regression tests pass (13 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks
