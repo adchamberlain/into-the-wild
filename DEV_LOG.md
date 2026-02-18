@@ -4074,6 +4074,29 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ---
 
+## Session 58 - Code Audit Bug Fixes Round 4 (2026-02-17)
+
+### Bug Fixes
+
+**1. Storage box inventory lost on save/load** - `save_load.gd` had zero code to save or restore storage box contents. Items stored in the storage container were permanently lost on every save/load cycle. Added `storage_items` field to structure save data during collection, and restoring items via `storage_inventory.add_item()` during structure recreation.
+
+**2. Resource harvest timer callback on freed player** - `resource_node.gd` fires `_complete_harvest(player)` after a 0.2s timer delay, but never checked if the player node was still valid. If the player died or the scene transitioned during that window, accessing the freed player reference would crash. Added `is_instance_valid(player)` guard.
+
+**3. Fishing catch callback on freed player** - `fishing_spot.gd` used `if current_player:` in `_attempt_catch()` which doesn't detect freed nodes. Changed to `is_instance_valid(current_player)` to prevent crashes if the player is freed during the fishing wait period.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/core/save_load.gd` | Modified | Save/restore storage inventory contents via `storage_items` in struct_data |
+| `scripts/resources/resource_node.gd` | Modified | Added `is_instance_valid(player)` check in `_complete_harvest()` |
+| `scripts/resources/fishing_spot.gd` | Modified | Changed `if current_player:` to `is_instance_valid(current_player)` in catch callback |
+| `tests/test_bug_regressions.gd` | Modified | Added 3 regression tests (10 new assertions, 40 total) |
+
+### Test Results
+- All 572 regression tests pass (10 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks

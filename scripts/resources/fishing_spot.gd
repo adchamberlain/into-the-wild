@@ -556,7 +556,7 @@ func _attempt_catch() -> void:
 	is_fishing = false
 	waiting_for_catch = false
 
-	if current_player:
+	if is_instance_valid(current_player):
 		var inventory: Node = _get_player_inventory(current_player)
 		print("[FishingSpot] current_player: %s, inventory: %s" % [current_player, inventory])
 		if inventory:

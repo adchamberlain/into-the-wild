@@ -471,6 +471,12 @@ func _collect_campsite_data() -> Dictionary:
 			if "fuel_remaining" in structure:
 				struct_data["fuel_remaining"] = structure.fuel_remaining
 
+			# Save storage inventory contents
+			if "storage_inventory" in structure and structure.storage_inventory:
+				var storage_items: Dictionary = structure.storage_inventory.get_all_items()
+				if not storage_items.is_empty():
+					struct_data["storage_items"] = storage_items
+
 			data["structures"].append(struct_data)
 
 	return data
@@ -767,6 +773,13 @@ func _recreate_structure(struct_data: Dictionary, container: Node) -> void:
 		structure._set_fire_state(struct_data["is_lit"])
 	if struct_data.has("fuel_remaining") and "fuel_remaining" in structure:
 		structure.fuel_remaining = struct_data["fuel_remaining"]
+
+	# Restore storage inventory contents
+	if struct_data.has("storage_items") and "storage_inventory" in structure and structure.storage_inventory:
+		var items: Dictionary = struct_data["storage_items"]
+		for item_type: String in items:
+			structure.storage_inventory.add_item(item_type, int(items[item_type]))
+		print("[SaveLoad] Restored %d item types to storage" % items.size())
 
 	print("[SaveLoad] Recreated structure: %s at %s" % [structure_type, pos])
 

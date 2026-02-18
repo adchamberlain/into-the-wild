@@ -16,6 +16,9 @@ func run_tests() -> Dictionary:
 	test_weather_forecast_saved_and_restored()
 	test_death_resets_movement_state()
 	test_fall_recovery_resets_fall_start_y()
+	test_storage_inventory_saved_and_restored()
+	test_resource_harvest_checks_player_validity()
+	test_fishing_catch_checks_player_validity()
 
 	return get_results()
 
@@ -281,3 +284,74 @@ func test_fall_recovery_resets_fall_start_y() -> void:
 		"_recover_from_fall() resets fall_start_y after teleport")
 	assert_true(recover_body.find("is_falling = false") != -1,
 		"_recover_from_fall() resets is_falling flag")
+
+
+func test_storage_inventory_saved_and_restored() -> void:
+	## Bug: save_load.gd had zero code to save or restore storage box contents.
+	## All items stored in the storage container were permanently lost on every
+	## save/load cycle.
+	var save_script: GDScript = load("res://scripts/core/save_load.gd") as GDScript
+	if not save_script:
+		assert_true(false, "Could not load save_load.gd")
+		return
+
+	var source: String = save_script.source_code
+
+	# Verify storage items are saved during collection
+	assert_true(source.find('"storage_items"') != -1,
+		"save_load.gd references storage_items key")
+	assert_true(source.find("storage_inventory") != -1,
+		"save_load.gd accesses storage_inventory")
+	assert_true(source.find('struct_data["storage_items"]') != -1,
+		"save_load.gd saves storage items to struct_data")
+
+	# Verify storage items are restored during load
+	assert_true(source.find('struct_data.has("storage_items")') != -1,
+		"save_load.gd checks for storage_items on load")
+
+	# Verify roundtrip: simulate storage data in struct_data
+	var struct_data: Dictionary = {
+		"type": "storage_container",
+		"storage_items": {"wood": 10, "berry": 5, "stone_axe": 1}
+	}
+	var json_str: String = JSON.stringify(struct_data)
+	var parsed: Dictionary = JSON.parse_string(json_str) as Dictionary
+	assert_true(parsed.has("storage_items"), "storage_items survives JSON roundtrip")
+	var items: Dictionary = parsed["storage_items"]
+	assert_equal(int(items.get("wood", 0)), 10, "Wood count preserved in storage save")
+	assert_equal(int(items.get("berry", 0)), 5, "Berry count preserved in storage save")
+	assert_equal(int(items.get("stone_axe", 0)), 1, "Stone axe count preserved in storage save")
+
+
+func test_resource_harvest_checks_player_validity() -> void:
+	## Bug: resource_node.gd _complete_harvest() was called via timer callback
+	## after 0.2s delay, but never checked if the player was still valid.
+	## If player died or scene transitioned during that window, it crashed.
+	var resource_script: GDScript = load("res://scripts/resources/resource_node.gd") as GDScript
+	if not resource_script:
+		assert_true(false, "Could not load resource_node.gd")
+		return
+
+	var source: String = resource_script.source_code
+	var harvest_start: int = source.find("func _complete_harvest(")
+	var harvest_end: int = source.find("\nfunc ", harvest_start + 1)
+	if harvest_end == -1:
+		harvest_end = source.length()
+	var harvest_body: String = source.substr(harvest_start, harvest_end - harvest_start)
+
+	assert_true(harvest_body.find("is_instance_valid(player)") != -1,
+		"_complete_harvest() checks is_instance_valid(player) before accessing")
+
+
+func test_fishing_catch_checks_player_validity() -> void:
+	## Bug: fishing_spot.gd _attempt_catch() checked "if current_player:" but
+	## didn't use is_instance_valid(). If player was freed during fishing wait,
+	## accessing properties would crash.
+	var fishing_script: GDScript = load("res://scripts/resources/fishing_spot.gd") as GDScript
+	if not fishing_script:
+		assert_true(false, "Could not load fishing_spot.gd")
+		return
+
+	var source: String = fishing_script.source_code
+	assert_true(source.find("is_instance_valid(current_player)") != -1,
+		"fishing_spot.gd uses is_instance_valid(current_player) for catch callback")

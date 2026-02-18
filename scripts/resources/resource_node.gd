@@ -186,6 +186,9 @@ func receive_chop(player: Node) -> bool:
 
 
 func _complete_harvest(player: Node) -> void:
+	if not is_instance_valid(player):
+		return
+
 	# Play gather animation
 	_play_gather_animation()
 
