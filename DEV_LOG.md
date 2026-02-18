@@ -4563,6 +4563,129 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ---
 
+## Session 79 - Code Audit Bug Fixes Round 25 (2026-02-18)
+
+### Overview
+Comprehensive bug hunt Round 1: Launched 5 parallel agents to search for Vector3 truthiness, null/freed node access, dictionary access, signal/connection, and logic/game mechanic bugs. Found and fixed 10 bugs across the codebase.
+
+### Bug Fixes
+
+**1. Zero-vector normalization NaN crashes (6 sites)** - `grappling_hook.gd`, `placement_system.gd` (x4), `hud.gd`, `ambient_animal_base.gd`, `ambient_bird.gd`, `ambient_rabbit.gd` all called `.normalized()` on vectors that could be zero-length, producing NaN values that propagated through physics. Added `length_squared() > 0.001` guards with sensible fallbacks.
+
+**2. Freed node access crashes (4 sites)** - `weather_manager.gd` (x3) and `chunk_manager.gd` used bare truthiness checks (`if not player`) instead of `is_instance_valid()`, which fails to detect freed nodes. Changed to proper validity checks.
+
+**3. Bark map rivers invisible** - `bark_map_ui.gd` used wrong dictionary keys `river.get("start")`/`river.get("end")` but rivers use a `"path"` array of points. Fixed to iterate `river.get("path", [])` segments.
+
+**4. Rest state soft-lock** - `player_controller.gd` set `is_resting = true` when entering a shelter but never cleared it if the shelter was freed (demolished/scene transition). Added `is_instance_valid(resting_in_structure)` check that clears `is_resting` when structure is gone.
+
+**5. Grappling hook scene transition crash** - `grappling_hook.gd` called `get_tree().current_scene.add_child()` without null-checking `current_scene`, which is null during scene transitions.
+
+**6. Osha root only healed, didn't restore hunger** - `player_controller.gd` consumed osha_root as a healing item but didn't check if it was also in FOOD_VALUES to restore hunger simultaneously.
+
+**7. Resource node timer on freed node** - `resource_node.gd` harvest timer callback didn't verify self was still valid before executing.
+
+**8. Signal connection guards (3 sites)** - `structure_shelter.gd`, `campsite_manager.gd`, `weather_manager.gd` connected signals without checking `is_connected()` first, risking duplicate connections.
+
+**9. Float equality in config_menu** - `config_menu.gd` compared float with `!= 1.0` for pluralization, which can fail due to floating-point imprecision. Changed to `is_equal_approx()`.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/player/grappling_hook.gd` | Modified | Zero-vector guard on dismount, null-check `current_scene` before `add_child()` |
+| `scripts/campsite/placement_system.gd` | Modified | Zero-vector guards at 4 normalization sites |
+| `scripts/ui/hud.gd` | Modified | Compass NaN early return on zero-length forward vector |
+| `scripts/creatures/ambient_animal_base.gd` | Modified | Flee direction NaN guard |
+| `scripts/creatures/ambient_bird.gd` | Modified | Flight direction NaN guard |
+| `scripts/creatures/ambient_rabbit.gd` | Modified | Hop direction NaN guard |
+| `scripts/world/weather_manager.gd` | Modified | `is_instance_valid()` for player/stats, `is_connected()` guard |
+| `scripts/world/chunk_manager.gd` | Modified | `is_instance_valid(player)` in `_process` |
+| `scripts/ui/bark_map_ui.gd` | Modified | River drawing uses `"path"` key segments |
+| `scripts/player/player_controller.gd` | Modified | Rest state soft-lock fix, osha_root dual-use |
+| `scripts/resources/resource_node.gd` | Modified | Self-validity check in harvest timer |
+| `scripts/campsite/structure_shelter.gd` | Modified | Signal connection guard |
+| `scripts/campsite/campsite_manager.gd` | Modified | Signal connection guard |
+| `scripts/ui/config_menu.gd` | Modified | `is_equal_approx()` for float comparison |
+| `tests/test_bug_regressions.gd` | Modified | Added 10 regression tests (24 new assertions) |
+
+### Test Results
+- All 734 regression tests pass (24 new)
+
+---
+
+## Session 80 - Code Audit Bug Fixes Round 26 (2026-02-18)
+
+### Overview
+Comprehensive bug hunt Round 2: Launched 5 more parallel agents focusing on save/load data integrity, UI/HUD display, race conditions, dead code/logic errors, and gameplay/balance bugs. Found and fixed 19 bugs ranging from critical save/load issues to medium gameplay polish.
+
+### Bug Fixes
+
+**Critical:**
+
+**1. Cave darkness damage never applies** - `cave_transition.gd` called `player.take_damage()` directly, but damage is handled by the `PlayerStats` child node. The player node has no `take_damage` method, so darkness damage was silently ignored. Now gets `PlayerStats` via `get_node_or_null("PlayerStats")`.
+
+**2. Save/load campsite race condition** - `save_load.gd` called `_apply_campsite_data()` (which builds structures with awaits for frame batching) and `_apply_save_data()` without `await`, causing subsequent code to execute before structures were built. Added `await` to both calls, and propagated `await` to `load_game()` and deferred loader.
+
+**3. Config settings not saved/restored** - Game settings (hunger, weather damage, day length, etc.) were lost on reload. Added `get_config()`/`apply_config()` to `config_menu.gd` and integrated with save/load system. Fixed wrong variable names in `apply_config` (`health_drain_toggle` → `health_toggle`, `coordinates_toggle` → `show_coordinates_toggle`).
+
+**4. Processing structures lose output after reload** - `structure_drying_rack.gd`, `structure_smoker.gd`, `structure_smithing_station.gd` cached `player_inventory` at build time. After save/reload, the cached reference was stale (freed), so completed items vanished. Now looks up player via `get_first_node_in_group("player")` at completion time.
+
+**5. Cave state not persisted** - `cave_transition.gd` didn't save `is_in_cave`, `current_cave_id`, or `is_dark`. Loading while in a cave would lose all cave state. Added these fields to `get_save_data()`/`load_save_data()`.
+
+**High:**
+
+**6. use_equipped fires during placement** - `player_controller.gd` processed `use_equipped` even when placement system was active (placing/moving structures), consuming items unintentionally. Now checks `is_placing`/`is_moving` and skips.
+
+**7. K/L keys active when config menu closed** - `config_menu.gd` K/L key handlers toggled settings even when the menu was closed, interfering with gameplay. Added `is_visible` check.
+
+**8. Unlimited fire healing** - Fire warmup had no cooldown, allowing players to spam warmth repeatedly. Added 30-second cooldown timer.
+
+**9. Fire cooking doesn't produce items** - Cooking at fire directly restored hunger instead of producing cooked items in inventory, bypassing the food system. Changed to `player_inventory.add_item(output_item, 1)`.
+
+**10. Cooking at extinguished fire** - No check for `fire.is_lit` before allowing cook/warm actions. Added `is_lit` check to both `_on_cook_pressed()` and `_on_warm_up_pressed()`.
+
+**11. Celebration input not consumed** - HUD celebration dialog didn't call `set_input_as_handled()`, allowing key presses to leak through to gameplay.
+
+**Medium:**
+
+**12. No raw_meat cooking recipe** - `fire_menu.gd` had no recipe for `raw_meat`, making hunted meat uncookable. Added `"raw_meat": {"output": "cooked_meat", "hunger": 35}`.
+
+**13. dried_herb unconsumable** - `dried_herb` had no entry in `FOOD_VALUES`, making it a dead-end crafting product. Added `"dried_herb": 8.0`.
+
+**14. Fishing always respawns on day change** - `fishing_spot.gd` `_on_day_changed` always respawned fish regardless of depletion time. Now checks hours elapsed vs `respawn_time_hours`.
+
+**15. Weather _rolled_today not saved** - `save_load.gd` didn't save/restore `_rolled_today` or `weather_enabled`, causing weather to re-roll on load. Added both to `_collect_weather_data()` and `_apply_weather_data()`.
+
+**16. Equipment menu cursor visibility** - `equipment_menu.gd` didn't show/hide mouse cursor when opening/closing. Added `MOUSE_MODE_VISIBLE`/`MOUSE_MODE_CAPTURED` toggling.
+
+**17. HUD weather display stale after load** - `hud.gd` didn't refresh weather display after game load. Added `_on_weather_changed` call in `_on_game_loaded`.
+
+**18. Return-by-reference bugs (3 sites)** - `crafting_system.gd` `get_discovered_recipes()` and `get_recipe()`, `campsite_manager.gd` `get_placed_structures()` all returned internal data by reference, allowing callers to mutate internal state. Now return `.duplicate()`.
+
+**19. cave_resource_state returned by reference** - `cave_transition.gd` `get_save_data()` returned `cave_resource_state` by reference. Now uses `.duplicate(true)` for deep copy.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/core/cave_transition.gd` | Modified | Darkness damage uses PlayerStats, save/load state, deep duplicate |
+| `scripts/core/save_load.gd` | Modified | await campsite/save data, config save/load, weather rolled_today, await propagation |
+| `scripts/ui/config_menu.gd` | Modified | `apply_config()` method, K/L visibility check, fixed variable names |
+| `scripts/campsite/structure_drying_rack.gd` | Modified | Fresh player inventory lookup on completion |
+| `scripts/campsite/structure_smoker.gd` | Modified | Fresh player inventory lookup on completion |
+| `scripts/campsite/structure_smithing_station.gd` | Modified | Fresh player inventory lookup on completion |
+| `scripts/player/player_controller.gd` | Modified | Skip use_equipped during placement, dried_herb in FOOD_VALUES |
+| `scripts/ui/fire_menu.gd` | Modified | raw_meat recipe, warmup cooldown, is_lit checks, inventory-based cooking |
+| `scripts/ui/hud.gd` | Modified | Celebration input consumed, weather refresh after load |
+| `scripts/ui/equipment_menu.gd` | Modified | Mouse cursor visibility on toggle |
+| `scripts/resources/fishing_spot.gd` | Modified | Hour-based respawn check |
+| `scripts/crafting/crafting_system.gd` | Modified | `.duplicate()` in getters |
+| `scripts/campsite/campsite_manager.gd` | Modified | `.duplicate()` in get_placed_structures |
+| `tests/test_bug_regressions.gd` | Modified | Added 19 regression tests (57 new assertions) |
+
+### Test Results
+- All 791 regression tests pass (57 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks
