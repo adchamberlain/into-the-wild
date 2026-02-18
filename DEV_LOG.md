@@ -4737,6 +4737,45 @@ Third round of systematic bug hunting using 5 parallel specialized agents: resou
 
 ---
 
+## Session 82 — Round 4 Bug Fixes (9 Bugs)
+
+### Overview
+Fourth round of bug hunting with 6 parallel agents covering: array/index bounds, string/type conversion, timer/tween lifecycle, signal disconnect/cleanup, save/load data integrity, and edge case/boundary conditions. Found and fixed 9 bugs across 6 source files. Added 10 regression tests (25 assertions).
+
+### Bugs Fixed
+
+#### Critical
+1. **Player Y position ignored on load when in cave** — `_apply_player_data` always recalculated Y from terrain height, ignoring saved Y. Players who saved while in a cave would be teleported to the terrain surface on load. Now uses saved Y when `is_in_cave` is true.
+
+#### High Priority
+2. **Equipment axe_swing_tween created on player** — Tween was `player.create_tween()` but animated `stone_axe_model`/`machete_model` (Equipment children). If Equipment freed, tween ran on invalid nodes. Changed to `create_tween()` (self).
+3. **Loading screen orphaned coroutine** — `_finish_loading()` used `await` without checking `is_instance_valid(self)` after timer, causing `create_tween()` on freed node if scene transitioned during delay.
+
+#### Medium Priority
+4. **HUD notification timer disconnect without is_connected** — `disconnect()` called without verifying signal was still connected, erroring if timer already fired.
+5. **HUD celebration_tween kill without is_valid()** — Inconsistent with fire_pit and other tween patterns. Added `is_valid()` check before `kill()`.
+6. **Config menu music settings not saved/restored** — `music_enabled` and `music_volume` missing from `get_config()`/`apply_config()`. Music preferences lost on save/load.
+7. **Cave transition light_check_timer not reset on load** — After loading while in a cave, darkness check was delayed up to `DARKNESS_CHECK_INTERVAL` seconds.
+8. **Health/hunger not clamped on load** — Corrupted save data could set negative or above-max values. Added `clampf()` to valid ranges.
+9. **Structure position defaults use int 0** — Vector3 construction used int defaults instead of float 0.0.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/core/save_load.gd` | Modified | Cave-aware player Y positioning, health/hunger clamping, float defaults |
+| `scripts/player/equipment.gd` | Modified | `axe_swing_tween = create_tween()` instead of `player.create_tween()` |
+| `scripts/ui/loading_screen.gd` | Modified | `is_instance_valid(self)` check after await |
+| `scripts/ui/hud.gd` | Modified | Notification `is_connected` guard, celebration tween `is_valid()` check |
+| `scripts/ui/config_menu.gd` | Modified | `music_enabled`/`music_volume` in get_config/apply_config/_apply_config |
+| `scripts/core/cave_transition.gd` | Modified | `light_check_timer = 0.0` in load_save_data |
+| `tests/test_bug_regressions.gd` | Modified | Added 10 regression tests (25 new assertions) |
+
+### Test Results
+- All 859 regression tests pass (25 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks
