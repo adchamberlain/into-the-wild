@@ -169,6 +169,16 @@ func run_tests() -> Dictionary:
 	test_shelter_skip_dawn_checks_self_valid()
 	test_cabin_bed_skip_dawn_checks_self_valid()
 
+	# Round 7 regression tests
+	test_environment_manager_uses_get_node_or_null()
+	test_cave_flat_zone_uses_continue()
+	test_height_limit_cache_bounded()
+	test_river_water_material_shared()
+	test_miter_checks_before_normalize()
+	test_hud_uses_get_node_or_null()
+	test_crafting_restore_focus_checks_is_open()
+	test_storage_ui_checks_instance_valid()
+
 	return get_results()
 
 
@@ -3474,3 +3484,145 @@ func test_cabin_bed_skip_dawn_checks_self_valid() -> void:
 	var body: String = src.substr(skip_idx, 300)
 	assert_true(body.find("is_instance_valid(self)") != -1,
 		"cabin_bed _skip_to_dawn checks self validity")
+
+
+# ============================================================
+# Round 7 regression tests
+# ============================================================
+
+
+func test_environment_manager_uses_get_node_or_null() -> void:
+	## Bug: environment_manager.gd used get_node() without null check, crashing on invalid path.
+	var file: FileAccess = FileAccess.open("res://scripts/world/environment_manager.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open environment_manager.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var ready_idx: int = src.find("func _ready")
+	assert_true(ready_idx != -1, "environment_manager has _ready")
+	var body: String = src.substr(ready_idx, 600)
+	# Should use get_node_or_null, not get_node
+	assert_true(body.find("get_node_or_null(time_manager_path)") != -1,
+		"environment_manager uses get_node_or_null for time_manager")
+	assert_true(body.find("get_node_or_null(sun_light_path)") != -1,
+		"environment_manager uses get_node_or_null for sun_light")
+
+
+func test_cave_flat_zone_uses_continue() -> void:
+	## Bug: chunk_manager.gd used break in cave flat-zone loop, skipping remaining caves.
+	var file: FileAccess = FileAccess.open("res://scripts/world/chunk_manager.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open chunk_manager.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	# Find the cave flat-zone check in get_height_at
+	var cave_loop_idx: int = src.find("dist_to_cave < cave_flat_outer")
+	assert_true(cave_loop_idx != -1, "chunk_manager has cave flat-zone check")
+	var after_check: String = src.substr(cave_loop_idx, 200)
+	assert_true(after_check.find("continue") != -1,
+		"cave flat-zone falloff uses continue (not break)")
+	assert_true(after_check.find("break") == -1,
+		"cave flat-zone falloff does NOT use break")
+
+
+func test_height_limit_cache_bounded() -> void:
+	## Bug: _height_limit_cache Dictionary grew unbounded during mountain exploration.
+	var file: FileAccess = FileAccess.open("res://scripts/world/chunk_manager.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open chunk_manager.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	# Should have a max size constant
+	assert_true(src.find("HEIGHT_CACHE_MAX_SIZE") != -1,
+		"chunk_manager has HEIGHT_CACHE_MAX_SIZE constant")
+	# Should clear when too large
+	var limit_idx: int = src.find("func _limit_height_difference")
+	assert_true(limit_idx != -1, "chunk_manager has _limit_height_difference")
+	var body: String = src.substr(limit_idx, 2500)
+	assert_true(body.find("_height_limit_cache.clear()") != -1,
+		"_limit_height_difference clears cache when too large")
+
+
+func test_river_water_material_shared() -> void:
+	## Bug: Each river created a new StandardMaterial3D, causing shader recompile stutter.
+	var file: FileAccess = FileAccess.open("res://scripts/world/chunk_manager.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open chunk_manager.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	# Should have a shared material getter
+	assert_true(src.find("_get_river_water_material") != -1,
+		"chunk_manager has shared river water material getter")
+	assert_true(src.find("_river_water_material") != -1,
+		"chunk_manager stores shared river water material")
+
+
+func test_miter_checks_before_normalize() -> void:
+	## Bug: Miter length was checked after .normalized(), always returning 1.0.
+	var file: FileAccess = FileAccess.open("res://scripts/world/chunk_manager.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open chunk_manager.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var river_idx: int = src.find("func _spawn_entire_river")
+	assert_true(river_idx != -1, "chunk_manager has _spawn_entire_river")
+	var body: String = src.substr(river_idx, 3000)
+	# Should check miter_sum.length() BEFORE normalizing
+	assert_true(body.find("miter_sum.length()") != -1,
+		"river miter checks unnormalized sum length before normalizing")
+
+
+func test_hud_uses_get_node_or_null() -> void:
+	## Bug: hud.gd used get_node() for time_manager and player, crashing on invalid path.
+	var file: FileAccess = FileAccess.open("res://scripts/ui/hud.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open hud.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var ready_idx: int = src.find("func _ready")
+	assert_true(ready_idx != -1, "hud has _ready")
+	var body: String = src.substr(ready_idx, 800)
+	assert_true(body.find("get_node_or_null(time_manager_path)") != -1,
+		"hud uses get_node_or_null for time_manager")
+	assert_true(body.find("get_node_or_null(player_path)") != -1,
+		"hud uses get_node_or_null for player")
+
+
+func test_crafting_restore_focus_checks_is_open() -> void:
+	## Bug: _do_restore_focus ran after menu was closed, stealing gameplay focus.
+	var file: FileAccess = FileAccess.open("res://scripts/ui/crafting_ui.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open crafting_ui.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var restore_idx: int = src.find("func _do_restore_focus")
+	assert_true(restore_idx != -1, "crafting_ui has _do_restore_focus")
+	var body: String = src.substr(restore_idx, 500)
+	assert_true(body.find("not is_open") != -1,
+		"_do_restore_focus checks is_open before grabbing focus")
+	# Check full function body for button validity
+	var full_body: String = src.substr(restore_idx, 800)
+	assert_true(full_body.find("is_instance_valid(button)") != -1,
+		"_do_restore_focus checks button validity")
+
+
+func test_storage_ui_checks_instance_valid() -> void:
+	## Bug: storage_ui accessed storage.storage_inventory without is_instance_valid guard.
+	var file: FileAccess = FileAccess.open("res://scripts/ui/storage_ui.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open storage_ui.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var open_idx: int = src.find("func open_storage")
+	assert_true(open_idx != -1, "storage_ui has open_storage")
+	var body: String = src.substr(open_idx, 800)
+	assert_true(body.find("is_instance_valid(storage)") != -1,
+		"open_storage checks storage validity before accessing inventory")

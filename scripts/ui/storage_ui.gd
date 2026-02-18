@@ -135,8 +135,9 @@ func open_storage(storage: Node) -> void:
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 
 	# Connect to storage inventory changes
-	if storage.storage_inventory and not storage.storage_inventory.inventory_changed.is_connected(_refresh_lists):
-		storage.storage_inventory.inventory_changed.connect(_refresh_lists)
+	if is_instance_valid(storage) and "storage_inventory" in storage and storage.storage_inventory:
+		if not storage.storage_inventory.inventory_changed.is_connected(_refresh_lists):
+			storage.storage_inventory.inventory_changed.connect(_refresh_lists)
 
 	# Connect to player inventory changes
 	if player_inventory and not player_inventory.inventory_changed.is_connected(_refresh_lists):

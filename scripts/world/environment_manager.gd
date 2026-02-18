@@ -128,13 +128,14 @@ var weather_fog_depth_end: Dictionary = {
 
 func _ready() -> void:
 	if time_manager_path:
-		time_manager = get_node(time_manager_path)
-		time_manager.time_changed.connect(_on_time_changed)
-		if time_manager.has_signal("day_changed"):
-			time_manager.day_changed.connect(_on_day_changed)
+		time_manager = get_node_or_null(time_manager_path)
+		if time_manager:
+			time_manager.time_changed.connect(_on_time_changed)
+			if time_manager.has_signal("day_changed"):
+				time_manager.day_changed.connect(_on_day_changed)
 
 	if sun_light_path:
-		sun_light = get_node(sun_light_path)
+		sun_light = get_node_or_null(sun_light_path)
 
 	_setup_environment()
 	_setup_night_sky()

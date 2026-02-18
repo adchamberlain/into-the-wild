@@ -4860,6 +4860,43 @@ Sixth round of bug hunting with 6 parallel code review agents covering player sc
 
 ---
 
+## Session 85 — Round 7 Bug Fixes (8 Bugs)
+
+### Overview
+Seventh round of bug fixes targeting world/terrain and UI systems. Found by parallel code review agents from the Round 6 scan. Fixed 8 bugs across 5 source files. Added 8 regression tests (18 assertions).
+
+### Bugs Fixed
+
+#### Critical
+1. **environment_manager `get_node()` crash** — Used `get_node()` without null check for `time_manager_path` and `sun_light_path`. Crashes with fatal error if exported NodePath is misconfigured. Changed to `get_node_or_null()` with guards.
+2. **Cave flat-zone `break` skips remaining caves** — `chunk_manager.gd` `get_height_at()` used `break` in the cave flat-zone loop when a point was in one cave's falloff zone. This prevented checking remaining caves for flat-zone membership, causing wrong terrain height between adjacent caves. Changed to `continue`.
+3. **HUD `get_node()` crash** — Same pattern as environment_manager: `get_node()` for `time_manager` and `player` without null check. Changed to `get_node_or_null()` with guards.
+
+#### High Priority
+4. **River miter check after `normalized()`** — `_spawn_entire_river` checked `miter.length() < 0.1` after `.normalized()`, which always returns 1.0. Near-180-degree river bends produced wildly stretched vertices. Now checks unnormalized sum length before normalizing.
+5. **Crafting `_restore_focus` steals gameplay input** — `_do_restore_focus()` ran after 2-frame await even if menu was closed, calling `grab_focus()` and stealing input from gameplay. Added `is_open` and `is_instance_valid` guards.
+6. **Storage UI freed node access** — `open_storage()` accessed `storage.storage_inventory` without `is_instance_valid` guard. Could crash if storage node freed between signal dispatch and handler.
+
+#### Medium Priority
+7. **River material shader recompile** — Each river created a new `StandardMaterial3D`, causing shader recompile stutter (2 rivers = 2 compilations). Added shared material via `_get_river_water_material()` getter.
+8. **`_height_limit_cache` unbounded growth** — Dictionary in `_limit_height_difference` grew indefinitely during mountain exploration with no cleanup. Added `HEIGHT_CACHE_MAX_SIZE = 2048` cap with clear-on-overflow.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/world/environment_manager.gd` | Modified | `get_node_or_null()` with guards for time_manager and sun_light |
+| `scripts/world/chunk_manager.gd` | Modified | Cave `continue`, height cache cap, shared river material, miter pre-normalize check |
+| `scripts/ui/hud.gd` | Modified | `get_node_or_null()` with guards for time_manager and player |
+| `scripts/ui/crafting_ui.gd` | Modified | `is_open` and `is_instance_valid` guards in `_do_restore_focus` |
+| `scripts/ui/storage_ui.gd` | Modified | `is_instance_valid` guard on storage inventory access |
+| `tests/test_bug_regressions.gd` | Modified | Added 8 regression tests (18 new assertions) |
+
+### Test Results
+- All 932 regression tests pass (21 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks

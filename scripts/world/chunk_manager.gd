@@ -806,8 +806,9 @@ func _has_carved_neighbor(x: float, z: float, threshold: float) -> bool:
 ## Pit prevention: guard flag to prevent recursion when checking neighbor heights
 var _in_pit_check: bool = false
 
-## Cached neighbor heights for height limiting (cleared after each get_height_at call)
+## Cached neighbor heights for height limiting (bounded to prevent unbounded growth)
 var _height_limit_cache: Dictionary = {}
+const HEIGHT_CACHE_MAX_SIZE: int = 2048
 
 
 func _limit_height_difference(x: float, z: float, height: float, max_diff: float) -> float:
@@ -842,7 +843,9 @@ func _limit_height_difference(x: float, z: float, height: float, max_diff: float
 	if min_neighbor_height != INF and height - min_neighbor_height > max_diff:
 		height = min_neighbor_height + max_diff
 
-	# Cache the result
+	# Cache the result (clear if too large to prevent unbounded memory growth)
+	if _height_limit_cache.size() >= HEIGHT_CACHE_MAX_SIZE:
+		_height_limit_cache.clear()
 	_height_limit_cache[cache_key] = height
 	return height
 
@@ -1053,7 +1056,7 @@ func get_height_at(x: float, z: float, skip_pit_check: bool = false) -> float:
 		if dist_to_cave < cave_flat_inner:
 			return cave_platform_height
 		elif dist_to_cave < cave_flat_outer:
-			break  # In falloff zone - let terrain compute, ramp applied at end
+			continue  # In falloff zone for this cave - still check other caves for flat zone
 
 	# Check all water bodies (ponds and lakes) for terrain depression
 	for body in water_bodies:
@@ -1656,6 +1659,19 @@ func _cross_product_2d(a: Vector2, b: Vector2) -> float:
 	return a.x * b.y - a.y * b.x
 
 
+## Shared river water material (avoids shader recompile per river)
+var _river_water_material: StandardMaterial3D = null
+
+func _get_river_water_material() -> StandardMaterial3D:
+	if not _river_water_material:
+		_river_water_material = StandardMaterial3D.new()
+		_river_water_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_river_water_material.vertex_color_use_as_albedo = true
+		_river_water_material.roughness = 0.1
+		_river_water_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return _river_water_material
+
+
 func _spawn_entire_river(river_idx: int, river: Dictionary) -> void:
 	## Spawn an entire river as one continuous mesh
 	var path: Array = river["path"]
@@ -1705,12 +1721,13 @@ func _spawn_entire_river(river_idx: int, river: Dictionary) -> void:
 			var dir_out: Vector2 = (path[i + 1] - path[i]).normalized()
 
 			# Calculate the miter direction (bisector of the angle)
-			var miter: Vector2 = (dir_in + dir_out).normalized()
-
-			# If directions are nearly opposite, use perpendicular to incoming
-			if miter.length() < 0.1:
+			# Check sum length BEFORE normalizing to detect near-180-degree bends
+			var miter_sum: Vector2 = dir_in + dir_out
+			if miter_sum.length() < 0.1:
+				# Directions nearly opposite — use perpendicular to incoming
 				perpendicular = Vector2(-dir_in.y, dir_in.x)
 			else:
+				var miter: Vector2 = miter_sum.normalized()
 				perpendicular = Vector2(-miter.y, miter.x)
 
 				# Calculate miter length factor to maintain consistent width
@@ -1774,13 +1791,8 @@ func _spawn_entire_river(river_idx: int, river: Dictionary) -> void:
 
 	water_mesh.mesh = st.commit()
 
-	# Semi-transparent water material
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.vertex_color_use_as_albedo = true
-	mat.roughness = 0.1
-	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	water_mesh.material_override = mat
+	# Semi-transparent water material (shared across all rivers to avoid shader recompiles)
+	water_mesh.material_override = _get_river_water_material()
 
 	river_root.add_child(water_mesh)
 

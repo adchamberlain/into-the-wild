@@ -289,6 +289,9 @@ func _restore_focus() -> void:
 
 
 func _do_restore_focus() -> void:
+	# Guard: menu may have been closed during the 2-frame await in _restore_focus
+	if not is_open:
+		return
 	if recipe_button_list.is_empty():
 		return
 
@@ -299,10 +302,13 @@ func _do_restore_focus() -> void:
 		focused_recipe_index = 0
 
 	var button: Button = recipe_button_list[focused_recipe_index]
+	if not is_instance_valid(button):
+		return
 	button.grab_focus()
 	# Scroll to keep the focused item visible
 	var item_panel: Control = button.get_parent().get_parent()
-	scroll_container.ensure_control_visible(item_panel)
+	if is_instance_valid(item_panel):
+		scroll_container.ensure_control_visible(item_panel)
 
 
 ## Navigate through recipe list with D-pad.

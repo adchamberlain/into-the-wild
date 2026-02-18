@@ -102,16 +102,18 @@ var hud_update_timer: float = 0.0
 func _ready() -> void:
 	# Connect to time manager
 	if time_manager_path:
-		time_manager = get_node(time_manager_path)
-		time_manager.time_changed.connect(_on_time_changed)
-		time_manager.period_changed.connect(_on_period_changed)
-		if time_manager.has_signal("day_changed"):
-			time_manager.day_changed.connect(_on_day_changed)
-		_update_time_display()
+		time_manager = get_node_or_null(time_manager_path)
+		if time_manager:
+			time_manager.time_changed.connect(_on_time_changed)
+			time_manager.period_changed.connect(_on_period_changed)
+			if time_manager.has_signal("day_changed"):
+				time_manager.day_changed.connect(_on_day_changed)
+			_update_time_display()
 
 	# Connect to player for interaction prompts, inventory, stats, and equipment
 	if player_path:
-		player = get_node(player_path)
+		player = get_node_or_null(player_path)
+	if player:
 		if player.has_signal("interaction_target_changed"):
 			player.interaction_target_changed.connect(_on_interaction_target_changed)
 		if player.has_signal("interaction_cleared"):
