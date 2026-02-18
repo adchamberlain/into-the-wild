@@ -592,7 +592,7 @@ func _try_use_equipped() -> void:
 
 func _try_move_structure() -> void:
 	# Check if we're looking at a structure
-	if current_interaction_target and current_interaction_target.is_in_group("structure"):
+	if is_instance_valid(current_interaction_target) and current_interaction_target.is_in_group("structure"):
 		# Torches and lodestones can only be picked up, not moved
 		var stype: String = current_interaction_target.get("structure_type") if current_interaction_target.get("structure_type") else ""
 		if stype == "placed_torch" or stype == "lodestone" or stype == "placed_lantern":

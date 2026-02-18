@@ -37,7 +37,7 @@ func _find_weather_manager() -> void:
 
 func _process(delta: float) -> void:
 	# Animate the arrow with wind-like wobble
-	if arrow_pivot:
+	if is_instance_valid(arrow_pivot):
 		var wobble: float = sin(Time.get_ticks_msec() * 0.001 * wobble_speed + time_offset) * wobble_amount
 		arrow_pivot.rotation.y = base_rotation + wobble
 

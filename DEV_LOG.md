@@ -4425,6 +4425,29 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ---
 
+## Session 73 - Code Audit Bug Fixes Round 19 (2026-02-17)
+
+### Bug Fixes
+
+**1. Move structure crash on freed interaction target** - `player_controller.gd` `_try_move_structure()` checked `current_interaction_target` with truthiness instead of `is_instance_valid()`. If the target node was freed (e.g., structure destroyed by another system) between raycast detection and the move attempt, truthiness would pass but `is_in_group("structure")` would crash on the freed node.
+
+**2. Weather vane crash on freed arrow pivot** - `structure_weather_vane.gd` `_process()` checked `arrow_pivot` with truthiness instead of `is_instance_valid()`. If the child node was freed during scene transitions or tree restructuring, truthiness would pass but accessing `.rotation.y` on the freed node would crash. This runs every frame, making it a high-frequency crash risk.
+
+**3. Grapple rope normalize-before-check logic bug** - `grappling_hook.gd` `_update_rope_visual()` called `(to - from).normalized()` then checked `direction.length() > 0.001`. Since `normalized()` always returns length 0 (for zero vectors) or ~1.0, the guard was ineffective — any non-zero distance passed the check. When `from` and `to` were very close but not identical, `look_at()` was called with near-overlapping positions, causing visual glitches. Fixed by checking the actual distance (`length`) before normalizing.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/player/player_controller.gd` | Modified | `is_instance_valid(current_interaction_target)` in `_try_move_structure()` |
+| `scripts/campsite/structure_weather_vane.gd` | Modified | `is_instance_valid(arrow_pivot)` in `_process()` |
+| `scripts/player/grappling_hook.gd` | Modified | Check `length > 0.001` before normalizing in `_update_rope_visual()` |
+| `tests/test_bug_regressions.gd` | Modified | Added 3 regression tests (4 new assertions, 159 total) |
+
+### Test Results
+- All 691 regression tests pass (4 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks

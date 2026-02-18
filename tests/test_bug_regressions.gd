@@ -62,6 +62,9 @@ func run_tests() -> Dictionary:
 	test_fire_pit_warmth_zero_radius_guard()
 	test_storm_fire_player_uses_instance_valid()
 	test_fire_menu_actions_use_instance_valid()
+	test_move_structure_uses_instance_valid()
+	test_weather_vane_arrow_uses_instance_valid()
+	test_grapple_rope_checks_length_before_normalize()
 
 	return get_results()
 
@@ -1534,3 +1537,57 @@ func test_fire_menu_actions_use_instance_valid() -> void:
 	var fuel_body: String = source.substr(fuel_start, fuel_end - fuel_start)
 	assert_true(fuel_body.find("is_instance_valid(current_fire)") != -1,
 		"_on_add_fuel_pressed uses is_instance_valid for current_fire")
+
+
+func test_move_structure_uses_instance_valid() -> void:
+	## Bug: _try_move_structure used truthiness for current_interaction_target.
+	## If the target node was freed, truthiness would pass but is_in_group() would crash.
+	var script: GDScript = load("res://scripts/player/player_controller.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load player_controller.gd")
+		return
+
+	var source: String = script.source_code
+	var func_start: int = source.find("func _try_move_structure()")
+	var func_end: int = source.find("\nfunc ", func_start + 1)
+	var func_body: String = source.substr(func_start, func_end - func_start)
+	assert_true(func_body.find("is_instance_valid(current_interaction_target)") != -1,
+		"_try_move_structure uses is_instance_valid for current_interaction_target")
+
+
+func test_weather_vane_arrow_uses_instance_valid() -> void:
+	## Bug: Weather vane _process used truthiness for arrow_pivot.
+	## If the child node was freed during scene transitions, accessing .rotation.y would crash.
+	var script: GDScript = load("res://scripts/campsite/structure_weather_vane.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load structure_weather_vane.gd")
+		return
+
+	var source: String = script.source_code
+	var func_start: int = source.find("func _process(")
+	var func_end: int = source.find("\nfunc ", func_start + 1)
+	var func_body: String = source.substr(func_start, func_end - func_start)
+	assert_true(func_body.find("is_instance_valid(arrow_pivot)") != -1,
+		"Weather vane _process uses is_instance_valid for arrow_pivot")
+
+
+func test_grapple_rope_checks_length_before_normalize() -> void:
+	## Bug: _update_rope_visual normalized the direction vector before checking length.
+	## normalized() always returns length 0 or ~1.0, so the length > 0.001 guard was
+	## ineffective. When from and to were very close, look_at was called with near-
+	## overlapping positions. Fix: check the actual distance (length) before normalizing.
+	var script: GDScript = load("res://scripts/player/grappling_hook.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load grappling_hook.gd")
+		return
+
+	var source: String = script.source_code
+	var func_start: int = source.find("func _update_rope_visual(")
+	var func_end: int = source.find("\nfunc ", func_start + 1)
+	var func_body: String = source.substr(func_start, func_end - func_start)
+	# The length check must come before normalization
+	var length_check_pos: int = func_body.find("if length > 0.001")
+	var normalize_pos: int = func_body.find(".normalized()")
+	assert_true(length_check_pos != -1, "Rope visual checks length before normalizing")
+	assert_true(normalize_pos == -1 or length_check_pos < normalize_pos,
+		"Length check comes before normalization to avoid near-zero look_at")

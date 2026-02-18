@@ -454,8 +454,7 @@ func _update_rope_visual(from: Vector3, to: Vector3) -> void:
 
 	# Point the cylinder from start to end
 	# Cylinder is oriented along Y by default, so we need to rotate it
-	var direction: Vector3 = (to - from).normalized()
-	if direction.length() > 0.001:
+	if length > 0.001:
 		# Look at the target, then rotate to align cylinder
 		rope_mesh.look_at(to, Vector3.UP)
 		rope_mesh.rotate_object_local(Vector3.RIGHT, PI / 2)
