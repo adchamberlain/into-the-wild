@@ -4815,6 +4815,51 @@ Fourth round of bug hunting with 6 parallel agents covering: array/index bounds,
 
 ---
 
+## Session 84 — Round 6 Bug Fixes (11 Bugs)
+
+### Overview
+Sixth round of bug hunting with 6 parallel code review agents covering player scripts, campsite scripts, core/save/crafting, UI, world/terrain, and creatures/resources. Found and fixed 11 bugs across 10 source files. Added 13 regression tests (26 assertions).
+
+### Bugs Fixed
+
+#### Critical
+1. **Resource respawn timer double-counts days** — `resource_manager.gd` added 1440 minutes when `elapsed < 0` AND added `days_elapsed * 1440`, double-counting day boundaries. Resources respawned ~3x faster than intended after multi-day depletion. Removed the `if elapsed < 0` correction since `days_elapsed` already handles midnight crossings.
+2. **global_position set before node in scene tree** — `save_load.gd` `_recreate_structure` set `structure.global_position` before `add_child`, which requires scene tree. Changed to `structure.position`.
+3. **Structure registered without being in tree** — Same function registered structure with campsite_manager even when container was null. Moved registration inside container check, added early return with queue_free.
+4. **Underwater overlay CanvasLayer leak** — `player_controller.gd` checked `has_node("UnderwaterOverlay")` but the CanvasLayer child is named `"UnderwaterCanvas"`. Check always failed, creating a new CanvasLayer+ColorRect every water entry.
+
+#### High Priority
+5. **False fall damage after grapple** — `is_falling` not reset when `set_grappling(false)`, so pre-grapple `fall_start_y` caused incorrect fall damage on landing.
+6. **Grapple attach sound fires after cancel** — Timer created for attach sound (0.15s) played even after `cancel_grapple`. Now stores timer reference and disconnects on cancel.
+7. **Bird NaN flight target** — `_on_enter_fleeing` called `.normalized()` on zero-length Vector2 when bird is at same position as player. Added `length_squared` guard with random fallback direction.
+8. **Freed emitter crash in ambient sound** — `_sync_emitters` called `.stop()` on popped emitter without validity check. Added `is_instance_valid` guard.
+
+#### Medium Priority
+9. **Berry bush chop_progress_float not reset** — `berry_bush.respawn()` overrides without calling `super()` and forgot to reset `chop_progress_float`, making bush easier to harvest after respawn.
+10. **Fire pit flare/dim light energy fight** — `_process` dim logic and `flare()` tween both wrote `fire_light.light_energy` every frame, interrupting flare visual. Dim logic now skips when flare tween is active.
+11. **Freed nodes accumulate in cached arrays** — `save_load.gd` cleared `placed_structures` and `structure_counts` on load but not `_cached_fire_pits`/`_cached_shelters`. Also added `is_instance_valid(self)` guard in shelter/bed `_skip_to_dawn` callbacks.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/resources/resource_manager.gd` | Modified | Removed double day-count in elapsed time calculation |
+| `scripts/core/save_load.gd` | Modified | `position` instead of `global_position`, guarded registration, re-validate container after await, clear cached arrays |
+| `scripts/player/player_controller.gd` | Modified | Fixed underwater overlay name check, reset `is_falling` on grapple end |
+| `scripts/player/grappling_hook.gd` | Modified | Track and cancel attach sound timer |
+| `scripts/creatures/ambient_bird.gd` | Modified | Zero-vector guard on flee direction |
+| `scripts/core/ambient_sound_manager.gd` | Modified | `is_instance_valid` on popped emitter |
+| `scripts/resources/berry_bush.gd` | Modified | Reset `chop_progress_float` in respawn |
+| `scripts/campsite/structure_fire_pit.gd` | Modified | Skip dim when flare tween active |
+| `scripts/campsite/structure_shelter.gd` | Modified | `is_instance_valid(self)` in `_skip_to_dawn` |
+| `scripts/campsite/cabin_bed.gd` | Modified | `is_instance_valid(self)` in `_skip_to_dawn` |
+| `tests/test_bug_regressions.gd` | Modified | Added 13 regression tests (26 new assertions) |
+
+### Test Results
+- All 911 regression tests pass (30 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks

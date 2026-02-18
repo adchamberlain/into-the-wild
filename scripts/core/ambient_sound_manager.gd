@@ -228,8 +228,9 @@ func _sync_emitters(emitters: Array[AudioStreamPlayer3D], target_positions: Arra
 	# Remove excess emitters
 	while emitters.size() > target_positions.size():
 		var emitter: AudioStreamPlayer3D = emitters.pop_back()
-		emitter.stop()
-		emitter.queue_free()
+		if is_instance_valid(emitter):
+			emitter.stop()
+			emitter.queue_free()
 
 	# Update existing emitters or create new ones
 	for i in range(target_positions.size()):

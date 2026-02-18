@@ -154,6 +154,21 @@ func run_tests() -> Dictionary:
 	test_canvas_tent_uses_eat_method()
 	test_kitchen_uses_eat_method()
 
+	# Round 6 regression tests
+	test_resource_respawn_no_double_day_count()
+	test_save_load_uses_position_not_global()
+	test_save_load_guards_register_with_container()
+	test_underwater_effect_checks_canvas_name()
+	test_grapple_end_resets_is_falling()
+	test_grapple_cancel_clears_attach_timer()
+	test_bird_flee_guards_zero_vector()
+	test_ambient_sound_sync_checks_validity()
+	test_berry_bush_respawn_resets_chop_float()
+	test_fire_pit_dim_skips_during_flare()
+	test_save_load_clears_cached_arrays()
+	test_shelter_skip_dawn_checks_self_valid()
+	test_cabin_bed_skip_dawn_checks_self_valid()
+
 	return get_results()
 
 
@@ -3235,3 +3250,227 @@ func test_kitchen_uses_eat_method() -> void:
 	var cook_body: String = src.substr(cook_idx, 1800)
 	assert_true(cook_body.find(".eat(") != -1,
 		"interact uses eat() method for hunger restore")
+
+
+# ============================================================
+# Round 6 regression tests
+# ============================================================
+
+
+func test_resource_respawn_no_double_day_count() -> void:
+	## Bug: resource_manager.gd added 1440 min when elapsed < 0 AND added days_elapsed * 1440,
+	## double-counting day boundaries so resources respawned ~3x too fast.
+	var file: FileAccess = FileAccess.open("res://scripts/resources/resource_manager.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open resource_manager.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	# The old pattern: if elapsed < 0: elapsed += 24.0 * 60.0 should be gone
+	assert_true(src.find("if elapsed < 0") == -1,
+		"resource_manager no longer has 'if elapsed < 0' day correction (days_elapsed handles it)")
+	# days_elapsed multiplication should still exist
+	assert_true(src.find("days_elapsed * 24.0 * 60.0") != -1,
+		"resource_manager uses days_elapsed for day tracking")
+
+
+func test_save_load_uses_position_not_global() -> void:
+	## Bug: save_load.gd set global_position before add_child (node not in tree).
+	var file: FileAccess = FileAccess.open("res://scripts/core/save_load.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open save_load.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var recreate_idx: int = src.find("func _recreate_structure")
+	assert_true(recreate_idx != -1, "save_load has _recreate_structure")
+	var body: String = src.substr(recreate_idx, 2500)
+	# Should use position = pos, not global_position = pos before add_child
+	var pos_assign_idx: int = body.find("structure.position = pos")
+	var add_child_idx: int = body.find("container.add_child(structure)")
+	assert_true(pos_assign_idx != -1,
+		"save_load uses structure.position (not global_position) before add_child")
+	assert_true(pos_assign_idx < add_child_idx,
+		"position assignment happens before add_child")
+
+
+func test_save_load_guards_register_with_container() -> void:
+	## Bug: save_load.gd registered structure with campsite_manager even when container was null.
+	var file: FileAccess = FileAccess.open("res://scripts/core/save_load.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open save_load.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var recreate_idx: int = src.find("func _recreate_structure")
+	assert_true(recreate_idx != -1, "save_load has _recreate_structure")
+	var body: String = src.substr(recreate_idx, 2500)
+	# register_structure should only be called inside the if container block
+	var register_idx: int = body.find("register_structure")
+	var if_container_idx: int = body.find("if container:")
+	assert_true(if_container_idx != -1, "save_load checks if container exists")
+	assert_true(register_idx > if_container_idx,
+		"register_structure is inside container check")
+
+
+func test_underwater_effect_checks_canvas_name() -> void:
+	## Bug: _show_underwater_effect checked has_node("UnderwaterOverlay") but
+	## the CanvasLayer is named "UnderwaterCanvas", so it always created new nodes.
+	var file: FileAccess = FileAccess.open("res://scripts/player/player_controller.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open player_controller.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var show_idx: int = src.find("func _show_underwater_effect")
+	assert_true(show_idx != -1, "player has _show_underwater_effect")
+	var body: String = src.substr(show_idx, 600)
+	# Should check for "UnderwaterCanvas" not "UnderwaterOverlay"
+	assert_true(body.find('has_node("UnderwaterCanvas")') != -1,
+		"_show_underwater_effect checks for UnderwaterCanvas (the actual child name)")
+	assert_true(body.find('has_node("UnderwaterOverlay")') == -1,
+		"_show_underwater_effect does NOT check for UnderwaterOverlay (wrong name)")
+
+
+func test_grapple_end_resets_is_falling() -> void:
+	## Bug: is_falling was not reset when grapple ended, causing false fall damage
+	## from pre-grapple fall_start_y height.
+	var file: FileAccess = FileAccess.open("res://scripts/player/player_controller.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open player_controller.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var set_idx: int = src.find("func set_grappling")
+	assert_true(set_idx != -1, "player has set_grappling")
+	var body: String = src.substr(set_idx, 400)
+	assert_true(body.find("is_falling = false") != -1,
+		"set_grappling resets is_falling when grapple ends")
+
+
+func test_grapple_cancel_clears_attach_timer() -> void:
+	## Bug: Grapple attach sound timer fired even after cancel_grapple.
+	var file: FileAccess = FileAccess.open("res://scripts/player/grappling_hook.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open grappling_hook.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	# Should have attach_sound_timer variable
+	assert_true(src.find("attach_sound_timer") != -1,
+		"grappling_hook tracks attach_sound_timer")
+	# cancel_grapple should clear the timer
+	var cancel_idx: int = src.find("func cancel_grapple")
+	assert_true(cancel_idx != -1, "grappling_hook has cancel_grapple")
+	var body: String = src.substr(cancel_idx, 500)
+	assert_true(body.find("attach_sound_timer") != -1,
+		"cancel_grapple handles attach_sound_timer cleanup")
+
+
+func test_bird_flee_guards_zero_vector() -> void:
+	## Bug: Bird flee direction called .normalized() on zero-length Vector2
+	## when bird is at same XZ position as player, producing NaN.
+	var file: FileAccess = FileAccess.open("res://scripts/creatures/ambient_bird.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open ambient_bird.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var flee_idx: int = src.find("_on_enter_fleeing")
+	assert_true(flee_idx != -1, "bird has _on_enter_fleeing")
+	var body: String = src.substr(flee_idx, 600)
+	assert_true(body.find("length_squared") != -1,
+		"flee direction guards against zero-length vector")
+
+
+func test_ambient_sound_sync_checks_validity() -> void:
+	## Bug: _sync_emitters called .stop() on emitter that may already be freed.
+	var file: FileAccess = FileAccess.open("res://scripts/core/ambient_sound_manager.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open ambient_sound_manager.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var sync_idx: int = src.find("func _sync_emitters")
+	assert_true(sync_idx != -1, "ambient_sound_manager has _sync_emitters")
+	var body: String = src.substr(sync_idx, 400)
+	assert_true(body.find("is_instance_valid(emitter)") != -1,
+		"_sync_emitters checks emitter validity before stop()")
+
+
+func test_berry_bush_respawn_resets_chop_float() -> void:
+	## Bug: berry_bush.respawn() didn't reset chop_progress_float,
+	## making the bush easier to harvest after respawn.
+	var file: FileAccess = FileAccess.open("res://scripts/resources/berry_bush.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open berry_bush.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var respawn_idx: int = src.find("func respawn")
+	assert_true(respawn_idx != -1, "berry_bush has respawn")
+	var body: String = src.substr(respawn_idx, 400)
+	assert_true(body.find("chop_progress_float = 0.0") != -1,
+		"berry_bush respawn resets chop_progress_float")
+
+
+func test_fire_pit_dim_skips_during_flare() -> void:
+	## Bug: _process dim logic and flare() tween both wrote fire_light.light_energy,
+	## causing visual fighting during flare animation.
+	var file: FileAccess = FileAccess.open("res://scripts/campsite/structure_fire_pit.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open structure_fire_pit.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	# The dim logic should check if flare_tween is active before adjusting light
+	var process_idx: int = src.find("func _process")
+	assert_true(process_idx != -1, "fire_pit has _process")
+	var body: String = src.substr(process_idx, 1200)
+	assert_true(body.find("flare_tween") != -1,
+		"_process dim logic checks flare_tween before adjusting light")
+
+
+func test_save_load_clears_cached_arrays() -> void:
+	## Bug: save_load cleared placed_structures and structure_counts but not
+	## _cached_fire_pits and _cached_shelters, leaving freed node references.
+	var file: FileAccess = FileAccess.open("res://scripts/core/save_load.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open save_load.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	assert_true(src.find("_cached_fire_pits") != -1,
+		"save_load clears _cached_fire_pits on load")
+	assert_true(src.find("_cached_shelters") != -1,
+		"save_load clears _cached_shelters on load")
+
+
+func test_shelter_skip_dawn_checks_self_valid() -> void:
+	## Bug: shelter _skip_to_dawn callback could fire on freed structure.
+	var file: FileAccess = FileAccess.open("res://scripts/campsite/structure_shelter.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open structure_shelter.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var skip_idx: int = src.find("func _skip_to_dawn")
+	assert_true(skip_idx != -1, "shelter has _skip_to_dawn")
+	var body: String = src.substr(skip_idx, 300)
+	assert_true(body.find("is_instance_valid(self)") != -1,
+		"shelter _skip_to_dawn checks self validity")
+
+
+func test_cabin_bed_skip_dawn_checks_self_valid() -> void:
+	## Bug: cabin bed _skip_to_dawn callback could fire on freed structure.
+	var file: FileAccess = FileAccess.open("res://scripts/campsite/cabin_bed.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open cabin_bed.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var skip_idx: int = src.find("func _skip_to_dawn")
+	assert_true(skip_idx != -1, "cabin_bed has _skip_to_dawn")
+	var body: String = src.substr(skip_idx, 300)
+	assert_true(body.find("is_instance_valid(self)") != -1,
+		"cabin_bed _skip_to_dawn checks self validity")

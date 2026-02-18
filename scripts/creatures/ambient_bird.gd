@@ -444,8 +444,10 @@ func _on_enter_fleeing() -> void:
 
 	# Flee direction (away from player)
 	if is_instance_valid(player):
-		var flee_dir: Vector2 = Vector2(global_position.x - player.global_position.x,
-										 global_position.z - player.global_position.z).normalized()
+		var flee_vec: Vector2 = Vector2(global_position.x - player.global_position.x,
+										 global_position.z - player.global_position.z)
+		# Guard against zero-length vector (bird at same position as player) to avoid NaN
+		var flee_dir: Vector2 = flee_vec.normalized() if flee_vec.length_squared() > 0.001 else Vector2(rng.randf_range(-1.0, 1.0), rng.randf_range(-1.0, 1.0)).normalized()
 
 		var distance: float = rng.randf_range(20.0, 35.0)
 		var target_xz: Vector2 = Vector2(global_position.x, global_position.z) + flee_dir * distance

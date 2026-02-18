@@ -52,8 +52,9 @@ func _on_berry_gather_complete() -> void:
 
 ## Override respawn to restore berries visibility.
 func respawn() -> void:
-	# Reset state
+	# Reset state (must reset chop_progress_float too, since we don't call super.respawn())
 	chop_progress = 0
+	chop_progress_float = 0.0
 	scale = original_scale
 	is_depleted = false
 

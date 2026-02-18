@@ -62,9 +62,10 @@ func _process(delta: float) -> void:
 			extinguish()
 			print("[FirePit] The fire has burned out - add wood!")
 		elif fuel_remaining < max_fuel * 0.3 and is_instance_valid(fire_light):
-			# Fire dims as fuel runs low (below 30%)
-			var dim_factor: float = fuel_remaining / (max_fuel * 0.3)
-			fire_light.light_energy = base_light_energy * effectiveness * (0.5 + 0.5 * dim_factor)
+			# Fire dims as fuel runs low (below 30%) — skip if flare tween is animating
+			if not (flare_tween and flare_tween.is_valid()):
+				var dim_factor: float = fuel_remaining / (max_fuel * 0.3)
+				fire_light.light_energy = base_light_energy * effectiveness * (0.5 + 0.5 * dim_factor)
 
 
 func interact(player: Node) -> bool:

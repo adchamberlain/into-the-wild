@@ -136,13 +136,11 @@ func _check_respawns() -> void:
 		if is_instance_valid(resource) and resource.resource_type == "wood":
 			respawn_minutes = tree_respawn_time_hours * 60.0
 
-		# Handle day wrap-around (track elapsed days)
+		# Calculate total elapsed time using tracked day rollovers
 		var elapsed: float = current_time_minutes - depleted_time_minutes
 		var days_elapsed: int = info.get("days_elapsed", 0)
-		if elapsed < 0:
-			elapsed += 24.0 * 60.0  # Add a full day
-
-		# Add accumulated days
+		# days_elapsed already counts all midnight crossings, so negative elapsed
+		# (clock wrapped past midnight) is naturally corrected by adding full days
 		elapsed += days_elapsed * 24.0 * 60.0
 
 		if elapsed >= respawn_minutes:

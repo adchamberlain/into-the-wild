@@ -38,6 +38,7 @@ var grapple_start_position: Vector3
 # Visuals
 var rope_mesh: MeshInstance3D
 var hook_mesh: Node3D
+var attach_sound_timer: SceneTreeTimer
 
 # Target tracking for reticle
 var current_target_valid: bool = false
@@ -291,9 +292,11 @@ func _start_grapple(anchor: Vector3, landing: Vector3) -> void:
 	# Create hook at anchor
 	_create_hook_visual(anchor)
 
-	# Play attach sound after short delay
-	get_tree().create_timer(0.15).timeout.connect(func():
+	# Play attach sound after short delay (store timer to cancel if grapple is cancelled)
+	attach_sound_timer = get_tree().create_timer(0.15)
+	attach_sound_timer.timeout.connect(func():
 		SFXManager.play_sfx("grapple_attach")
+		attach_sound_timer = null
 	)
 
 	# Calculate ascent time
@@ -411,6 +414,12 @@ func cancel_grapple() -> void:
 
 	if grapple_tween and grapple_tween.is_valid():
 		grapple_tween.kill()
+
+	# Cancel pending attach sound
+	if attach_sound_timer:
+		for conn: Dictionary in attach_sound_timer.timeout.get_connections():
+			attach_sound_timer.timeout.disconnect(conn["callable"])
+		attach_sound_timer = null
 
 	# Clean up visuals
 	_remove_rope_visual()

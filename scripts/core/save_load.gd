@@ -730,6 +730,11 @@ func _apply_campsite_data(data: Dictionary) -> void:
 
 	campsite_manager.placed_structures.clear()
 	campsite_manager.structure_counts.clear()
+	# Also clear cached arrays to prevent freed node references accumulating
+	if "_cached_fire_pits" in campsite_manager:
+		campsite_manager._cached_fire_pits.clear()
+	if "_cached_shelters" in campsite_manager:
+		campsite_manager._cached_shelters.clear()
 
 	# Wait a frame for cleanup
 	if not is_inside_tree():
@@ -737,6 +742,9 @@ func _apply_campsite_data(data: Dictionary) -> void:
 	await get_tree().process_frame
 	if not is_inside_tree():
 		return
+
+	# Re-validate structures_container after await (could be freed during scene transition)
+	structures_container = get_parent().get_node_or_null("Structures")
 
 	# Recreate structures
 	if data.has("structures"):
@@ -787,7 +795,8 @@ func _recreate_structure(struct_data: Dictionary, container: Node) -> void:
 	if not is_cave_structure and chunk_manager and chunk_manager.has_method("get_height_at"):
 		var terrain_y: float = chunk_manager.get_height_at(pos.x, pos.z)
 		pos.y = terrain_y
-	structure.global_position = pos
+	# Set local position before adding to tree (global_position requires scene tree)
+	structure.position = pos
 
 	# Restore rotation so doors/openings face the correct direction
 	if struct_data.has("rotation_y"):
@@ -795,9 +804,12 @@ func _recreate_structure(struct_data: Dictionary, container: Node) -> void:
 
 	if container:
 		container.add_child(structure)
-
-	# Register with campsite manager
-	campsite_manager.register_structure(structure, structure_type)
+		# Only register with campsite manager if structure is in the scene tree
+		campsite_manager.register_structure(structure, structure_type)
+	else:
+		push_warning("[SaveLoad] No container for structure %s - not added to tree" % structure_type)
+		structure.queue_free()
+		return
 
 	# Restore state
 	if struct_data.has("is_lit") and structure.has_method("_set_fire_state"):

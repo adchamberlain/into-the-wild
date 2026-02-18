@@ -564,6 +564,9 @@ func set_grappling(grappling: bool) -> void:
 		# Clear interaction target while grappling
 		current_interaction_target = null
 		interaction_cleared.emit()
+	else:
+		# Reset fall tracking so pre-grapple fall_start_y doesn't cause false fall damage
+		is_falling = false
 
 
 ## Set whether player is in water (swimming). Uses ref-counting to handle
@@ -588,7 +591,7 @@ func set_in_water(in_water: bool) -> void:
 
 func _show_underwater_effect() -> void:
 	# Create underwater overlay if it doesn't exist
-	if not has_node("UnderwaterOverlay"):
+	if not has_node("UnderwaterCanvas"):
 		var overlay := ColorRect.new()
 		overlay.name = "UnderwaterOverlay"
 		overlay.color = Color(0.1, 0.3, 0.5, 0.4)  # Blue tint
