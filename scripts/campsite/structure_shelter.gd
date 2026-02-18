@@ -122,7 +122,7 @@ func _connect_to_time_manager() -> void:
 
 func _on_period_changed(period: String) -> void:
 	# If player is resting and night has arrived, trigger sleep sequence
-	if is_player_resting and resting_player:
+	if is_player_resting and is_instance_valid(resting_player):
 		var time_manager: Node = _find_time_manager()
 		if time_manager and _is_nighttime(time_manager):
 			print("[Shelter] Night has fallen while resting - sleeping until dawn...")
@@ -159,6 +159,8 @@ func _skip_to_dawn(player: Node, time_manager: Node) -> void:
 	print("[Shelter] Advanced to day %d" % time_manager.current_day)
 
 	# Full heal and hunger restore when sleeping through the night
+	if not is_instance_valid(player):
+		return
 	if player.has_node("PlayerStats"):
 		var stats: Node = player.get_node("PlayerStats")
 		if stats.has_method("heal"):

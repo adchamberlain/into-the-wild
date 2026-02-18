@@ -4260,6 +4260,30 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ---
 
+## Session 66 - Code Audit Bug Fixes Round 12 (2026-02-17)
+
+### Bug Fixes
+
+**1. Sleep callbacks crash on freed player** - `structure_shelter.gd`, `structure_canvas_tent.gd`, and `cabin_bed.gd` all have `_skip_to_dawn()` / `_do_full_restore()` / `_wake_up()` functions called as async callbacks from `fade_to_black_and_back()`. These fire 2-3 seconds later, but never checked `is_instance_valid(player)`. If the player died during the fade (e.g., starvation), accessing `player.has_node()` on the freed reference would crash. Added validity guards to all 5 affected functions across 3 files.
+
+**2. Garden state lost on save/load** - `structure_garden.gd` had no `get_save_data()` or `load_save_data()` methods. All garden state (`production_timer`, `stored_herbs`, `can_tend`, `tend_cooldown`) was lost on every save/load cycle. Players lost accumulated herbs and cooldowns reset, allowing immediate re-tending. Added both methods with proper serialization.
+
+**3. Shelter resting_player uses truthiness instead of validity** - `structure_shelter.gd` `_on_period_changed()` checked `if is_player_resting and resting_player:` but a freed node passes truthiness in GDScript. Changed to `is_instance_valid(resting_player)` to properly detect freed player during period change signals.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/campsite/structure_shelter.gd` | Modified | `is_instance_valid(player)` in `_skip_to_dawn()`, `is_instance_valid(resting_player)` in `_on_period_changed()` |
+| `scripts/campsite/structure_canvas_tent.gd` | Modified | `is_instance_valid(player)` in `_skip_to_dawn()` |
+| `scripts/campsite/cabin_bed.gd` | Modified | `is_instance_valid(player)` in `_do_full_restore()` and `_wake_up()` |
+| `scripts/campsite/structure_garden.gd` | Modified | Added `get_save_data()` and `load_save_data()` for all state variables |
+| `tests/test_bug_regressions.gd` | Modified | Added 3 regression tests (11 new assertions, 111 total) |
+
+### Test Results
+- All 643 regression tests pass (11 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks

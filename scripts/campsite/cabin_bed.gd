@@ -136,6 +136,8 @@ func _do_rest(player: Node) -> void:
 
 func _do_full_restore(player: Node) -> void:
 	# Full restore - cabin bed bonus!
+	if not is_instance_valid(player):
+		return
 	if player.has_node("PlayerStats"):
 		var stats: Node = player.get_node("PlayerStats")
 		if stats.has_method("heal"):
@@ -148,6 +150,9 @@ func _do_full_restore(player: Node) -> void:
 func _wake_up(player: Node) -> void:
 	is_player_sleeping = false
 	sleeping_player = null
+
+	if not is_instance_valid(player):
+		return
 
 	# Position player standing next to the bed (positive X = right side of bed)
 	var exit_offset: Vector3 = Vector3(1.0, 0, 0).rotated(Vector3.UP, rotation.y)

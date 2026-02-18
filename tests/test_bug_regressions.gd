@@ -41,6 +41,9 @@ func run_tests() -> Dictionary:
 	test_fire_effectiveness_checks_instance_valid()
 	test_music_manager_no_infinite_recursion()
 	test_fire_menu_division_by_zero_guard()
+	test_sleep_callbacks_check_player_validity()
+	test_garden_state_saved_and_restored()
+	test_shelter_resting_player_uses_instance_valid()
 
 	return get_results()
 
@@ -967,3 +970,105 @@ func test_fire_menu_division_by_zero_guard() -> void:
 	assert_true(guard_pos != -1, "Fire menu has max_fuel > 0 guard")
 	assert_true(guard_pos < div_pos,
 		"max_fuel > 0 guard comes before the division")
+
+
+func test_sleep_callbacks_check_player_validity() -> void:
+	## Bug: Shelter, canvas tent, and cabin bed _skip_to_dawn() / _do_full_restore()
+	## are called as async callbacks from fade_to_black_and_back(), which fires after
+	## a 2-3 second delay. If the player dies during the fade, accessing
+	## player.has_node() on the freed reference crashes.
+	# Check shelter
+	var shelter_script: GDScript = load("res://scripts/campsite/structure_shelter.gd") as GDScript
+	if shelter_script:
+		var source: String = shelter_script.source_code
+		var fn_start: int = source.find("func _skip_to_dawn(")
+		var fn_end: int = source.find("\nfunc ", fn_start + 1)
+		if fn_end == -1:
+			fn_end = source.length()
+		var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+		assert_true(fn_body.find("is_instance_valid(player)") != -1,
+			"Shelter _skip_to_dawn() checks is_instance_valid(player)")
+
+	# Check canvas tent
+	var tent_script: GDScript = load("res://scripts/campsite/structure_canvas_tent.gd") as GDScript
+	if tent_script:
+		var source: String = tent_script.source_code
+		var fn_start: int = source.find("func _skip_to_dawn(")
+		var fn_end: int = source.find("\nfunc ", fn_start + 1)
+		if fn_end == -1:
+			fn_end = source.length()
+		var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+		assert_true(fn_body.find("is_instance_valid(player)") != -1,
+			"CanvasTent _skip_to_dawn() checks is_instance_valid(player)")
+
+	# Check cabin bed _do_full_restore
+	var bed_script: GDScript = load("res://scripts/campsite/cabin_bed.gd") as GDScript
+	if bed_script:
+		var source: String = bed_script.source_code
+		var fn_start: int = source.find("func _do_full_restore(")
+		var fn_end: int = source.find("\nfunc ", fn_start + 1)
+		if fn_end == -1:
+			fn_end = source.length()
+		var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+		assert_true(fn_body.find("is_instance_valid(player)") != -1,
+			"CabinBed _do_full_restore() checks is_instance_valid(player)")
+
+	# Check cabin bed _wake_up
+	if bed_script:
+		var source: String = bed_script.source_code
+		var fn_start: int = source.find("func _wake_up(")
+		var fn_end: int = source.find("\nfunc ", fn_start + 1)
+		if fn_end == -1:
+			fn_end = source.length()
+		var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+		assert_true(fn_body.find("is_instance_valid(player)") != -1,
+			"CabinBed _wake_up() checks is_instance_valid(player)")
+
+
+func test_garden_state_saved_and_restored() -> void:
+	## Bug: structure_garden.gd had no get_save_data() or load_save_data() methods.
+	## All garden state (production progress, stored herbs, tend cooldown) was lost
+	## on every save/load cycle. Players lost accumulated herbs and cooldowns reset.
+	var garden_script: GDScript = load("res://scripts/campsite/structure_garden.gd") as GDScript
+	if not garden_script:
+		assert_true(false, "Could not load structure_garden.gd")
+		return
+
+	var source: String = garden_script.source_code
+
+	# Must have get_save_data method
+	assert_true(source.find("func get_save_data()") != -1,
+		"Garden implements get_save_data()")
+	# Must have load_save_data method
+	assert_true(source.find("func load_save_data(") != -1,
+		"Garden implements load_save_data()")
+	# Must save key state fields
+	assert_true(source.find('"production_timer"') != -1,
+		"Garden saves production_timer")
+	assert_true(source.find('"stored_herbs"') != -1,
+		"Garden saves stored_herbs")
+	assert_true(source.find('"can_tend"') != -1,
+		"Garden saves can_tend")
+	assert_true(source.find('"tend_cooldown"') != -1,
+		"Garden saves tend_cooldown")
+
+
+func test_shelter_resting_player_uses_instance_valid() -> void:
+	## Bug: structure_shelter.gd _on_period_changed() checked
+	## "if is_player_resting and resting_player:" but resting_player could be a
+	## freed node that still passes truthiness. Subsequent code would then pass
+	## the freed reference to _trigger_sleep_sequence(), crashing the game.
+	var shelter_script: GDScript = load("res://scripts/campsite/structure_shelter.gd") as GDScript
+	if not shelter_script:
+		assert_true(false, "Could not load structure_shelter.gd")
+		return
+
+	var source: String = shelter_script.source_code
+	var fn_start: int = source.find("func _on_period_changed(")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+
+	assert_true(fn_body.find("is_instance_valid(resting_player)") != -1,
+		"_on_period_changed() checks is_instance_valid(resting_player)")

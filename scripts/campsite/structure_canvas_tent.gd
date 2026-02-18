@@ -27,6 +27,8 @@ func _skip_to_dawn(player: Node, time_manager: Node) -> void:
 	print("[CanvasTent] Advanced to day %d" % time_manager.current_day)
 
 	# Full heal and better hunger restore in canvas tent
+	if not is_instance_valid(player):
+		return
 	if player.has_node("PlayerStats"):
 		var stats: Node = player.get_node("PlayerStats")
 		if stats.has_method("heal"):

@@ -94,6 +94,23 @@ func _find_hud() -> Node:
 	return null
 
 
+func get_save_data() -> Dictionary:
+	var data: Dictionary = super.get_save_data()
+	data["production_timer"] = production_timer
+	data["stored_herbs"] = stored_herbs
+	data["can_tend"] = can_tend
+	data["tend_cooldown"] = tend_cooldown
+	return data
+
+
+func load_save_data(data: Dictionary) -> void:
+	super.load_save_data(data)
+	production_timer = data.get("production_timer", 0.0)
+	stored_herbs = data.get("stored_herbs", 0)
+	can_tend = data.get("can_tend", true)
+	tend_cooldown = data.get("tend_cooldown", 0.0)
+
+
 func get_interaction_text() -> String:
 	if stored_herbs > 0:
 		return "Collect %d Herbs" % stored_herbs
