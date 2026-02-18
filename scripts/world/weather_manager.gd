@@ -149,7 +149,7 @@ func _update_storm_fire_effects(delta: float) -> void:
 	var player_pos: Vector3 = player.global_position if player else Vector3.ZERO
 
 	for fire: Node in fire_pits:
-		if not fire.has_method("is_lit") or not fire.is_lit:
+		if not "is_lit" in fire or not fire.is_lit:
 			continue
 
 		# Check if player is tending the fire (within interaction range)

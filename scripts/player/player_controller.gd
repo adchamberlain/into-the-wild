@@ -237,7 +237,7 @@ func _physics_process(delta: float) -> void:
 		_update_interaction_target()
 
 	# Periodically refresh interaction text for dynamic objects
-	if current_interaction_target:
+	if is_instance_valid(current_interaction_target):
 		interaction_text_refresh_timer += delta
 		if interaction_text_refresh_timer >= INTERACTION_TEXT_REFRESH_INTERVAL:
 			interaction_text_refresh_timer = 0.0
@@ -478,7 +478,7 @@ func _get_interaction_text(target: Node) -> String:
 
 
 func _try_interact() -> void:
-	if current_interaction_target and current_interaction_target.has_method("interact"):
+	if is_instance_valid(current_interaction_target) and current_interaction_target.has_method("interact"):
 		current_interaction_target.interact(self)
 		# Check if target was freed or queued for deletion (e.g., picked up torch) and clear HUD
 		if not is_instance_valid(current_interaction_target) or current_interaction_target.is_queued_for_deletion():

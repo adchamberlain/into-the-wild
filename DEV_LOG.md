@@ -4120,6 +4120,32 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ---
 
+## Session 60 - Code Audit Bug Fixes Round 6 (2026-02-17)
+
+### Bug Fixes
+
+**1. Storms never extinguish fires** - `weather_manager.gd` used `has_method("is_lit")` to check if a fire pit has fire state, but `is_lit` is a property (var), not a method. `has_method()` always returned false, so the `continue` always fired and storms could never extinguish fires. Same bug pattern as the save_load fire state fix from Round 3. Changed to `"is_lit" in fire`.
+
+**2. Stale interaction target crashes** - `player_controller.gd` used `if current_interaction_target:` (lines 240, 481) to check the target before accessing it. This doesn't detect freed nodes — if a resource was gathered (calls `queue_free()`), accessing methods on the stale reference crashes. Changed both locations to `is_instance_valid(current_interaction_target)`.
+
+**3. Drying rack remove_item unchecked** - `structure_drying_rack.gd` `_start_drying()` called `remove_item()` but ignored the return value. If removal failed, drying would start without consuming the food item. Now checks return value and aborts if removal fails.
+
+**4. Smoker remove_item unchecked** - `structure_smoker.gd` `_start_smoking()` called `remove_item()` twice (meat + wood) without checking either return value. Now checks both: if fuel removal fails after meat was taken, the meat is refunded.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/world/weather_manager.gd` | Modified | Changed `has_method("is_lit")` to `"is_lit" in fire` in storm effect |
+| `scripts/player/player_controller.gd` | Modified | Changed interaction target checks to `is_instance_valid()` |
+| `scripts/campsite/structure_drying_rack.gd` | Modified | Check `remove_item()` return value in `_start_drying()` |
+| `scripts/campsite/structure_smoker.gd` | Modified | Check both `remove_item()` return values, refund meat if fuel removal fails |
+| `tests/test_bug_regressions.gd` | Modified | Added 4 regression tests (9 new assertions, 63 total) |
+
+### Test Results
+- All 595 regression tests pass (9 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks

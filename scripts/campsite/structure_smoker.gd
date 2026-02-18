@@ -73,9 +73,15 @@ func _start_smoking(meat_type: String) -> void:
 	if not player_inventory.has_item("wood", FUEL_REQUIRED):
 		return
 
-	# Consume meat and fuel
-	player_inventory.remove_item(meat_type, 1)
-	player_inventory.remove_item("wood", FUEL_REQUIRED)
+	# Consume meat and fuel - verify both succeed
+	var removed_meat: bool = player_inventory.remove_item(meat_type, 1)
+	if not removed_meat:
+		return
+	var removed_fuel: bool = player_inventory.remove_item("wood", FUEL_REQUIRED)
+	if not removed_fuel:
+		# Refund the meat if fuel removal failed
+		player_inventory.add_item(meat_type, 1)
+		return
 
 	current_meat = meat_type
 	is_smoking = true

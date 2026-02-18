@@ -62,7 +62,9 @@ func _start_drying(food_type: String) -> void:
 	if not player_inventory or not player_inventory.has_item(food_type):
 		return
 
-	player_inventory.remove_item(food_type, 1)
+	var removed: bool = player_inventory.remove_item(food_type, 1)
+	if not removed:
+		return
 	current_food = food_type
 	is_drying = true
 	drying_progress = 0.0

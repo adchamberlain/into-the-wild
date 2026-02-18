@@ -22,6 +22,10 @@ func run_tests() -> Dictionary:
 	test_snare_trap_state_saved_and_restored()
 	test_cook_verifies_item_removal()
 	test_pause_load_resumes_after_load()
+	test_storm_fire_uses_property_check()
+	test_interaction_target_uses_instance_valid()
+	test_drying_rack_verifies_item_removal()
+	test_smoker_verifies_item_removal()
 
 	return get_results()
 
@@ -447,3 +451,102 @@ func test_pause_load_resumes_after_load() -> void:
 	assert_true(resume_pos != -1, "Slot handler calls resume_game()")
 	assert_true(resume_pos > load_pos,
 		"resume_game() is called AFTER load_game_slot() (not before)")
+
+
+func test_storm_fire_uses_property_check() -> void:
+	## Bug: weather_manager.gd used has_method("is_lit") to check if a fire pit
+	## has the is_lit property, but is_lit is a var (property), not a func.
+	## has_method() always returned false, so storms could NEVER extinguish fires.
+	var weather_script: GDScript = load("res://scripts/world/weather_manager.gd") as GDScript
+	if not weather_script:
+		assert_true(false, "Could not load weather_manager.gd")
+		return
+
+	var source: String = weather_script.source_code
+
+	# Must use property check ("is_lit" in fire), NOT has_method("is_lit")
+	var storm_start: int = source.find("func _update_storm_fire_effects(")
+	var storm_end: int = source.find("\nfunc ", storm_start + 1)
+	if storm_end == -1:
+		storm_end = source.length()
+	var storm_body: String = source.substr(storm_start, storm_end - storm_start)
+
+	assert_true(storm_body.find('"is_lit" in fire') != -1,
+		"Storm fire check uses property check ('is_lit' in fire)")
+	assert_false(storm_body.find('has_method("is_lit")') != -1,
+		"Storm fire check does NOT use has_method('is_lit')")
+
+
+func test_interaction_target_uses_instance_valid() -> void:
+	## Bug: player_controller.gd used "if current_interaction_target:" to check
+	## the target before refreshing interaction text. This doesn't detect freed
+	## nodes. If a resource was gathered (queue_free'd), accessing methods on the
+	## stale reference would crash.
+	var controller_script: GDScript = load("res://scripts/player/player_controller.gd") as GDScript
+	if not controller_script:
+		assert_true(false, "Could not load player_controller.gd")
+		return
+
+	var source: String = controller_script.source_code
+
+	# The interaction text refresh must use is_instance_valid
+	assert_true(source.find("is_instance_valid(current_interaction_target)") != -1,
+		"Interaction target refresh uses is_instance_valid()")
+
+	# _try_interact must also use is_instance_valid
+	var interact_start: int = source.find("func _try_interact()")
+	var interact_end: int = source.find("\nfunc ", interact_start + 1)
+	if interact_end == -1:
+		interact_end = source.length()
+	var interact_body: String = source.substr(interact_start, interact_end - interact_start)
+	assert_true(interact_body.find("is_instance_valid(current_interaction_target)") != -1,
+		"_try_interact() uses is_instance_valid(current_interaction_target)")
+
+
+func test_drying_rack_verifies_item_removal() -> void:
+	## Bug: structure_drying_rack.gd _start_drying() called remove_item() but
+	## ignored the return value. If removal failed, drying would start without
+	## consuming the food item.
+	var rack_script: GDScript = load("res://scripts/campsite/structure_drying_rack.gd") as GDScript
+	if not rack_script:
+		assert_true(false, "Could not load structure_drying_rack.gd")
+		return
+
+	var source: String = rack_script.source_code
+	var start_fn: int = source.find("func _start_drying(")
+	var end_fn: int = source.find("\nfunc ", start_fn + 1)
+	if end_fn == -1:
+		end_fn = source.length()
+	var fn_body: String = source.substr(start_fn, end_fn - start_fn)
+
+	assert_true(fn_body.find("var removed") != -1,
+		"_start_drying() captures remove_item return value")
+	assert_true(fn_body.find("if not removed") != -1,
+		"_start_drying() checks if removal failed before starting")
+
+
+func test_smoker_verifies_item_removal() -> void:
+	## Bug: structure_smoker.gd _start_smoking() called remove_item() twice
+	## (meat and wood) but ignored both return values. If either removal failed,
+	## smoking would start without consuming the items.
+	var smoker_script: GDScript = load("res://scripts/campsite/structure_smoker.gd") as GDScript
+	if not smoker_script:
+		assert_true(false, "Could not load structure_smoker.gd")
+		return
+
+	var source: String = smoker_script.source_code
+	var start_fn: int = source.find("func _start_smoking(")
+	var end_fn: int = source.find("\nfunc ", start_fn + 1)
+	if end_fn == -1:
+		end_fn = source.length()
+	var fn_body: String = source.substr(start_fn, end_fn - start_fn)
+
+	# Must capture return value for meat removal
+	assert_true(fn_body.find("var removed_meat") != -1,
+		"_start_smoking() captures meat remove_item return value")
+	# Must capture return value for fuel removal
+	assert_true(fn_body.find("var removed_fuel") != -1,
+		"_start_smoking() captures fuel remove_item return value")
+	# Must refund meat if fuel removal fails
+	assert_true(fn_body.find("add_item(meat_type") != -1,
+		"_start_smoking() refunds meat if fuel removal fails")
