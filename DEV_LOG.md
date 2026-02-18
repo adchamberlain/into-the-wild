@@ -4169,6 +4169,29 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ---
 
+## Session 62 - Code Audit Bug Fixes Round 8 (2026-02-17)
+
+### Bug Fixes
+
+**1. Grapple tween callback crashes on dead player** - `grappling_hook.gd` `_on_grapple_complete()` directly accessed `player.global_position` without checking `is_instance_valid(player)`. If the player died during the grapple tween, the callback crashed on the freed reference. Added validity guard that cleans up visuals and exits early.
+
+**2. Death during grapple orphans rope/hook visuals** - `player_controller.gd` `_on_player_died()` set `is_grappling = false` but never called `cancel_grapple()` on the GrapplingHook child node. Rope and hook meshes remained in the scene as orphaned nodes. Now calls `cancel_grapple()` to properly clean up.
+
+**3. Fire pit negative fuel causes negative light energy** - `structure_fire_pit.gd` checked for extinguish (`fuel <= 0`) AFTER the dimming calculation. When `fuel_burn_rate * delta` overshot past zero in a single frame, `dim_factor` went negative, causing negative `light_energy` for one frame. Reordered to check extinguish first, then dim only in the `elif` branch.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/player/grappling_hook.gd` | Modified | Added `is_instance_valid(player)` guard in `_on_grapple_complete()` |
+| `scripts/player/player_controller.gd` | Modified | Death handler calls `cancel_grapple()` on GrapplingHook child |
+| `scripts/campsite/structure_fire_pit.gd` | Modified | Reordered extinguish check before dimming, fixed misplaced print |
+| `tests/test_bug_regressions.gd` | Modified | Added 3 regression tests (6 new assertions, 76 total) |
+
+### Test Results
+- All 608 regression tests pass (6 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks

@@ -355,6 +355,12 @@ func _interpolate_grapple(progress: float) -> void:
 
 
 func _on_grapple_complete() -> void:
+	if not is_instance_valid(player):
+		_remove_rope_visual()
+		_remove_hook_visual()
+		is_grappling = false
+		return
+
 	# Play landing sound
 	SFXManager.play_sfx("grapple_land")
 

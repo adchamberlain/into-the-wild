@@ -56,16 +56,15 @@ func _process(delta: float) -> void:
 	if is_lit and fuel_remaining > 0:
 		fuel_remaining -= fuel_burn_rate * delta
 
-		# Fire dims as fuel runs low (below 30%)
-		if fuel_remaining < max_fuel * 0.3 and fire_light:
-			var dim_factor: float = fuel_remaining / (max_fuel * 0.3)
-			fire_light.light_energy = base_light_energy * effectiveness * (0.5 + 0.5 * dim_factor)
-
-		# Fire goes out when no fuel
+		# Fire goes out when no fuel (check before dimming to prevent negative values)
 		if fuel_remaining <= 0:
 			fuel_remaining = 0
 			extinguish()
 			print("[FirePit] The fire has burned out - add wood!")
+		elif fuel_remaining < max_fuel * 0.3 and fire_light:
+			# Fire dims as fuel runs low (below 30%)
+			var dim_factor: float = fuel_remaining / (max_fuel * 0.3)
+			fire_light.light_energy = base_light_energy * effectiveness * (0.5 + 0.5 * dim_factor)
 
 
 func interact(player: Node) -> bool:

@@ -719,8 +719,13 @@ func _on_player_died() -> void:
 	# Reset movement state flags (player may die while resting, climbing, or grappling)
 	is_resting = false
 	is_climbing = false
-	is_grappling = false
 	resting_in_structure = null
+
+	# Cancel active grapple to clean up rope/hook visuals
+	var grapple_node: Node = get_node_or_null("GrapplingHook")
+	if is_grappling and grapple_node and grapple_node.has_method("cancel_grapple"):
+		grapple_node.cancel_grapple()
+	is_grappling = false
 
 	# Teleport player to respawn point
 	velocity = Vector3.ZERO

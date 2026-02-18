@@ -29,6 +29,9 @@ func run_tests() -> Dictionary:
 	test_crafting_refunds_on_partial_failure()
 	test_kitchen_verifies_item_removal()
 	test_resource_days_elapsed_saved()
+	test_grapple_complete_checks_player_validity()
+	test_death_cancels_active_grapple()
+	test_fire_pit_extinguish_before_dimming()
 
 	return get_results()
 
@@ -635,3 +638,72 @@ func test_resource_days_elapsed_saved() -> void:
 	var load_body: String = source.substr(load_start, load_end - load_start)
 	assert_true(load_body.find('"days_elapsed"') != -1,
 		"load_depleted_data() restores days_elapsed")
+
+
+func test_grapple_complete_checks_player_validity() -> void:
+	## Bug: grappling_hook.gd _on_grapple_complete() is a tween callback that
+	## directly accessed player.global_position without checking is_instance_valid().
+	## If the player died during the grapple tween, the callback would crash on
+	## the freed player reference.
+	var grapple_script: GDScript = load("res://scripts/player/grappling_hook.gd") as GDScript
+	if not grapple_script:
+		assert_true(false, "Could not load grappling_hook.gd")
+		return
+
+	var source: String = grapple_script.source_code
+	var complete_start: int = source.find("func _on_grapple_complete()")
+	var complete_end: int = source.find("\nfunc ", complete_start + 1)
+	if complete_end == -1:
+		complete_end = source.length()
+	var complete_body: String = source.substr(complete_start, complete_end - complete_start)
+
+	assert_true(complete_body.find("is_instance_valid(player)") != -1,
+		"_on_grapple_complete() checks is_instance_valid(player)")
+
+
+func test_death_cancels_active_grapple() -> void:
+	## Bug: player_controller.gd _on_player_died() set is_grappling = false but
+	## didn't call cancel_grapple() on the GrapplingHook child node. This left
+	## rope and hook visual meshes orphaned in the scene after death.
+	var controller_script: GDScript = load("res://scripts/player/player_controller.gd") as GDScript
+	if not controller_script:
+		assert_true(false, "Could not load player_controller.gd")
+		return
+
+	var source: String = controller_script.source_code
+	var death_start: int = source.find("func _on_player_died()")
+	var death_end: int = source.find("\nfunc ", death_start + 1)
+	if death_end == -1:
+		death_end = source.length()
+	var death_body: String = source.substr(death_start, death_end - death_start)
+
+	assert_true(death_body.find("cancel_grapple") != -1,
+		"_on_player_died() calls cancel_grapple() to clean up visuals")
+	assert_true(death_body.find("GrapplingHook") != -1,
+		"_on_player_died() gets GrapplingHook node for cleanup")
+
+
+func test_fire_pit_extinguish_before_dimming() -> void:
+	## Bug: structure_fire_pit.gd checked for extinguish (fuel <= 0) AFTER the
+	## dimming calculation. When fuel went negative in a single frame (burn rate
+	## overshooting), dim_factor became negative, causing negative light_energy
+	## for one frame before the clamp. Extinguish check must come first.
+	var fire_script: GDScript = load("res://scripts/campsite/structure_fire_pit.gd") as GDScript
+	if not fire_script:
+		assert_true(false, "Could not load structure_fire_pit.gd")
+		return
+
+	var source: String = fire_script.source_code
+	var process_start: int = source.find("func _process(")
+	var process_end: int = source.find("\nfunc ", process_start + 1)
+	if process_end == -1:
+		process_end = source.length()
+	var process_body: String = source.substr(process_start, process_end - process_start)
+
+	# Extinguish check must come BEFORE dimming calculation
+	var extinguish_pos: int = process_body.find("fuel_remaining <= 0")
+	var dim_pos: int = process_body.find("dim_factor")
+	assert_true(extinguish_pos != -1, "Fire pit checks fuel_remaining <= 0")
+	assert_true(dim_pos != -1, "Fire pit has dimming calculation")
+	assert_true(extinguish_pos < dim_pos,
+		"Extinguish check comes BEFORE dimming calculation (prevents negative dim_factor)")
