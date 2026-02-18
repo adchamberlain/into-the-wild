@@ -4686,6 +4686,57 @@ Comprehensive bug hunt Round 2: Launched 5 more parallel agents focusing on save
 
 ---
 
+## Session 81 — Round 3 Bug Fixes (17 Bugs)
+
+### Overview
+Third round of systematic bug hunting using 5 parallel specialized agents: resource/economy exploits, state machine bugs, math/physics errors, input handling issues, and memory/lifecycle problems. Found and fixed 17 bugs across 10 source files. Added 17 regression tests (51 assertions).
+
+### Bugs Fixed
+
+#### Critical
+1. **Fishing spot permanent depletion** — Respawn calculation used wrong day reference (`current_day` instead of `depleted_day`), causing fish to never respawn after depletion across day boundaries. Added `depleted_day` tracking variable.
+
+#### High Priority
+2. **Death doesn't reset water state** — Player remained in swimming state after dying in water. Added `is_in_water = false`, `_water_area_count = 0`, `_hide_underwater_effect()` to death handler.
+3. **Cave transition type mismatch** — `current_cave_id` default was `""` (string) but code expects `int`. Changed to `-1`.
+4. **Equipment _input no UI guards** — Equipment hotkeys worked while crafting/storage menus were open. Added `_is_ui_blocking_input()` check.
+5. **Player actions not blocked by UI** — Interact, eat, equip/unequip actions fired through open menus. Added UI blocking check to `_input()`.
+6. **Movement not blocked by UI** — WASD movement and sprint worked while menus were open. Added UI blocking to `_process_normal_movement` and `_process_swimming`.
+7. **Placement null inventory** — `_confirm_placement` silently skipped item consumption when inventory was null, giving free structures. Changed to early abort with `queue_free()`.
+
+#### Medium Priority
+8. **Equipped items transferable to storage** — Could transfer equipped items creating phantom equipped state. Added `_unequip_if_equipped()` before player→storage transfers.
+9. **Death doesn't close menus** — UI menus stayed open after death with stale data. Added `_close_all_menus()` to death handler.
+10. **Window refocus** — Alt-tab didn't restore mouse capture. Added `NOTIFICATION_WM_WINDOW_FOCUS_IN` handler.
+11. **Camera lerp clamp** — Lerp alpha could exceed 1.0 at low FPS. Added `minf()` clamp.
+12. **Grapple cancel input** — Cancel grapple didn't consume input, allowing fallthrough to other handlers.
+13. **Placement input consumed** — Placement confirm/cancel didn't consume input events.
+14. **Fire pit flare tween** — Multiple flare tweens could stack. Added tween tracking and kill-before-create.
+15. **Controller look blocked** — Right-stick camera look worked through open menus. Added UI blocking gate.
+16. **Water ref-counting** — Overlapping water areas caused stuck swimming state. Added `_water_area_count` ref counter.
+17. **Menu overlap** — Equipment and crafting menus could open simultaneously. Added `_is_other_menu_open()` checks.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/resources/fishing_spot.gd` | Modified | `depleted_day` tracking for correct respawn calculation |
+| `scripts/player/player_controller.gd` | Modified | Death resets (water, menus), UI input blocking (actions, movement, sprint, controller look), window refocus, camera lerp clamp, water ref-counting, `_close_all_menus()` |
+| `scripts/player/equipment.gd` | Modified | `_is_ui_blocking_input()` guard in `_input()` |
+| `scripts/player/grappling_hook.gd` | Modified | Input consumed after grapple cancel |
+| `scripts/core/cave_transition.gd` | Modified | `current_cave_id` default changed from `""` to `-1` |
+| `scripts/campsite/placement_system.gd` | Modified | Null inventory early abort, input consumption on confirm/cancel |
+| `scripts/campsite/structure_fire_pit.gd` | Modified | Flare tween tracking and lifecycle management |
+| `scripts/ui/crafting_ui.gd` | Modified | Menu overlap prevention with `_is_other_menu_open()` |
+| `scripts/ui/equipment_menu.gd` | Modified | Menu overlap prevention with `_is_other_menu_open()` |
+| `scripts/ui/storage_ui.gd` | Modified | `_unequip_if_equipped()` before player→storage transfers |
+| `tests/test_bug_regressions.gd` | Modified | Added 17 regression tests (51 new assertions) |
+
+### Test Results
+- All 834 regression tests pass (51 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks
