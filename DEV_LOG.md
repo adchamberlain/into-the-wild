@@ -4448,6 +4448,29 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ---
 
+## Session 74 - Code Audit Bug Fixes Round 20 (2026-02-17)
+
+### Bug Fixes
+
+**1. HUD interaction target crash on freed node** - `hud.gd` `_on_interaction_target_changed()` checked `target` with truthiness instead of `is_instance_valid()`. This is a signal handler — the target node could be freed between signal emission and handler execution. Truthiness passes for freed nodes, so `is_in_group("structure")` would crash when trying to add the move hint to the interaction prompt.
+
+**2. Storage UI item duplication on failed transfer** - `storage_ui.gd` `_on_transfer_pressed()` and `_on_transfer_all_pressed()` called `remove_item()` without checking the return value. If removal failed (item consumed by another system between check and removal), the item was still added to the destination, duplicating items. Fixed all 4 transfer paths to check the `remove_item()` return before calling `add_item()`.
+
+**3. Storm fire tending check uses freed player truthiness** - `weather_manager.gd` `_update_storm_fire_effects()` line 161 checked `player` with truthiness in the `is_tending` calculation. Line 149 already correctly used `is_instance_valid(player)` for computing `player_pos`, but this leftover truthiness check could incorrectly mark fires near the world origin as "tended" when the player was freed.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/ui/hud.gd` | Modified | `is_instance_valid(target)` in `_on_interaction_target_changed()` |
+| `scripts/ui/storage_ui.gd` | Modified | Check `remove_item()` return in all 4 transfer paths |
+| `scripts/world/weather_manager.gd` | Modified | `is_instance_valid(player)` in storm tending check |
+| `tests/test_bug_regressions.gd` | Modified | Added 3 regression tests (4 new assertions, 163 total) |
+
+### Test Results
+- All 695 regression tests pass (4 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks

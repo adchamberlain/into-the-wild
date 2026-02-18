@@ -158,7 +158,7 @@ func _update_storm_fire_effects(delta: float) -> void:
 			continue
 
 		# Check if player is tending the fire (within interaction range)
-		var is_tending: bool = player and fire.global_position.distance_to(player_pos) < 3.0
+		var is_tending: bool = is_instance_valid(player) and fire.global_position.distance_to(player_pos) < 3.0
 
 		if is_tending:
 			# Reset extinguish timer

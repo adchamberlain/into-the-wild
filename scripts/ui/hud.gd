@@ -234,7 +234,7 @@ func _on_interaction_target_changed(target: Node, interaction_text: String) -> v
 	if interaction_prompt:
 		var prompt_text: String = _get_interact_prompt() + " " + interaction_text
 		# Add move hint if target is a structure (except torches/lodestones - pick up only)
-		if target and target.is_in_group("structure"):
+		if is_instance_valid(target) and target.is_in_group("structure"):
 			var stype: String = target.get("structure_type") if target.get("structure_type") else ""
 			var is_pickup_only: bool = stype == "placed_torch" or stype == "lodestone" or stype == "placed_lantern"
 			if not is_pickup_only:

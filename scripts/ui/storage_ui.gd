@@ -268,13 +268,15 @@ func _on_transfer_pressed(item_type: String, from_player: bool) -> void:
 	if from_player:
 		# Player -> Storage
 		if player_inventory and player_inventory.has_item(item_type) and current_storage:
-			player_inventory.remove_item(item_type, 1)
-			current_storage.add_item(item_type, 1)
+			var removed: bool = player_inventory.remove_item(item_type, 1)
+			if removed:
+				current_storage.add_item(item_type, 1)
 	else:
 		# Storage -> Player
 		if current_storage and current_storage.has_item(item_type) and player_inventory:
-			current_storage.remove_item(item_type, 1)
-			player_inventory.add_item(item_type, 1)
+			var removed: bool = current_storage.remove_item(item_type, 1)
+			if removed:
+				player_inventory.add_item(item_type, 1)
 
 
 ## Transfer all of an item type.
@@ -284,15 +286,17 @@ func _on_transfer_all_pressed(item_type: String, from_player: bool) -> void:
 		if player_inventory and current_storage:
 			var count: int = player_inventory.get_item_count(item_type)
 			if count > 0:
-				player_inventory.remove_item(item_type, count)
-				current_storage.add_item(item_type, count)
+				var removed: bool = player_inventory.remove_item(item_type, count)
+				if removed:
+					current_storage.add_item(item_type, count)
 	else:
 		# Storage -> Player
 		if current_storage and player_inventory:
 			var count: int = current_storage.storage_inventory.get_item_count(item_type)
 			if count > 0:
-				current_storage.remove_item(item_type, count)
-				player_inventory.add_item(item_type, count)
+				var removed: bool = current_storage.remove_item(item_type, count)
+				if removed:
+					player_inventory.add_item(item_type, count)
 
 
 ## Navigate items with D-pad up/down.

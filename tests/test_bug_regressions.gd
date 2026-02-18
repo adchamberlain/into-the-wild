@@ -65,6 +65,9 @@ func run_tests() -> Dictionary:
 	test_move_structure_uses_instance_valid()
 	test_weather_vane_arrow_uses_instance_valid()
 	test_grapple_rope_checks_length_before_normalize()
+	test_hud_interaction_target_uses_instance_valid()
+	test_storage_ui_transfer_checks_removal()
+	test_storm_tending_uses_instance_valid()
 
 	return get_results()
 
@@ -1591,3 +1594,68 @@ func test_grapple_rope_checks_length_before_normalize() -> void:
 	assert_true(length_check_pos != -1, "Rope visual checks length before normalizing")
 	assert_true(normalize_pos == -1 or length_check_pos < normalize_pos,
 		"Length check comes before normalization to avoid near-zero look_at")
+
+
+func test_hud_interaction_target_uses_instance_valid() -> void:
+	## Bug: HUD _on_interaction_target_changed used truthiness for target parameter.
+	## If the target node was freed between signal emission and handler execution,
+	## truthiness would pass but is_in_group() would crash on the freed node.
+	var script: GDScript = load("res://scripts/ui/hud.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load hud.gd")
+		return
+
+	var source: String = script.source_code
+	var func_start: int = source.find("func _on_interaction_target_changed(")
+	var func_end: int = source.find("\nfunc ", func_start + 1)
+	var func_body: String = source.substr(func_start, func_end - func_start)
+	assert_true(func_body.find("is_instance_valid(target)") != -1,
+		"HUD interaction target handler uses is_instance_valid for target")
+
+
+func test_storage_ui_transfer_checks_removal() -> void:
+	## Bug: Storage UI transfer functions called remove_item() without checking
+	## the return value. If removal failed, items were still added to the
+	## destination inventory, causing item duplication.
+	var script: GDScript = load("res://scripts/ui/storage_ui.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load storage_ui.gd")
+		return
+
+	var source: String = script.source_code
+	# Single transfer function
+	var func_start: int = source.find("func _on_transfer_pressed(")
+	var func_end: int = source.find("\nfunc ", func_start + 1)
+	var func_body: String = source.substr(func_start, func_end - func_start)
+	# Both player->storage and storage->player should check removal
+	var remove_count: int = func_body.count("var removed: bool = ")
+	assert_true(remove_count >= 2,
+		"_on_transfer_pressed checks remove_item return in both directions")
+
+	# Bulk transfer function
+	var bulk_start: int = source.find("func _on_transfer_all_pressed(")
+	var bulk_end: int = source.find("\nfunc ", bulk_start + 1)
+	var bulk_body: String = source.substr(bulk_start, bulk_end - bulk_start)
+	var bulk_remove_count: int = bulk_body.count("var removed: bool = ")
+	assert_true(bulk_remove_count >= 2,
+		"_on_transfer_all_pressed checks remove_item return in both directions")
+
+
+func test_storm_tending_uses_instance_valid() -> void:
+	## Bug: _update_storm_fire_effects used truthiness for player in the
+	## is_tending check (line 161). Line 149 already correctly used
+	## is_instance_valid(player) for player_pos, but the is_tending check
+	## was a leftover that could incorrectly mark fires as tended when
+	## the player was freed.
+	var script: GDScript = load("res://scripts/world/weather_manager.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load weather_manager.gd")
+		return
+
+	var source: String = script.source_code
+	var func_start: int = source.find("func _update_storm_fire_effects(")
+	var func_end: int = source.find("\nfunc ", func_start + 1)
+	var func_body: String = source.substr(func_start, func_end - func_start)
+	# The is_tending line should use is_instance_valid, not plain truthiness
+	assert_true(func_body.find("is_instance_valid(player) and fire.global_position") != -1,
+		"Storm tending check uses is_instance_valid for player")
