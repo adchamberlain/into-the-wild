@@ -4027,6 +4027,29 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ---
 
+## Session 56 - Code Audit Bug Fixes Round 2 (2026-02-17)
+
+### Bug Fixes
+
+**1. Storage UI signal leak** - `storage_ui.gd` connected `player_inventory.inventory_changed` on open but only disconnected the storage inventory signal on close. After repeated open/close cycles, stale signal connections accumulated, causing `_refresh_lists()` to fire multiple times per inventory change.
+
+**2. Placement system crash on freed structure** - `placement_system.gd` used `not moving_structure` in `_confirm_move()` and `cancel_move()` which doesn't detect freed nodes in Godot. If a structure was destroyed while in move mode, accessing its properties would crash. Changed to `is_instance_valid(moving_structure)`.
+
+**3. HUD notification timer overlap** - `hud.gd` created a new `SceneTreeTimer` for each `show_notification()` call without cancelling the previous one. If notification B fired 2s after notification A, A's 3s timer would hide B after only 1 second. Fixed by tracking the timer and disconnecting the old one before creating a new one.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/ui/storage_ui.gd` | Modified | Added player_inventory signal disconnect in `close_storage()` |
+| `scripts/campsite/placement_system.gd` | Modified | `_confirm_move()` and `cancel_move()` use `is_instance_valid()` |
+| `scripts/ui/hud.gd` | Modified | Track `_notification_timer`, cancel old timer on new notification |
+| `tests/test_bug_regressions.gd` | Modified | Added 3 regression tests (7 new assertions, 19 total) |
+
+### Test Results
+- All 551 regression tests pass (7 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks

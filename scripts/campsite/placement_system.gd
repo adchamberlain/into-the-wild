@@ -1502,7 +1502,7 @@ func _restore_materials_recursive(node: Node) -> void:
 
 ## Confirm move and relocate structure.
 func _confirm_move() -> void:
-	if not is_moving or not moving_structure or not preview_instance:
+	if not is_moving or not is_instance_valid(moving_structure) or not preview_instance:
 		return
 
 	if not is_valid_placement:
@@ -1540,7 +1540,7 @@ func cancel_move() -> void:
 	SFXManager.play_sfx("place_cancel")
 
 	# Restore transparency (structure stays at original position)
-	if moving_structure:
+	if is_instance_valid(moving_structure):
 		_set_structure_transparency(moving_structure, 1.0)
 		structure_move_cancelled.emit(moving_structure)
 

@@ -161,6 +161,9 @@ func close_storage() -> void:
 		if current_storage.storage_inventory.inventory_changed.is_connected(_refresh_lists):
 			current_storage.storage_inventory.inventory_changed.disconnect(_refresh_lists)
 
+	if player_inventory and player_inventory.inventory_changed.is_connected(_refresh_lists):
+		player_inventory.inventory_changed.disconnect(_refresh_lists)
+
 	# Close the storage structure too
 	if current_storage and current_storage.has_method("close_storage"):
 		current_storage.is_open = false

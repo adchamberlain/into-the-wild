@@ -66,6 +66,9 @@ var show_coordinates: bool = true
 var is_celebrating: bool = false
 var celebration_tween: Tween = null
 
+# Notification timer tracking
+var _notification_timer: SceneTreeTimer = null
+
 # Grapple reticle (uses existing Crosshair label)
 @onready var crosshair: Label = $Crosshair
 var default_crosshair_color: Color = Color(1, 1, 1, 0.8)
@@ -560,10 +563,19 @@ func show_notification(message: String, color: Color = Color.WHITE) -> void:
 		notification_label.text = message
 		notification_label.add_theme_color_override("font_color", color)
 		notification_panel.visible = true
+		# Cancel previous notification timer so it doesn't hide this one early
+		if _notification_timer and _notification_timer.time_left > 0:
+			_notification_timer.timeout.disconnect(_hide_notification)
 		# Duration scales with content: 3s base + 1s per extra line
 		var line_count: int = message.count("\n") + 1
 		var duration: float = 3.0 + max(0, line_count - 1) * 1.0
-		get_tree().create_timer(duration).timeout.connect(func(): notification_panel.visible = false)
+		_notification_timer = get_tree().create_timer(duration)
+		_notification_timer.timeout.connect(_hide_notification)
+
+
+func _hide_notification() -> void:
+	if notification_panel:
+		notification_panel.visible = false
 
 
 func _on_game_saved(_filepath: String, slot: int) -> void:
