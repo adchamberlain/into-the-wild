@@ -212,6 +212,8 @@ func has_structure(structure_type: String) -> bool:
 func get_structures_of_type(structure_type: String) -> Array[Node]:
 	var result: Array[Node] = []
 	for structure: Node in placed_structures:
+		if not is_instance_valid(structure):
+			continue
 		if structure.has_method("get") and structure.get("structure_type") == structure_type:
 			result.append(structure)
 		elif structure.name.to_lower().contains(structure_type.replace("_", "")):

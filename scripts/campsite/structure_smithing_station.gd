@@ -73,8 +73,13 @@ func _start_smelting(ore_type: String) -> void:
 		return
 
 	# Consume ore and fuel
-	player_inventory.remove_item(ore_type, 1)
-	player_inventory.remove_item("wood", FUEL_REQUIRED)
+	var removed_ore: bool = player_inventory.remove_item(ore_type, 1)
+	if not removed_ore:
+		return
+	var removed_fuel: bool = player_inventory.remove_item("wood", FUEL_REQUIRED)
+	if not removed_fuel:
+		player_inventory.add_item(ore_type, 1)  # Refund ore
+		return
 
 	current_ore = ore_type
 	is_smelting = true

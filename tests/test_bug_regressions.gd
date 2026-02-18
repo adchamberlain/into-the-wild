@@ -35,6 +35,9 @@ func run_tests() -> Dictionary:
 	test_durability_clamped_to_zero()
 	test_upgrade_verifies_item_removal()
 	test_placement_verifies_item_removal()
+	test_smithing_verifies_item_removal()
+	test_storm_fire_checks_instance_valid()
+	test_campsite_structures_check_instance_valid()
 
 	return get_results()
 
@@ -818,3 +821,77 @@ func test_placement_verifies_item_removal() -> void:
 		"_confirm_placement() captures remove_item return value")
 	assert_true(confirm_body.find("queue_free()") != -1,
 		"_confirm_placement() cleans up structure if item removal fails")
+
+
+func test_smithing_verifies_item_removal() -> void:
+	## Bug: structure_smithing_station.gd _start_smelting() called remove_item()
+	## twice (ore and wood) but ignored both return values. If fuel removal failed,
+	## ore was consumed but smelting never started - player lost ore for nothing.
+	var smithing_script: GDScript = load("res://scripts/campsite/structure_smithing_station.gd") as GDScript
+	if not smithing_script:
+		assert_true(false, "Could not load structure_smithing_station.gd")
+		return
+
+	var source: String = smithing_script.source_code
+	var start_fn: int = source.find("func _start_smelting(")
+	var end_fn: int = source.find("\nfunc ", start_fn + 1)
+	if end_fn == -1:
+		end_fn = source.length()
+	var fn_body: String = source.substr(start_fn, end_fn - start_fn)
+
+	# Must capture return value for ore removal
+	assert_true(fn_body.find("var removed_ore") != -1,
+		"_start_smelting() captures ore remove_item return value")
+	# Must capture return value for fuel removal
+	assert_true(fn_body.find("var removed_fuel") != -1,
+		"_start_smelting() captures fuel remove_item return value")
+	# Must refund ore if fuel removal fails
+	assert_true(fn_body.find("add_item(ore_type") != -1,
+		"_start_smelting() refunds ore if fuel removal fails")
+
+
+func test_storm_fire_checks_instance_valid() -> void:
+	## Bug: weather_manager.gd _update_storm_fire_effects() iterated fire_pits
+	## without checking is_instance_valid(). If a fire pit was destroyed during a
+	## storm, accessing properties on the freed node would crash. Also,
+	## fire_storm_timers dictionary accumulated freed node keys as memory leak.
+	var weather_script: GDScript = load("res://scripts/world/weather_manager.gd") as GDScript
+	if not weather_script:
+		assert_true(false, "Could not load weather_manager.gd")
+		return
+
+	var source: String = weather_script.source_code
+	var storm_start: int = source.find("func _update_storm_fire_effects(")
+	var storm_end: int = source.find("\nfunc ", storm_start + 1)
+	if storm_end == -1:
+		storm_end = source.length()
+	var storm_body: String = source.substr(storm_start, storm_end - storm_start)
+
+	# Must check validity before accessing fire properties
+	assert_true(storm_body.find("is_instance_valid(fire)") != -1,
+		"Storm fire loop checks is_instance_valid(fire) before property access")
+	# Must clean up freed nodes from fire_storm_timers dictionary
+	assert_true(storm_body.find("fire_storm_timers.erase") != -1,
+		"Storm fire effect cleans up freed nodes from timer dictionary")
+
+
+func test_campsite_structures_check_instance_valid() -> void:
+	## Bug: campsite_manager.gd get_structures_of_type() iterated placed_structures
+	## without checking is_instance_valid(). If a structure was destroyed (e.g.,
+	## queue_free'd during gameplay), calling has_method() or get() on the freed
+	## node would crash. This function is used by get_fire_pits(), get_shelters(),
+	## and other callers throughout the codebase.
+	var campsite_script: GDScript = load("res://scripts/campsite/campsite_manager.gd") as GDScript
+	if not campsite_script:
+		assert_true(false, "Could not load campsite_manager.gd")
+		return
+
+	var source: String = campsite_script.source_code
+	var fn_start: int = source.find("func get_structures_of_type(")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+
+	assert_true(fn_body.find("is_instance_valid(structure)") != -1,
+		"get_structures_of_type() checks is_instance_valid before accessing structure")

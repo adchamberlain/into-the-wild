@@ -4214,6 +4214,29 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ---
 
+## Session 64 - Code Audit Bug Fixes Round 10 (2026-02-17)
+
+### Bug Fixes
+
+**1. Smithing station ore loss on fuel removal failure** - `structure_smithing_station.gd` `_start_smelting()` called `remove_item()` twice (ore then fuel) without checking returns. If fuel removal failed, the ore was already consumed but smelting never started - player lost ore for nothing. Added return checks with ore refund if fuel removal fails.
+
+**2. Storm fire effects crash on freed fire nodes** - `weather_manager.gd` `_update_storm_fire_effects()` iterated `fire_pits` without `is_instance_valid()` checks. If a fire pit was destroyed during a storm, accessing `is_lit` on the freed node would crash. Also, `fire_storm_timers` dictionary accumulated freed node keys as a memory leak. Added validity check in loop and cleanup pass for freed dictionary keys.
+
+**3. Campsite structure iteration crashes on freed nodes** - `campsite_manager.gd` `get_structures_of_type()` iterated `placed_structures` without `is_instance_valid()` checks. This core function feeds `get_fire_pits()`, `get_shelters()`, and other callers. If a structure was `queue_free()`d but not yet removed from the array, calling `has_method()` on the freed node would crash. Added validity guard.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/campsite/structure_smithing_station.gd` | Modified | Check `remove_item()` returns for ore and fuel, refund ore if fuel fails |
+| `scripts/world/weather_manager.gd` | Modified | Add `is_instance_valid(fire)` in storm loop, clean up freed timer keys |
+| `scripts/campsite/campsite_manager.gd` | Modified | Add `is_instance_valid(structure)` in `get_structures_of_type()` |
+| `tests/test_bug_regressions.gd` | Modified | Added 3 regression tests (6 new assertions, 95 total) |
+
+### Test Results
+- All 627 regression tests pass (6 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks

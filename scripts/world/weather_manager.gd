@@ -148,8 +148,13 @@ func _update_storm_fire_effects(delta: float) -> void:
 	var fire_pits: Array[Node] = campsite_manager.get_fire_pits()
 	var player_pos: Vector3 = player.global_position if player else Vector3.ZERO
 
+	# Clean up entries for freed fire nodes
+	for key: Variant in fire_storm_timers.keys():
+		if not is_instance_valid(key):
+			fire_storm_timers.erase(key)
+
 	for fire: Node in fire_pits:
-		if not "is_lit" in fire or not fire.is_lit:
+		if not is_instance_valid(fire) or not "is_lit" in fire or not fire.is_lit:
 			continue
 
 		# Check if player is tending the fire (within interaction range)
