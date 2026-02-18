@@ -3990,6 +3990,19 @@ Fixed all 20 bugs reported from gameplay testing session. Changes span combat, U
 
 ---
 
+## Session 54 - Testing Rule Added to CLAUDE.md (2026-02-17)
+
+### Changes
+
+Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for all bug fixes and new logic. This ensures every bug fix includes a test that reproduces the issue, and new data-transforming or decision-making logic gets unit test coverage.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `CLAUDE.md` | Modified | Added "Testing Rule" section with guidelines for writing tests (extend `TestBase`, register in `run_all_tests.gd`) |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
