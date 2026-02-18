@@ -655,6 +655,7 @@ func _update_fall_protection(delta: float) -> void:
 
 func _recover_from_fall() -> void:
 	velocity = Vector3.ZERO
+	is_falling = false
 
 	# Determine recovery XZ from last safe position or current position
 	var recover_x: float = last_safe_position.x if _has_safe_position else global_position.x
@@ -678,6 +679,9 @@ func _recover_from_fall() -> void:
 		last_safe_position = global_position
 		_has_safe_position = true
 		print("[Player] Recovered to spawn point.")
+
+	# Reset fall tracking to prevent false fall damage after recovery
+	fall_start_y = global_position.y
 
 
 ## Apply fall damage based on distance fallen.
@@ -712,9 +716,16 @@ func _on_player_died() -> void:
 		stats.hunger = stats.max_hunger * 0.5
 		stats.hunger_changed.emit(stats.hunger, stats.max_hunger)
 
+	# Reset movement state flags (player may die while resting, climbing, or grappling)
+	is_resting = false
+	is_climbing = false
+	is_grappling = false
+	resting_in_structure = null
+
 	# Teleport player to respawn point
 	velocity = Vector3.ZERO
 	is_falling = false
+	fall_start_y = respawn_position.y
 	global_position = respawn_position
 
 	# Show respawn notification

@@ -430,7 +430,8 @@ func _collect_time_data() -> Dictionary:
 func _collect_weather_data() -> Dictionary:
 	return {
 		"weather_type": weather_manager.current_weather,
-		"duration_remaining": weather_manager.weather_duration_remaining
+		"duration_remaining": weather_manager.weather_duration_remaining,
+		"next_weather": weather_manager.next_weather
 	}
 
 
@@ -465,8 +466,10 @@ func _collect_campsite_data() -> Dictionary:
 			}
 
 			# Save fire state if it's a fire pit
-			if structure.has_method("is_lit"):
+			if "is_lit" in structure:
 				struct_data["is_lit"] = structure.is_lit
+			if "fuel_remaining" in structure:
+				struct_data["fuel_remaining"] = structure.fuel_remaining
 
 			data["structures"].append(struct_data)
 
@@ -649,6 +652,8 @@ func _apply_weather_data(data: Dictionary) -> void:
 	var weather_type: int = int(data.get("weather_type", 0))
 	weather_manager.current_weather = weather_type
 	weather_manager.weather_duration_remaining = data.get("duration_remaining", 0.0)
+	if data.has("next_weather"):
+		weather_manager.next_weather = int(data["next_weather"])
 
 	# Update visuals
 	if weather_manager.environment_manager:
@@ -760,6 +765,8 @@ func _recreate_structure(struct_data: Dictionary, container: Node) -> void:
 	# Restore state
 	if struct_data.has("is_lit") and structure.has_method("_set_fire_state"):
 		structure._set_fire_state(struct_data["is_lit"])
+	if struct_data.has("fuel_remaining") and "fuel_remaining" in structure:
+		structure.fuel_remaining = struct_data["fuel_remaining"]
 
 	print("[SaveLoad] Recreated structure: %s at %s" % [structure_type, pos])
 

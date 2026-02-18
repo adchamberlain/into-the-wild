@@ -4050,6 +4050,30 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ---
 
+## Session 57 - Code Audit Bug Fixes Round 3 (2026-02-17)
+
+### Bug Fixes
+
+**1. Fire pit state never saved** - `save_load.gd` used `has_method("is_lit")` to detect fire pits, but `is_lit` is a property (`var`), not a method. `has_method()` always returned false, so fire pit lit state was silently dropped from save data. Also added `fuel_remaining` to save/restore, which was never persisted.
+
+**2. Weather forecast lost on load** - `_collect_weather_data()` saved `current_weather` and `duration_remaining` but not `next_weather`. After loading a save, the forecast always reset to CLEAR regardless of what weather was actually predicted. Added `next_weather` to save/restore.
+
+**3. Death doesn't reset movement state** - `_on_player_died()` didn't clear `is_resting`, `is_climbing`, or `is_grappling`. If the player died while resting (e.g., starvation), they'd respawn stuck in resting state and unable to move. Also resets `fall_start_y` to respawn position.
+
+**4. Emergency fall recovery causes false fall damage** - `_recover_from_fall()` teleported the player to safety but didn't reset `fall_start_y` or `is_falling`. The stale height from before the fall caused immediate max fall damage on the next landing after recovery.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/core/save_load.gd` | Modified | Fire pit: `has_method("is_lit")` → `"is_lit" in structure`; added fuel_remaining save/restore; added next_weather to weather save/restore |
+| `scripts/player/player_controller.gd` | Modified | Death handler resets is_resting/is_climbing/is_grappling/fall_start_y; fall recovery resets is_falling/fall_start_y |
+| `tests/test_bug_regressions.gd` | Modified | Added 4 regression tests (11 new assertions, 30 total) |
+
+### Test Results
+- All 562 regression tests pass (11 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks

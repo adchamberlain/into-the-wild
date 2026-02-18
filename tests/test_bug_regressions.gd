@@ -12,6 +12,10 @@ func run_tests() -> Dictionary:
 	test_storage_ui_disconnects_player_inventory_signal()
 	test_placement_move_uses_instance_valid()
 	test_notification_timer_replaced_on_new_message()
+	test_fire_pit_state_uses_property_check()
+	test_weather_forecast_saved_and_restored()
+	test_death_resets_movement_state()
+	test_fall_recovery_resets_fall_start_y()
 
 	return get_results()
 
@@ -176,3 +180,104 @@ func test_notification_timer_replaced_on_new_message() -> void:
 		"show_notification() disconnects old timer before creating new one")
 	assert_true(show_body.find("_notification_timer") != -1,
 		"show_notification() uses tracked timer variable")
+
+
+func test_fire_pit_state_uses_property_check() -> void:
+	## Bug: save_load.gd used has_method("is_lit") to check if a structure has
+	## fire state, but is_lit is a property (var), not a method. has_method()
+	## always returned false, so fire pit lit state was never saved.
+	var save_script: GDScript = load("res://scripts/core/save_load.gd") as GDScript
+	if not save_script:
+		assert_true(false, "Could not load save_load.gd")
+		return
+
+	var source: String = save_script.source_code
+
+	# Must use property check ("is_lit" in structure), NOT has_method("is_lit")
+	assert_true(source.find('"is_lit" in structure') != -1,
+		"save_load.gd uses property check for is_lit (not has_method)")
+	assert_false(source.find('has_method("is_lit")') != -1,
+		"save_load.gd does NOT use has_method('is_lit') (is_lit is a property)")
+
+	# Also verify fuel_remaining is saved
+	assert_true(source.find('"fuel_remaining" in structure') != -1,
+		"save_load.gd saves fuel_remaining for fire pits")
+
+	# Verify fuel_remaining is restored on load
+	assert_true(source.find('struct_data.has("fuel_remaining")') != -1,
+		"save_load.gd restores fuel_remaining on load")
+
+
+func test_weather_forecast_saved_and_restored() -> void:
+	## Bug: save_load.gd saved current_weather and duration_remaining but NOT
+	## next_weather. After loading, the forecast always reset to CLEAR.
+	var save_script: GDScript = load("res://scripts/core/save_load.gd") as GDScript
+	if not save_script:
+		assert_true(false, "Could not load save_load.gd")
+		return
+
+	var source: String = save_script.source_code
+
+	# Verify next_weather is saved in _collect_weather_data
+	var collect_start: int = source.find("func _collect_weather_data()")
+	var collect_end: int = source.find("\nfunc ", collect_start + 1)
+	if collect_end == -1:
+		collect_end = source.length()
+	var collect_body: String = source.substr(collect_start, collect_end - collect_start)
+	assert_true(collect_body.find("next_weather") != -1,
+		"_collect_weather_data() saves next_weather")
+
+	# Verify next_weather is restored in _apply_weather_data
+	var apply_start: int = source.find("func _apply_weather_data(")
+	var apply_end: int = source.find("\nfunc ", apply_start + 1)
+	if apply_end == -1:
+		apply_end = source.length()
+	var apply_body: String = source.substr(apply_start, apply_end - apply_start)
+	assert_true(apply_body.find("next_weather") != -1,
+		"_apply_weather_data() restores next_weather")
+
+
+func test_death_resets_movement_state() -> void:
+	## Bug: _on_player_died() didn't reset is_resting, is_climbing, or
+	## is_grappling. Player could die while resting (starvation) and respawn
+	## stuck in resting state, unable to move.
+	var controller_script: GDScript = load("res://scripts/player/player_controller.gd") as GDScript
+	if not controller_script:
+		assert_true(false, "Could not load player_controller.gd")
+		return
+
+	var source: String = controller_script.source_code
+	var death_start: int = source.find("func _on_player_died()")
+	var death_end: int = source.find("\nfunc ", death_start + 1)
+	if death_end == -1:
+		death_end = source.length()
+	var death_body: String = source.substr(death_start, death_end - death_start)
+
+	assert_true(death_body.find("is_resting = false") != -1,
+		"_on_player_died() resets is_resting")
+	assert_true(death_body.find("is_climbing = false") != -1,
+		"_on_player_died() resets is_climbing")
+	assert_true(death_body.find("is_grappling = false") != -1,
+		"_on_player_died() resets is_grappling")
+
+
+func test_fall_recovery_resets_fall_start_y() -> void:
+	## Bug: _recover_from_fall() teleported the player but didn't reset
+	## fall_start_y. The stale height caused immediate max fall damage
+	## on the next landing after emergency recovery.
+	var controller_script: GDScript = load("res://scripts/player/player_controller.gd") as GDScript
+	if not controller_script:
+		assert_true(false, "Could not load player_controller.gd")
+		return
+
+	var source: String = controller_script.source_code
+	var recover_start: int = source.find("func _recover_from_fall()")
+	var recover_end: int = source.find("\nfunc ", recover_start + 1)
+	if recover_end == -1:
+		recover_end = source.length()
+	var recover_body: String = source.substr(recover_start, recover_end - recover_start)
+
+	assert_true(recover_body.find("fall_start_y") != -1,
+		"_recover_from_fall() resets fall_start_y after teleport")
+	assert_true(recover_body.find("is_falling = false") != -1,
+		"_recover_from_fall() resets is_falling flag")
