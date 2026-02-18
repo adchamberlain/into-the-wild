@@ -4146,6 +4146,29 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ---
 
+## Session 61 - Code Audit Bug Fixes Round 7 (2026-02-17)
+
+### Bug Fixes
+
+**1. Crafting partial ingredient loss** - `crafting_system.gd` `craft()` removed ingredients in a loop without checking `remove_item()` return values. If any removal failed mid-loop, previously consumed ingredients were lost but the craft output was still given. Added tracking of consumed items with refund on failure.
+
+**2. Cabin kitchen ingredient duplication** - `cabin_kitchen.gd` `interact()` consumed ingredients without verifying removal success. Same fix pattern: track consumed items and refund if any removal fails.
+
+**3. Resource respawn timing breaks on save/load** - `resource_manager.gd` `get_depleted_data()` saved `depleted_hour` and `depleted_minute` but not `days_elapsed`. On load, the days counter reset to 0, meaning resources that should have respawned already would need to wait the full respawn time again. Added `days_elapsed` to both save and restore.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/crafting/crafting_system.gd` | Modified | Check each `remove_item()` return, refund consumed items on failure |
+| `scripts/campsite/cabin_kitchen.gd` | Modified | Check each `remove_item()` return, refund consumed items on failure |
+| `scripts/resources/resource_manager.gd` | Modified | Save and restore `days_elapsed` in depleted resource data |
+| `tests/test_bug_regressions.gd` | Modified | Added 3 regression tests (7 new assertions, 70 total) |
+
+### Test Results
+- All 602 regression tests pass (7 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks

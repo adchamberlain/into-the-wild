@@ -77,9 +77,16 @@ func interact(player: Node) -> bool:
 	var recipe: Dictionary = KITCHEN_RECIPES[best_recipe]
 	var inputs: Dictionary = recipe.get("inputs", {})
 
-	# Consume ingredients
+	# Consume ingredients - verify each removal succeeds
+	var consumed: Array[Dictionary] = []
 	for item: String in inputs:
-		player_inventory.remove_item(item, inputs[item])
+		var removed: bool = player_inventory.remove_item(item, inputs[item])
+		if not removed:
+			# Refund previously consumed ingredients
+			for prev: Dictionary in consumed:
+				player_inventory.add_item(prev["type"], prev["amount"])
+			return true
+		consumed.append({"type": item, "amount": inputs[item]})
 
 	# Apply effects
 	var hunger_restore: float = recipe.get("hunger_restore", 0.0)

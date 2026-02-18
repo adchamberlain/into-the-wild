@@ -333,10 +333,17 @@ func craft(recipe_id: String, at_bench: bool = false, campsite_level: int = 1) -
 	var output_type: String = recipe.get("output_type", "")
 	var output_amount: int = recipe.get("output_amount", 1)
 
-	# Remove input materials
+	# Remove input materials - verify each removal succeeds
+	var consumed: Array[Dictionary] = []
 	for resource_type: String in inputs:
 		var required: int = inputs[resource_type]
-		inventory.remove_item(resource_type, required)
+		var removed: bool = inventory.remove_item(resource_type, required)
+		if not removed:
+			# Refund previously consumed ingredients
+			for prev: Dictionary in consumed:
+				inventory.add_item(prev["type"], prev["amount"])
+			return false
+		consumed.append({"type": resource_type, "amount": required})
 
 	# Add output
 	inventory.add_item(output_type, output_amount)

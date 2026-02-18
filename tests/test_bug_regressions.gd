@@ -26,6 +26,9 @@ func run_tests() -> Dictionary:
 	test_interaction_target_uses_instance_valid()
 	test_drying_rack_verifies_item_removal()
 	test_smoker_verifies_item_removal()
+	test_crafting_refunds_on_partial_failure()
+	test_kitchen_verifies_item_removal()
+	test_resource_days_elapsed_saved()
 
 	return get_results()
 
@@ -550,3 +553,85 @@ func test_smoker_verifies_item_removal() -> void:
 	# Must refund meat if fuel removal fails
 	assert_true(fn_body.find("add_item(meat_type") != -1,
 		"_start_smoking() refunds meat if fuel removal fails")
+
+
+func test_crafting_refunds_on_partial_failure() -> void:
+	## Bug: crafting_system.gd craft() removed ingredients in a loop without
+	## checking return values. If any removal failed mid-loop, some ingredients
+	## were lost but the craft output was still given. Must check each removal
+	## and refund previously consumed items on failure.
+	var crafting_script: GDScript = load("res://scripts/crafting/crafting_system.gd") as GDScript
+	if not crafting_script:
+		assert_true(false, "Could not load crafting_system.gd")
+		return
+
+	var source: String = crafting_script.source_code
+	var craft_start: int = source.find("func craft(")
+	var craft_end: int = source.find("\nfunc ", craft_start + 1)
+	if craft_end == -1:
+		craft_end = source.length()
+	var craft_body: String = source.substr(craft_start, craft_end - craft_start)
+
+	# Must check remove_item return value
+	assert_true(craft_body.find("var removed") != -1,
+		"craft() captures remove_item return value")
+	# Must track consumed items for refund
+	assert_true(craft_body.find("consumed") != -1,
+		"craft() tracks consumed items for potential refund")
+	# Must refund on failure
+	assert_true(craft_body.find("add_item(prev") != -1,
+		"craft() refunds previously consumed items on failure")
+
+
+func test_kitchen_verifies_item_removal() -> void:
+	## Bug: cabin_kitchen.gd interact() consumed ingredients in a loop without
+	## checking remove_item() return values. If removal failed, cooking effects
+	## were still applied without consuming ingredients.
+	var kitchen_script: GDScript = load("res://scripts/campsite/cabin_kitchen.gd") as GDScript
+	if not kitchen_script:
+		assert_true(false, "Could not load cabin_kitchen.gd")
+		return
+
+	var source: String = kitchen_script.source_code
+	var interact_start: int = source.find("func interact(")
+	var interact_end: int = source.find("\nfunc ", interact_start + 1)
+	if interact_end == -1:
+		interact_end = source.length()
+	var interact_body: String = source.substr(interact_start, interact_end - interact_start)
+
+	# Must check remove_item return value
+	assert_true(interact_body.find("var removed") != -1,
+		"Kitchen interact() captures remove_item return value")
+	# Must track consumed items for refund
+	assert_true(interact_body.find("consumed") != -1,
+		"Kitchen interact() tracks consumed items for potential refund")
+
+
+func test_resource_days_elapsed_saved() -> void:
+	## Bug: resource_manager.gd get_depleted_data() saved depleted_hour and
+	## depleted_minute but NOT days_elapsed. On load, the elapsed days counter
+	## reset to 0, delaying resource respawns that should have already happened.
+	var rm_script: GDScript = load("res://scripts/resources/resource_manager.gd") as GDScript
+	if not rm_script:
+		assert_true(false, "Could not load resource_manager.gd")
+		return
+
+	var source: String = rm_script.source_code
+
+	# Verify days_elapsed is saved in get_depleted_data
+	var save_start: int = source.find("func get_depleted_data()")
+	var save_end: int = source.find("\nfunc ", save_start + 1)
+	if save_end == -1:
+		save_end = source.length()
+	var save_body: String = source.substr(save_start, save_end - save_start)
+	assert_true(save_body.find('"days_elapsed"') != -1,
+		"get_depleted_data() saves days_elapsed")
+
+	# Verify days_elapsed is restored in load_depleted_data
+	var load_start: int = source.find("func load_depleted_data(")
+	var load_end: int = source.find("\nfunc ", load_start + 1)
+	if load_end == -1:
+		load_end = source.length()
+	var load_body: String = source.substr(load_start, load_end - load_start)
+	assert_true(load_body.find('"days_elapsed"') != -1,
+		"load_depleted_data() restores days_elapsed")

@@ -218,7 +218,8 @@ func get_depleted_data() -> Array[Dictionary]:
 			data.append({
 				"node_name": resource.node_name,
 				"depleted_hour": info["depleted_hour"],
-				"depleted_minute": info["depleted_minute"]
+				"depleted_minute": info["depleted_minute"],
+				"days_elapsed": info.get("days_elapsed", 0)
 			})
 	return data
 
@@ -235,7 +236,8 @@ func load_depleted_data(data: Array) -> void:
 			depleted_resources.append({
 				"node": resource,
 				"depleted_hour": saved_info.get("depleted_hour", 0),
-				"depleted_minute": saved_info.get("depleted_minute", 0)
+				"depleted_minute": saved_info.get("depleted_minute", 0),
+				"days_elapsed": saved_info.get("days_elapsed", 0)
 			})
 
 
