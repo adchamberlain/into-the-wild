@@ -61,7 +61,7 @@ func _process(delta: float) -> void:
 			fuel_remaining = 0
 			extinguish()
 			print("[FirePit] The fire has burned out - add wood!")
-		elif fuel_remaining < max_fuel * 0.3 and fire_light:
+		elif fuel_remaining < max_fuel * 0.3 and is_instance_valid(fire_light):
 			# Fire dims as fuel runs low (below 30%)
 			var dim_factor: float = fuel_remaining / (max_fuel * 0.3)
 			fire_light.light_energy = base_light_energy * effectiveness * (0.5 + 0.5 * dim_factor)
@@ -84,7 +84,10 @@ func interact(player: Node) -> bool:
 			if player.has_method("get_inventory"):
 				inventory = player.get_inventory()
 			if inventory and inventory.has_item("wood"):
-				inventory.remove_item("wood", 1)
+				var removed: bool = inventory.remove_item("wood", 1)
+				if not removed:
+					_show_notification("Need wood to light fire!", Color(1.0, 0.4, 0.4))
+					return false
 				fuel_remaining = max_fuel  # 1 day of fuel
 				_set_fire_state(true)
 				flare()
@@ -157,7 +160,7 @@ func add_fuel(amount: float = -1.0) -> void:
 
 ## Visual flare effect - briefly increases light intensity.
 func flare() -> void:
-	if not fire_light or not is_lit:
+	if not is_instance_valid(fire_light) or not is_lit:
 		return
 
 	var original_energy: float = fire_light.light_energy

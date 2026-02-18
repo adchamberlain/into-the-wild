@@ -74,6 +74,9 @@ func run_tests() -> Dictionary:
 	test_drying_rack_completion_uses_instance_valid()
 	test_smoker_completion_uses_instance_valid()
 	test_smithing_completion_uses_instance_valid()
+	test_fire_pit_light_uses_instance_valid_in_process()
+	test_fire_pit_flare_uses_instance_valid()
+	test_fire_pit_light_wood_checks_removal()
 
 	return get_results()
 
@@ -1796,3 +1799,69 @@ func test_smithing_completion_uses_instance_valid() -> void:
 
 	assert_true(fn_body.find("is_instance_valid(player_inventory)") != -1,
 		"_complete_smelting uses is_instance_valid for stale player_inventory reference")
+
+
+func test_fire_pit_light_uses_instance_valid_in_process() -> void:
+	## Bug: structure_fire_pit.gd _process() checked fire_light with truthiness
+	## (and fire_light:) in the dimming code at line 64. If the FireLight child
+	## node was freed externally, the freed reference passes truthiness and
+	## accessing .light_energy crashes. Must use is_instance_valid().
+	var script: GDScript = load("res://scripts/campsite/structure_fire_pit.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load structure_fire_pit.gd")
+		return
+
+	var source: String = script.source_code
+	var fn_start: int = source.find("func _process(")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+
+	assert_true(fn_body.find("is_instance_valid(fire_light)") != -1,
+		"Fire pit _process dimming uses is_instance_valid for fire_light")
+
+
+func test_fire_pit_flare_uses_instance_valid() -> void:
+	## Bug: structure_fire_pit.gd flare() checked fire_light with truthiness
+	## (if not fire_light) instead of is_instance_valid(). A freed node passes
+	## truthiness so the guard wouldn't trigger, and the subsequent
+	## fire_light.light_energy access and tween would crash on the freed node.
+	var script: GDScript = load("res://scripts/campsite/structure_fire_pit.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load structure_fire_pit.gd")
+		return
+
+	var source: String = script.source_code
+	var fn_start: int = source.find("func flare()")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+
+	assert_true(fn_body.find("is_instance_valid(fire_light)") != -1,
+		"flare() uses is_instance_valid for fire_light guard")
+
+
+func test_fire_pit_light_wood_checks_removal() -> void:
+	## Bug: structure_fire_pit.gd interact() called inventory.remove_item("wood", 1)
+	## without checking the return value. If removal failed (race condition), the
+	## code still set fuel_remaining = max_fuel and lit the fire, giving the player
+	## free fuel without consuming wood.
+	var script: GDScript = load("res://scripts/campsite/structure_fire_pit.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load structure_fire_pit.gd")
+		return
+
+	var source: String = script.source_code
+	var fn_start: int = source.find("func interact(")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+
+	# Must capture remove_item return value for wood
+	assert_true(fn_body.find("var removed") != -1,
+		"Fire pit interact() captures remove_item return value for wood")
+	assert_true(fn_body.find("if not removed") != -1,
+		"Fire pit interact() checks remove_item return and aborts on failure")

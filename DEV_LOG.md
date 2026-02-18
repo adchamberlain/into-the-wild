@@ -4519,6 +4519,27 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ---
 
+## Session 77 - Code Audit Bug Fixes Round 23 (2026-02-17)
+
+### Bug Fixes
+
+**1. Fire pit light crash on freed node in _process()** - `structure_fire_pit.gd` `_process()` checked `fire_light` with truthiness (`and fire_light:`) in the dimming code. If the FireLight child node was freed externally, the freed reference passes truthiness and accessing `.light_energy` crashes. Changed to `is_instance_valid(fire_light)`.
+
+**2. Fire pit flare crash on freed light node** - `structure_fire_pit.gd` `flare()` checked `fire_light` with truthiness (`if not fire_light`) instead of `is_instance_valid()`. A freed node passes truthiness so the guard wouldn't trigger, and the subsequent `.light_energy` access and tween would crash. Changed to `is_instance_valid(fire_light)`.
+
+**3. Fire pit unchecked wood removal on lighting** - `structure_fire_pit.gd` `interact()` called `inventory.remove_item("wood", 1)` without checking the return value. If removal failed, the code still set `fuel_remaining = max_fuel` and lit the fire, giving the player free fuel without consuming wood. Now checks return value and aborts on failure.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/campsite/structure_fire_pit.gd` | Modified | `is_instance_valid(fire_light)` in `_process()` and `flare()`, check `remove_item` return in `interact()` |
+| `tests/test_bug_regressions.gd` | Modified | Added 3 regression tests (4 new assertions, 174 total) |
+
+### Test Results
+- All 706 regression tests pass (4 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks
