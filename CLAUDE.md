@@ -98,6 +98,15 @@ When editing GDScript files, be careful with: 1) Vector3 truthiness (use `vector
 
 After completing all changes for a task, always commit and push to main unless told otherwise. Use descriptive commit messages summarizing what was changed and why.
 
+### Testing Rule
+
+When fixing a bug, add a regression test that reproduces the bug before applying the fix. When adding new logic that transforms data or makes decisions, add a unit test. Run the test suite to verify before presenting the fix.
+
+- All tests go in `tests/` as GDScript files extending `TestBase`
+- Follow the existing pattern: create a `test_*.gd` file with a `run_tests()` method
+- Register new test files in `tests/run_all_tests.gd`
+- Use `assert_true`, `assert_equal`, `assert_not_equal`, etc. from `TestBase`
+
 ### Regression Tests
 
 Before committing changes, run the regression test suite:
@@ -112,3 +121,4 @@ All tests must pass. If a test fails, fix the issue before committing. The suite
 - **CaveTransition** - respawn timing, save roundtrip, entry guards, scene paths
 - **SaveLoad** - serialization roundtrips, field presence, JSON precision
 - **UIConstants** - font size tiers, panel colors, text colors, font resource
+
