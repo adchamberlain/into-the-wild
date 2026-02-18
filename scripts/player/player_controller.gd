@@ -110,6 +110,7 @@ const FOOD_VALUES: Dictionary = {
 	"dried_fish": 30.0,
 	"dried_berries": 20.0,
 	"dried_mushroom": 15.0,
+	"dried_herb": 8.0,
 	# Smoked (smoker - Level 3)
 	"smoked_meat": 45.0,
 	"smoked_fish": 50.0,
@@ -195,8 +196,11 @@ func _input(event: InputEvent) -> void:
 		_try_eat()
 		return
 
-	# Handle using equipped item (R key or R2 trigger) - disabled while resting
+	# Handle using equipped item (R key or R2 trigger) - disabled while resting or placing
 	if event.is_action_pressed("use_equipped") and not is_resting:
+		var placement: Node = get_node_or_null("PlacementSystem")
+		if placement and ("is_placing" in placement and placement.is_placing or "is_moving" in placement and placement.is_moving):
+			return  # Let PlacementSystem handle this input
 		_try_use_equipped()
 		return
 

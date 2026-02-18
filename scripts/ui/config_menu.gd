@@ -341,13 +341,13 @@ func _input(event: InputEvent) -> void:
 				toggle_menu()
 				_handle_input()
 			return
-		# Quick save with K (Keep)
-		elif event.physical_keycode == KEY_K:
+		# Quick save with K (Keep) - only when menu is open
+		elif event.physical_keycode == KEY_K and is_visible:
 			_on_save_pressed()
 			_handle_input()
 			return
-		# Quick load with L (Load)
-		elif event.physical_keycode == KEY_L:
+		# Quick load with L (Load) - only when menu is open
+		elif event.physical_keycode == KEY_L and is_visible:
 			_on_load_pressed()
 			_handle_input()
 			return
@@ -603,6 +603,40 @@ func get_config() -> Dictionary:
 		"tree_respawn_days": tree_respawn_days,
 		"day_length_minutes": day_length_minutes
 	}
+
+
+## Apply config from saved data.
+func apply_config(data: Dictionary) -> void:
+	hunger_enabled = data.get("hunger_enabled", false)
+	health_drain_enabled = data.get("health_drain_enabled", false)
+	weather_damage_enabled = data.get("weather_damage_enabled", false)
+	weather_enabled = data.get("weather_enabled", true)
+	unlimited_fire_enabled = data.get("unlimited_fire_enabled", false)
+	show_coordinates_enabled = data.get("show_coordinates_enabled", true)
+	tree_respawn_days = data.get("tree_respawn_days", 7.0)
+	day_length_minutes = data.get("day_length_minutes", 20.0)
+	# Update UI sliders/toggles
+	if hunger_toggle:
+		hunger_toggle.button_pressed = hunger_enabled
+	if health_toggle:
+		health_toggle.button_pressed = health_drain_enabled
+	if weather_damage_toggle:
+		weather_damage_toggle.button_pressed = weather_damage_enabled
+	if weather_toggle:
+		weather_toggle.button_pressed = weather_enabled
+	if unlimited_fire_toggle:
+		unlimited_fire_toggle.button_pressed = unlimited_fire_enabled
+	if show_coordinates_toggle:
+		show_coordinates_toggle.button_pressed = show_coordinates_enabled
+	if tree_respawn_slider:
+		tree_respawn_slider.value = tree_respawn_days
+	if tree_respawn_label:
+		tree_respawn_label.text = "%.0f day%s" % [tree_respawn_days, "s" if not is_equal_approx(tree_respawn_days, 1.0) else ""]
+	if day_length_slider:
+		day_length_slider.value = day_length_minutes
+	if day_length_label:
+		day_length_label.text = "%.0f min" % day_length_minutes
+	_apply_config()
 
 
 ## Save/Load functions

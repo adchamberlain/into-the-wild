@@ -230,7 +230,7 @@ func get_total_structure_count() -> int:
 
 ## Get all placed structures.
 func get_placed_structures() -> Array[Node]:
-	return placed_structures
+	return placed_structures.duplicate()
 
 
 ## Check level progression and level up if requirements met.

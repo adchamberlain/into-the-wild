@@ -15,7 +15,12 @@ const COOKING_RECIPES: Dictionary = {
 	"berry": {"output": "cooked_berries", "hunger": 25},
 	"mushroom": {"output": "cooked_mushroom", "hunger": 20},
 	"fish": {"output": "cooked_fish", "hunger": 40},
+	"raw_meat": {"output": "cooked_meat", "hunger": 35},
 }
+
+# Warmup cooldown tracking
+var _warmup_cooldown: float = 0.0
+const WARMUP_COOLDOWN_TIME: float = 30.0
 
 # UI References
 @onready var panel: PanelContainer = $Panel
@@ -84,6 +89,8 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if open_cooldown_timer > 0:
 		open_cooldown_timer -= delta
+	if _warmup_cooldown > 0:
+		_warmup_cooldown -= delta
 
 	# Wait for jump action to be released before fully closing menu
 	# This prevents the player from jumping when X is used to select menu options
@@ -243,10 +250,20 @@ func _get_cookable_item() -> String:
 func _on_warm_up_pressed() -> void:
 	if not is_instance_valid(current_fire) or not player_stats:
 		return
+	# Fire must still be lit
+	if "is_lit" in current_fire and not current_fire.is_lit:
+		_show_notification("The fire has gone out!", Color(1.0, 0.5, 0.5))
+		close_menu()
+		return
+	# Cooldown check
+	if _warmup_cooldown > 0:
+		_show_notification("Need to wait before warming up again", Color(0.7, 0.7, 0.7))
+		return
 
 	# Heal player
 	if player_stats.has_method("heal"):
 		player_stats.heal(15.0)
+	_warmup_cooldown = WARMUP_COOLDOWN_TIME
 
 	# Visual flare effect
 	if current_fire.has_method("flare"):
@@ -262,6 +279,11 @@ func _on_warm_up_pressed() -> void:
 func _on_cook_pressed() -> void:
 	if not is_instance_valid(current_fire) or not player_inventory or not player_stats:
 		return
+	# Fire must still be lit
+	if "is_lit" in current_fire and not current_fire.is_lit:
+		_show_notification("The fire has gone out!", Color(1.0, 0.5, 0.5))
+		close_menu()
+		return
 
 	var cookable_item: String = _get_cookable_item()
 	if cookable_item == "":
@@ -274,17 +296,17 @@ func _on_cook_pressed() -> void:
 	if not removed:
 		return
 
-	# Restore hunger directly (cooked food gives more)
-	if player_stats.has_method("eat"):
-		player_stats.eat(recipe["hunger"])
+	# Add cooked item to inventory
+	var output_item: String = recipe["output"]
+	player_inventory.add_item(output_item, 1)
 
 	# Visual flare effect
 	if current_fire.has_method("flare"):
 		current_fire.flare()
 
 	# Show notification
-	var output_name: String = recipe["output"].capitalize().replace("_", " ")
-	_show_notification("Cooked %s! +%d Hunger" % [cookable_item.capitalize(), recipe["hunger"]], Color(1.0, 0.6, 0.2))
+	var output_name: String = output_item.capitalize().replace("_", " ")
+	_show_notification("Cooked %s!" % output_name, Color(1.0, 0.6, 0.2))
 
 	action_selected.emit("cook")
 

@@ -586,6 +586,9 @@ func _on_game_loaded(_filepath: String, slot: int) -> void:
 	show_notification("Loaded Slot %d!" % slot, Color(0.4, 1.0, 0.4, 1))
 	# Update campsite level display (without showing celebration)
 	_update_campsite_level_display()
+	# Refresh weather display (weather_changed signal isn't emitted during load)
+	if weather_manager and weather_manager.has_method("get_weather_name"):
+		_on_weather_changed(weather_manager.current_weather)
 
 
 func _connect_to_placement_system() -> void:
@@ -747,6 +750,8 @@ func _input(event: InputEvent) -> void:
 	if is_celebrating:
 		if (event is InputEventKey and event.pressed) or (event is InputEventJoypadButton and event.pressed):
 			_hide_celebration()
+			get_viewport().set_input_as_handled()
+			return
 
 
 ## Update crosshair color based on grapple target validity.

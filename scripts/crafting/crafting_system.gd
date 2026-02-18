@@ -271,12 +271,13 @@ func set_inventory(inv: Inventory) -> void:
 
 ## Get all discovered recipes.
 func get_discovered_recipes() -> Array[String]:
-	return discovered_recipes
+	return discovered_recipes.duplicate()
 
 
 ## Get recipe data by ID.
 func get_recipe(recipe_id: String) -> Dictionary:
-	return recipes.get(recipe_id, {})
+	var recipe: Dictionary = recipes.get(recipe_id, {})
+	return recipe.duplicate() if recipe else {}
 
 
 ## Check if player can craft a recipe (has all required materials and bench if needed).

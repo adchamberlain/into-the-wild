@@ -75,7 +75,13 @@ func _start_drying(food_type: String) -> void:
 func _complete_drying() -> void:
 	var dried_type: String = DRYING_RECIPES.get(current_food, "dried_food")
 
-	# Add dried food to player inventory if available, otherwise drop nearby
+	# Find player inventory fresh (cached reference may be stale after save/load)
+	if not is_instance_valid(player_inventory):
+		var p: Node = get_tree().get_first_node_in_group("player")
+		if p and p.has_method("get_inventory"):
+			player_inventory = p.get_inventory()
+
+	# Add dried food to player inventory
 	if is_instance_valid(player_inventory):
 		player_inventory.add_item(dried_type, 1)
 		print("[DryingRack] Drying complete! +1 %s" % dried_type)

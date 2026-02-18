@@ -94,7 +94,13 @@ func _start_smoking(meat_type: String) -> void:
 func _complete_smoking() -> void:
 	var output_type: String = SMOKE_RECIPES.get(current_meat, "smoked_meat")
 
-	# Add output to player inventory if available
+	# Find player inventory fresh (cached reference may be stale after save/load)
+	if not is_instance_valid(player_inventory):
+		var p: Node = get_tree().get_first_node_in_group("player")
+		if p and p.has_method("get_inventory"):
+			player_inventory = p.get_inventory()
+
+	# Add output to player inventory
 	if is_instance_valid(player_inventory):
 		player_inventory.add_item(output_type, 1)
 		print("[Smoker] Smoking complete! +1 %s" % output_type)

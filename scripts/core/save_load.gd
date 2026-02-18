@@ -102,7 +102,7 @@ func _check_pending_load() -> void:
 
 		print("[SaveLoad] References after wait - Player: %s, ChunkManager: %s" % [player != null, chunk_manager != null])
 
-		load_game_slot(pending_slot)
+		await load_game_slot(pending_slot)
 
 
 func _ensure_save_directory() -> void:
@@ -151,7 +151,7 @@ func save_game_slot(slot: int) -> bool:
 
 ## Load the game state from file (backward compatibility wrapper for slot 1).
 func load_game() -> bool:
-	return load_game_slot(1)
+	return await load_game_slot(1)
 
 
 ## Load the game state from a specific slot.
@@ -212,7 +212,7 @@ func load_game_slot(slot: int) -> bool:
 			get_tree().reload_current_scene()
 			return true
 
-	_apply_save_data(save_data)
+	await _apply_save_data(save_data)
 
 	# Ensure game is unpaused after loading (in case we loaded from pause menu)
 	get_tree().paused = false
@@ -381,6 +381,11 @@ func _collect_save_data() -> Dictionary:
 	if cave_transition and cave_transition.has_method("get_save_data"):
 		data["cave"] = cave_transition.get_save_data()
 
+	# Config settings
+	var config_menu: Node = get_tree().root.get_node_or_null("Main/ConfigMenu")
+	if config_menu and config_menu.has_method("get_config"):
+		data["config"] = config_menu.get_config()
+
 	return data
 
 
@@ -431,7 +436,9 @@ func _collect_weather_data() -> Dictionary:
 	return {
 		"weather_type": weather_manager.current_weather,
 		"duration_remaining": weather_manager.weather_duration_remaining,
-		"next_weather": weather_manager.next_weather
+		"next_weather": weather_manager.next_weather,
+		"rolled_today": weather_manager._rolled_today,
+		"weather_enabled": weather_manager.weather_enabled
 	}
 
 
@@ -537,7 +544,7 @@ func _apply_save_data(data: Dictionary) -> void:
 	# Campsite (structures)
 	if data.has("campsite") and campsite_manager:
 		print("[SaveLoad] Applying campsite data...")
-		_apply_campsite_data(data["campsite"])
+		await _apply_campsite_data(data["campsite"])
 	elif data.has("campsite"):
 		push_warning("[SaveLoad] Skipping campsite data - campsite_manager is null")
 
@@ -552,6 +559,12 @@ func _apply_save_data(data: Dictionary) -> void:
 		var cave_transition: Node = get_node_or_null("/root/CaveTransition")
 		if cave_transition and cave_transition.has_method("load_save_data"):
 			cave_transition.load_save_data(data["cave"])
+
+	# Config settings
+	if data.has("config"):
+		var config_menu: Node = get_tree().root.get_node_or_null("Main/ConfigMenu")
+		if config_menu and config_menu.has_method("apply_config"):
+			config_menu.apply_config(data["config"])
 
 	# Post-load: Verify crafting flags based on inventory (for backward compatibility)
 	_verify_crafting_flags_from_inventory()
@@ -667,6 +680,10 @@ func _apply_weather_data(data: Dictionary) -> void:
 	weather_manager.weather_duration_remaining = data.get("duration_remaining", 0.0)
 	if data.has("next_weather"):
 		weather_manager.next_weather = int(data["next_weather"])
+	if data.has("rolled_today"):
+		weather_manager._rolled_today = data["rolled_today"]
+	if data.has("weather_enabled"):
+		weather_manager.weather_enabled = data["weather_enabled"]
 
 	# Update visuals
 	if weather_manager.environment_manager:

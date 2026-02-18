@@ -91,6 +91,27 @@ func run_tests() -> Dictionary:
 	test_signal_connections_use_is_connected_guard()
 	test_config_menu_float_comparison()
 
+	# Round 2 regression tests
+	test_cave_darkness_uses_player_stats()
+	test_cave_transition_saves_state()
+	test_cave_resource_state_deep_duplicate()
+	test_save_load_awaits_campsite_data()
+	test_weather_data_saves_rolled_today()
+	test_weather_data_restores_rolled_today()
+	test_load_game_slot_callers_use_await()
+	test_config_menu_has_apply_config()
+	test_config_kl_keys_check_visibility()
+	test_processing_structures_lookup_player_on_complete()
+	test_use_equipped_checks_placement_active()
+	test_dried_herb_in_food_values()
+	test_fire_menu_has_raw_meat_recipe()
+	test_fire_menu_checks_is_lit()
+	test_fire_menu_cooking_uses_inventory()
+	test_equipment_menu_sets_mouse_mode()
+	test_fishing_respawn_checks_hours()
+	test_crafting_getters_return_duplicates()
+	test_campsite_get_structures_returns_duplicate()
+
 	return get_results()
 
 
@@ -2214,3 +2235,336 @@ func test_config_menu_float_comparison() -> void:
 		"config_menu uses is_equal_approx for float comparison")
 	assert_true(src.find("tree_respawn_days != 1.0") == -1,
 		"config_menu does not use bare != 1.0 float comparison")
+
+
+# ============================================================
+# Round 2 Regression Tests
+# ============================================================
+
+func test_cave_darkness_uses_player_stats() -> void:
+	## Bug: cave_transition.gd called player.take_damage() directly, but damage
+	## is handled by PlayerStats node. Must get PlayerStats and call take_damage on it.
+	var script: GDScript = load("res://scripts/core/cave_transition.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load cave_transition.gd")
+		return
+	var src: String = script.source_code
+	# Find the _apply_darkness_damage function which does the actual damage
+	var func_idx: int = src.find("func _apply_darkness_damage")
+	assert_true(func_idx != -1, "cave_transition has _apply_darkness_damage")
+	var func_body: String = src.substr(func_idx, 500)
+	assert_true(func_body.find("PlayerStats") != -1,
+		"darkness damage uses PlayerStats node")
+	assert_true(func_body.find("stats.take_damage") != -1 or func_body.find("stats.has_method") != -1,
+		"darkness damage calls take_damage on stats node")
+
+
+func test_cave_transition_saves_state() -> void:
+	## Bug: cave state (is_in_cave, current_cave_id, is_dark) was not saved,
+	## so loading a save while in a cave would lose cave state.
+	var script: GDScript = load("res://scripts/core/cave_transition.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load cave_transition.gd")
+		return
+	var src: String = script.source_code
+	var save_idx: int = src.find("func get_save_data")
+	assert_true(save_idx != -1, "cave_transition has get_save_data")
+	var save_body: String = src.substr(save_idx, 300)
+	assert_true(save_body.find("is_in_cave") != -1, "get_save_data includes is_in_cave")
+	assert_true(save_body.find("current_cave_id") != -1, "get_save_data includes current_cave_id")
+	assert_true(save_body.find("is_dark") != -1, "get_save_data includes is_dark")
+
+	var load_idx: int = src.find("func load_save_data")
+	assert_true(load_idx != -1, "cave_transition has load_save_data")
+	var load_body: String = src.substr(load_idx, 500)
+	assert_true(load_body.find("is_in_cave") != -1, "load_save_data restores is_in_cave")
+	assert_true(load_body.find("current_cave_id") != -1, "load_save_data restores current_cave_id")
+	assert_true(load_body.find("is_dark") != -1, "load_save_data restores is_dark")
+
+
+func test_cave_resource_state_deep_duplicate() -> void:
+	## Bug: get_save_data returned cave_resource_state by reference, so external
+	## code could mutate the internal state. Must use .duplicate(true).
+	var script: GDScript = load("res://scripts/core/cave_transition.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load cave_transition.gd")
+		return
+	var src: String = script.source_code
+	var save_idx: int = src.find("func get_save_data")
+	assert_true(save_idx != -1, "cave_transition has get_save_data")
+	var save_body: String = src.substr(save_idx, 300)
+	assert_true(save_body.find("cave_resource_state.duplicate") != -1,
+		"get_save_data duplicates cave_resource_state")
+
+
+func test_save_load_awaits_campsite_data() -> void:
+	## Bug: _apply_campsite_data is async (builds structures with awaits) but was
+	## called without await, causing race conditions during load.
+	var script: GDScript = load("res://scripts/core/save_load.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load save_load.gd")
+		return
+	var src: String = script.source_code
+	assert_true(src.find("await _apply_campsite_data") != -1,
+		"save_load awaits _apply_campsite_data")
+	assert_true(src.find("await _apply_save_data") != -1,
+		"save_load awaits _apply_save_data")
+
+
+func test_weather_data_saves_rolled_today() -> void:
+	## Bug: weather _rolled_today flag was not saved, so loading a save would
+	## re-roll weather for the day, losing the original forecast.
+	var script: GDScript = load("res://scripts/core/save_load.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load save_load.gd")
+		return
+	var src: String = script.source_code
+	var collect_idx: int = src.find("func _collect_weather_data")
+	assert_true(collect_idx != -1, "save_load has _collect_weather_data")
+	var collect_body: String = src.substr(collect_idx, 400)
+	assert_true(collect_body.find("rolled_today") != -1,
+		"_collect_weather_data includes rolled_today")
+	assert_true(collect_body.find("weather_enabled") != -1,
+		"_collect_weather_data includes weather_enabled")
+
+
+func test_weather_data_restores_rolled_today() -> void:
+	## Bug: _apply_weather_data did not restore _rolled_today or weather_enabled.
+	var script: GDScript = load("res://scripts/core/save_load.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load save_load.gd")
+		return
+	var src: String = script.source_code
+	var apply_idx: int = src.find("func _apply_weather_data")
+	assert_true(apply_idx != -1, "save_load has _apply_weather_data")
+	var apply_body: String = src.substr(apply_idx, 500)
+	assert_true(apply_body.find("_rolled_today") != -1,
+		"_apply_weather_data restores _rolled_today")
+	assert_true(apply_body.find("weather_enabled") != -1,
+		"_apply_weather_data restores weather_enabled")
+
+
+func test_load_game_slot_callers_use_await() -> void:
+	## Bug: load_game_slot became a coroutine (has await internally) but callers
+	## did not use await, causing errors.
+	var script: GDScript = load("res://scripts/core/save_load.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load save_load.gd")
+		return
+	var src: String = script.source_code
+	var load_game_idx: int = src.find("func load_game()")
+	assert_true(load_game_idx != -1, "save_load has load_game()")
+	var load_game_body: String = src.substr(load_game_idx, 200)
+	assert_true(load_game_body.find("await load_game_slot") != -1,
+		"load_game() awaits load_game_slot")
+
+
+func test_config_menu_has_apply_config() -> void:
+	## Bug: config settings were not saved/restored on load because config_menu
+	## had no apply_config method to restore settings from save data.
+	var script: GDScript = load("res://scripts/ui/config_menu.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load config_menu.gd")
+		return
+	var src: String = script.source_code
+	assert_true(src.find("func apply_config(data: Dictionary)") != -1,
+		"config_menu has apply_config method")
+	var apply_idx: int = src.find("func apply_config")
+	var apply_body: String = src.substr(apply_idx, 600)
+	assert_true(apply_body.find("hunger_enabled") != -1,
+		"apply_config restores hunger_enabled")
+	assert_true(apply_body.find("weather_enabled") != -1,
+		"apply_config restores weather_enabled")
+
+
+func test_config_kl_keys_check_visibility() -> void:
+	## Bug: K/L keys in config_menu toggled settings even when menu was closed,
+	## interfering with gameplay. Must check is_visible.
+	var script: GDScript = load("res://scripts/ui/config_menu.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load config_menu.gd")
+		return
+	var src: String = script.source_code
+	var k_idx: int = src.find("KEY_K")
+	assert_true(k_idx != -1, "config_menu has KEY_K handler")
+	var k_context: String = src.substr(max(0, k_idx - 50), 100)
+	assert_true(k_context.find("is_visible") != -1,
+		"KEY_K handler checks is_visible")
+	var l_idx: int = src.find("KEY_L")
+	assert_true(l_idx != -1, "config_menu has KEY_L handler")
+	var l_context: String = src.substr(max(0, l_idx - 50), 100)
+	assert_true(l_context.find("is_visible") != -1,
+		"KEY_L handler checks is_visible")
+
+
+func test_processing_structures_lookup_player_on_complete() -> void:
+	## Bug: drying rack, smoker, and smithing station cached player_inventory
+	## at build time. If player reloaded, the cached reference went stale and
+	## completed items were lost. Must look up player via group at completion.
+	for file_path: String in [
+		"res://scripts/campsite/structure_drying_rack.gd",
+		"res://scripts/campsite/structure_smoker.gd",
+		"res://scripts/campsite/structure_smithing_station.gd",
+	]:
+		var script: GDScript = load(file_path) as GDScript
+		if not script:
+			assert_true(false, "Could not load %s" % file_path)
+			continue
+		var src: String = script.source_code
+		assert_true(src.find("get_first_node_in_group") != -1,
+			"%s looks up player via group on completion" % file_path.get_file())
+		assert_true(src.find("is_instance_valid(player_inventory)") != -1,
+			"%s checks player_inventory validity before use" % file_path.get_file())
+
+
+func test_use_equipped_checks_placement_active() -> void:
+	## Bug: use_equipped would fire while placement system was active (placing/moving
+	## a structure), consuming items unintentionally.
+	var file: FileAccess = FileAccess.open("res://scripts/player/player_controller.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open player_controller.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var equip_idx: int = src.find("use_equipped")
+	assert_true(equip_idx != -1, "player_controller has use_equipped handler")
+	var equip_context: String = src.substr(equip_idx, 500)
+	assert_true(equip_context.find("is_placing") != -1,
+		"use_equipped checks placement is_placing")
+
+
+func test_dried_herb_in_food_values() -> void:
+	## Bug: dried_herb had no entry in FOOD_VALUES, making it unconsumable
+	## despite being a crafted food item.
+	var file: FileAccess = FileAccess.open("res://scripts/player/player_controller.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open player_controller.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var food_idx: int = src.find("FOOD_VALUES")
+	assert_true(food_idx != -1, "player_controller has FOOD_VALUES")
+	var food_body: String = src.substr(food_idx, 1000)
+	assert_true(food_body.find("dried_herb") != -1,
+		"FOOD_VALUES includes dried_herb")
+
+
+func test_fire_menu_has_raw_meat_recipe() -> void:
+	## Bug: fire_menu had no recipe for raw_meat, so players could not cook
+	## meat at the campfire despite having it in inventory.
+	var file: FileAccess = FileAccess.open("res://scripts/ui/fire_menu.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open fire_menu.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	assert_true(src.find("raw_meat") != -1,
+		"fire_menu has raw_meat recipe")
+	assert_true(src.find("cooked_meat") != -1,
+		"fire_menu raw_meat recipe produces cooked_meat")
+
+
+func test_fire_menu_checks_is_lit() -> void:
+	## Bug: players could cook/warm at extinguished fires because there was
+	## no check for fire.is_lit before allowing those actions.
+	var file: FileAccess = FileAccess.open("res://scripts/ui/fire_menu.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open fire_menu.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	assert_true(src.find("is_lit") != -1,
+		"fire_menu checks is_lit before actions")
+	# Check both cook and warm functions reference is_lit
+	var cook_idx: int = src.find("func _on_cook")
+	if cook_idx != -1:
+		var cook_body: String = src.substr(cook_idx, 500)
+		assert_true(cook_body.find("is_lit") != -1,
+			"cook function checks is_lit")
+	var warm_idx: int = src.find("func _on_warm")
+	if warm_idx != -1:
+		var warm_body: String = src.substr(warm_idx, 500)
+		assert_true(warm_body.find("is_lit") != -1,
+			"warm function checks is_lit")
+
+
+func test_fire_menu_cooking_uses_inventory() -> void:
+	## Bug: cooking at fire directly restored hunger instead of producing
+	## cooked items in inventory, bypassing the food system.
+	var file: FileAccess = FileAccess.open("res://scripts/ui/fire_menu.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open fire_menu.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var cook_idx: int = src.find("func _on_cook")
+	assert_true(cook_idx != -1, "fire_menu has cook function")
+	var cook_body: String = src.substr(cook_idx, 1000)
+	assert_true(cook_body.find("add_item") != -1,
+		"cooking adds output item to inventory")
+
+
+func test_equipment_menu_sets_mouse_mode() -> void:
+	## Bug: equipment menu did not show/hide mouse cursor when opening/closing,
+	## leaving cursor invisible when menu open or visible when closed.
+	var script: GDScript = load("res://scripts/ui/equipment_menu.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load equipment_menu.gd")
+		return
+	var src: String = script.source_code
+	assert_true(src.find("MOUSE_MODE_VISIBLE") != -1,
+		"equipment_menu shows cursor when open")
+	assert_true(src.find("MOUSE_MODE_CAPTURED") != -1,
+		"equipment_menu captures cursor when closed")
+
+
+func test_fishing_respawn_checks_hours() -> void:
+	## Bug: fishing spots always respawned on day change regardless of how
+	## recently they were depleted. Must check hours elapsed vs respawn_time_hours.
+	var file: FileAccess = FileAccess.open("res://scripts/resources/fishing_spot.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open fishing_spot.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var day_idx: int = src.find("func _on_day_changed")
+	assert_true(day_idx != -1, "fishing_spot has _on_day_changed")
+	var day_body: String = src.substr(day_idx, 600)
+	assert_true(day_body.find("respawn_time_hours") != -1,
+		"_on_day_changed checks respawn_time_hours")
+
+
+func test_crafting_getters_return_duplicates() -> void:
+	## Bug: get_discovered_recipes and get_recipe returned internal arrays/dicts
+	## by reference, allowing callers to mutate internal crafting state.
+	var script: GDScript = load("res://scripts/crafting/crafting_system.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load crafting_system.gd")
+		return
+	var src: String = script.source_code
+	var disc_idx: int = src.find("func get_discovered_recipes")
+	assert_true(disc_idx != -1, "crafting_system has get_discovered_recipes")
+	var disc_body: String = src.substr(disc_idx, 200)
+	assert_true(disc_body.find(".duplicate()") != -1,
+		"get_discovered_recipes returns duplicate")
+
+	var recipe_idx: int = src.find("func get_recipe")
+	assert_true(recipe_idx != -1, "crafting_system has get_recipe")
+	var recipe_body: String = src.substr(recipe_idx, 200)
+	assert_true(recipe_body.find(".duplicate()") != -1,
+		"get_recipe returns duplicate")
+
+
+func test_campsite_get_structures_returns_duplicate() -> void:
+	## Bug: get_placed_structures returned internal array by reference,
+	## allowing external code to accidentally add/remove structures.
+	var script: GDScript = load("res://scripts/campsite/campsite_manager.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load campsite_manager.gd")
+		return
+	var src: String = script.source_code
+	var idx: int = src.find("func get_placed_structures")
+	assert_true(idx != -1, "campsite_manager has get_placed_structures")
+	var body: String = src.substr(idx, 200)
+	assert_true(body.find(".duplicate()") != -1,
+		"get_placed_structures returns duplicate")

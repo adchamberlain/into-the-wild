@@ -159,10 +159,11 @@ func _apply_darkness_damage() -> void:
 	if time_in_darkness < DARKNESS_DAMAGE_DELAY + DARKNESS_DAMAGE_INTERVAL * 0.5:
 		_show_notification("You stumble in the darkness!", Color(1.0, 0.6, 0.4))
 
-	if player.has_method("take_damage"):
-		player.take_damage(DARKNESS_DAMAGE_AMOUNT)
-	elif "health" in player:
-		player.health -= DARKNESS_DAMAGE_AMOUNT
+	var stats: Node = player.get_node_or_null("PlayerStats")
+	if stats and stats.has_method("take_damage"):
+		stats.take_damage(DARKNESS_DAMAGE_AMOUNT)
+	elif stats and "health" in stats:
+		stats.health -= DARKNESS_DAMAGE_AMOUNT
 
 	print("[CaveTransition] Darkness damage: %d HP" % DARKNESS_DAMAGE_AMOUNT)
 
@@ -238,13 +239,23 @@ func get_depleted_cave_resources(cave_id: int, current_day: int, current_hour: i
 ## Get save data for persistence.
 func get_save_data() -> Dictionary:
 	return {
-		"cave_resource_state": cave_resource_state
+		"cave_resource_state": cave_resource_state.duplicate(true),
+		"is_in_cave": is_in_cave,
+		"current_cave_id": current_cave_id,
+		"is_dark": is_dark,
 	}
 
 
 ## Load save data.
 func load_save_data(data: Dictionary) -> void:
 	cave_resource_state = data.get("cave_resource_state", {})
+	is_in_cave = data.get("is_in_cave", false)
+	current_cave_id = data.get("current_cave_id", "")
+	is_dark = data.get("is_dark", false)
+	time_in_darkness = 0.0
+	darkness_damage_timer = 0.0
+	if darkness_overlay:
+		darkness_overlay.color.a = DARKNESS_ALPHA if is_dark else 0.0
 
 
 func _show_notification(message: String, color: Color) -> void:

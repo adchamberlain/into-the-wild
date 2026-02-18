@@ -202,9 +202,12 @@ func toggle_menu() -> void:
 	panel.visible = is_visible
 
 	if is_visible:
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 		focused_slot_index = 0
 		_update_display()
 		_update_focus_highlight()
+	else:
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
 func _on_inventory_changed() -> void:

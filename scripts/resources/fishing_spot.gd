@@ -483,7 +483,17 @@ func _update_fish_swimming(delta: float) -> void:
 
 func interact(player: Node) -> bool:
 	if is_depleted:
-		return false
+		# Check if enough time has passed for respawn
+		var tm: Node = _find_time_manager()
+		if tm:
+			var current_h: float = tm.current_day * 24.0 + tm.current_hour + tm.current_minute / 60.0
+			var depleted_h: float = (tm.current_day) * 24.0 + depleted_hour + depleted_minute / 60.0
+			if depleted_h > current_h:
+				depleted_h -= 24.0  # Handle day boundary
+			if current_h - depleted_h >= respawn_time_hours:
+				respawn()
+		if is_depleted:
+			return false
 
 	var equipment: Node = _get_player_equipment(player)
 	if not equipment or not equipment.has_tool_equipped("fishing"):
@@ -680,6 +690,14 @@ func _connect_day_changed() -> void:
 
 
 func _on_day_changed(_day: int) -> void:
-	if is_depleted:
-		respawn()
-		print("[FishingSpot] Fish restocked for new day")
+	if not is_depleted:
+		return
+	# Check if enough game hours have passed since depletion
+	var tm: Node = _find_time_manager()
+	if tm:
+		var current_total_hours: float = tm.current_day * 24.0 + tm.current_hour + tm.current_minute / 60.0
+		var depleted_total_hours: float = (tm.current_day - 1) * 24.0 + depleted_hour + depleted_minute / 60.0
+		if current_total_hours - depleted_total_hours < respawn_time_hours:
+			return
+	respawn()
+	print("[FishingSpot] Fish restocked after %.0f hours" % respawn_time_hours)
