@@ -4237,6 +4237,29 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ---
 
+## Session 65 - Code Audit Bug Fixes Round 11 (2026-02-17)
+
+### Bug Fixes
+
+**1. Weather fire effectiveness crashes on freed nodes** - `weather_manager.gd` `_update_fire_effectiveness()` iterated `fire_pits` without `is_instance_valid()` checks. We fixed the storm fire loop in Round 10 but missed this second fire iteration function. If a fire pit was destroyed while weather was active, calling `has_method()` on the freed node would crash. Added validity guard.
+
+**2. Music manager infinite recursion on missing tracks** - `music_manager.gd` `_play_next_track()` recursively called itself when a track failed to load. If all 12 tracks were missing (e.g., asset directory not found), this caused infinite recursion and stack overflow crash. Changed to use `call_deferred()` with a bounds check that stops after cycling through all tracks once.
+
+**3. Fire menu division by zero on fuel display** - `fire_menu.gd` calculated `fuel_remaining / max_fuel` without checking if `max_fuel > 0`. If `max_fuel` was 0 (corrupted save data, config error), this would crash with division by zero. Added `max_fuel > 0` guard.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/world/weather_manager.gd` | Modified | Add `is_instance_valid(fire)` in `_update_fire_effectiveness()` |
+| `scripts/core/music_manager.gd` | Modified | Replace direct recursion with `call_deferred()` + bounds check |
+| `scripts/ui/fire_menu.gd` | Modified | Add `max_fuel > 0` guard before division |
+| `tests/test_bug_regressions.gd` | Modified | Added 3 regression tests (5 new assertions, 100 total) |
+
+### Test Results
+- All 632 regression tests pass (5 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks

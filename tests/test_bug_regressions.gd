@@ -38,6 +38,9 @@ func run_tests() -> Dictionary:
 	test_smithing_verifies_item_removal()
 	test_storm_fire_checks_instance_valid()
 	test_campsite_structures_check_instance_valid()
+	test_fire_effectiveness_checks_instance_valid()
+	test_music_manager_no_infinite_recursion()
+	test_fire_menu_division_by_zero_guard()
 
 	return get_results()
 
@@ -895,3 +898,72 @@ func test_campsite_structures_check_instance_valid() -> void:
 
 	assert_true(fn_body.find("is_instance_valid(structure)") != -1,
 		"get_structures_of_type() checks is_instance_valid before accessing structure")
+
+
+func test_fire_effectiveness_checks_instance_valid() -> void:
+	## Bug: weather_manager.gd _update_fire_effectiveness() iterated fire_pits
+	## without checking is_instance_valid(fire). We fixed the storm loop in Round
+	## 10 but missed this second fire iteration function. If a fire pit was
+	## destroyed while weather was updating, calling has_method() on the freed
+	## node would crash.
+	var weather_script: GDScript = load("res://scripts/world/weather_manager.gd") as GDScript
+	if not weather_script:
+		assert_true(false, "Could not load weather_manager.gd")
+		return
+
+	var source: String = weather_script.source_code
+	var fn_start: int = source.find("func _update_fire_effectiveness()")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+
+	assert_true(fn_body.find("is_instance_valid(fire)") != -1,
+		"_update_fire_effectiveness() checks is_instance_valid(fire) before access")
+
+
+func test_music_manager_no_infinite_recursion() -> void:
+	## Bug: music_manager.gd _play_next_track() recursively called itself when a
+	## track failed to load. If all tracks were missing (e.g., asset directory
+	## not found), this caused infinite recursion → stack overflow crash. The
+	## recursion must be bounded or use call_deferred to prevent stack overflow.
+	var music_script: GDScript = load("res://scripts/core/music_manager.gd") as GDScript
+	if not music_script:
+		assert_true(false, "Could not load music_manager.gd")
+		return
+
+	var source: String = music_script.source_code
+	var fn_start: int = source.find("func _play_next_track()")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+
+	# Must NOT directly recurse - should use call_deferred or have a guard
+	var has_deferred: bool = fn_body.find("call_deferred") != -1
+	var has_guard: bool = fn_body.find("track_order.size()") != -1
+	assert_true(has_deferred or has_guard,
+		"_play_next_track() uses call_deferred or recursion guard to prevent stack overflow")
+
+
+func test_fire_menu_division_by_zero_guard() -> void:
+	## Bug: fire_menu.gd calculated days_remaining as fuel_remaining / max_fuel
+	## without checking if max_fuel > 0. If max_fuel was somehow 0 (corrupted
+	## save, config error), this caused a division by zero crash.
+	var fire_script: GDScript = load("res://scripts/ui/fire_menu.gd") as GDScript
+	if not fire_script:
+		assert_true(false, "Could not load fire_menu.gd")
+		return
+
+	var source: String = fire_script.source_code
+
+	# Find the fuel display section
+	var fuel_start: int = source.find("fuel_remaining / ")
+	assert_true(fuel_start != -1, "Fire menu calculates fuel remaining ratio")
+
+	# Must have a max_fuel > 0 guard before the division
+	var guard_pos: int = source.find("max_fuel > 0")
+	var div_pos: int = source.find("fuel_remaining / current_fire.max_fuel")
+	assert_true(guard_pos != -1, "Fire menu has max_fuel > 0 guard")
+	assert_true(guard_pos < div_pos,
+		"max_fuel > 0 guard comes before the division")

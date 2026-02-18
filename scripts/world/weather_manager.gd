@@ -317,6 +317,8 @@ func _update_fire_effectiveness() -> void:
 
 	var fire_pits: Array[Node] = campsite_manager.get_fire_pits()
 	for fire: Node in fire_pits:
+		if not is_instance_valid(fire):
+			continue
 		if fire.has_method("set_effectiveness"):
 			match current_weather:
 				Weather.RAIN:

@@ -132,8 +132,11 @@ func _play_next_track() -> void:
 		print("[MusicManager] Now playing: %s" % display_name)
 	else:
 		print("[MusicManager] Failed to load track: %s" % track_path)
-		# Try next track
-		_play_next_track()
+		# Try next track (use call_deferred to prevent stack overflow if all tracks fail)
+		if current_track_index < track_order.size() - 1:
+			_play_next_track.call_deferred()
+		else:
+			print("[MusicManager] All tracks failed to load, stopping playback")
 
 
 func _crossfade_to(new_stream: AudioStream) -> void:
