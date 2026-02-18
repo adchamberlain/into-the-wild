@@ -720,6 +720,7 @@ func _on_player_died() -> void:
 	is_resting = false
 	is_climbing = false
 	resting_in_structure = null
+	climbing_structure = null
 
 	# Cancel active grapple to clean up rope/hook visuals
 	var grapple_node: Node = get_node_or_null("GrapplingHook")

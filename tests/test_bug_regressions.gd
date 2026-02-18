@@ -50,6 +50,9 @@ func run_tests() -> Dictionary:
 	test_resting_structure_uses_instance_valid()
 	test_drying_rack_state_saved_and_restored()
 	test_smoker_smithing_state_saved_and_restored()
+	test_death_resets_climbing_structure()
+	test_fishing_fail_catch_uses_instance_valid()
+	test_crafting_recipes_status_guards_missing_recipe()
 
 	return get_results()
 
@@ -1247,3 +1250,67 @@ func test_smoker_smithing_state_saved_and_restored() -> void:
 		"Smithing station saves is_smelting state")
 	assert_true(smithing_source.find('"smelt_progress"') != -1,
 		"Smithing station saves smelt_progress state")
+
+
+func test_death_resets_climbing_structure() -> void:
+	## Bug: player_controller.gd death/respawn handler reset is_climbing to false
+	## but did NOT set climbing_structure = null. This left a dangling reference
+	## to the ladder/structure. If that structure was later freed, the stale
+	## reference could cause crashes on future climbing interactions.
+	var script: GDScript = load("res://scripts/player/player_controller.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load player_controller.gd")
+		return
+
+	var source: String = script.source_code
+	# Find the death/respawn section that resets movement flags
+	var reset_start: int = source.find("Reset movement state flags")
+	assert_true(reset_start != -1, "Found movement state reset section in respawn")
+	var reset_section: String = source.substr(reset_start, 200)
+	# Must null out climbing_structure alongside is_climbing = false
+	assert_true(reset_section.find("climbing_structure = null") != -1,
+		"Death handler resets climbing_structure to null")
+
+
+func test_fishing_fail_catch_uses_instance_valid() -> void:
+	## Bug: fishing_spot.gd _fail_catch() checked current_player with truthiness
+	## (if current_player:) instead of is_instance_valid(). If the player died
+	## during the catch window, calling methods on the freed reference would crash.
+	var script: GDScript = load("res://scripts/resources/fishing_spot.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load fishing_spot.gd")
+		return
+
+	var source: String = script.source_code
+	var fn_start: int = source.find("func _fail_catch()")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+
+	assert_true(fn_body.find("is_instance_valid(current_player)") != -1,
+		"_fail_catch() uses is_instance_valid for current_player")
+	assert_false(fn_body.find("if current_player:") != -1,
+		"_fail_catch() does NOT use bare truthiness for current_player")
+
+
+func test_crafting_recipes_status_guards_missing_recipe() -> void:
+	## Bug: crafting_system.gd get_all_recipes_status() accessed recipes[recipe_id]
+	## with bracket notation without checking if the recipe exists. If
+	## discovered_recipes contained a stale ID not in the recipes dictionary
+	## (e.g., recipe removed during updates), this would crash with KeyError.
+	var script: GDScript = load("res://scripts/crafting/crafting_system.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load crafting_system.gd")
+		return
+
+	var source: String = script.source_code
+	var fn_start: int = source.find("func get_all_recipes_status(")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+
+	# Must check recipe existence before bracket access
+	assert_true(fn_body.find("recipes.has(recipe_id)") != -1,
+		"get_all_recipes_status() checks recipes.has() before accessing")

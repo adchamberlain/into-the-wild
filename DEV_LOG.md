@@ -4333,6 +4333,29 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ---
 
+## Session 69 - Code Audit Bug Fixes Round 15 (2026-02-17)
+
+### Bug Fixes
+
+**1. Climbing structure not reset on death** - `player_controller.gd` death/respawn handler reset `is_climbing = false` and `resting_in_structure = null` but never set `climbing_structure = null`. This left a dangling reference to the ladder. If the structure was later freed, future climbing interactions could crash on the stale reference.
+
+**2. Fishing fail_catch freed player crash** - `fishing_spot.gd` `_fail_catch()` checked `current_player` with truthiness (`if current_player:`) instead of `is_instance_valid()`. If the player died during the catch window, calling `_get_player_equipment()` on the freed reference would crash. Changed to `is_instance_valid(current_player)`.
+
+**3. Crafting recipes status crashes on stale recipe IDs** - `crafting_system.gd` `get_all_recipes_status()` accessed `recipes[recipe_id]` with bracket notation without checking if the recipe existed. If `discovered_recipes` contained a stale ID not in the recipes dictionary (e.g., recipe removed during game updates), this would crash with KeyError. Added `recipes.has(recipe_id)` guard with continue.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/player/player_controller.gd` | Modified | Add `climbing_structure = null` in death/respawn handler |
+| `scripts/resources/fishing_spot.gd` | Modified | `is_instance_valid(current_player)` in `_fail_catch()` |
+| `scripts/crafting/crafting_system.gd` | Modified | Guard `recipes.has(recipe_id)` in `get_all_recipes_status()` |
+| `tests/test_bug_regressions.gd` | Modified | Added 3 regression tests (5 new assertions, 140 total) |
+
+### Test Results
+- All 672 regression tests pass (5 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks

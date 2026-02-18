@@ -585,7 +585,7 @@ func _fail_catch() -> void:
 	waiting_for_catch = false
 
 	# Hide the fishing line so player must cast again
-	if current_player:
+	if is_instance_valid(current_player):
 		var equipment: Node = _get_player_equipment(current_player)
 		if equipment and equipment.has_method("hide_fishing_line"):
 			equipment.hide_fishing_line()

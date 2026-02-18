@@ -376,6 +376,8 @@ func get_all_recipes_status(at_bench: bool = false, campsite_level: int = 1) -> 
 	var result: Array[Dictionary] = []
 
 	for recipe_id: String in discovered_recipes:
+		if not recipes.has(recipe_id):
+			continue
 		var recipe: Dictionary = recipes[recipe_id].duplicate()
 		recipe["id"] = recipe_id
 		recipe["can_craft"] = can_craft(recipe_id, at_bench, campsite_level)
