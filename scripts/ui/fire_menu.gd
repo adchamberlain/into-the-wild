@@ -269,8 +269,10 @@ func _on_cook_pressed() -> void:
 
 	var recipe: Dictionary = COOKING_RECIPES[cookable_item]
 
-	# Remove raw ingredient
-	player_inventory.remove_item(cookable_item, 1)
+	# Remove raw ingredient - verify removal succeeded
+	var removed: bool = player_inventory.remove_item(cookable_item, 1)
+	if not removed:
+		return
 
 	# Restore hunger directly (cooked food gives more)
 	if player_stats.has_method("eat"):

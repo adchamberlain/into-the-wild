@@ -4097,6 +4097,29 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ---
 
+## Session 59 - Code Audit Bug Fixes Round 5 (2026-02-17)
+
+### Bug Fixes
+
+**1. Snare trap state lost on save/load** - `structure_snare_trap.gd` had `get_save_data()` and `load_save_data()` methods to persist bait/catch state, but `save_load.gd` never called them. Snare trap bait type, catch status, and caught animal were all lost on every save/load. Added generic `get_save_data()` / `load_save_data()` calls in the structure collection and recreation pipeline, benefiting any future structures that implement these methods.
+
+**2. Fire menu cooking doesn't verify item removal** - `fire_menu.gd` `_on_cook_pressed()` called `player_inventory.remove_item()` but ignored the return value. If removal failed (e.g., race condition or empty inventory), the player would get free hunger restoration without spending the ingredient. Now captures and checks the return value, aborting if removal fails.
+
+**3. Pause menu unpauses before load attempt** - `pause_menu.gd` `_on_slot_button_pressed()` called `resume_game()` before `load_game_slot()`. If the load failed, the game was already unpaused with no menu visible. Reordered to call `resume_game()` after `load_game_slot()` so the game stays paused if load fails.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/core/save_load.gd` | Modified | Call `get_save_data()` / `load_save_data()` for structures that support them |
+| `scripts/ui/fire_menu.gd` | Modified | Check `remove_item()` return value in `_on_cook_pressed()` |
+| `scripts/ui/pause_menu.gd` | Modified | Reorder `resume_game()` after `load_game_slot()` in load handler |
+| `tests/test_bug_regressions.gd` | Modified | Added 3 regression tests (14 new assertions, 54 total) |
+
+### Test Results
+- All 586 regression tests pass (14 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks

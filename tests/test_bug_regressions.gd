@@ -19,6 +19,9 @@ func run_tests() -> Dictionary:
 	test_storage_inventory_saved_and_restored()
 	test_resource_harvest_checks_player_validity()
 	test_fishing_catch_checks_player_validity()
+	test_snare_trap_state_saved_and_restored()
+	test_cook_verifies_item_removal()
+	test_pause_load_resumes_after_load()
 
 	return get_results()
 
@@ -355,3 +358,92 @@ func test_fishing_catch_checks_player_validity() -> void:
 	var source: String = fishing_script.source_code
 	assert_true(source.find("is_instance_valid(current_player)") != -1,
 		"fishing_spot.gd uses is_instance_valid(current_player) for catch callback")
+
+
+func test_snare_trap_state_saved_and_restored() -> void:
+	## Bug: structure_snare_trap.gd had get_save_data() and load_save_data() methods
+	## but save_load.gd never called them. Snare trap bait/catch state was lost on
+	## every save/load cycle.
+	var save_script: GDScript = load("res://scripts/core/save_load.gd") as GDScript
+	if not save_script:
+		assert_true(false, "Could not load save_load.gd")
+		return
+
+	var source: String = save_script.source_code
+
+	# Verify save_load.gd calls get_save_data() for structures that support it
+	assert_true(source.find('has_method("get_save_data")') != -1,
+		"save_load.gd checks for get_save_data() on structures")
+	assert_true(source.find("structure.get_save_data()") != -1,
+		"save_load.gd calls structure.get_save_data() during collection")
+
+	# Verify save_load.gd calls load_save_data() for structures that support it
+	assert_true(source.find('has_method("load_save_data")') != -1,
+		"save_load.gd checks for load_save_data() on structures")
+	assert_true(source.find("structure.load_save_data(struct_data)") != -1,
+		"save_load.gd calls structure.load_save_data() during recreation")
+
+	# Verify snare trap has the methods
+	var snare_script: GDScript = load("res://scripts/campsite/structure_snare_trap.gd") as GDScript
+	if snare_script:
+		var snare_source: String = snare_script.source_code
+		assert_true(snare_source.find("func get_save_data()") != -1,
+			"structure_snare_trap.gd has get_save_data()")
+		assert_true(snare_source.find("func load_save_data(") != -1,
+			"structure_snare_trap.gd has load_save_data()")
+		# Verify snare saves key state fields
+		assert_true(snare_source.find('"is_baited"') != -1,
+			"Snare trap saves is_baited state")
+		assert_true(snare_source.find('"has_catch"') != -1,
+			"Snare trap saves has_catch state")
+		assert_true(snare_source.find('"catch_type"') != -1,
+			"Snare trap saves catch_type state")
+
+
+func test_cook_verifies_item_removal() -> void:
+	## Bug: fire_menu.gd _on_cook_pressed() called remove_item() but ignored its
+	## return value. If removal failed (race condition, empty inventory), the player
+	## would get free hunger restoration without spending the ingredient.
+	var fire_script: GDScript = load("res://scripts/ui/fire_menu.gd") as GDScript
+	if not fire_script:
+		assert_true(false, "Could not load fire_menu.gd")
+		return
+
+	var source: String = fire_script.source_code
+	var cook_start: int = source.find("func _on_cook_pressed()")
+	var cook_end: int = source.find("\nfunc ", cook_start + 1)
+	if cook_end == -1:
+		cook_end = source.length()
+	var cook_body: String = source.substr(cook_start, cook_end - cook_start)
+
+	# Must capture return value of remove_item
+	assert_true(cook_body.find("var removed") != -1,
+		"_on_cook_pressed() captures remove_item return value")
+	# Must check removed before giving hunger
+	assert_true(cook_body.find("if not removed") != -1,
+		"_on_cook_pressed() checks if removal failed before giving hunger")
+
+
+func test_pause_load_resumes_after_load() -> void:
+	## Bug: pause_menu.gd _on_slot_button_pressed() called resume_game() BEFORE
+	## load_game_slot(). If load failed, the game was already unpaused with no
+	## menu visible, leaving the player unable to re-pause.
+	var pause_script: GDScript = load("res://scripts/ui/pause_menu.gd") as GDScript
+	if not pause_script:
+		assert_true(false, "Could not load pause_menu.gd")
+		return
+
+	var source: String = pause_script.source_code
+	var slot_start: int = source.find("func _on_slot_button_pressed(")
+	var slot_end: int = source.find("\nfunc ", slot_start + 1)
+	if slot_end == -1:
+		slot_end = source.length()
+	var slot_body: String = source.substr(slot_start, slot_end - slot_start)
+
+	# resume_game() must come AFTER load_game_slot()
+	var load_pos: int = slot_body.find("load_game_slot")
+	var resume_pos: int = slot_body.find("resume_game()", load_pos)
+	assert_true(load_pos != -1, "Slot handler calls load_game_slot()")
+	assert_true(resume_pos != -1, "Slot handler calls resume_game()")
+	assert_true(resume_pos > load_pos,
+		"resume_game() is called AFTER load_game_slot() (not before)")

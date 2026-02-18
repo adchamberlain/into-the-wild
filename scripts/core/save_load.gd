@@ -477,6 +477,13 @@ func _collect_campsite_data() -> Dictionary:
 				if not storage_items.is_empty():
 					struct_data["storage_items"] = storage_items
 
+			# Save custom structure state (e.g., snare trap bait/catch)
+			if structure.has_method("get_save_data"):
+				var custom_data: Dictionary = structure.get_save_data()
+				for key: String in custom_data:
+					if not struct_data.has(key):  # Don't overwrite core fields
+						struct_data[key] = custom_data[key]
+
 			data["structures"].append(struct_data)
 
 	return data
@@ -780,6 +787,10 @@ func _recreate_structure(struct_data: Dictionary, container: Node) -> void:
 		for item_type: String in items:
 			structure.storage_inventory.add_item(item_type, int(items[item_type]))
 		print("[SaveLoad] Restored %d item types to storage" % items.size())
+
+	# Restore custom structure state (e.g., snare trap bait/catch)
+	if structure.has_method("load_save_data"):
+		structure.load_save_data(struct_data)
 
 	print("[SaveLoad] Recreated structure: %s at %s" % [structure_type, pos])
 

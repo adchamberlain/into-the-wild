@@ -425,10 +425,10 @@ func _on_slot_button_pressed(slot: int) -> void:
 		_hide_slot_panel()
 	else:
 		if save_load and save_load.has_method("load_game_slot"):
-			# Close menu before loading (loading will reset the game state)
+			# Close menu and load - resume AFTER load so game stays paused if load fails
 			_hide_slot_panel()
-			resume_game()
 			save_load.load_game_slot(slot)
+			resume_game()
 
 
 ## Focus the first slot button (called deferred).
