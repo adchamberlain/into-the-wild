@@ -59,6 +59,9 @@ func run_tests() -> Dictionary:
 	test_fishing_visuals_use_instance_valid()
 	test_snare_trap_bait_checks_removal()
 	test_fire_menu_fuel_checks_removal()
+	test_fire_pit_warmth_zero_radius_guard()
+	test_storm_fire_player_uses_instance_valid()
+	test_fire_menu_actions_use_instance_valid()
 
 	return get_results()
 
@@ -1453,3 +1456,81 @@ func test_fire_menu_fuel_checks_removal() -> void:
 		"_on_add_fuel_pressed captures remove_item return value")
 	assert_true(fn_body.find("if not removed") != -1,
 		"_on_add_fuel_pressed checks remove_item return and aborts on failure")
+
+
+func test_fire_pit_warmth_zero_radius_guard() -> void:
+	## Bug: structure_fire_pit.gd get_warmth_at() calculated (distance / warmth_radius)
+	## without checking if warmth_radius was 0. When set_effectiveness(0.0) is called
+	## (during storms), warmth_radius becomes 0.0. If a player stands at the exact fire
+	## position (distance=0), this produces 0.0/0.0 = NaN, corrupting warmth calculations.
+	var script: GDScript = load("res://scripts/campsite/structure_fire_pit.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load structure_fire_pit.gd")
+		return
+
+	var source: String = script.source_code
+	var fn_start: int = source.find("func get_warmth_at(")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+
+	# Must guard against warmth_radius being 0
+	assert_true(fn_body.find("warmth_radius <= 0") != -1,
+		"get_warmth_at() guards against zero warmth_radius to prevent division by zero")
+
+
+func test_storm_fire_player_uses_instance_valid() -> void:
+	## Bug: weather_manager.gd _update_storm_fire_effects() checked player with
+	## truthiness (if player else) instead of is_instance_valid(). This function is
+	## called independently during storms without the player guard in
+	## _apply_weather_effects(). If the player was freed, accessing global_position
+	## on the freed node would crash.
+	var script: GDScript = load("res://scripts/world/weather_manager.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load weather_manager.gd")
+		return
+
+	var source: String = script.source_code
+	var fn_start: int = source.find("func _update_storm_fire_effects(")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+
+	assert_true(fn_body.find("is_instance_valid(player)") != -1,
+		"_update_storm_fire_effects uses is_instance_valid for player reference")
+
+
+func test_fire_menu_actions_use_instance_valid() -> void:
+	## Bug: fire_menu.gd action handlers (_on_warm_up_pressed, _on_cook_pressed,
+	## _on_add_fuel_pressed) all checked current_fire with truthiness instead of
+	## is_instance_valid(). We fixed the fuel display in Round 16 but missed the
+	## action handlers. If the fire pit was destroyed while the menu was open,
+	## calling methods on the freed node would crash.
+	var script: GDScript = load("res://scripts/ui/fire_menu.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load fire_menu.gd")
+		return
+
+	var source: String = script.source_code
+	# All three action handlers must use is_instance_valid
+	var warm_start: int = source.find("func _on_warm_up_pressed()")
+	var warm_end: int = source.find("\nfunc ", warm_start + 1)
+	var warm_body: String = source.substr(warm_start, warm_end - warm_start)
+	assert_true(warm_body.find("is_instance_valid(current_fire)") != -1,
+		"_on_warm_up_pressed uses is_instance_valid for current_fire")
+
+	var cook_start: int = source.find("func _on_cook_pressed()")
+	var cook_end: int = source.find("\nfunc ", cook_start + 1)
+	var cook_body: String = source.substr(cook_start, cook_end - cook_start)
+	assert_true(cook_body.find("is_instance_valid(current_fire)") != -1,
+		"_on_cook_pressed uses is_instance_valid for current_fire")
+
+	var fuel_start: int = source.find("func _on_add_fuel_pressed()")
+	var fuel_end: int = source.find("\nfunc ", fuel_start + 1)
+	if fuel_end == -1:
+		fuel_end = source.length()
+	var fuel_body: String = source.substr(fuel_start, fuel_end - fuel_start)
+	assert_true(fuel_body.find("is_instance_valid(current_fire)") != -1,
+		"_on_add_fuel_pressed uses is_instance_valid for current_fire")

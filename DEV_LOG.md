@@ -4402,6 +4402,29 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ---
 
+## Session 72 - Code Audit Bug Fixes Round 18 (2026-02-17)
+
+### Bug Fixes
+
+**1. Fire pit warmth division by zero** - `structure_fire_pit.gd` `get_warmth_at()` divided `distance / warmth_radius` without checking if `warmth_radius` was 0. During storms, `set_effectiveness(0.0)` sets `warmth_radius = base_warmth_radius * 0.0 = 0.0`. If a player stood at the exact fire position, `0.0 / 0.0` produced NaN, corrupting warmth calculations. Added `warmth_radius <= 0.0` guard.
+
+**2. Storm fire effects crash on freed player** - `weather_manager.gd` `_update_storm_fire_effects()` checked `player` with truthiness (`if player else`) instead of `is_instance_valid()`. This function runs independently during storms without the player guard in `_apply_weather_effects()`. If the player was freed, accessing `global_position` on the freed node would crash.
+
+**3. Fire menu action handlers crash on freed fire pit** - `fire_menu.gd` action handlers (`_on_warm_up_pressed`, `_on_cook_pressed`, `_on_add_fuel_pressed`) all checked `current_fire` with truthiness instead of `is_instance_valid()`. We fixed the fuel display in Round 16 but missed 3 remaining handlers. If the fire pit was destroyed while the menu was open, calling methods on the freed node would crash.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/campsite/structure_fire_pit.gd` | Modified | Add `warmth_radius <= 0.0` guard in `get_warmth_at()` |
+| `scripts/world/weather_manager.gd` | Modified | `is_instance_valid(player)` in `_update_storm_fire_effects()` |
+| `scripts/ui/fire_menu.gd` | Modified | `is_instance_valid(current_fire)` in 3 action handlers |
+| `tests/test_bug_regressions.gd` | Modified | Added 3 regression tests (5 new assertions, 155 total) |
+
+### Test Results
+- All 687 regression tests pass (5 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks

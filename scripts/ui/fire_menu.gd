@@ -241,7 +241,7 @@ func _get_cookable_item() -> String:
 
 
 func _on_warm_up_pressed() -> void:
-	if not current_fire or not player_stats:
+	if not is_instance_valid(current_fire) or not player_stats:
 		return
 
 	# Heal player
@@ -260,7 +260,7 @@ func _on_warm_up_pressed() -> void:
 
 
 func _on_cook_pressed() -> void:
-	if not current_fire or not player_inventory or not player_stats:
+	if not is_instance_valid(current_fire) or not player_inventory or not player_stats:
 		return
 
 	var cookable_item: String = _get_cookable_item()
@@ -293,7 +293,7 @@ func _on_cook_pressed() -> void:
 
 
 func _on_add_fuel_pressed() -> void:
-	if not current_fire or not player_inventory:
+	if not is_instance_valid(current_fire) or not player_inventory:
 		return
 
 	if not player_inventory.has_item("wood"):

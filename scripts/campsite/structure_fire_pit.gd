@@ -200,7 +200,7 @@ func is_in_warmth_range(pos: Vector3) -> bool:
 
 ## Get warmth value at a position (1.0 at center, 0.0 at edge).
 func get_warmth_at(pos: Vector3) -> float:
-	if not is_lit:
+	if not is_lit or warmth_radius <= 0.0:
 		return 0.0
 	var distance: float = global_position.distance_to(pos)
 	if distance > warmth_radius:

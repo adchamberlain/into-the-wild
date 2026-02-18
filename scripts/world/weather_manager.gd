@@ -146,7 +146,7 @@ func _update_storm_fire_effects(delta: float) -> void:
 		return
 
 	var fire_pits: Array[Node] = campsite_manager.get_fire_pits()
-	var player_pos: Vector3 = player.global_position if player else Vector3.ZERO
+	var player_pos: Vector3 = player.global_position if is_instance_valid(player) else Vector3.ZERO
 
 	# Clean up entries for freed fire nodes
 	for key: Variant in fire_storm_timers.keys():
