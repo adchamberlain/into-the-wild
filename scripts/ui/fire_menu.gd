@@ -220,7 +220,7 @@ func _refresh_menu() -> void:
 		fuel_label.modulate = Color(0.6, 0.6, 0.6, 1)
 
 	# Update fuel status display
-	if current_fire and "fuel_remaining" in current_fire and "max_fuel" in current_fire:
+	if is_instance_valid(current_fire) and "fuel_remaining" in current_fire and "max_fuel" in current_fire:
 		if current_fire.unlimited_fuel:
 			fuel_label.text += " (Unlimited)"
 		elif current_fire.max_fuel > 0:

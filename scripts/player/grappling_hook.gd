@@ -319,7 +319,7 @@ func _start_grapple(anchor: Vector3, landing: Vector3) -> void:
 
 
 func _interpolate_grapple(progress: float) -> void:
-	if not is_grappling or not player:
+	if not is_grappling or not is_instance_valid(player):
 		return
 
 	# Smooth ascent curve (ease out quad)

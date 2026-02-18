@@ -4356,6 +4356,29 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ---
 
+## Session 70 - Code Audit Bug Fixes Round 16 (2026-02-17)
+
+### Bug Fixes
+
+**1. Grapple interpolation crashes on freed player** - `grappling_hook.gd` `_interpolate_grapple()` checked player with truthiness (`not player`) instead of `is_instance_valid()`. This tween method runs every frame during grapple ascent. If the player died mid-grapple, the tween would continue and crash when setting `global_position` on the freed node. The completion callback `_on_grapple_complete()` already used `is_instance_valid()` but the per-frame interpolation did not.
+
+**2. Cave resource depleted signal crashes on freed node** - `cave_entrance.gd` `_on_resource_depleted()` accessed `res_node.name` without validating the node was still valid. If a cave resource node was freed between signal connection and emission (e.g., chunk unloading), this would crash. Added `is_instance_valid(res_node)` guard.
+
+**3. Fire menu crashes on destroyed fire pit** - `fire_menu.gd` checked `current_fire` with truthiness instead of `is_instance_valid()` before accessing fuel properties. If the fire pit was destroyed while the menu was open (e.g., storm damage), accessing `fuel_remaining`/`max_fuel` on the freed node would crash.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/player/grappling_hook.gd` | Modified | `is_instance_valid(player)` in `_interpolate_grapple()` |
+| `scripts/world/cave_entrance.gd` | Modified | `is_instance_valid(res_node)` in `_on_resource_depleted()` |
+| `scripts/ui/fire_menu.gd` | Modified | `is_instance_valid(current_fire)` in fuel display |
+| `tests/test_bug_regressions.gd` | Modified | Added 3 regression tests (3 new assertions, 143 total) |
+
+### Test Results
+- All 675 regression tests pass (3 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks

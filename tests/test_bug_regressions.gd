@@ -53,6 +53,9 @@ func run_tests() -> Dictionary:
 	test_death_resets_climbing_structure()
 	test_fishing_fail_catch_uses_instance_valid()
 	test_crafting_recipes_status_guards_missing_recipe()
+	test_grapple_interpolate_checks_player_validity()
+	test_cave_resource_depleted_checks_node_validity()
+	test_fire_menu_current_fire_uses_instance_valid()
 
 	return get_results()
 
@@ -1314,3 +1317,60 @@ func test_crafting_recipes_status_guards_missing_recipe() -> void:
 	# Must check recipe existence before bracket access
 	assert_true(fn_body.find("recipes.has(recipe_id)") != -1,
 		"get_all_recipes_status() checks recipes.has() before accessing")
+
+
+func test_grapple_interpolate_checks_player_validity() -> void:
+	## Bug: grappling_hook.gd _interpolate_grapple() checked player with truthiness
+	## (if not player:) instead of is_instance_valid(). This tween method runs every
+	## frame during grapple ascent. If the player died mid-grapple, the tween would
+	## continue and crash when setting global_position on a freed node.
+	var script: GDScript = load("res://scripts/player/grappling_hook.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load grappling_hook.gd")
+		return
+
+	var source: String = script.source_code
+	var fn_start: int = source.find("func _interpolate_grapple(")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+
+	assert_true(fn_body.find("is_instance_valid(player)") != -1,
+		"_interpolate_grapple() uses is_instance_valid for player check")
+
+
+func test_cave_resource_depleted_checks_node_validity() -> void:
+	## Bug: cave_entrance.gd _on_resource_depleted() accessed res_node.name without
+	## validating the node was still valid. If a resource node was freed between
+	## signal connection and emission, accessing res_node.name would crash.
+	var script: GDScript = load("res://scripts/world/cave_entrance.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load cave_entrance.gd")
+		return
+
+	var source: String = script.source_code
+	var fn_start: int = source.find("func _on_resource_depleted(")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+
+	assert_true(fn_body.find("is_instance_valid(res_node)") != -1,
+		"_on_resource_depleted() validates res_node before accessing properties")
+
+
+func test_fire_menu_current_fire_uses_instance_valid() -> void:
+	## Bug: fire_menu.gd checked current_fire with truthiness (if current_fire and)
+	## instead of is_instance_valid(). If the fire pit was destroyed while the fire
+	## menu was open (e.g., storm damage), accessing fuel_remaining/max_fuel on the
+	## freed node would crash.
+	var script: GDScript = load("res://scripts/ui/fire_menu.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load fire_menu.gd")
+		return
+
+	var source: String = script.source_code
+	# The fuel display section should use is_instance_valid
+	assert_true(source.find("is_instance_valid(current_fire)") != -1,
+		"Fire menu uses is_instance_valid for current_fire check")

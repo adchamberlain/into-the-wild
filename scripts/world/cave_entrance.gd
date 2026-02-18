@@ -508,6 +508,8 @@ func _apply_saved_resource_state() -> void:
 
 func _on_resource_depleted(res_node: Node) -> void:
 	## Track resource depletion in CaveTransition
+	if not is_instance_valid(res_node):
+		return
 	var cave_transition: Node = get_node_or_null("/root/CaveTransition")
 	if not cave_transition or not cave_transition.has_method("track_cave_resource_depleted"):
 		return
