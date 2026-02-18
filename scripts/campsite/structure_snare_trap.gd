@@ -116,7 +116,9 @@ func _set_bait(bait: String) -> void:
 	if not player_inventory or not player_inventory.has_item(bait):
 		return
 
-	player_inventory.remove_item(bait, 1)
+	var removed: bool = player_inventory.remove_item(bait, 1)
+	if not removed:
+		return
 	bait_type = bait
 	is_baited = true
 	check_timer = 0.0

@@ -300,7 +300,9 @@ func _on_add_fuel_pressed() -> void:
 		return
 
 	# Remove wood
-	player_inventory.remove_item("wood", 1)
+	var removed: bool = player_inventory.remove_item("wood", 1)
+	if not removed:
+		return
 
 	# Add fuel to fire (1 day worth)
 	if current_fire.has_method("add_fuel"):

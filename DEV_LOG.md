@@ -4379,6 +4379,29 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ---
 
+## Session 71 - Code Audit Bug Fixes Round 17 (2026-02-17)
+
+### Bug Fixes
+
+**1. Fishing visual callbacks crash on freed nodes** - `equipment.gd` `_hide_fishing_visuals()` and `hide_fishing_line()` checked `caught_fish_model` and `line_pivot` with truthiness instead of `is_instance_valid()`. These are called as tween callbacks or from `fishing_spot._fail_catch()`. If the nodes were freed via `_remove_fishing_rod()` (unequip during animation, death), accessing `.visible` on the freed reference would crash.
+
+**2. Snare trap bait not checking remove_item** - `structure_snare_trap.gd` `_set_bait()` called `remove_item()` without checking the return value. If removal failed (race condition between has_item check and remove), the trap became baited without consuming the bait item, duplicating resources.
+
+**3. Fire menu fuel not checking remove_item** - `fire_menu.gd` `_on_add_fuel_pressed()` called `remove_item("wood", 1)` without checking the return value. If removal failed, `add_fuel()` was called anyway, giving free fire fuel without consuming wood.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/player/equipment.gd` | Modified | `is_instance_valid()` in `_hide_fishing_visuals()` and `hide_fishing_line()` |
+| `scripts/campsite/structure_snare_trap.gd` | Modified | Check `remove_item()` return in `_set_bait()` |
+| `scripts/ui/fire_menu.gd` | Modified | Check `remove_item()` return in `_on_add_fuel_pressed()` |
+| `tests/test_bug_regressions.gd` | Modified | Added 3 regression tests (7 new assertions, 150 total) |
+
+### Test Results
+- All 682 regression tests pass (7 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks

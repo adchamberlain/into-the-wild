@@ -1248,16 +1248,16 @@ func _create_caught_fish() -> Node3D:
 
 
 func _hide_fishing_visuals() -> void:
-	if caught_fish_model:
+	if is_instance_valid(caught_fish_model):
 		caught_fish_model.visible = false
-	if line_pivot:
+	if is_instance_valid(line_pivot):
 		line_pivot.visible = false
 	is_line_cast = false
 
 
 ## Hide the fishing line (called when fish gets away or fishing is cancelled).
 func hide_fishing_line() -> void:
-	if line_pivot:
+	if is_instance_valid(line_pivot):
 		line_pivot.visible = false
 	is_line_cast = false
 	print("[Equipment] Fishing line retracted")

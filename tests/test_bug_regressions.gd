@@ -56,6 +56,9 @@ func run_tests() -> Dictionary:
 	test_grapple_interpolate_checks_player_validity()
 	test_cave_resource_depleted_checks_node_validity()
 	test_fire_menu_current_fire_uses_instance_valid()
+	test_fishing_visuals_use_instance_valid()
+	test_snare_trap_bait_checks_removal()
+	test_fire_menu_fuel_checks_removal()
 
 	return get_results()
 
@@ -1374,3 +1377,79 @@ func test_fire_menu_current_fire_uses_instance_valid() -> void:
 	# The fuel display section should use is_instance_valid
 	assert_true(source.find("is_instance_valid(current_fire)") != -1,
 		"Fire menu uses is_instance_valid for current_fire check")
+
+
+func test_fishing_visuals_use_instance_valid() -> void:
+	## Bug: equipment.gd _hide_fishing_visuals() and hide_fishing_line() checked
+	## caught_fish_model and line_pivot with truthiness instead of is_instance_valid().
+	## These are called as tween callbacks or from fishing_spot._fail_catch(). If the
+	## nodes were freed via _remove_fishing_rod() (unequip, death), accessing .visible
+	## on the freed reference would crash.
+	var script: GDScript = load("res://scripts/player/equipment.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load equipment.gd")
+		return
+
+	var source: String = script.source_code
+
+	# _hide_fishing_visuals must use is_instance_valid
+	var fn_start: int = source.find("func _hide_fishing_visuals()")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+	assert_true(fn_body.find("is_instance_valid(caught_fish_model)") != -1,
+		"_hide_fishing_visuals uses is_instance_valid for caught_fish_model")
+	assert_true(fn_body.find("is_instance_valid(line_pivot)") != -1,
+		"_hide_fishing_visuals uses is_instance_valid for line_pivot")
+
+	# hide_fishing_line must use is_instance_valid
+	var fn2_start: int = source.find("func hide_fishing_line()")
+	var fn2_end: int = source.find("\nfunc ", fn2_start + 1)
+	var fn2_body: String = source.substr(fn2_start, fn2_end - fn2_start)
+	assert_true(fn2_body.find("is_instance_valid(line_pivot)") != -1,
+		"hide_fishing_line uses is_instance_valid for line_pivot")
+
+
+func test_snare_trap_bait_checks_removal() -> void:
+	## Bug: structure_snare_trap.gd _set_bait() called remove_item() without checking
+	## the return value. If removal failed (race condition), the trap became baited
+	## without consuming the bait item, duplicating resources.
+	var script: GDScript = load("res://scripts/campsite/structure_snare_trap.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load structure_snare_trap.gd")
+		return
+
+	var source: String = script.source_code
+	var fn_start: int = source.find("func _set_bait(")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+
+	# Must capture remove_item return value
+	assert_true(fn_body.find("var removed") != -1,
+		"_set_bait captures remove_item return value")
+	assert_true(fn_body.find("if not removed") != -1,
+		"_set_bait checks remove_item return and aborts on failure")
+
+
+func test_fire_menu_fuel_checks_removal() -> void:
+	## Bug: fire_menu.gd _on_add_fuel_pressed() called remove_item("wood", 1)
+	## without checking the return value. If removal failed, add_fuel() was called
+	## anyway, giving the player free fire fuel without consuming wood.
+	var script: GDScript = load("res://scripts/ui/fire_menu.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load fire_menu.gd")
+		return
+
+	var source: String = script.source_code
+	var fn_start: int = source.find("func _on_add_fuel_pressed()")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+
+	# Must capture remove_item return value for wood
+	assert_true(fn_body.find("var removed") != -1,
+		"_on_add_fuel_pressed captures remove_item return value")
+	assert_true(fn_body.find("if not removed") != -1,
+		"_on_add_fuel_pressed checks remove_item return and aborts on failure")
