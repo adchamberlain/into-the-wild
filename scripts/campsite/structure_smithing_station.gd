@@ -93,7 +93,7 @@ func _complete_smelting() -> void:
 	var output_type: String = SMELT_RECIPES.get(current_ore, "metal_ingot")
 
 	# Add output to player inventory if available
-	if player_inventory:
+	if is_instance_valid(player_inventory):
 		player_inventory.add_item(output_type, 1)
 		print("[SmithingStation] Smelting complete! +1 %s" % output_type)
 	else:

@@ -4496,6 +4496,29 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ---
 
+## Session 76 - Code Audit Bug Fixes Round 22 (2026-02-17)
+
+### Bug Fixes
+
+**1. Drying rack crash on freed player_inventory** - `structure_drying_rack.gd` `_complete_drying()` checked `player_inventory` with truthiness (`if player_inventory:`) instead of `is_instance_valid()`. The `player_inventory` reference is stored during `interact()` but `_complete_drying()` fires from `_process()` after 60 seconds of drying time. If the player dies or the scene transitions during drying, the stale reference passes truthiness but calling `.add_item()` on the freed node crashes.
+
+**2. Smoker crash on freed player_inventory** - `structure_smoker.gd` `_complete_smoking()` had the same stale `player_inventory` truthiness issue. Smoking takes 180 seconds, giving a 3-minute window where the player could die or leave, leaving a dangling reference that crashes on `.add_item()`.
+
+**3. Smithing station crash on freed player_inventory** - `structure_smithing_station.gd` `_complete_smelting()` had the same pattern. Smelting takes 120 seconds. All three structures now use `is_instance_valid(player_inventory)` in their completion callbacks.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/campsite/structure_drying_rack.gd` | Modified | `is_instance_valid(player_inventory)` in `_complete_drying()` |
+| `scripts/campsite/structure_smoker.gd` | Modified | `is_instance_valid(player_inventory)` in `_complete_smoking()` |
+| `scripts/campsite/structure_smithing_station.gd` | Modified | `is_instance_valid(player_inventory)` in `_complete_smelting()` |
+| `tests/test_bug_regressions.gd` | Modified | Added 3 regression tests (3 new assertions, 170 total) |
+
+### Test Results
+- All 702 regression tests pass (3 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks

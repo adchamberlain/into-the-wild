@@ -71,6 +71,9 @@ func run_tests() -> Dictionary:
 	test_shelter_skip_to_dawn_validates_time_manager()
 	test_cabin_bed_skip_to_dawn_validates_time_manager()
 	test_player_stats_percent_guards_zero()
+	test_drying_rack_completion_uses_instance_valid()
+	test_smoker_completion_uses_instance_valid()
+	test_smithing_completion_uses_instance_valid()
 
 	return get_results()
 
@@ -1727,3 +1730,69 @@ func test_player_stats_percent_guards_zero() -> void:
 	var hunger_body: String = source.substr(hunger_start, hunger_end - hunger_start)
 	assert_true(hunger_body.find("max_hunger <= 0") != -1,
 		"get_hunger_percent guards against zero max_hunger")
+
+
+func test_drying_rack_completion_uses_instance_valid() -> void:
+	## Bug: structure_drying_rack.gd _complete_drying() checked player_inventory with
+	## truthiness (if player_inventory:) instead of is_instance_valid(). The player_inventory
+	## is stored during interact() but _complete_drying() fires from _process() after
+	## DRYING_TIME seconds (60s). If the player dies or the scene transitions during drying,
+	## the stale reference passes truthiness but accessing .add_item() on the freed node crashes.
+	var script: GDScript = load("res://scripts/campsite/structure_drying_rack.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load structure_drying_rack.gd")
+		return
+
+	var source: String = script.source_code
+	var fn_start: int = source.find("func _complete_drying()")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+
+	assert_true(fn_body.find("is_instance_valid(player_inventory)") != -1,
+		"_complete_drying uses is_instance_valid for stale player_inventory reference")
+
+
+func test_smoker_completion_uses_instance_valid() -> void:
+	## Bug: structure_smoker.gd _complete_smoking() checked player_inventory with
+	## truthiness (if player_inventory:) instead of is_instance_valid(). The player_inventory
+	## is stored during interact() but _complete_smoking() fires from _process() after
+	## SMOKE_TIME seconds (180s). If the player dies during smoking, the stale reference
+	## passes truthiness but accessing .add_item() on the freed node crashes.
+	var script: GDScript = load("res://scripts/campsite/structure_smoker.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load structure_smoker.gd")
+		return
+
+	var source: String = script.source_code
+	var fn_start: int = source.find("func _complete_smoking()")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+
+	assert_true(fn_body.find("is_instance_valid(player_inventory)") != -1,
+		"_complete_smoking uses is_instance_valid for stale player_inventory reference")
+
+
+func test_smithing_completion_uses_instance_valid() -> void:
+	## Bug: structure_smithing_station.gd _complete_smelting() checked player_inventory
+	## with truthiness (if player_inventory:) instead of is_instance_valid(). The
+	## player_inventory is stored during interact() but _complete_smelting() fires from
+	## _process() after SMELT_TIME seconds (120s). If the player dies during smelting,
+	## the stale reference passes truthiness but accessing .add_item() crashes.
+	var script: GDScript = load("res://scripts/campsite/structure_smithing_station.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load structure_smithing_station.gd")
+		return
+
+	var source: String = script.source_code
+	var fn_start: int = source.find("func _complete_smelting()")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+
+	assert_true(fn_body.find("is_instance_valid(player_inventory)") != -1,
+		"_complete_smelting uses is_instance_valid for stale player_inventory reference")

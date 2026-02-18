@@ -76,7 +76,7 @@ func _complete_drying() -> void:
 	var dried_type: String = DRYING_RECIPES.get(current_food, "dried_food")
 
 	# Add dried food to player inventory if available, otherwise drop nearby
-	if player_inventory:
+	if is_instance_valid(player_inventory):
 		player_inventory.add_item(dried_type, 1)
 		print("[DryingRack] Drying complete! +1 %s" % dried_type)
 	else:
