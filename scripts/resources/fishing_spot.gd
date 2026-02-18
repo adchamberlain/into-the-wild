@@ -31,6 +31,7 @@ var catch_timer: float = 0.0
 var catch_window_timer: float = 0.0
 
 # Respawn tracking
+var depleted_day: int = 0
 var depleted_hour: int = 0
 var depleted_minute: int = 0
 
@@ -487,9 +488,7 @@ func interact(player: Node) -> bool:
 		var tm: Node = _find_time_manager()
 		if tm:
 			var current_h: float = tm.current_day * 24.0 + tm.current_hour + tm.current_minute / 60.0
-			var depleted_h: float = (tm.current_day) * 24.0 + depleted_hour + depleted_minute / 60.0
-			if depleted_h > current_h:
-				depleted_h -= 24.0  # Handle day boundary
+			var depleted_h: float = depleted_day * 24.0 + depleted_hour + depleted_minute / 60.0
 			if current_h - depleted_h >= respawn_time_hours:
 				respawn()
 		if is_depleted:
@@ -610,6 +609,7 @@ func _deplete() -> void:
 
 	var time_manager: Node = _find_time_manager()
 	if time_manager:
+		depleted_day = time_manager.current_day
 		depleted_hour = time_manager.current_hour
 		depleted_minute = time_manager.current_minute
 
@@ -696,7 +696,7 @@ func _on_day_changed(_day: int) -> void:
 	var tm: Node = _find_time_manager()
 	if tm:
 		var current_total_hours: float = tm.current_day * 24.0 + tm.current_hour + tm.current_minute / 60.0
-		var depleted_total_hours: float = (tm.current_day - 1) * 24.0 + depleted_hour + depleted_minute / 60.0
+		var depleted_total_hours: float = depleted_day * 24.0 + depleted_hour + depleted_minute / 60.0
 		if current_total_hours - depleted_total_hours < respawn_time_hours:
 			return
 	respawn()

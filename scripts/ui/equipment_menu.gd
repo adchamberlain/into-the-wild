@@ -160,6 +160,9 @@ func _input(event: InputEvent) -> void:
 
 	# Toggle menu with I key or Create button
 	if event.is_action_pressed("open_inventory"):
+		# Don't open if another menu is already open (unless closing this one)
+		if not is_visible and _is_other_menu_open():
+			return
 		toggle_menu()
 		_handle_input()
 		return
@@ -195,6 +198,23 @@ func _handle_input() -> void:
 	var vp: Viewport = get_viewport()
 	if vp:
 		vp.set_input_as_handled()
+
+
+## Check if another UI menu is open (prevents overlapping menus).
+func _is_other_menu_open() -> bool:
+	for node in get_tree().get_nodes_in_group("crafting_ui"):
+		if "is_open" in node and node.is_open:
+			return true
+	for node in get_tree().get_nodes_in_group("config_menu"):
+		if "is_visible" in node and node.is_visible:
+			return true
+	for node in get_tree().get_nodes_in_group("storage_ui"):
+		if "is_open" in node and node.is_open:
+			return true
+	for node in get_tree().get_nodes_in_group("fire_menu"):
+		if "is_open" in node and node.is_open:
+			return true
+	return false
 
 
 func toggle_menu() -> void:

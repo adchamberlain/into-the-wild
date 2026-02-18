@@ -250,7 +250,7 @@ func get_save_data() -> Dictionary:
 func load_save_data(data: Dictionary) -> void:
 	cave_resource_state = data.get("cave_resource_state", {})
 	is_in_cave = data.get("is_in_cave", false)
-	current_cave_id = data.get("current_cave_id", "")
+	current_cave_id = data.get("current_cave_id", -1)
 	is_dark = data.get("is_dark", false)
 	time_in_darkness = 0.0
 	darkness_damage_timer = 0.0

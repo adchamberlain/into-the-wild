@@ -159,16 +159,22 @@ func add_fuel(amount: float = -1.0) -> void:
 
 
 ## Visual flare effect - briefly increases light intensity.
+var flare_tween: Tween = null
+
 func flare() -> void:
 	if not is_instance_valid(fire_light) or not is_lit:
 		return
 
+	# Kill previous flare tween to prevent fighting over light_energy
+	if flare_tween and flare_tween.is_valid():
+		flare_tween.kill()
+
 	var original_energy: float = fire_light.light_energy
 	var flare_energy: float = original_energy * 2.0
 
-	var tween: Tween = create_tween()
-	tween.tween_property(fire_light, "light_energy", flare_energy, 0.1)
-	tween.tween_property(fire_light, "light_energy", original_energy, 0.4)
+	flare_tween = create_tween()
+	flare_tween.tween_property(fire_light, "light_energy", flare_energy, 0.1)
+	flare_tween.tween_property(fire_light, "light_energy", original_energy, 0.4)
 
 
 func _set_fire_state(lit: bool) -> void:

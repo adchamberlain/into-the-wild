@@ -79,6 +79,9 @@ func _input(event: InputEvent) -> void:
 	# Handle grapple cancel (ESC or Circle button)
 	if is_grappling and event.is_action_pressed("unequip"):
 		cancel_grapple()
+		var vp: Viewport = get_viewport()
+		if vp:
+			vp.set_input_as_handled()
 
 
 func _is_grappling_hook_equipped() -> bool:

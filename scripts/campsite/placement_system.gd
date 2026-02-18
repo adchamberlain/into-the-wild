@@ -89,22 +89,27 @@ func _input(event: InputEvent) -> void:
 					_confirm_move()
 				else:
 					print("[PlacementSystem] Cannot move here - invalid location")
+				_consume_input()
 				return
 			elif event.physical_keycode == KEY_Q:
 				cancel_move()
+				_consume_input()
 				return
 
 		# Handle action-based input for move mode (controller support)
 		if event.is_action_pressed("use_equipped"):
 			if placement_cooldown_timer > 0:
+				_consume_input()
 				return
 			if is_valid_placement:
 				_confirm_move()
 			else:
 				print("[PlacementSystem] Cannot move here - invalid location")
+			_consume_input()
 			return
 		elif event.is_action_pressed("unequip"):
 			cancel_move()
+			_consume_input()
 			return
 		return
 
@@ -119,21 +124,33 @@ func _input(event: InputEvent) -> void:
 				_confirm_placement()
 			else:
 				print("[PlacementSystem] Cannot place here - invalid location")
+			_consume_input()
 		# Q to cancel
 		elif event.physical_keycode == KEY_Q:
 			cancel_placement()
+			_consume_input()
 
 	# Handle action-based input (controller support)
 	if event.is_action_pressed("use_equipped"):
 		# Ignore R2 presses during cooldown (prevents trigger from immediately confirming)
 		if placement_cooldown_timer > 0:
+			_consume_input()
 			return
 		if is_valid_placement:
 			_confirm_placement()
 		else:
 			print("[PlacementSystem] Cannot place here - invalid location")
+		_consume_input()
 	elif event.is_action_pressed("unequip"):
 		cancel_placement()
+		_consume_input()
+
+
+## Consume input event to prevent it from leaking to other handlers.
+func _consume_input() -> void:
+	var vp: Viewport = get_viewport()
+	if vp:
+		vp.set_input_as_handled()
 
 
 ## Start placement mode for a structure.
@@ -809,13 +826,16 @@ func _confirm_placement() -> void:
 	if structure.has_method("on_placed"):
 		structure.on_placed()
 
-	# Consume item from inventory
-	if inventory:
-		var removed: bool = inventory.remove_item(current_item_type, 1)
-		if not removed:
-			structure.queue_free()
-			print("[PlacementSystem] Failed to consume %s from inventory - removing placed structure" % current_item_type)
-			return
+	# Consume item from inventory (required - abort if inventory unavailable)
+	if not inventory:
+		structure.queue_free()
+		push_error("[PlacementSystem] No inventory reference - cannot consume item")
+		return
+	var removed: bool = inventory.remove_item(current_item_type, 1)
+	if not removed:
+		structure.queue_free()
+		print("[PlacementSystem] Failed to consume %s from inventory - removing placed structure" % current_item_type)
+		return
 
 	# Notify campsite manager
 	if campsite_manager and campsite_manager.has_method("register_structure"):

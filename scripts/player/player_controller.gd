@@ -177,6 +177,10 @@ func _input(event: InputEvent) -> void:
 			_handle_mouse_look(event)
 		return
 
+	# Block gameplay actions when a UI menu is open
+	if _is_ui_blocking_input():
+		return
+
 	# Handle interaction (E key or L2 trigger)
 	if event.is_action_pressed("interact"):
 		# Skip if cooldown active (prevents analog trigger jitter)
@@ -267,8 +271,12 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector3.ZERO
 		return
 
-	# Handle right stick camera look (controller)
-	_handle_controller_look(delta)
+	# Block controller look and movement when UI menus are open
+	var ui_blocking: bool = _is_ui_blocking_input()
+
+	# Handle right stick camera look (controller) - disabled when menus are open
+	if not ui_blocking:
+		_handle_controller_look(delta)
 
 	# Handle swimming vs normal movement
 	var actually_swimming: bool = is_in_water and global_position.y < water_surface_y
@@ -340,11 +348,12 @@ func _process_normal_movement(delta: float) -> void:
 		is_falling = false  # Will be set when actually falling
 
 	# Handle sprint (works with both keyboard and controller via action)
-	is_sprinting = Input.is_action_pressed("sprint") and is_on_floor()
+	is_sprinting = Input.is_action_pressed("sprint") and is_on_floor() and not _is_ui_blocking_input()
 	current_speed = sprint_speed if is_sprinting else walk_speed
 
 	# Get input direction from actions (supports both keyboard and controller)
-	var input_dir: Vector2 = _get_movement_input()
+	# Block movement when UI menus are open
+	var input_dir: Vector2 = Vector2.ZERO if _is_ui_blocking_input() else _get_movement_input()
 
 	var direction: Vector3 = Vector3.ZERO
 	if input_dir.length() > 0:
@@ -439,7 +448,8 @@ func _process_swimming(delta: float) -> void:
 		velocity.y = -swim_sink_speed * 2
 
 	# Slower horizontal movement while swimming (use shared input function)
-	var input_dir: Vector2 = _get_movement_input()
+	# Block movement when UI menus are open
+	var input_dir: Vector2 = Vector2.ZERO if _is_ui_blocking_input() else _get_movement_input()
 
 	var direction: Vector3 = Vector3.ZERO
 	if input_dir.length() > 0:
@@ -556,10 +566,18 @@ func set_grappling(grappling: bool) -> void:
 		interaction_cleared.emit()
 
 
-## Set whether player is in water (swimming).
+## Set whether player is in water (swimming). Uses ref-counting to handle
+## overlapping water areas (e.g., fishing pond + river).
+var _water_area_count: int = 0
+
 func set_in_water(in_water: bool) -> void:
+	if in_water:
+		_water_area_count += 1
+	else:
+		_water_area_count = maxi(_water_area_count - 1, 0)
+
 	var was_in_water: bool = is_in_water
-	is_in_water = in_water
+	is_in_water = _water_area_count > 0
 
 	# Update underwater visual effect
 	if is_in_water and not was_in_water:
@@ -650,6 +668,10 @@ func _notification(what: int) -> void:
 	# Release mouse when window loses focus
 	if what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	# Re-capture mouse when window regains focus (only if no UI menu is open)
+	elif what == NOTIFICATION_WM_WINDOW_FOCUS_IN:
+		if not _is_ui_blocking_input():
+			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
 ## Fall-through protection: safety net in case player somehow falls below world.
@@ -738,11 +760,20 @@ func _on_player_died() -> void:
 	resting_in_structure = null
 	climbing_structure = null
 
+	# Reset water state (player may die while swimming)
+	if is_in_water:
+		is_in_water = false
+		_water_area_count = 0
+		_hide_underwater_effect()
+
 	# Cancel active grapple to clean up rope/hook visuals
 	var grapple_node: Node = get_node_or_null("GrapplingHook")
 	if is_grappling and grapple_node and grapple_node.has_method("cancel_grapple"):
 		grapple_node.cancel_grapple()
 	is_grappling = false
+
+	# Close any open UI menus and restore mouse capture
+	_close_all_menus()
 
 	# Teleport player to respawn point
 	velocity = Vector3.ZERO
@@ -855,7 +886,7 @@ func _update_camera_collision(delta: float) -> void:
 		target_y = clampf(target_y, CAMERA_MIN_Y, CAMERA_DEFAULT_Y)
 
 	# Smoothly interpolate to target height for natural feel
-	camera.position.y = lerpf(camera.position.y, target_y, CAMERA_COLLISION_LERP_SPEED * delta)
+	camera.position.y = lerpf(camera.position.y, target_y, minf(CAMERA_COLLISION_LERP_SPEED * delta, 1.0))
 
 
 ## Check if any UI menu is open and blocking player input.
@@ -891,3 +922,27 @@ func _is_ui_blocking_input() -> bool:
 			return true
 
 	return false
+
+
+## Close all open UI menus and restore mouse capture. Used on death/respawn.
+func _close_all_menus() -> void:
+	for node in get_tree().get_nodes_in_group("crafting_ui"):
+		if "is_open" in node and node.is_open and node.has_method("toggle_crafting_menu"):
+			node.toggle_crafting_menu(false)
+	for node in get_tree().get_nodes_in_group("equipment_menu"):
+		if "is_visible" in node and node.is_visible and node.has_method("toggle_menu"):
+			node.toggle_menu()
+	for node in get_tree().get_nodes_in_group("config_menu"):
+		if "is_visible" in node and node.is_visible and node.has_method("toggle_menu"):
+			node.toggle_menu()
+	for node in get_tree().get_nodes_in_group("storage_ui"):
+		if "is_open" in node and node.is_open and node.has_method("close_storage"):
+			node.close_storage()
+	for node in get_tree().get_nodes_in_group("fire_menu"):
+		if "is_open" in node and node.is_open and node.has_method("close_menu"):
+			node.close_menu()
+	for node in get_tree().get_nodes_in_group("map_ui"):
+		if is_instance_valid(node) and node.has_method("close_map"):
+			node.close_map()
+	# Ensure mouse is recaptured for gameplay
+	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)

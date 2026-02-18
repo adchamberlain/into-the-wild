@@ -247,6 +247,10 @@ func _setup_references() -> void:
 var current_slot: int = 1
 
 func _input(event: InputEvent) -> void:
+	# Block equipment input when any UI menu is open or game is paused
+	if _is_ui_blocking_input():
+		return
+
 	# Handle controller slot cycling (L1/R1)
 	if event.is_action_pressed("next_slot"):
 		_cycle_slot(1)
@@ -292,6 +296,16 @@ func _input(event: InputEvent) -> void:
 		_try_equip_slot(13)
 	elif event.physical_keycode == KEY_BRACKETRIGHT:
 		_try_equip_slot(24)
+
+
+## Check if any UI menu is open that should block equipment input.
+func _is_ui_blocking_input() -> bool:
+	if get_tree().paused:
+		return true
+	var player: Node = get_parent()
+	if player and player.has_method("_is_ui_blocking_input"):
+		return player._is_ui_blocking_input()
+	return false
 
 
 ## Cycle through equipment slots (for controller L1/R1).

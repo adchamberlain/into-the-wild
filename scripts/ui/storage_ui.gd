@@ -266,7 +266,8 @@ func _create_item_button(parent: VBoxContainer, item_type: String, count: int, i
 ## Transfer one item.
 func _on_transfer_pressed(item_type: String, from_player: bool) -> void:
 	if from_player:
-		# Player -> Storage
+		# Player -> Storage: unequip if this item is currently equipped
+		_unequip_if_equipped(item_type)
 		if player_inventory and player_inventory.has_item(item_type) and current_storage:
 			var removed: bool = player_inventory.remove_item(item_type, 1)
 			if removed:
@@ -282,7 +283,8 @@ func _on_transfer_pressed(item_type: String, from_player: bool) -> void:
 ## Transfer all of an item type.
 func _on_transfer_all_pressed(item_type: String, from_player: bool) -> void:
 	if from_player:
-		# Player -> Storage
+		# Player -> Storage: unequip if this item is currently equipped
+		_unequip_if_equipped(item_type)
 		if player_inventory and current_storage:
 			var count: int = player_inventory.get_item_count(item_type)
 			if count > 0:
@@ -383,6 +385,16 @@ func _transfer_focused_item() -> void:
 		var row: Array = current_rows[focused_row_index]
 		if focused_col_index < row.size():
 			row[focused_col_index].pressed.emit()
+
+
+## Unequip item if it is currently equipped (prevents phantom equipped items).
+func _unequip_if_equipped(item_type: String) -> void:
+	if not player:
+		return
+	var equipment: Node = player.get_node_or_null("Equipment")
+	if equipment and "equipped_item" in equipment and equipment.equipped_item == item_type:
+		if equipment.has_method("unequip"):
+			equipment.unequip()
 
 
 ## Update hint label based on input device.

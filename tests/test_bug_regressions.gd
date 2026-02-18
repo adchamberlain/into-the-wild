@@ -112,6 +112,25 @@ func run_tests() -> Dictionary:
 	test_crafting_getters_return_duplicates()
 	test_campsite_get_structures_returns_duplicate()
 
+	# Round 3 regression tests
+	test_fishing_spot_tracks_depleted_day()
+	test_death_resets_water_state()
+	test_death_closes_menus()
+	test_window_refocus_recaptures_mouse()
+	test_equipment_input_has_ui_guard()
+	test_player_actions_blocked_by_ui()
+	test_movement_blocked_by_ui()
+	test_controller_look_blocked_by_ui()
+	test_cave_id_default_is_negative_one()
+	test_camera_lerp_alpha_clamped()
+	test_grapple_cancel_consumes_input()
+	test_placement_consumes_input()
+	test_flare_tween_tracked()
+	test_placement_requires_inventory()
+	test_storage_unequips_on_transfer()
+	test_menu_overlap_prevention()
+	test_water_ref_counting()
+
 	return get_results()
 
 
@@ -2568,3 +2587,299 @@ func test_campsite_get_structures_returns_duplicate() -> void:
 	var body: String = src.substr(idx, 200)
 	assert_true(body.find(".duplicate()") != -1,
 		"get_placed_structures returns duplicate")
+
+
+# ============================================================
+# Round 3 Regression Tests
+# ============================================================
+
+func test_fishing_spot_tracks_depleted_day() -> void:
+	## Bug: FishingSpot only tracked depleted_hour/minute but not depleted_day,
+	## so _on_day_changed assumed depletion was yesterday, causing permanent depletion.
+	var file: FileAccess = FileAccess.open("res://scripts/resources/fishing_spot.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open fishing_spot.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	# Must have depleted_day variable
+	assert_true(src.find("var depleted_day") != -1,
+		"fishing_spot has depleted_day variable")
+	# _on_day_changed must use depleted_day, not (current_day - 1)
+	var day_changed_idx: int = src.find("func _on_day_changed")
+	assert_true(day_changed_idx != -1, "fishing_spot has _on_day_changed")
+	var day_body: String = src.substr(day_changed_idx, 500)
+	assert_true(day_body.find("depleted_day") != -1,
+		"_on_day_changed uses depleted_day")
+	assert_true(day_body.find("current_day - 1") == -1,
+		"_on_day_changed does not hardcode current_day - 1")
+	# interact() respawn check must also use depleted_day
+	var interact_idx: int = src.find("func interact")
+	assert_true(interact_idx != -1, "fishing_spot has interact")
+	var interact_body: String = src.substr(interact_idx, 500)
+	assert_true(interact_body.find("depleted_day") != -1,
+		"interact respawn check uses depleted_day")
+
+
+func test_death_resets_water_state() -> void:
+	## Bug: _on_player_died did not reset is_in_water, causing swimming physics
+	## and underwater overlay to persist after respawn on dry land.
+	var file: FileAccess = FileAccess.open("res://scripts/player/player_controller.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open player_controller.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var death_idx: int = src.find("func _on_player_died")
+	assert_true(death_idx != -1, "player_controller has _on_player_died")
+	var death_body: String = src.substr(death_idx, 800)
+	assert_true(death_body.find("is_in_water") != -1,
+		"_on_player_died resets is_in_water")
+	assert_true(death_body.find("_water_area_count") != -1,
+		"_on_player_died resets _water_area_count")
+
+
+func test_death_closes_menus() -> void:
+	## Bug: Death did not close open UI menus, leaving mouse visible and
+	## menus displayed with stale data after respawn.
+	var file: FileAccess = FileAccess.open("res://scripts/player/player_controller.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open player_controller.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var death_idx: int = src.find("func _on_player_died")
+	assert_true(death_idx != -1, "player_controller has _on_player_died")
+	var death_body: String = src.substr(death_idx, 1200)
+	assert_true(death_body.find("_close_all_menus") != -1,
+		"_on_player_died calls _close_all_menus")
+	assert_true(src.find("func _close_all_menus") != -1,
+		"player_controller has _close_all_menus method")
+
+
+func test_window_refocus_recaptures_mouse() -> void:
+	## Bug: Window refocus did not re-capture mouse, requiring menu open/close
+	## to restore mouse capture after alt-tabbing.
+	var file: FileAccess = FileAccess.open("res://scripts/player/player_controller.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open player_controller.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	assert_true(src.find("NOTIFICATION_WM_WINDOW_FOCUS_IN") != -1,
+		"player_controller handles FOCUS_IN notification")
+
+
+func test_equipment_input_has_ui_guard() -> void:
+	## Bug: Equipment._input had no UI state guards, causing equipment changes
+	## to fire during any open menu. Controller Cross = both unequip and ui_cancel.
+	var file: FileAccess = FileAccess.open("res://scripts/player/equipment.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open equipment.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var input_idx: int = src.find("func _input")
+	assert_true(input_idx != -1, "equipment has _input handler")
+	var input_body: String = src.substr(input_idx, 300)
+	assert_true(input_body.find("_is_ui_blocking_input") != -1,
+		"equipment _input checks _is_ui_blocking_input")
+
+
+func test_player_actions_blocked_by_ui() -> void:
+	## Bug: Player interact/eat/use_equipped were not blocked when UI menus
+	## were open, allowing actions behind menus.
+	var file: FileAccess = FileAccess.open("res://scripts/player/player_controller.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open player_controller.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var input_idx: int = src.find("func _input")
+	assert_true(input_idx != -1, "player_controller has _input")
+	# Find the section between _input and the first action handler
+	var interact_idx: int = src.find("is_action_pressed(\"interact\")", input_idx)
+	assert_true(interact_idx != -1, "player_controller handles interact action")
+	var between: String = src.substr(input_idx, interact_idx - input_idx)
+	assert_true(between.find("_is_ui_blocking_input") != -1,
+		"_input checks _is_ui_blocking_input before action handlers")
+
+
+func test_movement_blocked_by_ui() -> void:
+	## Bug: WASD movement was not blocked when UI menus were open because
+	## _physics_process polled Input without checking UI state.
+	var file: FileAccess = FileAccess.open("res://scripts/player/player_controller.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open player_controller.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var move_idx: int = src.find("func _process_normal_movement")
+	assert_true(move_idx != -1, "player_controller has _process_normal_movement")
+	var move_body: String = src.substr(move_idx, 800)
+	assert_true(move_body.find("_is_ui_blocking_input") != -1,
+		"_process_normal_movement checks UI blocking for movement")
+
+
+func test_controller_look_blocked_by_ui() -> void:
+	## Bug: Controller right-stick look worked while menus were open.
+	var file: FileAccess = FileAccess.open("res://scripts/player/player_controller.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open player_controller.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	# Find the _handle_controller_look call in _physics_process
+	var call_idx: int = src.find("_handle_controller_look")
+	assert_true(call_idx != -1, "player_controller calls _handle_controller_look")
+	var context: String = src.substr(max(0, call_idx - 200), 250)
+	assert_true(context.find("ui_blocking") != -1 or context.find("_is_ui_blocking_input") != -1,
+		"controller look is gated by UI blocking check")
+
+
+func test_cave_id_default_is_negative_one() -> void:
+	## Bug: cave_transition.load_save_data used "" (empty string) as default
+	## for current_cave_id (typed as int), causing type mismatch.
+	var script: GDScript = load("res://scripts/core/cave_transition.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load cave_transition.gd")
+		return
+	var src: String = script.source_code
+	var load_idx: int = src.find("func load_save_data")
+	assert_true(load_idx != -1, "cave_transition has load_save_data")
+	var load_body: String = src.substr(load_idx, 300)
+	assert_true(load_body.find("current_cave_id\", -1") != -1,
+		"load_save_data uses -1 as default for current_cave_id")
+	assert_true(load_body.find("current_cave_id\", \"\"") == -1,
+		"load_save_data does not use empty string default for cave_id")
+
+
+func test_camera_lerp_alpha_clamped() -> void:
+	## Bug: Camera collision lerp alpha (12.0 * delta) could exceed 1.0 at low
+	## FPS, causing overshoot. Must be clamped with minf().
+	var file: FileAccess = FileAccess.open("res://scripts/player/player_controller.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open player_controller.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	assert_true(src.find("minf(CAMERA_COLLISION_LERP_SPEED * delta, 1.0)") != -1,
+		"camera lerp alpha is clamped with minf")
+
+
+func test_grapple_cancel_consumes_input() -> void:
+	## Bug: Grappling hook cancel did not call set_input_as_handled(),
+	## causing the event to leak to equipment.gd and unequip the hook.
+	var file: FileAccess = FileAccess.open("res://scripts/player/grappling_hook.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open grappling_hook.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var cancel_idx: int = src.find("cancel_grapple()")
+	assert_true(cancel_idx != -1, "grappling_hook calls cancel_grapple")
+	var after_cancel: String = src.substr(cancel_idx, 200)
+	assert_true(after_cancel.find("set_input_as_handled") != -1,
+		"grapple cancel consumes input event")
+
+
+func test_placement_consumes_input() -> void:
+	## Bug: Placement system confirm/cancel did not consume input events,
+	## leaking to equipment._input and causing unintended unequip.
+	var file: FileAccess = FileAccess.open("res://scripts/campsite/placement_system.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open placement_system.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	assert_true(src.find("_consume_input") != -1,
+		"placement_system has _consume_input method")
+	assert_true(src.find("set_input_as_handled") != -1,
+		"placement_system consumes input events")
+
+
+func test_flare_tween_tracked() -> void:
+	## Bug: Fire pit flare() created new tweens without killing previous ones,
+	## causing fighting tweens on rapid calls.
+	var script: GDScript = load("res://scripts/campsite/structure_fire_pit.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load structure_fire_pit.gd")
+		return
+	var src: String = script.source_code
+	assert_true(src.find("var flare_tween") != -1,
+		"fire_pit tracks flare_tween")
+	var flare_idx: int = src.find("func flare")
+	assert_true(flare_idx != -1, "fire_pit has flare method")
+	var flare_body: String = src.substr(flare_idx, 400)
+	assert_true(flare_body.find("flare_tween.kill()") != -1,
+		"flare kills previous tween before creating new one")
+
+
+func test_placement_requires_inventory() -> void:
+	## Bug: _confirm_placement skipped item consumption when inventory was null,
+	## giving free structures.
+	var file: FileAccess = FileAccess.open("res://scripts/campsite/placement_system.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open placement_system.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var confirm_idx: int = src.find("func _confirm_placement")
+	assert_true(confirm_idx != -1, "placement_system has _confirm_placement")
+	var confirm_body: String = src.substr(confirm_idx, 1400)
+	assert_true(confirm_body.find("not inventory") != -1,
+		"_confirm_placement checks for null inventory and aborts")
+
+
+func test_storage_unequips_on_transfer() -> void:
+	## Bug: Equipped items could be transferred to storage while still equipped,
+	## creating phantom usable items.
+	var script: GDScript = load("res://scripts/ui/storage_ui.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load storage_ui.gd")
+		return
+	var src: String = script.source_code
+	assert_true(src.find("_unequip_if_equipped") != -1,
+		"storage_ui has _unequip_if_equipped method")
+	var transfer_idx: int = src.find("func _on_transfer_pressed")
+	assert_true(transfer_idx != -1, "storage_ui has _on_transfer_pressed")
+	var transfer_body: String = src.substr(transfer_idx, 400)
+	assert_true(transfer_body.find("_unequip_if_equipped") != -1,
+		"_on_transfer_pressed calls _unequip_if_equipped")
+
+
+func test_menu_overlap_prevention() -> void:
+	## Bug: Crafting/equipment menus could open on top of other menus,
+	## creating overlapping UIs with conflicting input handlers.
+	var script: GDScript = load("res://scripts/ui/crafting_ui.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load crafting_ui.gd")
+		return
+	var src: String = script.source_code
+	assert_true(src.find("_is_other_menu_open") != -1,
+		"crafting_ui has _is_other_menu_open check")
+	var equip_script: GDScript = load("res://scripts/ui/equipment_menu.gd") as GDScript
+	if not equip_script:
+		assert_true(false, "Could not load equipment_menu.gd")
+		return
+	var equip_src: String = equip_script.source_code
+	assert_true(equip_src.find("_is_other_menu_open") != -1,
+		"equipment_menu has _is_other_menu_open check")
+
+
+func test_water_ref_counting() -> void:
+	## Bug: set_in_water used a simple boolean. Overlapping water areas
+	## (fishing spot + river) caused premature is_in_water=false on exit from one.
+	var file: FileAccess = FileAccess.open("res://scripts/player/player_controller.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open player_controller.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	assert_true(src.find("_water_area_count") != -1,
+		"player_controller has _water_area_count for ref-counting")
+	var set_idx: int = src.find("func set_in_water")
+	assert_true(set_idx != -1, "player_controller has set_in_water")
+	var set_body: String = src.substr(set_idx, 400)
+	assert_true(set_body.find("_water_area_count") != -1,
+		"set_in_water uses _water_area_count")
