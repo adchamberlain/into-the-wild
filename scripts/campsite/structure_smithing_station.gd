@@ -109,6 +109,25 @@ func _complete_smelting() -> void:
 	interaction_text = "Use Smithing Station"
 
 
+func get_save_data() -> Dictionary:
+	var data: Dictionary = super.get_save_data()
+	data["is_smelting"] = is_smelting
+	data["current_ore"] = current_ore
+	data["smelt_progress"] = smelt_progress
+	data["has_fuel"] = has_fuel
+	return data
+
+
+func load_save_data(data: Dictionary) -> void:
+	super.load_save_data(data)
+	is_smelting = data.get("is_smelting", false)
+	current_ore = data.get("current_ore", "")
+	smelt_progress = data.get("smelt_progress", 0.0)
+	has_fuel = data.get("has_fuel", false)
+	if is_smelting:
+		interaction_text = "Check Smelting Progress"
+
+
 func get_interaction_text() -> String:
 	if is_smelting:
 		var percent: int = int((smelt_progress / SMELT_TIME) * 100)

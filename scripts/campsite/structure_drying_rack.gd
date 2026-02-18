@@ -91,6 +91,23 @@ func _complete_drying() -> void:
 	interaction_text = "Use Drying Rack"
 
 
+func get_save_data() -> Dictionary:
+	var data: Dictionary = super.get_save_data()
+	data["is_drying"] = is_drying
+	data["current_food"] = current_food
+	data["drying_progress"] = drying_progress
+	return data
+
+
+func load_save_data(data: Dictionary) -> void:
+	super.load_save_data(data)
+	is_drying = data.get("is_drying", false)
+	current_food = data.get("current_food", "")
+	drying_progress = data.get("drying_progress", 0.0)
+	if is_drying:
+		interaction_text = "Check Drying Progress"
+
+
 func get_interaction_text() -> String:
 	if is_drying:
 		var percent: int = int((drying_progress / DRYING_TIME) * 100)

@@ -184,7 +184,7 @@ func _input(event: InputEvent) -> void:
 		interact_cooldown_timer = INTERACT_COOLDOWN
 
 		# If resting, interact exits rest mode
-		if is_resting and resting_in_structure:
+		if is_resting and is_instance_valid(resting_in_structure):
 			resting_in_structure.interact(self)
 		else:
 			_try_interact()

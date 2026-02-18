@@ -4309,6 +4309,30 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ---
 
+## Session 68 - Code Audit Bug Fixes Round 14 (2026-02-17)
+
+### Bug Fixes
+
+**1. Resting structure freed node crash** - `player_controller.gd` checked `resting_in_structure` with truthiness (`if resting_in_structure:`) instead of `is_instance_valid()`. If the structure was destroyed while the player was resting (e.g., storm damage), calling `interact()` on the freed node would crash. Changed to `is_instance_valid(resting_in_structure)`.
+
+**2. Drying rack state lost on save/load** - `structure_drying_rack.gd` had no `get_save_data()` or `load_save_data()` methods. All drying state (`is_drying`, `current_food`, `drying_progress`) was lost on save/load. Partially-dried food vanished and consumed resources were lost. Added both methods with proper serialization.
+
+**3. Smoker and smithing station state lost on save/load** - `structure_smoker.gd` and `structure_smithing_station.gd` both lacked save/load methods. In-progress smoking/smelting was lost on save/load - consumed resources (meat/ore/wood) vanished with no output. Added `get_save_data()`/`load_save_data()` to both structures.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/player/player_controller.gd` | Modified | `is_instance_valid(resting_in_structure)` instead of truthiness |
+| `scripts/campsite/structure_drying_rack.gd` | Modified | Added `get_save_data()` and `load_save_data()` for drying state |
+| `scripts/campsite/structure_smoker.gd` | Modified | Added `get_save_data()` and `load_save_data()` for smoking state |
+| `scripts/campsite/structure_smithing_station.gd` | Modified | Added `get_save_data()` and `load_save_data()` for smelting state |
+| `tests/test_bug_regressions.gd` | Modified | Added 3 regression tests (15 new assertions, 135 total) |
+
+### Test Results
+- All 667 regression tests pass (15 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks

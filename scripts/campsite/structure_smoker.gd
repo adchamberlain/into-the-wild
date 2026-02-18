@@ -111,6 +111,25 @@ func _complete_smoking() -> void:
 	interaction_text = "Use Smoker"
 
 
+func get_save_data() -> Dictionary:
+	var data: Dictionary = super.get_save_data()
+	data["is_smoking"] = is_smoking
+	data["current_meat"] = current_meat
+	data["smoke_progress"] = smoke_progress
+	data["has_fuel"] = has_fuel
+	return data
+
+
+func load_save_data(data: Dictionary) -> void:
+	super.load_save_data(data)
+	is_smoking = data.get("is_smoking", false)
+	current_meat = data.get("current_meat", "")
+	smoke_progress = data.get("smoke_progress", 0.0)
+	has_fuel = data.get("has_fuel", false)
+	if is_smoking:
+		interaction_text = "Check Smoking Progress"
+
+
 func get_interaction_text() -> String:
 	if is_smoking:
 		var percent: int = int((smoke_progress / SMOKE_TIME) * 100)

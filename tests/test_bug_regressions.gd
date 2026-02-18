@@ -47,6 +47,9 @@ func run_tests() -> Dictionary:
 	test_creature_player_uses_instance_valid()
 	test_darkness_tween_kills_previous()
 	test_save_position_uses_safe_access()
+	test_resting_structure_uses_instance_valid()
+	test_drying_rack_state_saved_and_restored()
+	test_smoker_smithing_state_saved_and_restored()
 
 	return get_results()
 
@@ -1167,3 +1170,80 @@ func test_save_position_uses_safe_access() -> void:
 		"_apply_player_data() does NOT use unsafe pos[\"x\"] bracket access")
 	assert_false(fn_body.find('pos["z"]') != -1,
 		"_apply_player_data() does NOT use unsafe pos[\"z\"] bracket access")
+
+
+func test_resting_structure_uses_instance_valid() -> void:
+	## Bug: player_controller.gd checked resting_in_structure with truthiness
+	## (if resting_in_structure:) instead of is_instance_valid(). If the structure
+	## was destroyed while player was resting (e.g., storm damage), the freed node
+	## passes truthiness and calling interact() on it would crash.
+	var script: GDScript = load("res://scripts/player/player_controller.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load player_controller.gd")
+		return
+
+	var source: String = script.source_code
+	# Find the interact handler that checks resting_in_structure
+	assert_true(source.find("is_instance_valid(resting_in_structure)") != -1,
+		"Player controller uses is_instance_valid for resting_in_structure")
+	# Must NOT use bare truthiness check
+	assert_false(source.find("and resting_in_structure:") != -1,
+		"Player controller does NOT use bare truthiness for resting_in_structure")
+
+
+func test_drying_rack_state_saved_and_restored() -> void:
+	## Bug: structure_drying_rack.gd had no get_save_data()/load_save_data() methods.
+	## All drying state (is_drying, current_food, drying_progress) was lost on every
+	## save/load cycle, meaning partially-dried food vanished.
+	var script: GDScript = load("res://scripts/campsite/structure_drying_rack.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load structure_drying_rack.gd")
+		return
+
+	var source: String = script.source_code
+	assert_true(source.find("func get_save_data()") != -1,
+		"Drying rack has get_save_data() method")
+	assert_true(source.find("func load_save_data(") != -1,
+		"Drying rack has load_save_data() method")
+	# Key state must be serialized
+	assert_true(source.find('"is_drying"') != -1,
+		"Drying rack saves is_drying state")
+	assert_true(source.find('"current_food"') != -1,
+		"Drying rack saves current_food state")
+	assert_true(source.find('"drying_progress"') != -1,
+		"Drying rack saves drying_progress state")
+
+
+func test_smoker_smithing_state_saved_and_restored() -> void:
+	## Bug: structure_smoker.gd and structure_smithing_station.gd had no save/load
+	## methods. In-progress smoking/smelting was lost on save/load - player lost
+	## consumed resources (meat/ore/wood) with no output.
+	var smoker_script: GDScript = load("res://scripts/campsite/structure_smoker.gd") as GDScript
+	if not smoker_script:
+		assert_true(false, "Could not load structure_smoker.gd")
+		return
+
+	var smoker_source: String = smoker_script.source_code
+	assert_true(smoker_source.find("func get_save_data()") != -1,
+		"Smoker has get_save_data() method")
+	assert_true(smoker_source.find("func load_save_data(") != -1,
+		"Smoker has load_save_data() method")
+	assert_true(smoker_source.find('"is_smoking"') != -1,
+		"Smoker saves is_smoking state")
+	assert_true(smoker_source.find('"smoke_progress"') != -1,
+		"Smoker saves smoke_progress state")
+
+	var smithing_script: GDScript = load("res://scripts/campsite/structure_smithing_station.gd") as GDScript
+	if not smithing_script:
+		assert_true(false, "Could not load structure_smithing_station.gd")
+		return
+
+	var smithing_source: String = smithing_script.source_code
+	assert_true(smithing_source.find("func get_save_data()") != -1,
+		"Smithing station has get_save_data() method")
+	assert_true(smithing_source.find("func load_save_data(") != -1,
+		"Smithing station has load_save_data() method")
+	assert_true(smithing_source.find('"is_smelting"') != -1,
+		"Smithing station saves is_smelting state")
+	assert_true(smithing_source.find('"smelt_progress"') != -1,
+		"Smithing station saves smelt_progress state")
