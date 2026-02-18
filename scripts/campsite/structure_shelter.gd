@@ -168,9 +168,8 @@ func _skip_to_dawn(player: Node, time_manager: Node) -> void:
 		var stats: Node = player.get_node("PlayerStats")
 		if stats.has_method("heal"):
 			stats.heal(stats.max_health)  # Full health restore
-		if "hunger" in stats and "max_hunger" in stats:
-			stats.hunger = min(stats.hunger + 30.0, stats.max_hunger)  # Partial hunger restore
-			stats.hunger_changed.emit(stats.hunger, stats.max_hunger)
+		if stats.has_method("eat"):
+			stats.eat(30.0)  # Partial hunger restore
 
 	resting_started.emit(player)
 	print("[Shelter] You wake at dawn, fully rested (+100% health, +30 hunger)")

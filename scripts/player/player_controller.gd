@@ -749,6 +749,7 @@ func _on_player_died() -> void:
 
 	# Restore health and hunger to partial values
 	if stats:
+		stats.is_dead = false
 		stats.health = stats.max_health * 0.5
 		stats.health_changed.emit(stats.health, stats.max_health)
 		stats.hunger = stats.max_hunger * 0.5

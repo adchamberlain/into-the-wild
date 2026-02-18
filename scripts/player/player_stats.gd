@@ -21,6 +21,7 @@ signal player_died()
 # Current values
 var health: float = 100.0
 var hunger: float = 100.0
+var is_dead: bool = false
 
 # Config toggles (set by ConfigMenu)
 var hunger_depletion_enabled: bool = false
@@ -70,6 +71,8 @@ func _update_hunger(delta: float) -> void:
 
 
 func _update_health(delta: float) -> void:
+	if is_dead:
+		return
 	var old_health: float = health
 
 	if hunger <= 0.0 and health_drain_enabled:
@@ -83,6 +86,7 @@ func _update_health(delta: float) -> void:
 		health_changed.emit(health, max_health)
 
 		if health <= 0.0:
+			is_dead = true
 			player_died.emit()
 
 
@@ -101,6 +105,8 @@ func eat(amount: float) -> float:
 
 ## Take damage to health. Returns actual damage taken.
 func take_damage(amount: float) -> float:
+	if is_dead:
+		return 0.0
 	var old_health: float = health
 	health = max(0.0, health - amount)
 	var damage_taken: float = old_health - health
@@ -110,6 +116,7 @@ func take_damage(amount: float) -> float:
 		print("[PlayerStats] Took %.1f damage (now %.1f)" % [damage_taken, health])
 
 		if health <= 0.0:
+			is_dead = true
 			player_died.emit()
 
 	return damage_taken

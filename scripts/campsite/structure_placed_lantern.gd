@@ -50,10 +50,7 @@ func interact(player: Node) -> bool:
 		SFXManager.play_sfx("pickup")
 		_show_notification("Picked up lantern", Color(0.9, 0.95, 1.0))
 
-		# Remove from campsite manager
-		_unregister_from_campsite()
-
-		# Destroy the placed lantern
+		# Destroy (triggers structure_destroyed signal -> campsite manager unregistration)
 		destroy()
 		return true
 

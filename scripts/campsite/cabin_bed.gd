@@ -131,9 +131,8 @@ func _do_rest(player: Node) -> void:
 		var stats: Node = player.get_node("PlayerStats")
 		if stats.has_method("heal"):
 			stats.heal(30.0)
-		if "hunger" in stats and "max_hunger" in stats:
-			stats.hunger = min(stats.hunger + 20.0, stats.max_hunger)
-			stats.hunger_changed.emit(stats.hunger, stats.max_hunger)
+		if stats.has_method("eat"):
+			stats.eat(20.0)
 
 
 func _do_full_restore(player: Node) -> void:
@@ -144,9 +143,8 @@ func _do_full_restore(player: Node) -> void:
 		var stats: Node = player.get_node("PlayerStats")
 		if stats.has_method("heal"):
 			stats.heal(stats.max_health)
-		if "hunger" in stats and "max_hunger" in stats:
-			stats.hunger = stats.max_hunger
-			stats.hunger_changed.emit(stats.hunger, stats.max_hunger)
+		if stats.has_method("eat"):
+			stats.eat(stats.max_hunger)
 
 
 func _wake_up(player: Node) -> void:

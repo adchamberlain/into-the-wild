@@ -678,6 +678,7 @@ func _apply_time_data(data: Dictionary) -> void:
 	time_manager.current_minute = int(data.get("minute", 0))
 	time_manager._update_period()
 	time_manager.day_changed.emit(time_manager.current_day)
+	time_manager.time_changed.emit(time_manager.current_hour, time_manager.current_minute)
 
 
 func _apply_weather_data(data: Dictionary) -> void:

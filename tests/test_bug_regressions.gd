@@ -143,6 +143,17 @@ func run_tests() -> Dictionary:
 	test_health_hunger_clamped_on_load()
 	test_structure_position_defaults_are_float()
 
+	# Round 5 regression tests
+	test_death_signal_guarded_by_is_dead()
+	test_take_damage_guarded_by_is_dead()
+	test_time_changed_emitted_on_load()
+	test_reclaimable_no_double_unregister()
+	test_placement_checks_water()
+	test_shelter_uses_eat_method()
+	test_cabin_bed_uses_eat_method()
+	test_canvas_tent_uses_eat_method()
+	test_kitchen_uses_eat_method()
+
 	return get_results()
 
 
@@ -3071,3 +3082,156 @@ func test_structure_position_defaults_are_float() -> void:
 		"structure position Y default is float 0.0")
 	assert_true(recreate_body.find('get("z", 0.0)') != -1,
 		"structure position Z default is float 0.0")
+
+
+# ============================================================
+# Round 5 regression tests
+# ============================================================
+
+func test_death_signal_guarded_by_is_dead() -> void:
+	## Bug: player_died signal could emit multiple times in a single frame
+	## because both _update_health and take_damage could trigger it.
+	var script: GDScript = load("res://scripts/player/player_stats.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load player_stats.gd")
+		return
+	var src: String = script.source_code
+	assert_true(src.find("var is_dead: bool") != -1,
+		"player_stats has is_dead guard flag")
+	var update_idx: int = src.find("func _update_health")
+	assert_true(update_idx != -1, "player_stats has _update_health")
+	var update_body: String = src.substr(update_idx, 500)
+	assert_true(update_body.find("is_dead") != -1,
+		"_update_health checks is_dead before processing")
+
+
+func test_take_damage_guarded_by_is_dead() -> void:
+	## Bug: take_damage could emit player_died when health was already 0.
+	var script: GDScript = load("res://scripts/player/player_stats.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load player_stats.gd")
+		return
+	var src: String = script.source_code
+	var take_idx: int = src.find("func take_damage")
+	assert_true(take_idx != -1, "player_stats has take_damage")
+	var take_body: String = src.substr(take_idx, 400)
+	assert_true(take_body.find("is_dead") != -1,
+		"take_damage checks is_dead before processing")
+
+
+func test_time_changed_emitted_on_load() -> void:
+	## Bug: save/load emitted day_changed but not time_changed after loading
+	## time data, causing HUD to show stale time and environment lighting
+	## to be out of sync.
+	var file: FileAccess = FileAccess.open("res://scripts/core/save_load.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open save_load.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var time_idx: int = src.find("func _apply_time_data")
+	assert_true(time_idx != -1, "save_load has _apply_time_data")
+	var time_body: String = src.substr(time_idx, 400)
+	assert_true(time_body.find("time_changed.emit") != -1,
+		"_apply_time_data emits time_changed signal")
+	assert_true(time_body.find("day_changed.emit") != -1,
+		"_apply_time_data emits day_changed signal")
+
+
+func test_reclaimable_no_double_unregister() -> void:
+	## Bug: Reclaimable structures (torch, lantern, lodestone) called
+	## _unregister_from_campsite() AND destroy() which triggered unregister
+	## again via signal, potentially decrementing structure counts twice.
+	var torch_file: FileAccess = FileAccess.open("res://scripts/campsite/structure_placed_torch.gd", FileAccess.READ)
+	if not torch_file:
+		assert_true(false, "Could not open structure_placed_torch.gd")
+		return
+	var torch_src: String = torch_file.get_as_text()
+	torch_file.close()
+	var interact_idx: int = torch_src.find("func interact")
+	assert_true(interact_idx != -1, "placed_torch has interact")
+	var interact_body: String = torch_src.substr(interact_idx, 400)
+	assert_true(interact_body.find("_unregister_from_campsite") == -1,
+		"placed_torch interact does not manually unregister (destroy() handles it)")
+
+
+func test_placement_checks_water() -> void:
+	## Bug: Placement system allowed structures in water bodies.
+	var file: FileAccess = FileAccess.open("res://scripts/campsite/placement_system.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open placement_system.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var validate_idx: int = src.find("func _validate_placement")
+	assert_true(validate_idx != -1, "placement_system has _validate_placement")
+	var validate_body: String = src.substr(validate_idx, 800)
+	assert_true(validate_body.find("is_in_water") != -1,
+		"_validate_placement checks for water bodies")
+
+
+func test_shelter_uses_eat_method() -> void:
+	## Bug: Shelter set stats.hunger directly without emitting hunger_changed.
+	var file: FileAccess = FileAccess.open("res://scripts/campsite/structure_shelter.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open structure_shelter.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var skip_idx: int = src.find("func _skip_to_dawn")
+	assert_true(skip_idx != -1, "shelter has _skip_to_dawn")
+	var skip_body: String = src.substr(skip_idx, 1000)
+	assert_true(skip_body.find(".eat(") != -1,
+		"_skip_to_dawn uses eat() method instead of direct assignment")
+
+
+func test_cabin_bed_uses_eat_method() -> void:
+	## Bug: Cabin bed set stats.hunger directly without emitting hunger_changed.
+	var file: FileAccess = FileAccess.open("res://scripts/campsite/cabin_bed.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open cabin_bed.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	# Check daytime rest
+	var rest_idx: int = src.find("func _do_rest")
+	assert_true(rest_idx != -1, "cabin_bed has _do_rest")
+	var rest_body: String = src.substr(rest_idx, 400)
+	assert_true(rest_body.find(".eat(") != -1,
+		"_do_rest uses eat() method")
+	# Check full restore
+	var full_idx: int = src.find("func _do_full_restore")
+	assert_true(full_idx != -1, "cabin_bed has _do_full_restore")
+	var full_body: String = src.substr(full_idx, 400)
+	assert_true(full_body.find(".eat(") != -1,
+		"_do_full_restore uses eat() method")
+
+
+func test_canvas_tent_uses_eat_method() -> void:
+	## Bug: Canvas tent set stats.hunger directly without emitting hunger_changed.
+	var file: FileAccess = FileAccess.open("res://scripts/campsite/structure_canvas_tent.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open structure_canvas_tent.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var skip_idx: int = src.find("func _skip_to_dawn")
+	assert_true(skip_idx != -1, "canvas_tent has _skip_to_dawn")
+	var skip_body: String = src.substr(skip_idx, 1000)
+	assert_true(skip_body.find(".eat(") != -1,
+		"canvas_tent _skip_to_dawn uses eat() method")
+
+
+func test_kitchen_uses_eat_method() -> void:
+	## Bug: Kitchen set player_stats.hunger directly without emitting hunger_changed.
+	var file: FileAccess = FileAccess.open("res://scripts/campsite/cabin_kitchen.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open cabin_kitchen.gd")
+		return
+	var src: String = file.get_as_text()
+	file.close()
+	var cook_idx: int = src.find("func interact")
+	assert_true(cook_idx != -1, "cabin_kitchen has interact")
+	var cook_body: String = src.substr(cook_idx, 1800)
+	assert_true(cook_body.find(".eat(") != -1,
+		"interact uses eat() method for hunger restore")

@@ -95,9 +95,8 @@ func interact(player: Node) -> bool:
 	if player_stats:
 		if health_restore > 0 and player_stats.has_method("heal"):
 			player_stats.heal(health_restore)
-		if hunger_restore > 0 and "hunger" in player_stats and "max_hunger" in player_stats:
-			player_stats.hunger = min(player_stats.hunger + hunger_restore, player_stats.max_hunger)
-			player_stats.hunger_changed.emit(player_stats.hunger, player_stats.max_hunger)
+		if hunger_restore > 0 and player_stats.has_method("eat"):
+			player_stats.eat(hunger_restore)
 
 	# Show notification with what was cooked
 	var msg: String = "Cooked %s!" % recipe.get("name")

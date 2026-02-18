@@ -672,6 +672,12 @@ func _validate_placement(pos: Vector3) -> bool:
 	if distance < 1.5 or distance > max_distance:
 		return false
 
+	# Prevent placing structures in water
+	var chunk_mgr: Node = get_node_or_null("/root/Main/ChunkManager")
+	if chunk_mgr and chunk_mgr.has_method("is_in_water"):
+		if chunk_mgr.is_in_water(pos.x, pos.z, 1.0):
+			return false
+
 	# Prevent placing structures where the player would be trapped inside walls
 	# Use the structure's footprint to check if player is too close to center
 	var player_dist_2d: float = Vector2(player.global_position.x - pos.x, player.global_position.z - pos.z).length()
