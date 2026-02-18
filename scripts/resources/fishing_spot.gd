@@ -626,7 +626,7 @@ func respawn() -> void:
 	if water_mesh and water_mesh.material_override:
 		var mat: StandardMaterial3D = water_mesh.material_override as StandardMaterial3D
 		if mat:
-			mat.albedo_color = Color(0.15, 0.35, 0.45, 0.75)
+			mat.albedo_color = Color(0.15, 0.42, 0.55, 0.72)
 
 	# Show fish again
 	for fish in fish_nodes:

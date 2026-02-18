@@ -70,7 +70,7 @@ func interact(player: Node) -> bool:
 			_show_notification("Tended garden! +1 herb", Color(0.4, 0.9, 0.4))
 		return true
 	elif not can_tend:
-		var minutes_left: int = int(tend_cooldown / 60) + 1
+		var minutes_left: int = ceili(tend_cooldown / 60.0)
 		print("[Garden] Garden recently tended. Wait %d more minutes." % minutes_left)
 		if collected_count > 0:
 			_show_notification("Collected %d herbs. Garden needs rest." % collected_count, Color(0.9, 0.8, 0.4))
@@ -100,5 +100,5 @@ func get_interaction_text() -> String:
 	elif can_tend:
 		return "Tend Garden"
 	else:
-		var minutes_left: int = int(tend_cooldown / 60) + 1
+		var minutes_left: int = ceili(tend_cooldown / 60.0)
 		return "Garden (wait %dm)" % minutes_left

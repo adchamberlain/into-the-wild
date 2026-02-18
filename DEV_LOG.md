@@ -4003,6 +4003,30 @@ Added a **Testing Rule** section to `CLAUDE.md` requiring regression tests for a
 
 ---
 
+## Session 55 - Code Audit Bug Fixes (2026-02-17)
+
+### Bug Fixes
+
+**1. Campsite progression flags lost on save/load** - `save_load.gd` checked inventory for `"Fishing Rod"` and `"Stone Axe"` (display names), but the inventory stores items by crafting key (`"fishing_rod"`, `"stone_axe"`). The lookup always failed, so `has_crafted_fishing_rod` and `has_crafted_tool` were never restored from inventory after loading — silently breaking campsite level progression.
+
+**2. Garden cooldown display off by 1 minute at boundaries** - `int(tend_cooldown / 60) + 1` showed "2 minutes" when exactly 60 seconds remained. Changed to `ceili(tend_cooldown / 60.0)` for correct ceiling rounding. Affected both the interaction notification and the interaction prompt text.
+
+**3. Fishing pond color changes after respawn** - Original pond water color was `Color(0.15, 0.42, 0.55, 0.72)` but `respawn()` restored it to `Color(0.15, 0.35, 0.45, 0.75)` — noticeably darker and greener. Fixed to use the exact original color.
+
+### Modified Files
+| File | Type | Changes |
+|------|------|---------|
+| `scripts/core/save_load.gd` | Modified | Fixed inventory key lookups: `"Fishing Rod"` → `"fishing_rod"`, `"Stone Axe"` → `"stone_axe"` |
+| `scripts/campsite/structure_garden.gd` | Modified | Fixed cooldown display: `int(x/60)+1` → `ceili(x/60.0)` in 2 places |
+| `scripts/resources/fishing_spot.gd` | Modified | Fixed respawn water color to match original `Color(0.15, 0.42, 0.55, 0.72)` |
+| `tests/test_bug_regressions.gd` | New | Regression tests for all 3 bugs (12 assertions) |
+| `tests/run_all_tests.gd` | Modified | Registered new test file |
+
+### Test Results
+- All 544 regression tests pass (12 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks

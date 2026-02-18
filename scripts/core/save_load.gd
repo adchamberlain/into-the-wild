@@ -556,23 +556,23 @@ func _verify_crafting_flags_from_inventory() -> void:
 
 	# If player has fishing rod in inventory, they must have crafted it
 	if not campsite_manager.has_crafted_fishing_rod:
-		if inventory.has_method("has_item") and inventory.has_item("Fishing Rod"):
+		if inventory.has_method("has_item") and inventory.has_item("fishing_rod"):
 			campsite_manager.has_crafted_fishing_rod = true
 			print("[SaveLoad] Set has_crafted_fishing_rod from inventory")
 		elif inventory.has_method("get_all_items"):
 			var items: Dictionary = inventory.get_all_items()
-			if items.has("Fishing Rod") and items["Fishing Rod"] > 0:
+			if items.has("fishing_rod") and items["fishing_rod"] > 0:
 				campsite_manager.has_crafted_fishing_rod = true
 				print("[SaveLoad] Set has_crafted_fishing_rod from inventory")
 
 	# If player has stone axe in inventory, they must have crafted it
 	if not campsite_manager.has_crafted_tool:
-		if inventory.has_method("has_item") and inventory.has_item("Stone Axe"):
+		if inventory.has_method("has_item") and inventory.has_item("stone_axe"):
 			campsite_manager.has_crafted_tool = true
 			print("[SaveLoad] Set has_crafted_tool from inventory")
 		elif inventory.has_method("get_all_items"):
 			var items: Dictionary = inventory.get_all_items()
-			if items.has("Stone Axe") and items["Stone Axe"] > 0:
+			if items.has("stone_axe") and items["stone_axe"] > 0:
 				campsite_manager.has_crafted_tool = true
 				print("[SaveLoad] Set has_crafted_tool from inventory")
 
