@@ -242,8 +242,8 @@ func _sync_emitters(emitters: Array[AudioStreamPlayer3D], target_positions: Arra
 		else:
 			# Create new emitter
 			var emitter: AudioStreamPlayer3D = _create_water_emitter(sound)
-			emitter.global_position = target_pos
 			add_child(emitter)
+			emitter.global_position = target_pos
 			emitters.append(emitter)
 			emitter.play()
 

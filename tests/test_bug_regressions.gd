@@ -209,6 +209,10 @@ func run_tests() -> Dictionary:
 	test_shelter_sleep_guard_prevents_double()
 	test_heal_eat_guard_is_dead()
 
+	# Round 10 regression tests
+	test_music_manager_set_enabled_guards_null_player()
+	test_ambient_sound_add_child_before_global_position()
+
 	return get_results()
 
 
@@ -4088,3 +4092,43 @@ func test_heal_eat_guard_is_dead() -> void:
 	var eat_body: String = src.substr(eat_idx, 300)
 	assert_true(eat_body.find("is_dead") != -1,
 		"eat() checks is_dead guard")
+
+
+func test_music_manager_set_enabled_guards_null_player() -> void:
+	## Bug: config_menu._ready() calls music_manager.set_music_enabled() before
+	## music_manager._ready() has created audio players, causing crash on
+	## active_player.stop() when active_player is null.
+	var music_script: GDScript = load("res://scripts/core/music_manager.gd") as GDScript
+	if not music_script:
+		assert_true(false, "Could not load music_manager.gd")
+		return
+	var source: String = music_script.source_code
+	var fn_start: int = source.find("func set_music_enabled(")
+	assert_true(fn_start != -1, "set_music_enabled function exists")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+	assert_true(fn_body.find("not active_player") != -1 or fn_body.find("active_player == null") != -1,
+		"set_music_enabled guards against null active_player")
+
+
+func test_ambient_sound_add_child_before_global_position() -> void:
+	## Bug: ambient_sound_manager.gd set global_position on emitter before
+	## add_child(), causing "not is_inside_tree()" error since global_position
+	## requires the node to be in the scene tree.
+	var sound_script: GDScript = load("res://scripts/core/ambient_sound_manager.gd") as GDScript
+	if not sound_script:
+		assert_true(false, "Could not load ambient_sound_manager.gd")
+		return
+	var source: String = sound_script.source_code
+	var fn_start: int = source.find("func _sync_emitters(")
+	assert_true(fn_start != -1, "_sync_emitters function exists")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+	var add_child_pos: int = fn_body.find("add_child(emitter)")
+	var global_pos_pos: int = fn_body.find("emitter.global_position = target_pos", add_child_pos)
+	assert_true(add_child_pos != -1 and global_pos_pos != -1 and add_child_pos < global_pos_pos,
+		"add_child(emitter) is called before setting global_position")
