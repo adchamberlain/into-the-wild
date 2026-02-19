@@ -4999,6 +4999,75 @@ Found and fixed 18 bugs across equipment, campsite structures, cave resources, t
 
 ---
 
+## Session 84 - Startup Crash Fix (2026-02-19)
+
+### Overview
+Fixed a startup crash caused by node initialization order and a non-fatal scene tree error.
+
+### Bug Fixes (2 fixes)
+
+#### Crash (1 fix)
+1. **Startup crash: null `active_player` in MusicManager** — `ConfigMenu._ready()` called `MusicManager.set_music_enabled()` before `MusicManager._ready()` had created the audio players, causing a null reference crash on `active_player.stop()`. Added null guard to `set_music_enabled()` to safely no-op when called before initialization; the `music_enabled` flag is still stored so `_ready()` picks it up.
+
+#### Non-fatal Error (1 fix)
+2. **Ambient sound emitter `global_position` before `add_child()`** — `ambient_sound_manager.gd` set `emitter.global_position` before calling `add_child(emitter)`, causing a "not is_inside_tree()" error since `global_position` requires the node to be in the scene tree. Swapped the order so `add_child()` happens first.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/core/music_manager.gd` | Modified | Null guard for `active_player` in `set_music_enabled()` |
+| `scripts/core/ambient_sound_manager.gd` | Modified | `add_child()` before `global_position` assignment |
+| `tests/test_bug_regressions.gd` | Modified | Added 2 regression tests |
+
+### Test Results
+- All 1004 regression tests pass (2 new)
+
+---
+
+## Session 85 - Bug Fixes & Bark Strip Visual (2026-02-19)
+
+### Overview
+Fixed 3 crashes (save load, weather type mismatch, scene teardown), fixed creatures moving backwards, and added a visual stripped-bark band on birch trees after bark harvesting.
+
+### Bug Fixes (4 fixes)
+
+#### Crashes (2 fixes)
+1. **Load crash: scene teardown null tree** — When loading a saved game with a different world seed, `load_game_slot()` triggers `reload_current_scene()` but the awaiting `pause_menu` still calls `resume_game()`, crashing on `get_tree().paused = false`. Added `is_inside_tree()` guard.
+
+2. **Load crash: Weather enum passed as String** — `hud.gd._on_game_loaded()` called `_on_weather_changed(weather_manager.current_weather)` but `current_weather` is a Weather enum (int), not a String. Changed to `get_weather_name()`.
+
+#### Visual (2 fixes)
+3. **Creatures moving backwards** — All creature meshes (rabbit, bird) have faces at +Z, but Godot's `look_at()` orients -Z toward the target by default. Added `use_model_front=true` parameter to all three `look_at()` calls (base class, rabbit, bird).
+
+4. **Birch bark strip visual** — See New Features below.
+
+### New Features (1 feature)
+
+#### Bark Strip Visual
+When the machete strips bark from a birch tree, a brown BoxMesh band appears at eye level on the trunk, simulating exposed wood. The band:
+- Uses shared static material for performance
+- Persists across chunk unloading/reloading via `bark_harvest_tracker`
+- Disappears after the 3-day regrowth cooldown expires
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/ui/pause_menu.gd` | Modified | `is_inside_tree()` guard in `resume_game()` |
+| `scripts/ui/hud.gd` | Modified | Use `get_weather_name()` instead of raw enum |
+| `scripts/creatures/ambient_animal_base.gd` | Modified | `use_model_front=true` in `look_at()` |
+| `scripts/creatures/ambient_rabbit.gd` | Modified | `use_model_front=true` in `look_at()` |
+| `scripts/creatures/ambient_bird.gd` | Modified | `use_model_front=true` in `look_at()` |
+| `scripts/player/equipment.gd` | Modified | Bark strip visual helpers, harvest integration |
+| `scripts/world/terrain_chunk.gd` | Modified | Apply bark strips on birch tree spawn |
+| `tests/test_bug_regressions.gd` | Modified | Added 7 regression tests |
+
+### Test Results
+- All 1023 regression tests pass (17 new)
+
+---
+
 ## Next Session
 
 ### Planned Tasks
