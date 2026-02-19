@@ -590,7 +590,7 @@ func _on_game_loaded(_filepath: String, slot: int) -> void:
 	_update_campsite_level_display()
 	# Refresh weather display (weather_changed signal isn't emitted during load)
 	if weather_manager and weather_manager.has_method("get_weather_name"):
-		_on_weather_changed(weather_manager.current_weather)
+		_on_weather_changed(weather_manager.get_weather_name())
 
 
 func _connect_to_placement_system() -> void:

@@ -213,6 +213,7 @@ func run_tests() -> Dictionary:
 	test_music_manager_set_enabled_guards_null_player()
 	test_ambient_sound_add_child_before_global_position()
 	test_pause_resume_guards_is_inside_tree()
+	test_hud_weather_refresh_uses_get_weather_name()
 
 	return get_results()
 
@@ -4153,3 +4154,24 @@ func test_pause_resume_guards_is_inside_tree() -> void:
 	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
 	assert_true(fn_body.find("is_inside_tree()") != -1,
 		"resume_game() guards against being called after scene teardown")
+
+
+func test_hud_weather_refresh_uses_get_weather_name() -> void:
+	## Bug: hud.gd _on_game_loaded() called _on_weather_changed(weather_manager.current_weather)
+	## but current_weather is a Weather enum (int), while _on_weather_changed expects a String.
+	## Must use get_weather_name() to convert the enum to a string.
+	var hud_script: GDScript = load("res://scripts/ui/hud.gd") as GDScript
+	if not hud_script:
+		assert_true(false, "Could not load hud.gd")
+		return
+	var source: String = hud_script.source_code
+	var fn_start: int = source.find("func _on_game_loaded(")
+	assert_true(fn_start != -1, "_on_game_loaded function exists")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+	assert_true(fn_body.find("get_weather_name()") != -1,
+		"_on_game_loaded uses get_weather_name() not current_weather enum")
+	assert_true(fn_body.find(".current_weather)") == -1,
+		"_on_game_loaded does not pass raw current_weather enum to handler")
