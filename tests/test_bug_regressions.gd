@@ -219,6 +219,8 @@ func run_tests() -> Dictionary:
 	test_bark_strip_reapplied_on_chunk_spawn()
 	test_cabin_bed_connects_to_period_changed()
 	test_animal_avoids_cave_entrance()
+	test_map_does_not_block_movement()
+	test_map_updates_player_position()
 
 	return get_results()
 
@@ -4331,3 +4333,48 @@ func test_animal_avoids_cave_entrance() -> void:
 			"_move_animal checks cave_entrances to avoid pits")
 		assert_true(fn_body.find("move_direction = -move_direction") != -1,
 			"_move_animal reverses direction near caves")
+
+
+func test_map_does_not_block_movement() -> void:
+	## Bug: Map UI was listed as a movement-blocking UI in player_controller.gd.
+	## Player should be able to walk while the map overlay is open.
+	var script: GDScript = load("res://scripts/player/player_controller.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load player_controller.gd")
+		return
+	var source: String = script.source_code
+
+	# _is_ui_blocking_input should NOT check for map_ui group
+	var fn_start: int = source.find("func _is_ui_blocking_input(")
+	assert_true(fn_start != -1, "_is_ui_blocking_input function exists")
+	if fn_start != -1:
+		var fn_end: int = source.find("\nfunc ", fn_start + 1)
+		if fn_end == -1:
+			fn_end = source.length()
+		var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+		assert_true(fn_body.find("map_ui") == -1,
+			"_is_ui_blocking_input does NOT block on map_ui (walking allowed with map open)")
+
+
+func test_map_updates_player_position() -> void:
+	## Bug: Map captured player position once in _gather_map_data() at open time.
+	## The X marker never moved while walking with the map open.
+	## Fix: _process() updates player_pos each frame and triggers redraw.
+	var script: GDScript = load("res://scripts/ui/bark_map_ui.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load bark_map_ui.gd")
+		return
+	var source: String = script.source_code
+
+	# Must have _process that updates player_pos
+	var fn_start: int = source.find("func _process(")
+	assert_true(fn_start != -1, "BarkMapUI has _process for live position updates")
+	if fn_start != -1:
+		var fn_end: int = source.find("\nfunc ", fn_start + 1)
+		if fn_end == -1:
+			fn_end = source.length()
+		var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+		assert_true(fn_body.find("player_pos") != -1,
+			"_process updates player_pos")
+		assert_true(fn_body.find("queue_redraw") != -1,
+			"_process triggers map redraw when position changes")

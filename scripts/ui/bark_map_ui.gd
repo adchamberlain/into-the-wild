@@ -42,6 +42,16 @@ func _ready() -> void:
 	map_control.queue_redraw()
 
 
+func _process(_delta: float) -> void:
+	# Update player position marker in real-time as they walk
+	var player_node: Node = get_tree().get_first_node_in_group("player")
+	if player_node and is_instance_valid(player_node):
+		var new_pos: Vector3 = player_node.global_position
+		if new_pos != player_pos:
+			player_pos = new_pos
+			map_control.queue_redraw()
+
+
 func _build_ui() -> void:
 	# Dark semi-transparent fullscreen background
 	background = ColorRect.new()
