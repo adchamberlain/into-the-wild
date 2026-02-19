@@ -14,6 +14,7 @@ const FULL_HUNGER_RESTORE: bool = true
 
 # State
 var is_player_sleeping: bool = false
+var _is_sleep_sequence_active: bool = false  # Guard against double sleep triggers
 var sleeping_player: Node = null
 var player_original_position: Vector3
 var player_original_rotation: Vector3
@@ -26,6 +27,8 @@ func _ready() -> void:
 	interaction_text = "Sleep"
 	# Bed is part of cabin, not a separate structure to track
 	remove_from_group("structure")
+	# Connect to time manager to detect nightfall while player is in bed
+	call_deferred("_connect_to_time_manager")
 
 
 func interact(player: Node) -> bool:
@@ -90,6 +93,24 @@ func _find_time_manager() -> Node:
 	return null
 
 
+func _connect_to_time_manager() -> void:
+	var time_manager: Node = _find_time_manager()
+	if time_manager and time_manager.has_signal("period_changed"):
+		if not time_manager.period_changed.is_connected(_on_period_changed):
+			time_manager.period_changed.connect(_on_period_changed)
+
+
+func _on_period_changed(_period: String) -> void:
+	if _is_sleep_sequence_active:
+		return
+	if is_player_sleeping and is_instance_valid(sleeping_player):
+		var time_manager: Node = _find_time_manager()
+		if time_manager and _is_nighttime(time_manager):
+			_is_sleep_sequence_active = true
+			print("[CabinBed] Night has fallen while in bed - sleeping until dawn...")
+			_trigger_sleep_sequence(sleeping_player, time_manager)
+
+
 func _find_hud() -> Node:
 	var root: Node = get_tree().root
 	if root.has_node("Main/HUD"):
@@ -98,6 +119,7 @@ func _find_hud() -> Node:
 
 
 func _trigger_sleep_sequence(player: Node, time_manager: Node) -> void:
+	_is_sleep_sequence_active = true
 	var hud: Node = _find_hud()
 
 	if hud and hud.has_method("fade_to_black_and_back"):
@@ -149,6 +171,7 @@ func _do_full_restore(player: Node) -> void:
 
 func _wake_up(player: Node) -> void:
 	is_player_sleeping = false
+	_is_sleep_sequence_active = false
 	sleeping_player = null
 
 	if not is_instance_valid(player):

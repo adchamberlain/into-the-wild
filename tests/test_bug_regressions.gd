@@ -217,6 +217,7 @@ func run_tests() -> Dictionary:
 	test_creature_look_at_uses_model_front()
 	test_bark_strip_visual_added_on_harvest()
 	test_bark_strip_reapplied_on_chunk_spawn()
+	test_cabin_bed_connects_to_period_changed()
 
 	return get_results()
 
@@ -4271,3 +4272,36 @@ func test_bark_strip_reapplied_on_chunk_spawn() -> void:
 		"_try_apply_bark_strip checks bark_harvest_tracker")
 	assert_true(try_body.find("add_bark_strip") != -1,
 		"_try_apply_bark_strip calls add_bark_strip")
+
+
+func test_cabin_bed_connects_to_period_changed() -> void:
+	## Bug: CabinBed only checked _is_nighttime() when player entered bed.
+	## If player got in bed at 7 PM (before nighttime threshold), they had to
+	## leave and re-enter to trigger sleep at 8 PM. Fix: connect to
+	## TimeManager.period_changed signal to detect nightfall while in bed.
+	var script: GDScript = load("res://scripts/campsite/cabin_bed.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load cabin_bed.gd")
+		return
+	var source: String = script.source_code
+
+	# Must connect to time manager for period changes
+	assert_true(source.find("_connect_to_time_manager") != -1,
+		"CabinBed has _connect_to_time_manager method")
+	assert_true(source.find("period_changed") != -1,
+		"CabinBed connects to period_changed signal")
+
+	# Must have _on_period_changed handler that triggers sleep
+	var handler_start: int = source.find("func _on_period_changed(")
+	assert_true(handler_start != -1, "CabinBed has _on_period_changed handler")
+	if handler_start != -1:
+		var handler_end: int = source.find("\nfunc ", handler_start + 1)
+		if handler_end == -1:
+			handler_end = source.length()
+		var handler_body: String = source.substr(handler_start, handler_end - handler_start)
+		assert_true(handler_body.find("is_player_sleeping") != -1,
+			"_on_period_changed checks if player is in bed")
+		assert_true(handler_body.find("_is_nighttime") != -1,
+			"_on_period_changed checks if nighttime")
+		assert_true(handler_body.find("_trigger_sleep_sequence") != -1,
+			"_on_period_changed triggers sleep sequence")
