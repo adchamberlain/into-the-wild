@@ -214,6 +214,7 @@ func run_tests() -> Dictionary:
 	test_ambient_sound_add_child_before_global_position()
 	test_pause_resume_guards_is_inside_tree()
 	test_hud_weather_refresh_uses_get_weather_name()
+	test_creature_look_at_uses_model_front()
 
 	return get_results()
 
@@ -4175,3 +4176,26 @@ func test_hud_weather_refresh_uses_get_weather_name() -> void:
 		"_on_game_loaded uses get_weather_name() not current_weather enum")
 	assert_true(fn_body.find(".current_weather)") == -1,
 		"_on_game_loaded does not pass raw current_weather enum to handler")
+
+
+func test_creature_look_at_uses_model_front() -> void:
+	## Bug: Creature meshes are built with face at +Z, but look_at() orients -Z
+	## toward the target by default, causing animals to move backwards. Must pass
+	## use_model_front=true to treat +Z as forward.
+	for path: String in [
+		"res://scripts/creatures/ambient_animal_base.gd",
+		"res://scripts/creatures/ambient_rabbit.gd",
+		"res://scripts/creatures/ambient_bird.gd"
+	]:
+		var script: GDScript = load(path) as GDScript
+		if not script:
+			assert_true(false, "Could not load " + path)
+			continue
+		var source: String = script.source_code
+		var look_idx: int = source.find("look_at(look_target")
+		if look_idx == -1:
+			continue
+		var line_end: int = source.find("\n", look_idx)
+		var look_line: String = source.substr(look_idx, line_end - look_idx)
+		assert_true(look_line.find("true") != -1,
+			path.get_file() + " look_at uses use_model_front=true")

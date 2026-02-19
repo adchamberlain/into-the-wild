@@ -194,7 +194,7 @@ func _move_animal(delta: float, speed: float) -> void:
 	if move_direction.length() > 0.1 and rotation_timer >= ROTATION_UPDATE_INTERVAL:
 		rotation_timer = 0.0
 		var look_target: Vector3 = global_position + move_direction
-		mesh_container.look_at(look_target, Vector3.UP)
+		mesh_container.look_at(look_target, Vector3.UP, true)
 
 
 ## Get terrain height using max of nearby samples to prevent clipping at block edges.

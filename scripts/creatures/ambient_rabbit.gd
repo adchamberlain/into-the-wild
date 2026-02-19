@@ -372,7 +372,7 @@ func _start_single_hop() -> void:
 	if hop_dir.length() > 0.1 and rotation_timer >= ROTATION_UPDATE_INTERVAL:
 		rotation_timer = 0.0
 		var look_target: Vector3 = global_position + hop_dir
-		mesh_container.look_at(look_target, Vector3.UP)
+		mesh_container.look_at(look_target, Vector3.UP, true)
 
 
 func _on_enter_moving() -> void:

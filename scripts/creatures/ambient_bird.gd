@@ -306,7 +306,7 @@ func _process_flying(delta: float) -> void:
 	if rotation_timer >= ROTATION_UPDATE_INTERVAL:
 		rotation_timer = 0.0
 		var look_target: Vector3 = global_position + direction
-		mesh_container.look_at(look_target, Vector3.UP)
+		mesh_container.look_at(look_target, Vector3.UP, true)
 		# Tilt slightly in flight direction
 		mesh_container.rotation.x = -0.2
 
