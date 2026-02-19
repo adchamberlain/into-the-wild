@@ -174,6 +174,16 @@ func _move_animal(delta: float, speed: float) -> void:
 	var movement: Vector3 = move_direction * speed * delta
 	var new_pos: Vector3 = global_position + movement
 
+	# Avoid cave entrance pits (animals would float over carved-out area)
+	if chunk_manager and "cave_entrances" in chunk_manager:
+		for cave: Dictionary in chunk_manager.cave_entrances:
+			var cave_center: Vector2 = cave["center"]
+			var dx: float = new_pos.x - cave_center.x
+			var dz: float = new_pos.z - cave_center.y
+			if absf(dx) < 5.0 and absf(dz) < 8.0:
+				move_direction = -move_direction
+				return
+
 	# Sample terrain height at new position using max of nearby samples
 	# to avoid clipping into adjacent terrain block edges
 	if chunk_manager and chunk_manager.has_method("get_height_at"):

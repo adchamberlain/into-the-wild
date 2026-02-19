@@ -218,6 +218,7 @@ func run_tests() -> Dictionary:
 	test_bark_strip_visual_added_on_harvest()
 	test_bark_strip_reapplied_on_chunk_spawn()
 	test_cabin_bed_connects_to_period_changed()
+	test_animal_avoids_cave_entrance()
 
 	return get_results()
 
@@ -4305,3 +4306,28 @@ func test_cabin_bed_connects_to_period_changed() -> void:
 			"_on_period_changed checks if nighttime")
 		assert_true(handler_body.find("_trigger_sleep_sequence") != -1,
 			"_on_period_changed triggers sleep sequence")
+
+
+func test_animal_avoids_cave_entrance() -> void:
+	## Bug: Ambient animals (bunnies) could hop across the cave entrance pit,
+	## floating in mid-air because get_height_at() returns the flat platform
+	## height (2.0) but no actual terrain mesh exists in the skip zone.
+	## Fix: _move_animal() checks cave_entrances and reverses direction.
+	var script: GDScript = load("res://scripts/creatures/ambient_animal_base.gd") as GDScript
+	if not script:
+		assert_true(false, "Could not load ambient_animal_base.gd")
+		return
+	var source: String = script.source_code
+
+	# _move_animal must check cave_entrances before applying movement
+	var fn_start: int = source.find("func _move_animal(")
+	assert_true(fn_start != -1, "_move_animal function exists")
+	if fn_start != -1:
+		var fn_end: int = source.find("\nfunc ", fn_start + 1)
+		if fn_end == -1:
+			fn_end = source.length()
+		var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+		assert_true(fn_body.find("cave_entrances") != -1,
+			"_move_animal checks cave_entrances to avoid pits")
+		assert_true(fn_body.find("move_direction = -move_direction") != -1,
+			"_move_animal reverses direction near caves")
