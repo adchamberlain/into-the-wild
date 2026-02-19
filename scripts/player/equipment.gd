@@ -1651,6 +1651,10 @@ func _harvest_birch_bark(target: Node) -> bool:
 			print("[Equipment] Birch bark on cooldown (harvested day %d, now day %d)" % [harvest_day, current_day])
 			_play_swing_animation()
 			return false
+		else:
+			# Cooldown expired - remove old strip visual (bark regrew)
+			_remove_bark_strip(target)
+			bark_harvest_tracker.erase(pos_key)
 
 	# Harvest bark
 	_play_swing_animation()
@@ -1660,12 +1664,56 @@ func _harvest_birch_bark(target: Node) -> bool:
 	item_used.emit(equipped_item)
 	use_durability(1)
 
+	# Add stripped bark visual to the tree
+	_add_bark_strip(target)
+
 	# Show notification
 	var hud: Node = player.get_tree().get_first_node_in_group("hud") if player else null
 	if hud and hud.has_method("show_notification"):
 		hud.show_notification("Harvested Birch Bark", Color(0.6, 1.0, 0.6, 1))
 	print("[Equipment] Harvested birch bark from tree at %s" % pos)
 	return true
+
+
+## Shared material for bark strip visuals (avoids per-tree material allocation).
+static var _bark_strip_material: StandardMaterial3D = null
+
+
+## Add a brown stripped-bark band to a birch tree at eye level.
+static func add_bark_strip(tree: Node) -> void:
+	if not is_instance_valid(tree):
+		return
+	# Don't add a second strip
+	if tree.has_node("BarkStrip"):
+		return
+	if not _bark_strip_material:
+		_bark_strip_material = StandardMaterial3D.new()
+		_bark_strip_material.albedo_color = Color(0.45, 0.30, 0.18)
+	var strip: MeshInstance3D = MeshInstance3D.new()
+	strip.name = "BarkStrip"
+	var box: BoxMesh = BoxMesh.new()
+	box.size = Vector3(0.58, 0.6, 0.58)
+	strip.mesh = box
+	strip.position = Vector3(0, 2.0, 0)
+	strip.material_override = _bark_strip_material
+	tree.add_child(strip)
+
+
+## Remove the stripped-bark band from a birch tree (bark regrew).
+static func remove_bark_strip(tree: Node) -> void:
+	if not is_instance_valid(tree):
+		return
+	var strip: Node = tree.get_node_or_null("BarkStrip")
+	if strip:
+		strip.queue_free()
+
+
+func _add_bark_strip(target: Node) -> void:
+	add_bark_strip(target)
+
+
+func _remove_bark_strip(target: Node) -> void:
+	remove_bark_strip(target)
 
 
 ## Toggle map overlay on/off.

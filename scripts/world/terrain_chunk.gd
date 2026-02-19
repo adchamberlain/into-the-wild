@@ -909,6 +909,10 @@ func _spawn_chunk_trees() -> void:
 				trees_container.add_child(tree)
 				spawned_trees.append(tree)
 
+				# Apply bark strip visual to birch trees that have been harvested
+				if tree.scene_file_path.ends_with("birch_tree_resource.tscn"):
+					_try_apply_bark_strip(tree)
+
 				# Batch yielding - pause every N trees to prevent frame stuttering
 				trees_spawned_this_batch += 1
 				if trees_spawned_this_batch >= TREES_PER_BATCH:
@@ -921,6 +925,21 @@ func _spawn_chunk_trees() -> void:
 
 			z += tree_grid_size
 		x += tree_grid_size
+
+
+func _try_apply_bark_strip(tree: Node) -> void:
+	## Check if a birch tree has been bark-stripped and apply the visual band.
+	var player_node: Node = get_tree().get_first_node_in_group("player") if is_inside_tree() else null
+	if not player_node:
+		return
+	var equipment: Node = player_node.get_node_or_null("Equipment")
+	if not equipment or not "bark_harvest_tracker" in equipment:
+		return
+	var tracker: Dictionary = equipment.bark_harvest_tracker
+	var pos: Vector3 = tree.position
+	var pos_key: String = "%d_%d" % [int(pos.x * 10), int(pos.z * 10)]
+	if tracker.has(pos_key):
+		Equipment.add_bark_strip(tree)
 
 
 func _spawn_chunk_resources() -> void:

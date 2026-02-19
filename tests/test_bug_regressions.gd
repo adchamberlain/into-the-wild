@@ -215,6 +215,8 @@ func run_tests() -> Dictionary:
 	test_pause_resume_guards_is_inside_tree()
 	test_hud_weather_refresh_uses_get_weather_name()
 	test_creature_look_at_uses_model_front()
+	test_bark_strip_visual_added_on_harvest()
+	test_bark_strip_reapplied_on_chunk_spawn()
 
 	return get_results()
 
@@ -4199,3 +4201,73 @@ func test_creature_look_at_uses_model_front() -> void:
 		var look_line: String = source.substr(look_idx, line_end - look_idx)
 		assert_true(look_line.find("true") != -1,
 			path.get_file() + " look_at uses use_model_front=true")
+
+
+func test_bark_strip_visual_added_on_harvest() -> void:
+	## Feature: Birch trees show a brown stripped band at eye level after bark
+	## is harvested with a machete. The strip should be added via add_bark_strip().
+	var equip_script: GDScript = load("res://scripts/player/equipment.gd") as GDScript
+	if not equip_script:
+		assert_true(false, "Could not load equipment.gd")
+		return
+	var source: String = equip_script.source_code
+
+	# _harvest_birch_bark must call _add_bark_strip after harvesting
+	var fn_start: int = source.find("func _harvest_birch_bark(")
+	assert_true(fn_start != -1, "_harvest_birch_bark function exists")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+	assert_true(fn_body.find("_add_bark_strip") != -1,
+		"_harvest_birch_bark adds bark strip visual after harvesting")
+
+	# add_bark_strip static method must exist and create a BarkStrip node
+	var strip_fn_start: int = source.find("static func add_bark_strip(")
+	assert_true(strip_fn_start != -1, "add_bark_strip static method exists")
+	var strip_fn_end: int = source.find("\nfunc ", strip_fn_start + 1)
+	if strip_fn_end == -1:
+		strip_fn_end = source.find("\nstatic func ", strip_fn_start + 1)
+	if strip_fn_end == -1:
+		strip_fn_end = source.length()
+	var strip_body: String = source.substr(strip_fn_start, strip_fn_end - strip_fn_start)
+	assert_true(strip_body.find("BarkStrip") != -1,
+		"add_bark_strip creates a node named BarkStrip")
+
+	# remove_bark_strip static method must exist
+	var remove_fn: int = source.find("static func remove_bark_strip(")
+	assert_true(remove_fn != -1, "remove_bark_strip static method exists")
+
+
+func test_bark_strip_reapplied_on_chunk_spawn() -> void:
+	## Feature: When terrain chunks reload, birch trees that were previously
+	## stripped must have their visual band reapplied from the bark tracker.
+	var chunk_script: GDScript = load("res://scripts/world/terrain_chunk.gd") as GDScript
+	if not chunk_script:
+		assert_true(false, "Could not load terrain_chunk.gd")
+		return
+	var source: String = chunk_script.source_code
+
+	# _spawn_chunk_trees must call _try_apply_bark_strip for birch trees
+	var fn_start: int = source.find("func _spawn_chunk_trees(")
+	assert_true(fn_start != -1, "_spawn_chunk_trees function exists")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+	assert_true(fn_body.find("_try_apply_bark_strip") != -1,
+		"_spawn_chunk_trees calls _try_apply_bark_strip for birch trees")
+	assert_true(fn_body.find("birch_tree_resource.tscn") != -1,
+		"_spawn_chunk_trees checks for birch tree scene path")
+
+	# _try_apply_bark_strip must check bark_harvest_tracker
+	var try_fn: int = source.find("func _try_apply_bark_strip(")
+	assert_true(try_fn != -1, "_try_apply_bark_strip function exists")
+	var try_fn_end: int = source.find("\nfunc ", try_fn + 1)
+	if try_fn_end == -1:
+		try_fn_end = source.length()
+	var try_body: String = source.substr(try_fn, try_fn_end - try_fn)
+	assert_true(try_body.find("bark_harvest_tracker") != -1,
+		"_try_apply_bark_strip checks bark_harvest_tracker")
+	assert_true(try_body.find("add_bark_strip") != -1,
+		"_try_apply_bark_strip calls add_bark_strip")
