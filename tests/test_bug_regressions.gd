@@ -212,6 +212,7 @@ func run_tests() -> Dictionary:
 	# Round 10 regression tests
 	test_music_manager_set_enabled_guards_null_player()
 	test_ambient_sound_add_child_before_global_position()
+	test_pause_resume_guards_is_inside_tree()
 
 	return get_results()
 
@@ -4132,3 +4133,23 @@ func test_ambient_sound_add_child_before_global_position() -> void:
 	var global_pos_pos: int = fn_body.find("emitter.global_position = target_pos", add_child_pos)
 	assert_true(add_child_pos != -1 and global_pos_pos != -1 and add_child_pos < global_pos_pos,
 		"add_child(emitter) is called before setting global_position")
+
+
+func test_pause_resume_guards_is_inside_tree() -> void:
+	## Bug: When loading a saved game with a different world seed, load_game_slot()
+	## calls get_tree().reload_current_scene() and returns true. The await in
+	## pause_menu then calls resume_game(), but the scene is being torn down so
+	## get_tree() returns null, crashing on get_tree().paused = false.
+	var pause_script: GDScript = load("res://scripts/ui/pause_menu.gd") as GDScript
+	if not pause_script:
+		assert_true(false, "Could not load pause_menu.gd")
+		return
+	var source: String = pause_script.source_code
+	var fn_start: int = source.find("func resume_game(")
+	assert_true(fn_start != -1, "resume_game function exists")
+	var fn_end: int = source.find("\nfunc ", fn_start + 1)
+	if fn_end == -1:
+		fn_end = source.length()
+	var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+	assert_true(fn_body.find("is_inside_tree()") != -1,
+		"resume_game() guards against being called after scene teardown")

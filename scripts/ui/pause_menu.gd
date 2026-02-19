@@ -177,6 +177,8 @@ func _update_hint_label() -> void:
 
 
 func resume_game() -> void:
+	if not is_inside_tree():
+		return
 	is_paused = false
 	showing_credits = false
 	showing_slots = false
