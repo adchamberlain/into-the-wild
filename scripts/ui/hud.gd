@@ -308,8 +308,7 @@ func _update_equipped_display() -> void:
 		var unequip_key: String = _get_button_prompt("unequip")
 
 		if equipped_type == "torch" or equipped_type == "lodestone":
-			var interact_key: String = _get_button_prompt("interact")
-			equipped_label.text += " [%s place, %s unequip]" % [interact_key, unequip_key]
+			equipped_label.text += " [%s place, %s unequip]" % [use_key, unequip_key]
 		elif StructureData.is_placeable_item(equipped_type):
 			equipped_label.text += " [%s place, %s unequip]" % [use_key, unequip_key]
 		elif equipped_type == "fishing_rod":

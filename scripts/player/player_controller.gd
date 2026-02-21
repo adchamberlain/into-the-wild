@@ -509,21 +509,7 @@ func _try_interact() -> void:
 			# Refresh interaction text in case it changed (e.g., drying rack progress)
 			var interaction_text: String = _get_interaction_text(current_interaction_target)
 			interaction_target_changed.emit(current_interaction_target, interaction_text)
-	else:
-		# No interaction target - try instant placement if torch/lodestone is equipped
-		if equipment and equipment.get_equipped() == "torch":
-			var placement_system: Node = get_node_or_null("PlacementSystem")
-			if placement_system and placement_system.has_method("place_torch_instant"):
-				if placement_system.place_torch_instant():
-					equipment.unequip()
-					# Auto-equip next torch if player has more
-					if inventory and inventory.has_item("torch"):
-						equipment.equip("torch")
-		elif equipment and equipment.get_equipped() == "lodestone":
-			var placement_system: Node = get_node_or_null("PlacementSystem")
-			if placement_system and placement_system.has_method("place_lodestone_instant"):
-				if placement_system.place_lodestone_instant():
-					equipment.unequip()
+	# L2/interact should only pick up/interact - placement is handled by R2/use_equipped
 
 
 func get_inventory() -> Inventory:
