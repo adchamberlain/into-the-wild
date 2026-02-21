@@ -847,6 +847,11 @@ func _confirm_placement() -> void:
 	if campsite_manager and campsite_manager.has_method("register_structure"):
 		campsite_manager.register_structure(structure, current_structure_type)
 
+	# Clear decorative grass/flowers under the structure footprint
+	var footprint_radius: float = StructureData.get_footprint_radius(current_structure_type)
+	if footprint_radius > 0 and is_instance_valid(chunk_manager) and chunk_manager.has_method("clear_decorations_in_radius"):
+		chunk_manager.clear_decorations_in_radius(place_pos.x, place_pos.z, footprint_radius)
+
 	# Play placement confirm sound
 	SFXManager.play_sfx("place_confirm")
 
@@ -3346,6 +3351,8 @@ func _create_placed_torch() -> StaticBody3D:
 	light.light_energy = 8.0
 	light.omni_range = 15.0
 	light.shadow_enabled = true
+	light.shadow_bias = 1.0
+	light.shadow_normal_bias = 2.0
 	light.position = Vector3(0, 1.0, 0)
 	torch.add_child(light)
 
@@ -3578,6 +3585,8 @@ func _create_placed_lantern() -> StaticBody3D:
 	light.light_energy = 16.0
 	light.omni_range = 30.0
 	light.shadow_enabled = true
+	light.shadow_bias = 1.0
+	light.shadow_normal_bias = 2.0
 	light.position = Vector3(0, 0.25, 0)
 	lantern.add_child(light)
 

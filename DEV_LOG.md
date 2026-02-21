@@ -5068,6 +5068,64 @@ When the machete strips bark from a birch tree, a brown BoxMesh band appears at 
 
 ---
 
+## Session 19 - Bug Fixing Batch (Feb 21, 2026)
+
+### Summary
+Fixed 9 gameplay bugs and added a placement cooldown, covering floating trees, torch behavior, HUD prompts, map rendering, and berry bush physics.
+
+### Changes
+
+**1. Fix floating trees in rocky region**
+- Trees and resources were calling `get_height_at()` directly, bypassing the post-processed height cache (which includes pit prevention and flat smoothing)
+- Added `_get_cached_height_at()` helper to `terrain_chunk.gd` that reads from the height cache, ensuring trees sit at the same height as the terrain mesh
+
+**2. Torch auto-equip on pickup and after placement**
+- After placing a torch, if the player has more torches in inventory, the next one auto-equips
+- Picking up a placed torch also auto-equips it
+- Works in both the primary and fallback placement paths
+
+**3. Fix torch/lantern light not illuminating ground**
+- Root cause: terrain material uses `CULL_DISABLED`, causing self-shadowing in the OmniLight3D shadow pass
+- Added `shadow_bias = 1.0` and `shadow_normal_bias = 2.0` to all torch and lantern light creation (equipped, placed, and save/loaded)
+
+**4. Fix lodestone HUD prompt persisting after pickup**
+- After pickup, `_update_interaction_target()` could re-acquire the queued-for-deletion node in the same frame via raycast
+- Added `is_queued_for_deletion()` filter to raycast results and emit `interaction_cleared` in the stale reference check
+
+**5. Clear plants/grass under cabin footprint on placement**
+- Added `clear_decorations_in_radius()` to `chunk_manager.gd` that removes grass tufts and flowers within a structure's footprint
+- Called from `placement_system.gd` after any structure placement
+
+**6. Persist berry bush collision after harvest**
+- Removed the code that disabled `CollisionShape3D` children in `_on_berry_gather_complete()` — bush now keeps its physical collision even when depleted
+
+**7-9. Birchbark map overhaul**
+- Rewrote `bark_map_ui.gd` from fullscreen overlay to compact HUD panel on the right side
+- Water bodies rendered as blocky grid cells (sampled per-cell) instead of smooth circles
+- Added structure icons (cabin, canvas tent, basic shelter) and cave entrance markers
+- Map is 700px with semi-transparent terrain colors (0.55 alpha) so game world shows through
+- Uses `clip_contents = true` to prevent drawing outside map bounds
+
+**10. Placement cooldown (0.5s)**
+- Added cooldown timer to `_place_item()` in `equipment.gd` to prevent rapid-fire torch/lantern/lodestone placement from controller trigger
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `CLAUDE.md` | Modified | Suspended testing rules |
+| `scripts/world/terrain_chunk.gd` | Modified | Added `_get_cached_height_at()`, use for tree/resource spawning |
+| `scripts/player/equipment.gd` | Modified | Torch auto-equip, shadow bias on torch light, placement cooldown |
+| `scripts/campsite/structure_placed_torch.gd` | Modified | Auto-equip torch on pickup |
+| `scripts/player/player_controller.gd` | Modified | Lodestone HUD fix, torch auto-equip fallback path |
+| `scripts/campsite/placement_system.gd` | Modified | Shadow bias on placed torch/lantern, decoration clearing |
+| `scripts/core/save_load.gd` | Modified | Shadow bias on loaded torch/lantern lights |
+| `scripts/resources/berry_bush.gd` | Modified | Keep collision after berry harvest |
+| `scripts/ui/bark_map_ui.gd` | Modified | Complete rewrite: HUD panel, blocky water, structures, transparency |
+| `scripts/world/chunk_manager.gd` | Modified | Added `clear_decorations_in_radius()` |
+
+---
+
 ## Next Session
 
 ### Planned Tasks

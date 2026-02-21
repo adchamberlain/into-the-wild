@@ -51,6 +51,12 @@ func interact(player: Node) -> bool:
 		SFXManager.play_sfx("pickup")
 		_show_notification("Picked up torch", Color(1.0, 0.85, 0.5))
 
+		# Auto-equip the torch
+		var equipment: Node = player.get_node_or_null("Equipment")
+		if equipment and equipment.has_method("equip"):
+			# Defer equip to after destroy completes
+			equipment.call_deferred("equip", "torch")
+
 		# Destroy (triggers structure_destroyed signal -> campsite manager unregistration)
 		destroy()
 		return true

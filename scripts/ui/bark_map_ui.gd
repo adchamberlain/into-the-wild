@@ -1,6 +1,7 @@
 extends CanvasLayer
 class_name BarkMapUI
-## Fullscreen wilderness map overlay showing terrain, water, caves, campsite, and player position.
+## HUD minimap overlay showing terrain, water, caves, structures, and player position.
+## Displays on the right side below the time/camp level panel with transparency.
 
 const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 
@@ -9,33 +10,37 @@ const MAP_EXTENT: float = 150.0
 # Sample interval (world units between each terrain sample)
 const SAMPLE_INTERVAL: float = 6.0
 # Map display size (pixels)
-const MAP_SIZE: float = 2100.0
-# Map padding from edges
-const MAP_PADDING: float = 40.0
+const MAP_SIZE: float = 700.0
+# Map padding from edges of the control
+const MAP_PADDING: float = 8.0
+# Position below TimePanel and weather info (pushed down to avoid overlap)
+const MAP_TOP: float = 380.0
+const MAP_RIGHT_MARGIN: float = 20.0
 
 # Cached map data
-var region_grid: Array = []  # Array of {x, z, region}
-var water_bodies_data: Array = []
-var rivers_data: Array = []
+var region_grid: Array = []  # Array of {x, z, region, in_water}
 var cave_entrances_data: Array = []
+var structure_positions: Array = []  # Array of {x, z, type}
 var player_pos: Vector3 = Vector3.ZERO
 
 # UI nodes
+var map_panel: PanelContainer
 var map_control: Control
-var background: ColorRect
 
 # Region colors for the map
 const REGION_COLORS: Dictionary = {
-	0: Color(0.55, 0.78, 0.4, 1),   # MEADOW - light green
-	1: Color(0.2, 0.5, 0.2, 1),     # FOREST - dark green
-	2: Color(0.55, 0.55, 0.3, 1),   # HILLS - olive
-	3: Color(0.5, 0.45, 0.35, 1),   # ROCKY - grey-brown
-	4: Color(0.55, 0.55, 0.55, 1),  # MOUNTAIN - grey
+	0: Color(0.55, 0.78, 0.4, 0.55),   # MEADOW - light green
+	1: Color(0.2, 0.5, 0.2, 0.55),     # FOREST - dark green
+	2: Color(0.55, 0.55, 0.3, 0.55),   # HILLS - olive
+	3: Color(0.5, 0.45, 0.35, 0.55),   # ROCKY - grey-brown
+	4: Color(0.55, 0.55, 0.55, 0.55),  # MOUNTAIN - grey
 }
+
+const WATER_COLOR: Color = Color(0.2, 0.45, 0.75, 0.55)
 
 
 func _ready() -> void:
-	layer = 100
+	layer = 90  # Below HUD (60) would hide it; above HUD so map renders on top
 	add_to_group("map_ui")
 	_build_ui()
 	_gather_map_data()
@@ -53,59 +58,43 @@ func _process(_delta: float) -> void:
 
 
 func _build_ui() -> void:
-	# Dark semi-transparent fullscreen background
-	background = ColorRect.new()
-	background.color = Color(0.05, 0.05, 0.08, 0.85)
-	background.anchors_preset = Control.PRESET_FULL_RECT
-	background.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(background)
+	# Get viewport size for positioning
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
 
-	# Title label
-	var title: Label = Label.new()
-	title.text = "WILDERNESS MAP"
-	title.add_theme_font_override("font", HUD_FONT)
-	title.add_theme_font_size_override("font_size", 48)
-	title.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3, 1))
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.anchors_preset = Control.PRESET_TOP_WIDE
-	title.offset_top = 30.0
-	title.offset_bottom = 90.0
-	add_child(title)
+	# Panel background with transparency
+	map_panel = PanelContainer.new()
+	var panel_style: StyleBoxFlat = StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.08, 0.08, 0.1, 0.35)
+	panel_style.corner_radius_top_left = 10
+	panel_style.corner_radius_top_right = 10
+	panel_style.corner_radius_bottom_right = 10
+	panel_style.corner_radius_bottom_left = 10
+	panel_style.content_margin_left = 8
+	panel_style.content_margin_top = 8
+	panel_style.content_margin_right = 8
+	panel_style.content_margin_bottom = 8
+	map_panel.add_theme_stylebox_override("panel", panel_style)
 
-	# Close hint
-	var hint: Label = Label.new()
-	hint.text = "[R] Close Map"
-	hint.add_theme_font_override("font", HUD_FONT)
-	hint.add_theme_font_size_override("font_size", 28)
-	hint.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6, 1))
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.anchors_preset = Control.PRESET_BOTTOM_WIDE
-	hint.offset_top = -60.0
-	hint.offset_bottom = -20.0
-	add_child(hint)
+	# Position at top-right, below TimePanel
+	map_panel.anchor_left = 1.0
+	map_panel.anchor_right = 1.0
+	map_panel.anchor_top = 0.0
+	map_panel.anchor_bottom = 0.0
+	map_panel.offset_left = -(MAP_SIZE + MAP_RIGHT_MARGIN + 16)
+	map_panel.offset_top = MAP_TOP
+	map_panel.offset_right = -MAP_RIGHT_MARGIN
+	map_panel.offset_bottom = MAP_TOP + MAP_SIZE + 16
+	map_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	map_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(map_panel)
 
-	# North indicator
-	var north_label: Label = Label.new()
-	north_label.text = "N"
-	north_label.add_theme_font_override("font", HUD_FONT)
-	north_label.add_theme_font_size_override("font_size", 36)
-	north_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4, 1))
-	north_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	north_label.anchors_preset = Control.PRESET_TOP_WIDE
-	north_label.offset_top = 85.0
-	north_label.offset_bottom = 125.0
-	add_child(north_label)
-
-	# Map drawing control (centered square)
+	# Map drawing control (square, inside panel)
 	map_control = Control.new()
 	map_control.custom_minimum_size = Vector2(MAP_SIZE, MAP_SIZE)
-	map_control.anchors_preset = Control.PRESET_CENTER
-	map_control.offset_left = -MAP_SIZE / 2.0
-	map_control.offset_top = -MAP_SIZE / 2.0 + 20.0
-	map_control.offset_right = MAP_SIZE / 2.0
-	map_control.offset_bottom = MAP_SIZE / 2.0 + 20.0
+	map_control.clip_contents = true
 	map_control.draw.connect(_on_map_draw)
-	add_child(map_control)
+	map_control.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	map_panel.add_child(map_control)
 
 
 func _gather_map_data() -> void:
@@ -121,7 +110,16 @@ func _gather_map_data() -> void:
 	if player_node:
 		player_pos = player_node.global_position
 
-	# Sample terrain regions
+	# Build water body and river lookup data
+	var water_bodies: Array = []
+	var rivers: Array = []
+	if chunk_manager:
+		if "water_bodies" in chunk_manager:
+			water_bodies = chunk_manager.water_bodies
+		if "rivers" in chunk_manager:
+			rivers = chunk_manager.rivers
+
+	# Sample terrain regions and mark water cells
 	region_grid.clear()
 	if chunk_manager and chunk_manager.has_method("get_region_at"):
 		var half: float = MAP_EXTENT
@@ -130,24 +128,67 @@ func _gather_map_data() -> void:
 			var z: float = -half
 			while z <= half:
 				var region: int = chunk_manager.get_region_at(x, z)
-				region_grid.append({"x": x, "z": z, "region": region})
+				var in_water: bool = _is_in_water(x, z, water_bodies, rivers)
+				region_grid.append({"x": x, "z": z, "region": region, "in_water": in_water})
 				z += SAMPLE_INTERVAL
 			x += SAMPLE_INTERVAL
-
-	# Copy water bodies
-	if chunk_manager and "water_bodies" in chunk_manager:
-		for body in chunk_manager.water_bodies:
-			water_bodies_data.append(body.duplicate())
-
-	# Copy rivers
-	if chunk_manager and "rivers" in chunk_manager:
-		for river in chunk_manager.rivers:
-			rivers_data.append(river.duplicate())
 
 	# Copy cave entrances
 	if chunk_manager and "cave_entrances" in chunk_manager:
 		for cave in chunk_manager.cave_entrances:
 			cave_entrances_data.append(cave.duplicate())
+
+	# Gather placed structures (cabins, tents, shelters)
+	_gather_structures()
+
+
+func _is_in_water(x: float, z: float, water_bodies: Array, rivers: Array) -> bool:
+	## Check if a world position is inside a water body or river.
+	for body in water_bodies:
+		var center: Vector2 = body.get("center", Vector2.ZERO)
+		var radius: float = body.get("radius", 5.0)
+		if Vector2(x, z).distance_to(center) < radius:
+			return true
+	for river in rivers:
+		var path: Array = river.get("path", [])
+		var width: float = river.get("width", 6.0)
+		var half_width: float = width / 2.0
+		for i: int in range(1, path.size()):
+			var seg_start: Vector2 = path[i - 1]
+			var seg_end: Vector2 = path[i]
+			var closest: Vector2 = _closest_point_on_segment(Vector2(x, z), seg_start, seg_end)
+			if Vector2(x, z).distance_to(closest) < half_width:
+				return true
+	return false
+
+
+func _closest_point_on_segment(point: Vector2, seg_start: Vector2, seg_end: Vector2) -> Vector2:
+	var seg: Vector2 = seg_end - seg_start
+	var len_sq: float = seg.length_squared()
+	if len_sq < 0.001:
+		return seg_start
+	var t: float = clamp((point - seg_start).dot(seg) / len_sq, 0.0, 1.0)
+	return seg_start + seg * t
+
+
+func _gather_structures() -> void:
+	structure_positions.clear()
+	var campsite_manager: Node = get_tree().get_first_node_in_group("campsite_manager")
+	if not campsite_manager:
+		campsite_manager = get_node_or_null("/root/Main/CampsiteManager")
+	if not campsite_manager or not campsite_manager.has_method("get_placed_structures"):
+		return
+	var structures: Array = campsite_manager.get_placed_structures()
+	for structure: Node in structures:
+		if not is_instance_valid(structure):
+			continue
+		var stype: String = ""
+		if "structure_type" in structure:
+			stype = structure.structure_type
+		# Only show shelters (cabin, canvas_tent, basic_shelter) on map
+		if stype in ["cabin", "canvas_tent", "basic_shelter"]:
+			var pos: Vector3 = structure.global_position
+			structure_positions.append({"x": pos.x, "z": pos.z, "type": stype})
 
 
 func _world_to_map(world_x: float, world_z: float) -> Vector2:
@@ -161,123 +202,97 @@ func _world_to_map(world_x: float, world_z: float) -> Vector2:
 
 
 func _on_map_draw() -> void:
-	# Draw map border
-	var border_rect: Rect2 = Rect2(MAP_PADDING - 2, MAP_PADDING - 2,
-		MAP_SIZE - MAP_PADDING * 2.0 + 4, MAP_SIZE - MAP_PADDING * 2.0 + 4)
-	map_control.draw_rect(border_rect, Color(0.3, 0.3, 0.3, 1), false, 2.0)
+	# Draw map background (dark base)
+	var bg_rect: Rect2 = Rect2(MAP_PADDING, MAP_PADDING,
+		MAP_SIZE - MAP_PADDING * 2.0, MAP_SIZE - MAP_PADDING * 2.0)
+	map_control.draw_rect(bg_rect, Color(0.12, 0.12, 0.14, 0.5))
 
-	# Draw terrain grid cells
+	# Draw terrain grid cells (blocky - water included as cell color)
 	var cell_size: float = (MAP_SIZE - MAP_PADDING * 2.0) / (MAP_EXTENT * 2.0) * SAMPLE_INTERVAL
 	for sample in region_grid:
 		var pos: Vector2 = _world_to_map(sample["x"], sample["z"])
-		var color: Color = REGION_COLORS.get(sample["region"], Color(0.3, 0.3, 0.3, 1))
+		var color: Color
+		if sample["in_water"]:
+			color = WATER_COLOR
+		else:
+			color = REGION_COLORS.get(sample["region"], Color(0.3, 0.3, 0.3, 1))
 		var rect: Rect2 = Rect2(pos.x - cell_size / 2.0, pos.y - cell_size / 2.0, cell_size, cell_size)
 		map_control.draw_rect(rect, color)
 
-	# Draw water bodies
-	var map_scale: float = (MAP_SIZE - MAP_PADDING * 2.0) / (MAP_EXTENT * 2.0)
-	for body in water_bodies_data:
-		var center: Vector2 = body.get("center", Vector2.ZERO)
-		var radius: float = body.get("radius", 5.0)
-		var map_pos: Vector2 = _world_to_map(center.x, center.y)
-		var map_radius: float = max(radius * map_scale, 3.0)
-		map_control.draw_circle(map_pos, map_radius, Color(0.2, 0.45, 0.75, 0.9))
-
-	# Draw rivers
-	for river in rivers_data:
-		var path: Array = river.get("path", [])
-		for i in range(1, path.size()):
-			var seg_start: Vector2 = path[i - 1]
-			var seg_end: Vector2 = path[i]
-			var map_start: Vector2 = _world_to_map(seg_start.x, seg_start.y)
-			var map_end: Vector2 = _world_to_map(seg_end.x, seg_end.y)
-			map_control.draw_line(map_start, map_end, Color(0.2, 0.45, 0.75, 0.9), 3.0)
-
-	# Draw cave entrances
+	# Draw cave entrances as small dark squares with outline
 	for cave in cave_entrances_data:
 		var center: Vector2 = cave.get("center", Vector2.ZERO)
 		var map_pos: Vector2 = _world_to_map(center.x, center.y)
-		var cave_rect: Rect2 = Rect2(map_pos.x - 5, map_pos.y - 5, 10, 10)
+		var cave_size: float = 6.0
+		var cave_rect: Rect2 = Rect2(map_pos.x - cave_size / 2.0, map_pos.y - cave_size / 2.0, cave_size, cave_size)
 		map_control.draw_rect(cave_rect, Color(0.15, 0.1, 0.1, 1))
-		map_control.draw_rect(cave_rect, Color(0.4, 0.3, 0.3, 1), false, 1.0)
+		map_control.draw_rect(cave_rect, Color(0.5, 0.35, 0.35, 1), false, 1.0)
+
+	# Draw structure icons
+	for struct in structure_positions:
+		var map_pos: Vector2 = _world_to_map(struct["x"], struct["z"])
+		_draw_structure_icon(map_pos, struct["type"])
 
 	# Draw campsite at (0,0)
 	var camp_pos: Vector2 = _world_to_map(0.0, 0.0)
-	map_control.draw_circle(camp_pos, 7.0, Color(1.0, 0.85, 0.3, 1))
-	map_control.draw_circle(camp_pos, 7.0, Color(0.8, 0.65, 0.1, 1), false, 2.0)
+	map_control.draw_circle(camp_pos, 4.0, Color(1.0, 0.85, 0.3, 1))
+	map_control.draw_circle(camp_pos, 4.0, Color(0.8, 0.65, 0.1, 1), false, 1.5)
 
-	# Draw player position as detailed marker with edge clamping
+	# Draw player position as X marker with edge clamping
 	var raw_player_pos: Vector2 = _world_to_map(player_pos.x, player_pos.z)
 	var map_min: float = MAP_PADDING
 	var map_max: float = MAP_SIZE - MAP_PADDING
 
-	# Check if player is within map bounds
 	var is_off_map: bool = (player_pos.x < -MAP_EXTENT or player_pos.x > MAP_EXTENT
 		or player_pos.z < -MAP_EXTENT or player_pos.z > MAP_EXTENT)
 
-	# Clamp marker position to map edges
 	var player_map_pos: Vector2 = Vector2(
 		clamp(raw_player_pos.x, map_min, map_max),
 		clamp(raw_player_pos.y, map_min, map_max)
 	)
 
-	var x_size: float = 12.0
-	var x_width: float = 4.0
+	var x_size: float = 6.0
+	var x_width: float = 2.5
 	var x_color: Color = Color(1, 0.3, 0.3, 1) if is_off_map else Color(1, 1, 1, 1)
 	var x_outline: Color = Color(0.1, 0.1, 0.1, 1)
 
-	# Draw filled circle behind the X for visibility
-	map_control.draw_circle(player_map_pos, x_size + 3.0, Color(0.1, 0.1, 0.1, 0.7))
-
-	# Draw X outline (thicker for contrast)
-	map_control.draw_line(player_map_pos + Vector2(-x_size, -x_size), player_map_pos + Vector2(x_size, x_size), x_outline, x_width + 3.0)
-	map_control.draw_line(player_map_pos + Vector2(x_size, -x_size), player_map_pos + Vector2(-x_size, x_size), x_outline, x_width + 3.0)
-	# Draw X in color
+	# Draw circle behind X for visibility
+	map_control.draw_circle(player_map_pos, x_size + 2.0, Color(0.1, 0.1, 0.1, 0.7))
+	# Draw X outline
+	map_control.draw_line(player_map_pos + Vector2(-x_size, -x_size), player_map_pos + Vector2(x_size, x_size), x_outline, x_width + 2.0)
+	map_control.draw_line(player_map_pos + Vector2(x_size, -x_size), player_map_pos + Vector2(-x_size, x_size), x_outline, x_width + 2.0)
+	# Draw X
 	map_control.draw_line(player_map_pos + Vector2(-x_size, -x_size), player_map_pos + Vector2(x_size, x_size), x_color, x_width)
 	map_control.draw_line(player_map_pos + Vector2(x_size, -x_size), player_map_pos + Vector2(-x_size, x_size), x_color, x_width)
 
-	# Draw pulsing ring around marker for extra visibility
-	map_control.draw_circle(player_map_pos, x_size + 3.0, x_color, false, 2.0)
+	# Draw border
+	var border_rect: Rect2 = Rect2(MAP_PADDING - 1, MAP_PADDING - 1,
+		MAP_SIZE - MAP_PADDING * 2.0 + 2, MAP_SIZE - MAP_PADDING * 2.0 + 2)
+	map_control.draw_rect(border_rect, Color(0.4, 0.35, 0.25, 0.8), false, 1.5)
 
-	# Draw legend
-	_draw_legend()
+	# Draw "N" indicator at top center
+	var north_pos: Vector2 = Vector2(MAP_SIZE / 2.0, MAP_PADDING - 2)
+	map_control.draw_string(HUD_FONT, north_pos, "N", HORIZONTAL_ALIGNMENT_CENTER, -1, 12, Color(1.0, 0.4, 0.4, 0.9))
 
 
-func _draw_legend() -> void:
-	var legend_x: float = MAP_SIZE - MAP_PADDING - 130.0
-	var legend_y: float = MAP_PADDING + 10.0
-	var swatch_size: float = 12.0
-	var line_height: float = 18.0
-
-	var entries: Array = [
-		{"color": REGION_COLORS[0], "label": "Meadow"},
-		{"color": REGION_COLORS[1], "label": "Forest"},
-		{"color": REGION_COLORS[2], "label": "Hills"},
-		{"color": REGION_COLORS[3], "label": "Rocky"},
-		{"color": REGION_COLORS[4], "label": "Mountain"},
-		{"color": Color(0.2, 0.45, 0.75, 0.9), "label": "Water"},
-		{"color": Color(0.15, 0.1, 0.1, 1), "label": "Cave"},
-		{"color": Color(1.0, 0.85, 0.3, 1), "label": "Camp"},
-		{"color": Color(1, 1, 1, 1), "label": "You (on map)"},
-		{"color": Color(1, 0.3, 0.3, 1), "label": "You (off map)"},
-	]
-
-	for i: int in range(entries.size()):
-		var entry: Dictionary = entries[i]
-		var y: float = legend_y + i * line_height
-		if entry["label"].begins_with("You"):
-			# Draw X marker in legend
-			var cx: float = legend_x + swatch_size / 2.0
-			var cy: float = y + swatch_size / 2.0
-			var s: float = swatch_size / 2.0 - 1.0
-			map_control.draw_line(Vector2(cx - s, cy - s), Vector2(cx + s, cy + s), entry["color"], 2.0)
-			map_control.draw_line(Vector2(cx + s, cy - s), Vector2(cx - s, cy + s), entry["color"], 2.0)
-		else:
-			var swatch_rect: Rect2 = Rect2(legend_x, y, swatch_size, swatch_size)
-			map_control.draw_rect(swatch_rect, entry["color"])
-		map_control.draw_string(HUD_FONT, Vector2(legend_x + swatch_size + 6, y + swatch_size),
-			entry["label"], HORIZONTAL_ALIGNMENT_LEFT, -1, 14,
-			Color(0.8, 0.8, 0.8, 1))
+func _draw_structure_icon(pos: Vector2, structure_type: String) -> void:
+	## Draw a small icon for a placed structure on the map.
+	var icon_size: float = 4.0
+	var icon_color: Color
+	match structure_type:
+		"cabin":
+			icon_color = Color(0.65, 0.45, 0.25, 1)  # Wood brown
+			icon_size = 5.0
+		"canvas_tent":
+			icon_color = Color(0.7, 0.65, 0.5, 1)  # Canvas tan
+		"basic_shelter":
+			icon_color = Color(0.5, 0.55, 0.35, 1)  # Shelter green
+		_:
+			icon_color = Color(0.6, 0.6, 0.6, 1)
+	# Draw as small filled square with outline
+	var rect: Rect2 = Rect2(pos.x - icon_size / 2.0, pos.y - icon_size / 2.0, icon_size, icon_size)
+	map_control.draw_rect(rect, icon_color)
+	map_control.draw_rect(rect, Color(1, 1, 1, 0.6), false, 1.0)
 
 
 func _input(event: InputEvent) -> void:

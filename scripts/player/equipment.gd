@@ -219,11 +219,20 @@ var is_line_cast: bool = false
 var fishing_cast_tween: Tween = null
 var fish_caught_tween: Tween = null
 
+# Placement cooldown to prevent rapid-fire placement
+const PLACEMENT_COOLDOWN: float = 0.5
+var placement_cooldown_timer: float = 0.0
+
 
 func _ready() -> void:
 	# Get references from parent (player)
 	# Use call_deferred because parent's @onready vars aren't set when children's _ready runs
 	call_deferred("_setup_references")
+
+
+func _process(delta: float) -> void:
+	if placement_cooldown_timer > 0.0:
+		placement_cooldown_timer -= delta
 
 
 func _setup_references() -> void:
@@ -713,6 +722,8 @@ func _create_torch_light(item_data: Dictionary) -> void:
 	light.light_energy = item_data.get("light_energy", 2.0)
 	light.omni_range = item_data.get("light_range", 10.0)
 	light.shadow_enabled = true
+	light.shadow_bias = 1.0
+	light.shadow_normal_bias = 2.0
 
 	# Position slightly in front and to the side of player
 	light.position = Vector3(0.5, 1.2, -0.5)
@@ -1411,11 +1422,19 @@ func _place_item() -> bool:
 	if not player or not inventory:
 		return false
 
+	# Cooldown to prevent rapid-fire placement
+	if placement_cooldown_timer > 0.0:
+		return false
+
 	# Torch: instant placement without preview mode
 	if equipped_item == "torch":
 		if placement_system and placement_system.has_method("place_torch_instant"):
 			if placement_system.place_torch_instant():
+				placement_cooldown_timer = PLACEMENT_COOLDOWN
 				unequip()
+				# Auto-equip next torch if player has more
+				if inventory and inventory.has_item("torch"):
+					equip("torch")
 				return true
 		return false
 
@@ -1423,6 +1442,7 @@ func _place_item() -> bool:
 	if equipped_item == "lantern":
 		if placement_system and placement_system.has_method("place_lantern_instant"):
 			if placement_system.place_lantern_instant():
+				placement_cooldown_timer = PLACEMENT_COOLDOWN
 				unequip()
 				return true
 		return false
@@ -1431,6 +1451,7 @@ func _place_item() -> bool:
 	if equipped_item == "lodestone":
 		if placement_system and placement_system.has_method("place_lodestone_instant"):
 			if placement_system.place_lodestone_instant():
+				placement_cooldown_timer = PLACEMENT_COOLDOWN
 				unequip()
 				return true
 		return false

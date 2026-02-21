@@ -100,6 +100,9 @@ After completing all changes for a task, always commit and push to main unless t
 
 ### Testing Rule
 
+**SUSPENDED**: Do not create new regression tests and do not run the existing test suite until told to resume. Focus on fixing bugs directly.
+
+<!-- ORIGINAL TESTING RULES (suspended, restore when resumed):
 When fixing a bug, add a regression test that reproduces the bug before applying the fix. When adding new logic that transforms data or makes decisions, add a unit test. Run the test suite to verify before presenting the fix.
 
 - All tests go in `tests/` as GDScript files extending `TestBase`
@@ -121,4 +124,5 @@ All tests must pass. If a test fails, fix the issue before committing. The suite
 - **CaveTransition** - respawn timing, save roundtrip, entry guards, scene paths
 - **SaveLoad** - serialization roundtrips, field presence, JSON precision
 - **UIConstants** - font size tiers, panel colors, text colors, font resource
+-->
 

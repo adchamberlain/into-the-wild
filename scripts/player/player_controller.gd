@@ -473,13 +473,14 @@ func _update_interaction_target() -> void:
 
 	if interaction_ray.is_colliding():
 		var collider: Node = interaction_ray.get_collider()
-		# Check if collider is interactable
-		if collider and collider.is_in_group("interactable"):
+		# Check if collider is interactable and not queued for deletion (e.g., just picked up)
+		if collider and collider.is_in_group("interactable") and not collider.is_queued_for_deletion():
 			new_target = collider
 
 	# Clear stale reference to freed or deletion-queued node (e.g., after cave transition or pickup)
 	if current_interaction_target and (not is_instance_valid(current_interaction_target) or current_interaction_target.is_queued_for_deletion()):
 		current_interaction_target = null
+		interaction_cleared.emit()
 
 	# Only emit signals if target changed
 	if new_target != current_interaction_target:
@@ -515,6 +516,9 @@ func _try_interact() -> void:
 			if placement_system and placement_system.has_method("place_torch_instant"):
 				if placement_system.place_torch_instant():
 					equipment.unequip()
+					# Auto-equip next torch if player has more
+					if inventory and inventory.has_item("torch"):
+						equipment.equip("torch")
 		elif equipment and equipment.get_equipped() == "lodestone":
 			var placement_system: Node = get_node_or_null("PlacementSystem")
 			if placement_system and placement_system.has_method("place_lodestone_instant"):

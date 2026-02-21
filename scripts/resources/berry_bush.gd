@@ -41,12 +41,7 @@ func _on_berry_gather_complete() -> void:
 	# Mark as depleted but don't hide the bush
 	is_depleted = true
 
-	# Disable collision so player can't interact again
-	for child in get_children():
-		if child is CollisionShape3D:
-			child.disabled = true
-
-	# Remove from interactable group while depleted
+	# Remove from interactable group while depleted (collision stays for physical barrier)
 	remove_from_group("interactable")
 
 

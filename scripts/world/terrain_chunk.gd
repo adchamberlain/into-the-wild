@@ -303,6 +303,25 @@ func _apply_flat_smoothing() -> void:
 		_height_cache[int(v.y)][int(v.x)] = v.z
 
 
+func _get_cached_height_at(world_x: float, world_z: float) -> float:
+	## Look up terrain height from the post-processed height cache.
+	## Falls back to get_height_at() if position is outside this chunk's cache.
+	if _height_cache.is_empty():
+		return chunk_manager.get_height_at(world_x, world_z)
+	var cell_size: float = chunk_manager.cell_size
+	var chunk_size_cells: int = chunk_manager.chunk_size_cells
+	var chunk_world_x: float = chunk_coord.x * chunk_size_cells * cell_size
+	var chunk_world_z: float = chunk_coord.y * chunk_size_cells * cell_size
+	var cx: int = int(floor((world_x - chunk_world_x) / cell_size))
+	var cz: int = int(floor((world_z - chunk_world_z) / cell_size))
+	# Cache indices have +1 offset for border cells
+	var cache_x: int = cx + 1
+	var cache_z: int = cz + 1
+	if cache_x >= 0 and cache_x < _height_cache_size and cache_z >= 0 and cache_z < _height_cache_size:
+		return _height_cache[cache_z][cache_x]
+	return chunk_manager.get_height_at(world_x, world_z)
+
+
 func _generate_terrain_mesh_batched() -> void:
 	## Generate terrain mesh in batches across multiple frames to prevent stuttering.
 	var surface_tool: SurfaceTool = SurfaceTool.new()
@@ -856,7 +875,7 @@ func _spawn_chunk_trees() -> void:
 				var tree_x: float = world_x + jitter_x
 				var tree_z: float = world_z + jitter_z
 
-				var tree_y: float = chunk_manager.get_height_at(tree_x, tree_z)
+				var tree_y: float = _get_cached_height_at(tree_x, tree_z)
 
 				# Skip trees in water (negative height = inside water body)
 				if tree_y < 0:
@@ -1000,7 +1019,7 @@ func _spawn_chunk_resources() -> void:
 				z += resource_grid_size
 				continue
 
-			var res_y: float = chunk_manager.get_height_at(res_x, res_z)
+			var res_y: float = _get_cached_height_at(res_x, res_z)
 
 			# Skip if in water (negative height = pond)
 			if res_y < 0:

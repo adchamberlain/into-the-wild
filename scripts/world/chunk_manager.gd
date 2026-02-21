@@ -2073,3 +2073,25 @@ func is_position_blocked_by_structure(x: float, z: float, radius: float = 1.5) -
 			return true
 
 	return false
+
+
+func clear_decorations_in_radius(center_x: float, center_z: float, radius: float) -> void:
+	## Remove decorative grass and flowers within a radius (used when placing structures).
+	var center_2d: Vector2 = Vector2(center_x, center_z)
+	for chunk_coord: Vector2i in loaded_chunks.keys():
+		var chunk: TerrainChunk = loaded_chunks[chunk_coord]
+		if not is_instance_valid(chunk) or not chunk.decorations_container:
+			continue
+		# Quick AABB check: skip chunks too far away
+		var chunk_center_x: float = (chunk_coord.x + 0.5) * chunk_size_cells * cell_size
+		var chunk_center_z: float = (chunk_coord.y + 0.5) * chunk_size_cells * cell_size
+		if Vector2(chunk_center_x, chunk_center_z).distance_to(center_2d) > radius + chunk_size_cells * cell_size:
+			continue
+		var to_remove: Array[Node] = []
+		for child: Node in chunk.decorations_container.get_children():
+			var child_pos: Vector3 = child.global_position
+			var dist: float = Vector2(child_pos.x, child_pos.z).distance_to(center_2d)
+			if dist < radius:
+				to_remove.append(child)
+		for node: Node in to_remove:
+			node.queue_free()

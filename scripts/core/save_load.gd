@@ -2606,6 +2606,8 @@ func _create_placed_torch() -> StaticBody3D:
 	light.light_energy = 8.0
 	light.omni_range = 15.0
 	light.shadow_enabled = true
+	light.shadow_bias = 1.0
+	light.shadow_normal_bias = 2.0
 	light.position = Vector3(0, 1.0, 0)
 	torch.add_child(light)
 
@@ -2837,6 +2839,8 @@ func _create_placed_lantern() -> StaticBody3D:
 	light.light_energy = 16.0
 	light.omni_range = 30.0
 	light.shadow_enabled = true
+	light.shadow_bias = 1.0
+	light.shadow_normal_bias = 2.0
 	light.position = Vector3(0, 0.25, 0)
 	lantern.add_child(light)
 
