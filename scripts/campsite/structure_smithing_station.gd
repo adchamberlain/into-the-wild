@@ -150,7 +150,23 @@ func load_save_data(data: Dictionary) -> void:
 
 
 func get_interaction_text() -> String:
+	if pending_output != "":
+		return "Collect Ingot"
 	if is_smelting:
 		var percent: int = int((smelt_progress / SMELT_TIME) * 100)
 		return "Smelting %s (%d%%)" % [current_ore.capitalize().replace("_", " "), percent]
+	# Check if player has ore and fuel
+	var p: Node = get_tree().get_first_node_in_group("player")
+	if p and p.has_method("get_inventory"):
+		var inv: Node = p.get_inventory()
+		if inv:
+			var has_ore: bool = false
+			for ore_type: String in SMELT_RECIPES:
+				if inv.has_item(ore_type):
+					has_ore = true
+					break
+			if not has_ore:
+				return "Need Ore to Smelt"
+			if not inv.has_item("wood", FUEL_REQUIRED):
+				return "Need Wood to Smelt"
 	return "Smelt Ore"

@@ -130,7 +130,18 @@ func load_save_data(data: Dictionary) -> void:
 
 
 func get_interaction_text() -> String:
+	if pending_output != "":
+		return "Collect Dried Food"
 	if is_drying:
 		var percent: int = int((drying_progress / DRYING_TIME) * 100)
 		return "Drying %s (%d%%)" % [current_food.capitalize(), percent]
+	# Check if player has food to dry
+	var p: Node = get_tree().get_first_node_in_group("player")
+	if p and p.has_method("get_inventory"):
+		var inv: Node = p.get_inventory()
+		if inv:
+			for food_type: String in DRYING_RECIPES:
+				if inv.has_item(food_type):
+					return "Dry Food"
+			return "Need Food to Dry"
 	return "Dry Food"
