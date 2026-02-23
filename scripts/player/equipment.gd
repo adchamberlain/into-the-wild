@@ -230,6 +230,10 @@ var fish_caught_tween: Tween = null
 const PLACEMENT_COOLDOWN: float = 0.5
 var placement_cooldown_timer: float = 0.0
 
+# Map toggle cooldown to prevent rapid on/off from controller triggers
+const MAP_TOGGLE_COOLDOWN: float = 0.4
+var map_toggle_cooldown_timer: float = 0.0
+
 
 func _ready() -> void:
 	# Get references from parent (player)
@@ -240,6 +244,8 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if placement_cooldown_timer > 0.0:
 		placement_cooldown_timer -= delta
+	if map_toggle_cooldown_timer > 0.0:
+		map_toggle_cooldown_timer -= delta
 
 
 func _setup_references() -> void:
@@ -1779,6 +1785,11 @@ func _remove_bark_strip(target: Node) -> void:
 func _use_map() -> bool:
 	if not player:
 		return false
+
+	# Cooldown to prevent rapid toggling from controller triggers
+	if map_toggle_cooldown_timer > 0.0:
+		return true
+	map_toggle_cooldown_timer = MAP_TOGGLE_COOLDOWN
 
 	# Check if map is already open
 	var existing: Node = player.get_tree().get_first_node_in_group("map_ui")
