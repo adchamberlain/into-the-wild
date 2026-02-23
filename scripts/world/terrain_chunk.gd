@@ -1110,17 +1110,21 @@ func _spawn_chunk_resources() -> void:
 									_spawn_resource(chunk_manager.ore_scene, res_x, res_y, res_z, rng)
 									spawned = true
 								else:
-									# Osha root - alpine medicinal plant
+									# Osha root - alpine medicinal plant (higher elevation herb)
 									resource_roll = rng.randf()
 									var osha_mult: float = chunk_manager.get_vegetation_multiplier(region, "osha")
 									var osha_base_chance: float = 0.02
 									var osha_chance: float = 0.0
 
 									if region == ChunkManager.RegionType.MOUNTAIN:
-										if res_y > 20.0 and res_y < 45.0:
+										if res_y > 8.0:
 											osha_chance = osha_base_chance * osha_mult
-									elif res_y > 25.0:
-										osha_chance = osha_base_chance * osha_mult
+									elif region == ChunkManager.RegionType.ROCKY:
+										if res_y > 6.0:
+											osha_chance = osha_base_chance * osha_mult
+									elif region == ChunkManager.RegionType.HILLS:
+										if res_y > 5.0:
+											osha_chance = osha_base_chance * osha_mult
 
 									if resource_roll < osha_chance and chunk_manager.osha_root_scene:
 										_spawn_resource(chunk_manager.osha_root_scene, res_x, res_y, res_z, rng)
