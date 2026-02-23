@@ -50,17 +50,7 @@ func _ready() -> void:
 	map_control.queue_redraw()
 
 
-var _action_released: bool = false
-
 func _process(_delta: float) -> void:
-	# Wait for the open press to be fully released before accepting close
-	if not _action_released:
-		if not Input.is_action_pressed("use_equipped"):
-			_action_released = true
-	elif Input.is_action_just_pressed("use_equipped"):
-		close_map()
-		return
-
 	# Track player position and keep map centered on them
 	var player_node: Node = get_tree().get_first_node_in_group("player")
 	if player_node and is_instance_valid(player_node):

@@ -5295,6 +5295,19 @@ Fixed 9 gameplay bugs and added a placement cooldown, covering floating trees, t
 
 ---
 
+## Session 36 - Pinnable Map Overlay (2026-02-23)
+
+**Pinnable map**: Map overlay now stays pinned on the HUD when switching equipment. Previously, switching from map to bow/axe/etc. would auto-close the map overlay. Now: equip map → R2 opens overlay → switch to any tool → overlay stays visible → switch back to map → R2 closes overlay. Three changes: (1) Removed self-close input handling from `bark_map_ui.gd` — MapUI no longer watches for R2 presses, (2) Removed `_close_map_if_open()` call from `equipment.gd:unequip()` so map persists across equipment switches, (3) Made `_use_map()` toggle — if map overlay already exists, close it instead of ignoring.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/ui/bark_map_ui.gd` | Modified | Removed `_action_released` var and self-close logic from `_process()` |
+| `scripts/player/equipment.gd` | Modified | Removed `_close_map_if_open()` from `unequip()`, made `_use_map()` toggle overlay on/off |
+
+---
+
 ## Next Session
 
 ### Planned Tasks

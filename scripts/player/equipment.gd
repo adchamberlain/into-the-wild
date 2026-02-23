@@ -464,7 +464,6 @@ func unequip() -> void:
 	_remove_fishing_rod()
 	_remove_grappling_hook()
 	_remove_bow_model()
-	_close_map_if_open()
 
 	equipped_item = ""
 	print("[Equipment] Unequipped %s" % old_item)
@@ -2130,9 +2129,10 @@ func _use_map() -> bool:
 	# Block further calls until R2 is released, regardless of open or close
 	_map_open_blocked = true
 
-	# If map is already open, don't do anything — MapUI handles its own closing
+	# If map is already open, toggle it off
 	var existing: Node = player.get_tree().get_first_node_in_group("map_ui")
-	if existing and is_instance_valid(existing):
+	if existing and is_instance_valid(existing) and existing.has_method("close_map"):
+		existing.close_map()
 		return true
 
 	# Open map overlay
