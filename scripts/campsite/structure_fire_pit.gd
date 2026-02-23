@@ -117,8 +117,15 @@ func interact(player: Node) -> bool:
 func get_interaction_text() -> String:
 	if is_lit:
 		return "Use Fire"
-	else:
+	# Fire is out - check if player can relight
+	if fuel_remaining > 0 or unlimited_fuel:
 		return "Light Fire"
+	var p: Node = get_tree().get_first_node_in_group("player")
+	if p and p.has_method("get_inventory"):
+		var inv: Node = p.get_inventory()
+		if inv and inv.has_item("wood"):
+			return "Light Fire"
+	return "Need Wood to Light"
 
 
 func _find_fire_menu() -> Node:
