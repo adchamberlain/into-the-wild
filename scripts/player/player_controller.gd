@@ -640,6 +640,10 @@ func _try_eat() -> void:
 	if not inventory or not stats:
 		return
 
+	# Don't consume anything if both health and hunger are full
+	if stats.health >= stats.max_health and stats.hunger >= stats.max_hunger:
+		return
+
 	# First check for healing items if health is not full
 	if stats.health < stats.max_health:
 		for heal_type: String in HEALING_ITEMS:
