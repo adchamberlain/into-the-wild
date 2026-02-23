@@ -121,7 +121,7 @@ const TOOL_ITEMS: Array = [
 
 # Items classified as food (edible + healing)
 const FOOD_ITEMS: Array = [
-	"berry", "mushroom", "herb", "fish", "raw_meat", "osha_root",
+	"berry", "mushroom", "herb", "fish", "osha_root",
 	"berry_pouch", "waterskin",
 	"cooked_berries", "cooked_mushroom", "cooked_fish", "cooked_meat",
 	"dried_fish", "dried_berries", "dried_mushroom", "dried_herb",

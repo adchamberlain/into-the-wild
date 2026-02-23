@@ -104,7 +104,6 @@ const FOOD_VALUES: Dictionary = {
 	"mushroom": 10.0,
 	"herb": 5.0,
 	"fish": 25.0,
-	"raw_meat": 20.0,
 	"osha_root": 20.0,  # Alpine medicinal plant - also restores hunger
 	# Processed
 	"berry_pouch": 40.0,
