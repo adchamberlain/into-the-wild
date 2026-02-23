@@ -979,8 +979,8 @@ func _create_fire_pit() -> StaticBody3D:
 
 	var light: OmniLight3D = OmniLight3D.new()
 	light.name = "FireLight"
-	light.light_color = Color(1.0, 0.7, 0.35)
-	light.light_energy = 2.2
+	light.light_color = Color(1.0, 0.75, 0.3)
+	light.light_energy = 1.4
 	light.omni_range = 10.0
 	light.omni_attenuation = 1.5
 	light.position.y = 0.5

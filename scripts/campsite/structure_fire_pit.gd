@@ -8,7 +8,7 @@ signal fire_extinguished()
 # Fire properties
 @export var warmth_radius: float = 5.0
 @export var base_warmth_radius: float = 5.0
-@export var light_energy: float = 2.2
+@export var light_energy: float = 1.4
 @export var light_range: float = 10.0
 
 # Fuel system (1 day = 1200 seconds at default 20min day length)
@@ -20,7 +20,7 @@ var unlimited_fuel: bool = false  # Set by config menu
 # State
 var is_lit: bool = true
 var effectiveness: float = 1.0  # Reduced by rain/storm
-var base_light_energy: float = 3.0
+var base_light_energy: float = 1.4
 
 # Node references (set after scene instantiation)
 var fire_light: OmniLight3D
@@ -40,7 +40,7 @@ func _ready() -> void:
 	warmth_area = get_node_or_null("WarmthArea")
 
 	# Store base light energy
-	base_light_energy = 2.2
+	base_light_energy = 1.4
 
 	# Start lit with full fuel
 	fuel_remaining = max_fuel
