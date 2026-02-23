@@ -88,6 +88,38 @@ var fog_colors: Dictionary = {
 	"night": Color(0.12, 0.12, 0.22)
 }
 
+# Horizon haze
+var haze_mesh: MeshInstance3D
+var haze_material: ShaderMaterial
+var haze_colors: Dictionary = {
+	"dawn": Color(1.0, 0.6, 0.4),
+	"day": Color(0.7, 0.8, 0.95),
+	"dusk": Color(0.95, 0.45, 0.3),
+	"night": Color(0.1, 0.1, 0.25)
+}
+var haze_alphas: Dictionary = {
+	"dawn": 0.3,
+	"day": 0.15,
+	"dusk": 0.35,
+	"night": 0.1
+}
+var weather_haze_alpha_multiplier: Dictionary = {
+	"Clear": 1.0,
+	"Rain": 1.3,
+	"Storm": 1.5,
+	"Fog": 2.5,
+	"Heat Wave": 1.2,
+	"Cold Snap": 1.1
+}
+var weather_haze_color_tint: Dictionary = {
+	"Clear": Color(1, 1, 1),
+	"Rain": Color(0.7, 0.75, 0.85),
+	"Storm": Color(0.5, 0.5, 0.55),
+	"Fog": Color(0.85, 0.85, 0.88),
+	"Heat Wave": Color(1.1, 0.95, 0.8),
+	"Cold Snap": Color(0.85, 0.9, 1.0)
+}
+
 # Weather overlay
 var current_weather: String = "Clear"
 var weather_color_modifiers: Dictionary = {
@@ -191,6 +223,7 @@ func _setup_night_sky() -> void:
 	_setup_stars()
 	_setup_moon()
 	_setup_sun()
+	_setup_horizon_haze()
 	print("[EnvironmentManager] Sky elements initialized")
 
 
@@ -321,6 +354,41 @@ func _setup_sun() -> void:
 	sun_container.add_child(sun_mesh)
 
 
+func _setup_horizon_haze() -> void:
+	haze_mesh = MeshInstance3D.new()
+	haze_mesh.name = "HorizonHaze"
+
+	var cylinder: CylinderMesh = CylinderMesh.new()
+	cylinder.top_radius = 400.0
+	cylinder.bottom_radius = 400.0
+	cylinder.height = 60.0
+	cylinder.radial_segments = 32
+	haze_mesh.mesh = cylinder
+
+	haze_material = ShaderMaterial.new()
+	var shader: Shader = Shader.new()
+	shader.code = """
+shader_type spatial;
+render_mode unshaded, cull_front, depth_draw_never;
+
+uniform vec4 haze_color : source_color = vec4(0.7, 0.8, 0.95, 0.15);
+uniform float haze_intensity : hint_range(0.0, 1.0) = 0.15;
+
+void fragment() {
+	float gradient = pow(1.0 - UV.y, 2.0);
+	ALBEDO = haze_color.rgb;
+	ALPHA = gradient * haze_intensity;
+}
+"""
+	haze_material.shader = shader
+	haze_material.set_shader_parameter("haze_color", Color(0.7, 0.8, 0.95, 0.15))
+	haze_material.set_shader_parameter("haze_intensity", 0.15)
+	haze_mesh.material_override = haze_material
+
+	haze_mesh.position = Vector3(0, -10, 0)
+	add_child(haze_mesh)
+
+
 func _on_time_changed(hour: int, minute: int) -> void:
 	_update_environment()
 	_update_night_sky()
@@ -404,6 +472,41 @@ func _update_environment() -> void:
 
 	# Update blocky sun mesh position
 	_update_sun_position(progress)
+
+	# Update horizon haze
+	_update_haze(from_key, to_key, blend)
+
+
+func _update_haze(from_key: String, to_key: String, blend: float) -> void:
+	if not haze_mesh or not haze_material:
+		return
+
+	# Lerp haze color between time-of-day states
+	var from_color: Color = haze_colors[from_key]
+	var to_color: Color = haze_colors[to_key]
+	var haze_color: Color = from_color.lerp(to_color, blend)
+
+	# Lerp haze alpha between time-of-day states
+	var from_alpha: float = haze_alphas[from_key]
+	var to_alpha: float = haze_alphas[to_key]
+	var haze_alpha: float = lerpf(from_alpha, to_alpha, blend)
+
+	# Apply weather modifiers
+	var alpha_mult: float = weather_haze_alpha_multiplier.get(current_weather, 1.0)
+	var color_tint: Color = weather_haze_color_tint.get(current_weather, Color(1, 1, 1))
+	haze_alpha *= alpha_mult
+	haze_color = Color(
+		haze_color.r * color_tint.r,
+		haze_color.g * color_tint.g,
+		haze_color.b * color_tint.b
+	)
+
+	# Clamp final alpha
+	haze_alpha = clampf(haze_alpha, 0.0, 0.6)
+
+	# Set shader parameters
+	haze_material.set_shader_parameter("haze_color", Color(haze_color.r, haze_color.g, haze_color.b, haze_alpha))
+	haze_material.set_shader_parameter("haze_intensity", haze_alpha)
 
 
 func _update_sun_position(progress: float) -> void:
@@ -628,6 +731,8 @@ func _process(_delta: float) -> void:
 			stars_container.global_position = cam_pos
 		if sun_container:
 			sun_container.global_position = cam_pos
+		if haze_mesh:
+			haze_mesh.global_position = Vector3(cam_pos.x, cam_pos.y - 10.0, cam_pos.z)
 
 	# Make sun and moon face camera (billboard-style, but blocky)
 	_update_celestial_facing()
