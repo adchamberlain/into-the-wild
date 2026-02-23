@@ -1433,6 +1433,10 @@ func _spawn_chunk_decorations() -> void:
 		var noise_val: float = (decoration_noise.get_noise_2d(world_x * 0.8, world_z * 0.8) + 1.0) * 0.5
 		if noise_val > 0.35:
 			var y: float = _get_cached_height_at(world_x, world_z)
+			# Skip steep slopes to prevent clipping into terrain edges
+			if _is_steep_slope(world_x, world_z, y, 1.5):
+				attempts += 1
+				continue
 			_create_scatter_rock(Vector3(world_x, y, world_z), rng)
 			rock_count += 1
 
@@ -1516,6 +1520,9 @@ func _spawn_chunk_decorations() -> void:
 			var noise_val: float = (decoration_noise.get_noise_2d(world_x * 0.5, world_z * 0.5) + 1.0) * 0.5
 			if noise_val > 0.55:
 				var y: float = _get_cached_height_at(world_x, world_z)
+				if _is_steep_slope(world_x, world_z, y, 1.0):
+					attempts += 1
+					continue
 				_create_scatter_log(Vector3(world_x, y, world_z), rng)
 				log_count += 1
 
@@ -1565,6 +1572,17 @@ func _add_grass_quad(st: SurfaceTool, v0: Vector3, v1: Vector3, v2: Vector3, v3:
 	st.add_vertex(v0)
 	st.add_vertex(v2)
 	st.add_vertex(v3)
+
+
+func _is_steep_slope(world_x: float, world_z: float, center_y: float, check_radius: float) -> bool:
+	## Returns true if terrain around (world_x, world_z) has height differences exceeding one cell step.
+	var y_px: float = _get_cached_height_at(world_x + check_radius, world_z)
+	var y_nx: float = _get_cached_height_at(world_x - check_radius, world_z)
+	var y_pz: float = _get_cached_height_at(world_x, world_z + check_radius)
+	var y_nz: float = _get_cached_height_at(world_x, world_z - check_radius)
+	var max_diff: float = maxf(maxf(absf(y_px - center_y), absf(y_nx - center_y)),
+							   maxf(absf(y_pz - center_y), absf(y_nz - center_y)))
+	return max_diff > 1.0
 
 
 func _create_flower(pos: Vector3, petal_color: Color, rng: RandomNumberGenerator) -> void:
