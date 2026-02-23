@@ -421,6 +421,8 @@ func equip(item_type: String) -> bool:
 	elif tool_type == "grappling_hook":
 		_create_grappling_hook_model()
 		_ensure_grappling_hook_controller()
+	elif tool_type == "bow":
+		_create_bow_model()
 	elif tool_type == "map":
 		pass  # No 3D model for map
 
@@ -442,6 +444,7 @@ func unequip() -> void:
 	_remove_machete()
 	_remove_fishing_rod()
 	_remove_grappling_hook()
+	_remove_bow_model()
 	_close_map_if_open()
 
 	equipped_item = ""
@@ -1423,6 +1426,36 @@ func _remove_grappling_hook() -> void:
 	if grappling_hook_model:
 		grappling_hook_model.queue_free()
 		grappling_hook_model = null
+
+
+# Bow visual
+var bow_model: Node3D = null
+const BOW_REST_POSITION: Vector3 = Vector3(0.35, -0.15, -0.55)
+const BOW_REST_ROTATION: Vector3 = Vector3(0, 0, -15)
+
+
+func _create_bow_model() -> void:
+	if bow_model:
+		return
+	var bow_system: Node = get_parent().get_node_or_null("BowSystem") if get_parent() else null
+	if bow_system and bow_system.has_method("build_bow_model"):
+		bow_model = bow_system.build_bow_model()
+		if bow_model:
+			bow_model.position = BOW_REST_POSITION
+			bow_model.rotation_degrees = BOW_REST_ROTATION
+			if player:
+				var camera: Camera3D = player.get_node_or_null("Camera3D")
+				if camera:
+					camera.add_child(bow_model)
+
+
+func _remove_bow_model() -> void:
+	var bow_system: Node = get_parent().get_node_or_null("BowSystem") if get_parent() else null
+	if bow_system and bow_system.has_method("clear_bow_model"):
+		bow_system.clear_bow_model()
+	if bow_model:
+		bow_model.queue_free()
+		bow_model = null
 
 
 func _place_item() -> bool:
