@@ -5299,11 +5299,13 @@ Fixed 9 gameplay bugs and added a placement cooldown, covering floating trees, t
 
 **Pinnable map**: Map overlay now stays pinned on the HUD when switching equipment. Previously, switching from map to bow/axe/etc. would auto-close the map overlay. Now: equip map → R2 opens overlay → switch to any tool → overlay stays visible → switch back to map → R2 closes overlay. Three changes: (1) Removed self-close input handling from `bark_map_ui.gd` — MapUI no longer watches for R2 presses, (2) Removed `_close_map_if_open()` call from `equipment.gd:unequip()` so map persists across equipment switches, (3) Made `_use_map()` toggle — if map overlay already exists, close it instead of ignoring.
 
+**Map jitter fix**: Increased `REGATHER_DISTANCE` from 40 to 120 units (3x). The expensive terrain re-sampling was causing frame jitter when running with the map open. The player marker still updates every frame, but the full terrain/water/cave data re-sample now triggers far less often.
+
 ### Files Changed
 
 | File | Status | Changes |
 |------|--------|---------|
-| `scripts/ui/bark_map_ui.gd` | Modified | Removed `_action_released` var and self-close logic from `_process()` |
+| `scripts/ui/bark_map_ui.gd` | Modified | Removed `_action_released` var and self-close logic from `_process()`; increased `REGATHER_DISTANCE` from 40 to 120 |
 | `scripts/player/equipment.gd` | Modified | Removed `_close_map_if_open()` from `unequip()`, made `_use_map()` toggle overlay on/off |
 
 ---
