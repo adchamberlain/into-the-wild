@@ -745,7 +745,8 @@ func _show_placement_prompt(is_move: bool) -> void:
 	else:
 		interaction_prompt.text = "[%s] Place  [%s] Cancel" % [confirm_key, cancel_key]
 
-	interaction_prompt_panel.visible = true
+	if not _overlay_active:
+		interaction_prompt_panel.visible = true
 
 
 func _hide_placement_prompt() -> void:
@@ -763,10 +764,10 @@ func _update_resting_prompt() -> void:
 		player_resting = player.is_resting
 
 	if player_resting and not is_player_resting:
-		# Just started resting - show get up prompt
+		# Just started resting - show get up prompt (unless overlay is active)
 		if interaction_prompt:
 			interaction_prompt.text = "%s Get Up" % _get_interact_prompt()
-		if interaction_prompt_panel:
+		if interaction_prompt_panel and not _overlay_active:
 			interaction_prompt_panel.visible = true
 		is_player_resting = true
 	elif not player_resting and is_player_resting:
