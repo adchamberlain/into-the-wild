@@ -840,6 +840,7 @@ func _on_player_died() -> void:
 	# Teleport player to respawn point
 	velocity = Vector3.ZERO
 	is_falling = false
+	_spawn_landing = true
 	fall_start_y = respawn_position.y
 	global_position = respawn_position
 
