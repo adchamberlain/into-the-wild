@@ -111,8 +111,8 @@ func _build_cloud_cluster() -> Node3D:
 		randf_range(1.5, 2.5),
 		randf_range(6.0, 10.0)
 	)
-	base_box.material = cloud_material
 	base_mesh_instance.mesh = base_box
+	base_mesh_instance.material_override = cloud_material
 	base_mesh_instance.name = "Base"
 	cluster.add_child(base_mesh_instance)
 
@@ -125,8 +125,8 @@ func _build_cloud_cluster() -> Node3D:
 			randf_range(1.5, 2.5),
 			randf_range(4.0, 6.0)
 		)
-		extra_box.material = cloud_material
 		extra.mesh = extra_box
+		extra.material_override = cloud_material
 		extra.name = "Part_%d" % j
 
 		# Offset: mostly on top with some lateral spread
@@ -246,11 +246,10 @@ func _transition_weather() -> void:
 
 	# Update active cloud count immediately (visibility toggled)
 	# We tween the count separately for a gradual reveal/hide
-	var start_count: int = active_cloud_count
 	weather_tween.tween_method(
 		_tween_cloud_count,
-		start_count,
-		target_cloud_count,
+		float(active_cloud_count),
+		float(target_cloud_count),
 		3.0
 	)
 
