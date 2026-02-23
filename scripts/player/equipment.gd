@@ -420,6 +420,12 @@ func equip(item_type: String) -> bool:
 	if item_data.get("has_light", false):
 		_create_torch_light(item_data)
 
+	# Show held models for light items (torch/lantern)
+	if item_type == "torch":
+		_create_torch_model()
+	elif item_type == "lantern":
+		_create_lantern_model()
+
 	# Show tool models
 	var tool_type: String = item_data.get("tool_type", "")
 	if tool_type == "fishing":
@@ -434,7 +440,7 @@ func equip(item_type: String) -> bool:
 	elif tool_type == "bow":
 		_create_bow_model()
 	elif tool_type == "map":
-		pass  # No 3D model for map
+		_create_map_model()
 
 	print("[Equipment] Equipped %s" % item_data.get("name", item_type))
 	item_equipped.emit(item_type)
@@ -450,6 +456,9 @@ func unequip() -> void:
 
 	# Remove item effects
 	_remove_torch_light()
+	_remove_torch_model()
+	_remove_lantern_model()
+	_remove_map_model()
 	_remove_stone_axe()
 	_remove_machete()
 	_remove_fishing_rod()
@@ -1106,6 +1115,315 @@ func _remove_machete() -> void:
 		machete_model = null
 
 
+func _create_torch_model() -> void:
+	if torch_model:
+		return
+
+	torch_model = Node3D.new()
+	torch_model.name = "TorchModel"
+
+	# Wooden handle (short stick)
+	var handle := MeshInstance3D.new()
+	handle.name = "Handle"
+	var handle_mesh := BoxMesh.new()
+	handle_mesh.size = Vector3(0.05, 0.35, 0.05)
+	handle.mesh = handle_mesh
+
+	var handle_mat := StandardMaterial3D.new()
+	handle_mat.albedo_color = Color(0.45, 0.35, 0.2)
+	handle.material_override = handle_mat
+	handle.position = Vector3(0, 0, 0)
+
+	torch_model.add_child(handle)
+
+	# Cloth wrap near top
+	var wrap := MeshInstance3D.new()
+	wrap.name = "ClothWrap"
+	var wrap_mesh := BoxMesh.new()
+	wrap_mesh.size = Vector3(0.065, 0.08, 0.065)
+	wrap.mesh = wrap_mesh
+
+	var wrap_mat := StandardMaterial3D.new()
+	wrap_mat.albedo_color = Color(0.35, 0.25, 0.15)
+	wrap.material_override = wrap_mat
+	wrap.position = Vector3(0, 0.15, 0)
+
+	torch_model.add_child(wrap)
+
+	# Flame base (orange)
+	var flame_base := MeshInstance3D.new()
+	flame_base.name = "FlameBase"
+	var flame_base_mesh := BoxMesh.new()
+	flame_base_mesh.size = Vector3(0.08, 0.1, 0.08)
+	flame_base.mesh = flame_base_mesh
+
+	var flame_base_mat := StandardMaterial3D.new()
+	flame_base_mat.albedo_color = Color(1.0, 0.5, 0.1)
+	flame_base_mat.emission_enabled = true
+	flame_base_mat.emission = Color(1.0, 0.4, 0.0)
+	flame_base_mat.emission_energy_multiplier = 2.0
+	flame_base.material_override = flame_base_mat
+	flame_base.position = Vector3(0, 0.23, 0)
+
+	torch_model.add_child(flame_base)
+
+	# Flame tip (yellow, smaller)
+	var flame_tip := MeshInstance3D.new()
+	flame_tip.name = "FlameTip"
+	var flame_tip_mesh := BoxMesh.new()
+	flame_tip_mesh.size = Vector3(0.05, 0.08, 0.05)
+	flame_tip.mesh = flame_tip_mesh
+
+	var flame_tip_mat := StandardMaterial3D.new()
+	flame_tip_mat.albedo_color = Color(1.0, 0.85, 0.3)
+	flame_tip_mat.emission_enabled = true
+	flame_tip_mat.emission = Color(1.0, 0.8, 0.2)
+	flame_tip_mat.emission_energy_multiplier = 3.0
+	flame_tip.material_override = flame_tip_mat
+	flame_tip.position = Vector3(0, 0.31, 0)
+
+	torch_model.add_child(flame_tip)
+
+	# Position: right hand, angled slightly forward
+	torch_model.position = TORCH_REST_POSITION
+	torch_model.rotation_degrees = TORCH_REST_ROTATION
+
+	# Attach to camera
+	if player:
+		var camera: Camera3D = player.get_node_or_null("Camera3D")
+		if camera:
+			camera.add_child(torch_model)
+
+
+func _remove_torch_model() -> void:
+	if torch_model:
+		torch_model.queue_free()
+		torch_model = null
+
+
+func _create_lantern_model() -> void:
+	if lantern_model:
+		return
+
+	lantern_model = Node3D.new()
+	lantern_model.name = "LanternModel"
+
+	var metal_mat := StandardMaterial3D.new()
+	metal_mat.albedo_color = Color(0.5, 0.5, 0.52)
+	metal_mat.metallic = 0.6
+	metal_mat.roughness = 0.4
+
+	# Base plate
+	var base := MeshInstance3D.new()
+	base.name = "Base"
+	var base_mesh := BoxMesh.new()
+	base_mesh.size = Vector3(0.1, 0.02, 0.1)
+	base.mesh = base_mesh
+	base.material_override = metal_mat
+	base.position = Vector3(0, 0, 0)
+
+	lantern_model.add_child(base)
+
+	# Left frame post
+	var post_left := MeshInstance3D.new()
+	post_left.name = "PostLeft"
+	var post_mesh := BoxMesh.new()
+	post_mesh.size = Vector3(0.015, 0.2, 0.015)
+	post_left.mesh = post_mesh
+	post_left.material_override = metal_mat
+	post_left.position = Vector3(-0.04, 0.11, 0)
+
+	lantern_model.add_child(post_left)
+
+	# Right frame post
+	var post_right := MeshInstance3D.new()
+	post_right.name = "PostRight"
+	post_right.mesh = post_mesh
+	post_right.material_override = metal_mat
+	post_right.position = Vector3(0.04, 0.11, 0)
+
+	lantern_model.add_child(post_right)
+
+	# Top plate
+	var top := MeshInstance3D.new()
+	top.name = "Top"
+	var top_mesh := BoxMesh.new()
+	top_mesh.size = Vector3(0.1, 0.02, 0.1)
+	top.mesh = top_mesh
+	top.material_override = metal_mat
+	top.position = Vector3(0, 0.22, 0)
+
+	lantern_model.add_child(top)
+
+	# Handle/bail on top
+	var bail := MeshInstance3D.new()
+	bail.name = "Bail"
+	var bail_mesh := BoxMesh.new()
+	bail_mesh.size = Vector3(0.06, 0.015, 0.015)
+	bail.mesh = bail_mesh
+	bail.material_override = metal_mat
+	bail.position = Vector3(0, 0.27, 0)
+
+	lantern_model.add_child(bail)
+
+	# Bail vertical arms
+	var bail_arm_l := MeshInstance3D.new()
+	bail_arm_l.name = "BailArmL"
+	var bail_arm_mesh := BoxMesh.new()
+	bail_arm_mesh.size = Vector3(0.015, 0.05, 0.015)
+	bail_arm_l.mesh = bail_arm_mesh
+	bail_arm_l.material_override = metal_mat
+	bail_arm_l.position = Vector3(-0.025, 0.25, 0)
+
+	lantern_model.add_child(bail_arm_l)
+
+	var bail_arm_r := MeshInstance3D.new()
+	bail_arm_r.name = "BailArmR"
+	bail_arm_r.mesh = bail_arm_mesh
+	bail_arm_r.material_override = metal_mat
+	bail_arm_r.position = Vector3(0.025, 0.25, 0)
+
+	lantern_model.add_child(bail_arm_r)
+
+	# Glass panel (translucent, emissive to look lit)
+	var glass := MeshInstance3D.new()
+	glass.name = "Glass"
+	var glass_mesh := BoxMesh.new()
+	glass_mesh.size = Vector3(0.07, 0.16, 0.07)
+	glass.mesh = glass_mesh
+
+	var glass_mat := StandardMaterial3D.new()
+	glass_mat.albedo_color = Color(0.9, 0.95, 1.0, 0.4)
+	glass_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	glass_mat.emission_enabled = true
+	glass_mat.emission = Color(0.9, 0.95, 1.0)
+	glass_mat.emission_energy_multiplier = 1.5
+	glass.material_override = glass_mat
+	glass.position = Vector3(0, 0.11, 0)
+
+	lantern_model.add_child(glass)
+
+	# Position: held to the side, slightly lower
+	lantern_model.position = LANTERN_REST_POSITION
+	lantern_model.rotation_degrees = LANTERN_REST_ROTATION
+
+	# Attach to camera
+	if player:
+		var camera: Camera3D = player.get_node_or_null("Camera3D")
+		if camera:
+			camera.add_child(lantern_model)
+
+
+func _remove_lantern_model() -> void:
+	if lantern_model:
+		lantern_model.queue_free()
+		lantern_model = null
+
+
+func _create_map_model() -> void:
+	if map_model:
+		return
+
+	map_model = Node3D.new()
+	map_model.name = "MapModel"
+
+	# Main parchment body (flat rectangle)
+	var parchment := MeshInstance3D.new()
+	parchment.name = "Parchment"
+	var parchment_mesh := BoxMesh.new()
+	parchment_mesh.size = Vector3(0.35, 0.25, 0.01)
+	parchment.mesh = parchment_mesh
+
+	var parchment_mat := StandardMaterial3D.new()
+	parchment_mat.albedo_color = Color(0.85, 0.78, 0.6)  # Tan/cream
+	parchment.material_override = parchment_mat
+	parchment.position = Vector3(0, 0, 0)
+
+	map_model.add_child(parchment)
+
+	# Left curled edge
+	var curl_left := MeshInstance3D.new()
+	curl_left.name = "CurlLeft"
+	var curl_mesh := BoxMesh.new()
+	curl_mesh.size = Vector3(0.03, 0.25, 0.03)
+	curl_left.mesh = curl_mesh
+
+	var curl_mat := StandardMaterial3D.new()
+	curl_mat.albedo_color = Color(0.8, 0.72, 0.55)  # Slightly darker
+	curl_left.material_override = curl_mat
+	curl_left.position = Vector3(-0.18, 0, 0.01)
+
+	map_model.add_child(curl_left)
+
+	# Right curled edge
+	var curl_right := MeshInstance3D.new()
+	curl_right.name = "CurlRight"
+	curl_right.mesh = curl_mesh
+	curl_right.material_override = curl_mat
+	curl_right.position = Vector3(0.18, 0, 0.01)
+
+	map_model.add_child(curl_right)
+
+	var border_mat := StandardMaterial3D.new()
+	border_mat.albedo_color = Color(0.3, 0.25, 0.2)  # Dark brown border
+
+	# Top border line
+	var border_top := MeshInstance3D.new()
+	border_top.name = "BorderTop"
+	var border_h_mesh := BoxMesh.new()
+	border_h_mesh.size = Vector3(0.3, 0.008, 0.012)
+	border_top.mesh = border_h_mesh
+	border_top.material_override = border_mat
+	border_top.position = Vector3(0, 0.11, 0.005)
+
+	map_model.add_child(border_top)
+
+	# Bottom border line
+	var border_bottom := MeshInstance3D.new()
+	border_bottom.name = "BorderBottom"
+	border_bottom.mesh = border_h_mesh
+	border_bottom.material_override = border_mat
+	border_bottom.position = Vector3(0, -0.11, 0.005)
+
+	map_model.add_child(border_bottom)
+
+	# Left border line
+	var border_left := MeshInstance3D.new()
+	border_left.name = "BorderLeft"
+	var border_v_mesh := BoxMesh.new()
+	border_v_mesh.size = Vector3(0.008, 0.22, 0.012)
+	border_left.mesh = border_v_mesh
+	border_left.material_override = border_mat
+	border_left.position = Vector3(-0.14, 0, 0.005)
+
+	map_model.add_child(border_left)
+
+	# Right border line
+	var border_right := MeshInstance3D.new()
+	border_right.name = "BorderRight"
+	border_right.mesh = border_v_mesh
+	border_right.material_override = border_mat
+	border_right.position = Vector3(0.14, 0, 0.005)
+
+	map_model.add_child(border_right)
+
+	# Position: held in front, centered and lower
+	map_model.position = MAP_REST_POSITION
+	map_model.rotation_degrees = MAP_REST_ROTATION
+
+	# Attach to camera
+	if player:
+		var camera: Camera3D = player.get_node_or_null("Camera3D")
+		if camera:
+			camera.add_child(map_model)
+
+
+func _remove_map_model() -> void:
+	if map_model:
+		map_model.queue_free()
+		map_model = null
+
+
 func _create_fishing_rod() -> void:
 	if fishing_rod_model:
 		return
@@ -1437,6 +1755,21 @@ func _remove_grappling_hook() -> void:
 		grappling_hook_model.queue_free()
 		grappling_hook_model = null
 
+
+# Torch held model
+var torch_model: Node3D = null
+const TORCH_REST_POSITION: Vector3 = Vector3(0.3, -0.3, -0.6)
+const TORCH_REST_ROTATION: Vector3 = Vector3(15, 0, -15)
+
+# Lantern held model
+var lantern_model: Node3D = null
+const LANTERN_REST_POSITION: Vector3 = Vector3(0.35, -0.35, -0.55)
+const LANTERN_REST_ROTATION: Vector3 = Vector3(0, 0, -10)
+
+# Map held model
+var map_model: Node3D = null
+const MAP_REST_POSITION: Vector3 = Vector3(0.0, -0.4, -0.5)
+const MAP_REST_ROTATION: Vector3 = Vector3(-30, 0, 0)
 
 # Bow visual
 var bow_model: Node3D = null
