@@ -826,6 +826,7 @@ func _spawn_chunk_trees() -> void:
 	rng.seed = chunk_seed
 
 	var trees_spawned_this_batch: int = 0
+	var local_tree_index: int = 0
 
 	var x: float = 0.0
 	while x < chunk_world_size:
@@ -925,8 +926,16 @@ func _spawn_chunk_trees() -> void:
 				var scale_factor: float = rng.randf_range(0.7, 1.2)
 				tree.scale = Vector3(scale_factor, scale_factor, scale_factor)
 
+				# Deterministic name for save/load identification
+				tree.name = "Tree_C%d_%d_%d" % [chunk_coord.x, chunk_coord.y, local_tree_index]
+				local_tree_index += 1
+
 				trees_container.add_child(tree)
 				spawned_trees.append(tree)
+
+				# Register with ResourceManager for depletion tracking
+				if chunk_manager.resource_manager:
+					chunk_manager.resource_manager.register_chunk_resource(tree)
 
 				# Apply bark strip visual to birch trees that have been harvested
 				if tree.scene_file_path.ends_with("birch_tree_resource.tscn"):
@@ -987,6 +996,7 @@ func _spawn_chunk_resources() -> void:
 
 	var resource_grid_size: float = 5.0  # Larger grid for resources - fewer checks, better performance
 	var resources_spawned_this_batch: int = 0
+	var local_resource_index: int = 0
 
 	var x: float = 0.0
 	while x < chunk_world_size:
@@ -1133,6 +1143,10 @@ func _spawn_chunk_resources() -> void:
 func _spawn_resource(scene: PackedScene, x: float, y: float, z: float, rng: RandomNumberGenerator) -> void:
 	var resource: Node3D = scene.instantiate()
 
+	# Deterministic name for save/load identification
+	resource.name = "Res_C%d_%d_%d" % [chunk_coord.x, chunk_coord.y, local_resource_index]
+	local_resource_index += 1
+
 	# Place resource at the terrain height of its own cell position.
 	# The y parameter is already get_height_at(x, z) which snaps to cell centers internally,
 	# so it gives the correct height for the cell the resource is actually on.
@@ -1143,6 +1157,10 @@ func _spawn_resource(scene: PackedScene, x: float, y: float, z: float, rng: Rand
 	resource.rotation.y = rng.randf() * TAU
 	resources_container.add_child(resource)
 	spawned_resources.append(resource)
+
+	# Register with ResourceManager for depletion tracking
+	if resource is ResourceNode and chunk_manager.resource_manager:
+		chunk_manager.resource_manager.register_chunk_resource(resource)
 
 
 func _spawn_chunk_decorations() -> void:
@@ -1451,11 +1469,23 @@ func unload() -> void:
 	# Clear height cache first - this signals async box collision to stop if still running
 	_height_cache.clear()
 
+	# Unregister trees from ResourceManager before freeing (preserves depleted state)
+	if chunk_manager and chunk_manager.resource_manager:
+		for tree in spawned_trees:
+			if is_instance_valid(tree) and tree is ResourceNode:
+				chunk_manager.resource_manager.unregister_chunk_resource(tree)
+
 	# Clean up all children
 	for tree in spawned_trees:
 		if is_instance_valid(tree):
 			tree.queue_free()
 	spawned_trees.clear()
+
+	# Unregister resources from ResourceManager before freeing
+	if chunk_manager and chunk_manager.resource_manager:
+		for resource in spawned_resources:
+			if is_instance_valid(resource) and resource is ResourceNode:
+				chunk_manager.resource_manager.unregister_chunk_resource(resource)
 
 	for resource in spawned_resources:
 		if is_instance_valid(resource):

@@ -173,6 +173,9 @@ var spawned_river_fishing_pools: Array[Vector2] = []  # Track spawned river fish
 var cave_entrance_script: GDScript
 var spawned_cave_indices: Array[int] = []  # Track which cave entrances have been spawned
 
+# Resource manager reference (for registering chunk-spawned trees)
+var resource_manager: ResourceManager
+
 # Shared material for all chunks
 var terrain_material: StandardMaterial3D
 
@@ -201,6 +204,9 @@ func _ready() -> void:
 	_setup_material()
 	_setup_world_floor()
 	_load_scenes()
+
+	# Find resource manager
+	resource_manager = get_parent().get_node_or_null("ResourceManager") as ResourceManager
 
 	# Find player node
 	await get_tree().process_frame

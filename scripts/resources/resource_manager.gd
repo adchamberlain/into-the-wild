@@ -23,6 +23,10 @@ var depleted_resources: Array[Dictionary] = []  # {node, depleted_at_hour, deple
 var all_resources: Array[ResourceNode] = []
 var last_hour: int = -1  # Track for day rollover
 
+# Saved depleted data for resources in unloaded chunks (keyed by node_name)
+# Persists across chunk load/unload cycles so trees stay depleted
+var saved_depleted_data: Dictionary = {}
+
 # Performance: throttle respawn checks
 const RESPAWN_CHECK_INTERVAL: float = 5.0  # Only check every 5 seconds
 var respawn_check_timer: float = 0.0
@@ -53,7 +57,11 @@ func _process(delta: float) -> void:
 		_on_day_changed()
 	last_hour = current_hour
 
-	if not respawn_enabled or depleted_resources.is_empty():
+	if not respawn_enabled:
+		return
+
+	# Check respawns for both active depleted resources and saved data
+	if depleted_resources.is_empty() and saved_depleted_data.is_empty():
 		return
 
 	# Throttle respawn checks - no need to check every frame
@@ -65,8 +73,13 @@ func _process(delta: float) -> void:
 
 ## Called when a new day starts (hour rolls over from 23 to 0).
 func _on_day_changed() -> void:
-	# Increment days_elapsed for all depleted resources
+	# Increment days_elapsed for all depleted resources (active nodes)
 	for info: Dictionary in depleted_resources:
+		info["days_elapsed"] = info.get("days_elapsed", 0) + 1
+
+	# Also increment for saved depleted data (unloaded chunks)
+	for node_name: String in saved_depleted_data:
+		var info: Dictionary = saved_depleted_data[node_name]
 		info["days_elapsed"] = info.get("days_elapsed", 0) + 1
 
 
@@ -100,6 +113,52 @@ func _register_resource(resource: ResourceNode) -> void:
 		resource.depleted.connect(_on_resource_depleted.bind(resource))
 
 
+## Register a chunk-spawned resource and apply saved depleted state if applicable.
+func register_chunk_resource(resource: ResourceNode) -> void:
+	_register_resource(resource)
+
+	# Check if this resource has saved depleted data
+	if saved_depleted_data.has(resource.node_name):
+		var saved_info: Dictionary = saved_depleted_data[resource.node_name]
+		resource._set_depleted_state(true)
+		depleted_resources.append({
+			"node": resource,
+			"depleted_hour": saved_info.get("depleted_hour", 0),
+			"depleted_minute": saved_info.get("depleted_minute", 0),
+			"days_elapsed": saved_info.get("days_elapsed", 0)
+		})
+		# Remove from saved data since it's now actively tracked
+		saved_depleted_data.erase(resource.node_name)
+
+
+## Unregister a chunk resource before its chunk is unloaded.
+## Preserves depleted state in saved_depleted_data so it persists.
+func unregister_chunk_resource(resource: ResourceNode) -> void:
+	if not is_instance_valid(resource):
+		return
+
+	# If this resource is depleted, save its state before removing
+	var i: int = 0
+	while i < depleted_resources.size():
+		var info: Dictionary = depleted_resources[i]
+		if info["node"] == resource:
+			saved_depleted_data[resource.node_name] = {
+				"depleted_hour": info["depleted_hour"],
+				"depleted_minute": info["depleted_minute"],
+				"days_elapsed": info.get("days_elapsed", 0),
+				"resource_type": resource.resource_type
+			}
+			depleted_resources.remove_at(i)
+			break
+		i += 1
+
+	# Disconnect signal
+	if resource.depleted.is_connected(_on_resource_depleted):
+		resource.depleted.disconnect(_on_resource_depleted.bind(resource))
+
+	all_resources.erase(resource)
+
+
 ## Called when a resource is depleted.
 func _on_resource_depleted(resource: ResourceNode) -> void:
 	if not time_manager:
@@ -125,6 +184,7 @@ func _check_respawns() -> void:
 
 	var current_time_minutes: float = time_manager.current_hour * 60.0 + time_manager.current_minute
 
+	# Check active depleted resources (in loaded chunks)
 	var to_respawn: Array[Dictionary] = []
 
 	for info: Dictionary in depleted_resources:
@@ -160,6 +220,26 @@ func _check_respawns() -> void:
 			resource_respawned.emit(resource)
 
 		depleted_resources.erase(info)
+
+	# Also expire saved depleted data for unloaded chunks whose respawn time has passed
+	var saved_to_remove: Array[String] = []
+	for node_name: String in saved_depleted_data:
+		var info: Dictionary = saved_depleted_data[node_name]
+		var depleted_time_minutes: float = info["depleted_hour"] * 60.0 + info["depleted_minute"]
+
+		# Use stored resource type to determine respawn time
+		var saved_type: String = info.get("resource_type", "wood")
+		var respawn_minutes: float = tree_respawn_time_hours * 60.0 if saved_type == "wood" else respawn_time_hours * 60.0
+
+		var elapsed: float = current_time_minutes - depleted_time_minutes
+		var days_elapsed: int = info.get("days_elapsed", 0)
+		elapsed += days_elapsed * 24.0 * 60.0
+
+		if elapsed >= respawn_minutes:
+			saved_to_remove.append(node_name)
+
+	for node_name: String in saved_to_remove:
+		saved_depleted_data.erase(node_name)
 
 
 ## Check if a structure is blocking respawn at the given position.
@@ -210,6 +290,8 @@ func get_all_resources() -> Array[ResourceNode]:
 ## Get depleted resource data for saving.
 func get_depleted_data() -> Array[Dictionary]:
 	var data: Array[Dictionary] = []
+
+	# Include actively tracked depleted resources (in loaded chunks)
 	for info: Dictionary in depleted_resources:
 		var resource: ResourceNode = info["node"]
 		if is_instance_valid(resource):
@@ -219,6 +301,17 @@ func get_depleted_data() -> Array[Dictionary]:
 				"depleted_minute": info["depleted_minute"],
 				"days_elapsed": info.get("days_elapsed", 0)
 			})
+
+	# Include saved depleted data (from unloaded chunks)
+	for node_name: String in saved_depleted_data:
+		var info: Dictionary = saved_depleted_data[node_name]
+		data.append({
+			"node_name": node_name,
+			"depleted_hour": info.get("depleted_hour", 0),
+			"depleted_minute": info.get("depleted_minute", 0),
+			"days_elapsed": info.get("days_elapsed", 0)
+		})
+
 	return data
 
 
@@ -226,17 +319,26 @@ func get_depleted_data() -> Array[Dictionary]:
 func load_depleted_data(data: Array) -> void:
 	for saved_info: Dictionary in data:
 		var node_name: String = saved_info.get("node_name", "")
+		if node_name.is_empty():
+			continue
+
 		var resource: ResourceNode = _find_resource_by_name(node_name)
 		if resource:
-			# Mark as depleted
+			# Resource is currently loaded - apply depleted state directly
 			resource._set_depleted_state(true)
-			# Add to tracking
 			depleted_resources.append({
 				"node": resource,
 				"depleted_hour": saved_info.get("depleted_hour", 0),
 				"depleted_minute": saved_info.get("depleted_minute", 0),
 				"days_elapsed": saved_info.get("days_elapsed", 0)
 			})
+		else:
+			# Resource not loaded yet (chunk not generated) - save for later
+			saved_depleted_data[node_name] = {
+				"depleted_hour": saved_info.get("depleted_hour", 0),
+				"depleted_minute": saved_info.get("depleted_minute", 0),
+				"days_elapsed": saved_info.get("days_elapsed", 0)
+			}
 
 
 ## Find a resource node by its original name.
@@ -256,4 +358,5 @@ func respawn_all() -> void:
 			resource_respawned.emit(resource)
 
 	depleted_resources.clear()
+	saved_depleted_data.clear()
 	print("[ResourceManager] All resources respawned")
