@@ -96,7 +96,6 @@ static func _ensure_shared_materials() -> void:
 	_halo_mat.emission_energy_multiplier = 1.5
 	_halo_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_halo_mat.roughness = 0.1
-	_halo_mat.no_depth_test = true
 
 
 func _build_gem_mesh() -> void:
@@ -157,8 +156,8 @@ func _build_gem_mesh() -> void:
 	# Omni light for underwater glow
 	var light: OmniLight3D = OmniLight3D.new()
 	light.light_color = _diamond_mat.emission if gem_type == "diamond" else _opal_mat.emission
-	light.light_energy = 1.0
-	light.omni_range = 4.0
+	light.light_energy = 0.6
+	light.omni_range = 2.5
 	light.shadow_enabled = false
 	light.position = Vector3(0, 0.3, 0)
 	add_child(light)
