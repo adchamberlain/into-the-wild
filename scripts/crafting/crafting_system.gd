@@ -274,6 +274,33 @@ func _load_recipes() -> void:
 			"description": "A bundle of 20 arrows for the bow.",
 			"requires_bench": true,
 			"min_camp_level": 2
+		},
+		"diamond_axe": {
+			"name": "Diamond Axe",
+			"inputs": {"diamond": 2, "metal_ingot": 1, "rope": 1},
+			"output_type": "diamond_axe",
+			"output_amount": 1,
+			"description": "A powerful axe with a diamond edge. Chops and mines much faster.",
+			"requires_bench": true,
+			"min_camp_level": 3
+		},
+		"diamond_arrow_bundle": {
+			"name": "Diamond Arrows",
+			"inputs": {"diamond": 1, "branch": 5, "feathers": 2},
+			"output_type": "diamond_arrows",
+			"output_amount": 10,
+			"description": "10 diamond-tipped arrows. Recoverable after firing.",
+			"requires_bench": true,
+			"min_camp_level": 3
+		},
+		"enchanted_bow": {
+			"name": "Enchanted Bow",
+			"inputs": {"opal": 2, "bow": 1, "rope": 1},
+			"output_type": "enchanted_bow",
+			"output_amount": 1,
+			"description": "An opal-infused bow. Faster draw and longer range.",
+			"requires_bench": true,
+			"min_camp_level": 3
 		}
 	}
 

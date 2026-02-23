@@ -5424,6 +5424,40 @@ All scatter objects use shared static materials for performance, respect exclusi
 
 ---
 
+## Session 40 - Desert Biome Items & Crafting Recipes (2026-02-23)
+
+Added desert biome reward-loop items and endgame crafting recipes. Players can now find diamonds and opals in the desert, harvest cactus fruit for food, and craft powerful diamond/enchanted equipment at camp level 3.
+
+### New Inventory Items
+
+- **cactus_fruit**: Desert food item restoring 15 hunger (same as berry). Added to `FOOD_VALUES` in player_controller and `FOOD_ITEMS` in HUD. Cactus already drops this item via `cactus.gd` interaction.
+- **diamond**: Crafting material already dropped by `gem_node.gd` diamond variant. No new registration needed (falls into Resources category in HUD).
+- **opal**: Crafting material already dropped by `gem_node.gd` opal variant. No new registration needed.
+- **diamond_arrows**: Ammo item already handled by `bow_system.gd` (prefers diamond arrows, spawns `DiamondArrowProjectile`). Added to `TOOL_ITEMS` in HUD for categorization.
+
+### New Crafting Recipes (all require bench + camp level 3)
+
+- **Diamond Axe**: 2 diamond + 1 metal_ingot + 1 rope -> diamond_axe (3x effectiveness, 900 durability)
+- **Diamond Arrows**: 1 diamond + 5 branch + 2 feathers -> 10 diamond_arrows (recoverable after firing)
+- **Enchanted Bow**: 2 opal + 1 bow + 1 rope -> enchanted_bow (50% faster arrows, 200 durability)
+
+### HUD Updates
+
+- Added `diamond_axe`, `enchanted_bow`, `diamond_arrows` to TOOL_ITEMS category array
+- Added `cactus_fruit` to FOOD_ITEMS category array
+- Equipped display now shows arrow count for enchanted_bow (same as regular bow)
+- Arrow count in equipped display now sums regular arrows + diamond arrows
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/crafting/crafting_system.gd` | Modified | Added 3 recipes: diamond_axe, diamond_arrow_bundle, enchanted_bow |
+| `scripts/player/player_controller.gd` | Modified | Added cactus_fruit to FOOD_VALUES (15.0 hunger) |
+| `scripts/ui/hud.gd` | Modified | Added new items to TOOL_ITEMS/FOOD_ITEMS arrays, enchanted_bow equipped display, combined arrow count |
+
+---
+
 ## Next Session
 
 ### Planned Tasks

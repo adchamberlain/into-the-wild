@@ -100,6 +100,7 @@ const MAX_AIR_BUBBLES: int = 5
 # Food values (hunger restored per item)
 const FOOD_VALUES: Dictionary = {
 	# Raw foods
+	"cactus_fruit": 15.0,
 	"berry": 15.0,
 	"mushroom": 10.0,
 	"herb": 5.0,

@@ -119,12 +119,13 @@ const TOOL_ITEMS: Array = [
 	"drying_rack_kit", "garden_plot_kit", "canvas_tent_kit", "cabin_kit",
 	"snare_trap_kit", "smithing_station_kit", "smoker_kit", "weather_vane_kit",
 	"machete", "lantern", "grappling_hook", "lodestone", "map",
-	"leather_axe_wrap", "leather_hook_wrap", "compass", "bow", "arrows"
+	"leather_axe_wrap", "leather_hook_wrap", "compass", "bow", "arrows",
+	"diamond_axe", "enchanted_bow", "diamond_arrows"
 ]
 
 # Items classified as food (edible + healing)
 const FOOD_ITEMS: Array = [
-	"berry", "mushroom", "herb", "fish", "osha_root",
+	"berry", "mushroom", "herb", "fish", "osha_root", "cactus_fruit",
 	"berry_pouch", "waterskin",
 	"cooked_berries", "cooked_mushroom", "cooked_fish", "cooked_meat",
 	"dried_fish", "dried_berries", "dried_mushroom", "dried_herb",
@@ -371,7 +372,7 @@ func _update_equipped_display() -> void:
 			# Fishing is done by interacting with fishing spots, not use_equipped
 			var interact_key: String = _get_button_prompt("interact")
 			equipped_label.text += " [%s fish, %s unequip]" % [interact_key, unequip_key]
-		elif equipped_type == "bow":
+		elif equipped_type == "bow" or equipped_type == "enchanted_bow":
 			var arrow_count: int = 0
 			var player_node: Node = get_tree().get_first_node_in_group("player")
 			if player_node:
@@ -379,7 +380,7 @@ func _update_equipped_display() -> void:
 				if not inv and "inventory" in player_node:
 					inv = player_node.inventory
 				if inv and inv.has_method("get_item_count"):
-					arrow_count = inv.get_item_count("arrows")
+					arrow_count = inv.get_item_count("arrows") + inv.get_item_count("diamond_arrows")
 			equipped_label.text += " (%d arrows) [R-click aim, %s unequip]" % [arrow_count, unequip_key]
 		elif equipped_type == "map":
 			equipped_label.text += " [%s open map, %s unequip]" % [use_key, unequip_key]
