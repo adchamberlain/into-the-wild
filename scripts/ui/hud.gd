@@ -1031,9 +1031,9 @@ func _update_bubble_blink() -> void:
 		# Only blink filled bubbles (alpha > 0.5 means filled)
 		if color.a > 0.5:
 			if bubble_blink_visible:
-				bubble_labels[i].add_theme_color_override("font_color", Color(1.0, 0.4, 0.4, 1))  # Red warning
+				bubble_labels[i].add_theme_color_override("font_color", Color(0.6, 0.85, 1.0, 1))
 			else:
-				bubble_labels[i].add_theme_color_override("font_color", Color(1.0, 0.4, 0.4, 0.2))  # Faded out
+				bubble_labels[i].add_theme_color_override("font_color", Color(0.6, 0.85, 1.0, 0.15))
 
 
 func _update_compass_display() -> void:
