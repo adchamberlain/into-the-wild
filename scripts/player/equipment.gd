@@ -172,6 +172,12 @@ const EQUIPPABLE_ITEMS: Dictionary = {
 		"tool_type": "upgrade",
 		"upgrade_target": "grappling_hook",
 		"durability_multiplier": 3
+	},
+	"bow": {
+		"name": "Bow",
+		"slot": 27,
+		"has_light": false,
+		"tool_type": "bow"
 	}
 }
 
@@ -182,7 +188,8 @@ const TOOL_MAX_DURABILITY: Dictionary = {
 	"metal_axe": 300,
 	"fishing_rod": 50,
 	"machete": 200,
-	"grappling_hook": 100
+	"grappling_hook": 100,
+	"bow": 80
 }
 
 # Current durability for each tool (item_type -> current durability)
