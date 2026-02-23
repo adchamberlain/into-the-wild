@@ -97,6 +97,29 @@ var last_player_health: float = 100.0
 # Cache of item labels for quick updates
 var item_labels: Dictionary = {}
 
+# Category section header labels
+var _section_labels: Dictionary = {}  # "Tools"/"Food"/"Resources" -> Label
+
+# Items classified as tools (equippable items + crafting kits + upgrade wraps)
+const TOOL_ITEMS: Array = [
+	"torch", "primitive_axe", "stone_axe", "metal_axe", "campfire_kit",
+	"rope", "shelter_kit", "storage_box", "fishing_rod", "crafting_bench_kit",
+	"drying_rack_kit", "garden_plot_kit", "canvas_tent_kit", "cabin_kit",
+	"snare_trap_kit", "smithing_station_kit", "smoker_kit", "weather_vane_kit",
+	"machete", "lantern", "grappling_hook", "lodestone", "bark_map",
+	"leather_axe_wrap", "leather_hook_wrap", "compass"
+]
+
+# Items classified as food (edible + healing)
+const FOOD_ITEMS: Array = [
+	"berry", "mushroom", "herb", "fish", "raw_meat", "osha_root",
+	"berry_pouch", "waterskin",
+	"cooked_berries", "cooked_mushroom", "cooked_fish", "cooked_meat",
+	"dried_fish", "dried_berries", "dried_mushroom", "dried_herb",
+	"smoked_meat", "smoked_fish",
+	"healing_salve", "hide_bedroll"
+]
+
 # Performance: throttle expensive updates
 const HUD_UPDATE_INTERVAL: float = 0.1  # Update coordinates/protection every 100ms
 var hud_update_timer: float = 0.0
@@ -398,51 +421,85 @@ func _on_inventory_changed() -> void:
 	_update_inventory_display()
 
 
+func _get_display_name(item_type: String) -> String:
+	return item_type.capitalize().replace("_", " ").replace("River Rock", "Rock")
+
+
+func _get_item_category(item_type: String) -> String:
+	if item_type in TOOL_ITEMS:
+		return "Tools"
+	elif item_type in FOOD_ITEMS:
+		return "Food"
+	else:
+		return "Resources"
+
+
 func _update_inventory_display() -> void:
 	if not inventory or not item_list:
-		print("[HUD] Cannot update inventory display: inventory=%s, item_list=%s" % [inventory, item_list])
 		return
 
 	var items: Dictionary = inventory.get_all_items()
-	print("[HUD] Updating inventory display with items: %s" % items)
 
 	# Show/hide empty label
 	if empty_label:
 		empty_label.visible = items.is_empty()
 
-	# Track which items we've seen this update
-	var seen_items: Array = []
+	# Clear all existing labels and section headers
+	for resource_type: String in item_labels:
+		var label: Label = item_labels[resource_type]
+		if is_instance_valid(label):
+			label.queue_free()
+	item_labels.clear()
 
-	# Update or create labels for each item
-	for resource_type: String in items:
-		seen_items.append(resource_type)
-		var count: int = items[resource_type]
-		var display_name: String = resource_type.capitalize().replace("_", " ").replace("River Rock", "Rock")
+	for section_name: String in _section_labels:
+		var label: Label = _section_labels[section_name]
+		if is_instance_valid(label):
+			label.queue_free()
+	_section_labels.clear()
 
-		if item_labels.has(resource_type):
-			# Update existing label
-			var label: Label = item_labels[resource_type]
-			label.text = "%s: %d" % [display_name, count]
-		else:
-			# Create new label
+	if items.is_empty():
+		_update_eat_hint()
+		return
+
+	# Sort items into categories
+	var categorized: Dictionary = {"Tools": [], "Food": [], "Resources": []}
+	for item_type: String in items:
+		var category: String = _get_item_category(item_type)
+		categorized[category].append(item_type)
+
+	# Alphabetize within each category by display name
+	for category: String in categorized:
+		categorized[category].sort_custom(func(a: String, b: String) -> bool:
+			return _get_display_name(a) < _get_display_name(b)
+		)
+
+	# Build the display in order: Tools, Food, Resources
+	for category: String in ["Tools", "Food", "Resources"]:
+		var category_items: Array = categorized[category]
+		if category_items.is_empty():
+			continue
+
+		# Section header
+		var header: Label = Label.new()
+		header.text = "-- %s --" % category
+		header.add_theme_font_override("font", HUD_FONT)
+		header.add_theme_font_size_override("font_size", 32)
+		header.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
+		item_list.add_child(header)
+		_section_labels[category] = header
+
+		# Item labels
+		for item_type: String in category_items:
+			var count: int = items[item_type]
+			var display_name: String = _get_display_name(item_type)
+
 			var label: Label = Label.new()
 			label.text = "%s: %d" % [display_name, count]
 			label.add_theme_font_override("font", HUD_FONT)
 			label.add_theme_font_size_override("font_size", 40)
 			label.add_theme_color_override("font_color", Color(1, 1, 1, 1))
 			item_list.add_child(label)
-			item_labels[resource_type] = label
-
-	# Remove labels for items no longer in inventory
-	var to_remove: Array = []
-	for resource_type: String in item_labels:
-		if resource_type not in seen_items:
-			to_remove.append(resource_type)
-
-	for resource_type: String in to_remove:
-		var label: Label = item_labels[resource_type]
-		label.queue_free()
-		item_labels.erase(resource_type)
+			item_labels[item_type] = label
 
 	# Update eat hint visibility
 	_update_eat_hint()
