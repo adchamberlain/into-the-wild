@@ -5200,11 +5200,52 @@ Fixed 9 gameplay bugs and added a placement cooldown, covering floating trees, t
 
 ---
 
+## Session 32 - Bow & Arrow System (2026-02-22)
+
+**Bow & arrow weapon system**: Added a complete bow and arrow hunting system. Feathers (from snare traps) now have a crafting purpose — arrow bundles.
+
+**Crafting recipes**:
+- Bow: 2 rope + 3 branch (bench, camp level 2)
+- Arrow Bundle: 2 feathers + 4 branch → 20 arrows (bench, camp level 2)
+
+**Bow mechanics**: Equip bow, hold right-click to draw (0.5s charge), release to fire. Draw progress affects arrow speed (60%-100%). Minimum 30% draw required to fire. Bow has 80 durability (1 per shot). Each shot consumes 1 arrow from inventory.
+
+**Arrow projectile**: Physics-based RigidBody3D arrows with gravity arc. Arrows orient along their velocity during flight. Miss a target? Arrow sticks in terrain briefly then despawns. Max flight time 4 seconds.
+
+**Animal hunting**: Ambient birds and rabbits are now huntable. Each animal has a StaticBody3D hitbox on collision layer 2 for arrow detection. On hit: death animation (tip over), loot drops to inventory, despawn after 1 second. Birds drop 1 raw meat + 2 feathers. Rabbits drop 1 raw meat + 1 hide.
+
+**Bow visual**: Procedural BoxMesh bow model attached to camera when equipped — two curved limbs, grip, and animated string that pulls back during draw.
+
+**Sound effects**: Three procedural AudioStreamWAV sounds — bow draw (woody creak), bow fire (string twang), arrow hit (impact thud).
+
+**HUD**: Shows arrow count when bow is equipped. Updates live when arrows are consumed. Bow and arrows categorized under Tools in inventory display.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/crafting/crafting_system.gd` | Modified | Added bow and arrow_bundle recipes |
+| `scripts/player/equipment.gd` | Modified | Added bow equipment slot (slot 27), durability (80), model create/remove |
+| `scripts/player/arrow_projectile.gd` | Created | RigidBody3D arrow with physics, hit detection, procedural mesh |
+| `scripts/player/bow_system.gd` | Created | Draw/fire mechanics, arrow spawning, bow model builder |
+| `scripts/creatures/ambient_animal_base.gd` | Modified | Added take_hit(), loot drops, hitbox StaticBody3D, ambient_animal group |
+| `scripts/creatures/ambient_bird.gd` | Modified | Added loot table (1 meat, 2 feathers) |
+| `scripts/creatures/ambient_rabbit.gd` | Modified | Added loot table (1 meat, 1 hide) |
+| `scripts/player/player_controller.gd` | Modified | Added BowSystem child, use_equipped guard, TEMP test spawn |
+| `scripts/ui/hud.gd` | Modified | Arrow count display, bow/arrows in TOOL_ITEMS, BowSystem signal |
+| `scripts/core/sfx_manager.gd` | Modified | Added 3 procedural bow/arrow sounds |
+
+### Known Issues
+- TEMP: New games spawn with bow + 20 arrows for testing (remove before release)
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Continue play-testing and bug fixing
-2. Find a crafting use for feathers (currently a resource with no recipes)
+1. Play-test bow and arrow system, tune arrow speed/arc/range
+2. Remove TEMP test spawn items once satisfied with bow behavior
+3. Continue general play-testing and bug fixing
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.
