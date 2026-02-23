@@ -84,11 +84,11 @@ func _process(delta: float) -> void:
 	for i: int in range(count):
 		var idx: int = (_current_index + i) % _trees.size()
 		var entry: Dictionary = _trees[idx]
-		var tree: Node3D = entry["tree"] as Node3D
 
-		# Skip freed trees
-		if not is_instance_valid(tree):
+		# Skip freed trees (check before casting to avoid "freed object" error)
+		if not is_instance_valid(entry["tree"]):
 			continue
+		var tree: Node3D = entry["tree"] as Node3D
 
 		# Skip if not visible or too far
 		if not tree.visible:
@@ -104,9 +104,9 @@ func _process(delta: float) -> void:
 		var foliage_array: Array = entry["foliage"] as Array
 		for f_data: Variant in foliage_array:
 			var fd: Dictionary = f_data as Dictionary
-			var node: MeshInstance3D = fd["node"] as MeshInstance3D
-			if not is_instance_valid(node):
+			if not is_instance_valid(fd["node"]):
 				continue
+			var node: MeshInstance3D = fd["node"] as MeshInstance3D
 			var hf: float = fd["height_factor"] as float
 			# Translate foliage laterally based on height factor
 			node.position.x = (fd["base_x"] as float) + sway_x * hf * 0.5
