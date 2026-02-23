@@ -650,8 +650,12 @@ func _try_eat() -> void:
 	if not inventory or not stats:
 		return
 
+	var hud: Node = get_tree().get_first_node_in_group("hud")
+
 	# Don't consume anything if both health and hunger are full
 	if stats.health >= stats.max_health and stats.hunger >= stats.max_hunger:
+		if hud and hud.has_method("show_notification"):
+			hud.show_notification("Health and food are full!", Color(0.6, 1.0, 0.6, 1))
 		return
 
 	# First check for healing items if health is not full
@@ -661,11 +665,23 @@ func _try_eat() -> void:
 				var removed: bool = inventory.remove_item(heal_type, 1)
 				if not removed:
 					continue
-				stats.heal(HEALING_ITEMS[heal_type])
+				var healed: float = HEALING_ITEMS[heal_type]
+				stats.heal(healed)
+				var item_name: String = heal_type.capitalize().replace("_", " ")
+				var msg: String = "Used %s! +%.0f HP" % [item_name, healed]
 				# If item is also food, restore hunger too
 				if FOOD_VALUES.has(heal_type) and stats.hunger < stats.max_hunger:
-					stats.eat(FOOD_VALUES[heal_type])
+					var fed: float = stats.eat(FOOD_VALUES[heal_type])
+					msg += ", +%.0f FD" % fed
+				if hud and hud.has_method("show_notification"):
+					hud.show_notification(msg, Color(0.6, 1.0, 0.6, 1))
 				return
+
+	# Check if hunger is full before trying to eat food
+	if stats.hunger >= stats.max_hunger:
+		if hud and hud.has_method("show_notification"):
+			hud.show_notification("Food meter is full!", Color(0.6, 1.0, 0.6, 1))
+		return
 
 	# Try to eat any available food, prioritizing items with most hunger restore
 	var best_food: String = ""
@@ -677,11 +693,15 @@ func _try_eat() -> void:
 			best_value = FOOD_VALUES[food_type]
 
 	if best_food != "":
-		# Only eat if not already full
-		if stats.hunger < stats.max_hunger:
-			var removed: bool = inventory.remove_item(best_food, 1)
-			if removed:
-				stats.eat(best_value)
+		var removed: bool = inventory.remove_item(best_food, 1)
+		if removed:
+			var fed: float = stats.eat(best_value)
+			var item_name: String = best_food.capitalize().replace("_", " ")
+			if hud and hud.has_method("show_notification"):
+				hud.show_notification("Ate %s! +%.0f FD" % [item_name, fed], Color(0.6, 1.0, 0.6, 1))
+	else:
+		if hud and hud.has_method("show_notification"):
+			hud.show_notification("No food in inventory!", Color(1.0, 0.5, 0.5, 1))
 
 
 func _notification(what: int) -> void:
