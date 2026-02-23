@@ -1221,6 +1221,17 @@ func get_height_at(x: float, z: float, skip_pit_check: bool = false) -> float:
 		elif dist_to_cave < cave_flat_outer:
 			continue  # In falloff zone for this cave - still check other caves for flat zone
 
+	# Oasis pool depressions - flat floor with gradual ramp beyond edge
+	for oasis: Dictionary in desert_oases:
+		var oasis_dist: float = Vector2(snapped_x - oasis["center"].x, snapped_z - oasis["center"].y).length()
+		if oasis_dist < oasis["radius"]:
+			# Pool floor - completely flat across the entire pool
+			return -oasis["depth"]
+		elif oasis_dist < oasis["radius"] + 3.0:
+			# Ramp from pool edge to terrain
+			var blend_factor: float = (oasis_dist - oasis["radius"]) / 3.0
+			return lerpf(-oasis["depth"], height_step, blend_factor)
+
 	# Check all water bodies (ponds and lakes) for terrain depression
 	for body in water_bodies:
 		var body_center: Vector2 = body["center"]
