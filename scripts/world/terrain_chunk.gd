@@ -1635,23 +1635,26 @@ func _create_scatter_log(pos: Vector3, rng: RandomNumberGenerator) -> void:
 			obj.add_child(box)
 			y_offset += layer_h
 	else:
-		# Horizontal fallen log - 2-3 stretched boxes
-		var log_length: float = rng.randf_range(1.0, 2.0)
-		var log_thickness: float = rng.randf_range(0.15, 0.25)
-		var segments: int = rng.randi_range(2, 3)
+		# Horizontal fallen log - thick trunk with taper
+		var log_length: float = rng.randf_range(3.0, 5.0)
+		var log_thickness: float = rng.randf_range(0.5, 0.75)
+		var segments: int = rng.randi_range(3, 4)
 		for i: int in range(segments):
 			var box: MeshInstance3D = MeshInstance3D.new()
 			var mesh: BoxMesh = BoxMesh.new()
 			var seg_len: float = log_length / float(segments) * rng.randf_range(0.9, 1.1)
-			var thick: float = log_thickness * rng.randf_range(0.85, 1.15)
+			# Taper from thick base to thinner end
+			var taper: float = 1.0 - float(i) / float(segments) * 0.35
+			var thick: float = log_thickness * taper * rng.randf_range(0.9, 1.1)
 			mesh.size = Vector3(seg_len, thick, thick)
 			box.mesh = mesh
 			box.material_override = _get_log_material()
 			box.position = Vector3(
 				(float(i) - float(segments) * 0.5) * (log_length / float(segments)),
 				thick * 0.5,
-				rng.randf_range(-0.05, 0.05)
+				rng.randf_range(-0.08, 0.08)
 			)
+			box.rotation.y = rng.randf_range(-0.05, 0.05)
 			obj.add_child(box)
 
 	obj.position = pos
