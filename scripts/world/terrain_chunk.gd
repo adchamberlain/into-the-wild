@@ -87,12 +87,12 @@ static func _get_bush_material(dark: bool) -> StandardMaterial3D:
 	if dark:
 		if not _bush_dark_mat:
 			_bush_dark_mat = StandardMaterial3D.new()
-			_bush_dark_mat.albedo_color = Color(0.15, 0.35, 0.12)
+			_bush_dark_mat.albedo_color = Color(0.2, 0.5, 0.18)
 		return _bush_dark_mat
 	else:
 		if not _bush_mid_mat:
 			_bush_mid_mat = StandardMaterial3D.new()
-			_bush_mid_mat.albedo_color = Color(0.2, 0.45, 0.18)
+			_bush_mid_mat.albedo_color = Color(0.3, 0.6, 0.25)
 		return _bush_mid_mat
 
 
@@ -1588,22 +1588,22 @@ func _create_scatter_rock(pos: Vector3, rng: RandomNumberGenerator) -> void:
 
 func _create_scatter_bush(pos: Vector3, rng: RandomNumberGenerator) -> void:
 	var bush: Node3D = Node3D.new()
-	var num_boxes: int = rng.randi_range(2, 4)
-	var base_size: float = rng.randf_range(0.4, 0.8)
+	var num_boxes: int = rng.randi_range(3, 5)
+	var base_size: float = rng.randf_range(0.8, 1.4)
 
 	for i: int in range(num_boxes):
 		var box: MeshInstance3D = MeshInstance3D.new()
 		var mesh: BoxMesh = BoxMesh.new()
 		var sx: float = base_size * rng.randf_range(0.5, 1.0)
-		var sy: float = base_size * rng.randf_range(0.4, 0.8)
+		var sy: float = base_size * rng.randf_range(0.5, 0.9)
 		var sz: float = base_size * rng.randf_range(0.5, 1.0)
 		mesh.size = Vector3(sx, sy, sz)
 		box.mesh = mesh
 		box.material_override = _get_bush_material(rng.randf() > 0.5)
 		box.position = Vector3(
-			rng.randf_range(-0.2, 0.2) * base_size,
-			sy * 0.5 + rng.randf_range(0.0, 0.1),
-			rng.randf_range(-0.2, 0.2) * base_size
+			rng.randf_range(-0.3, 0.3) * base_size,
+			sy * 0.5 + rng.randf_range(0.0, 0.15),
+			rng.randf_range(-0.3, 0.3) * base_size
 		)
 		bush.add_child(box)
 
