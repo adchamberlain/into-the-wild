@@ -5424,7 +5424,70 @@ All scatter objects use shared static materials for performance, respect exclusi
 
 ---
 
-## Session 40 - Desert Biome Items & Crafting Recipes (2026-02-23)
+## Session 40 - Desert Biome: World Generation & Content (2026-02-23)
+
+Built the complete desert biome ring (150-250 units from spawn) with terrain generation, flora, fauna, oases with underwater gem mining, and diamond arrow mechanics. Desert uses sandy tan terrain with dune-shaped height variation, 20-unit transition zones blending into adjacent biomes.
+
+### Desert Terrain (Tasks 1, 7, 14)
+
+- Added `DESERT = 5` to RegionType enum with sandy brown color palette and dune height params
+- Distance-based biome detection in `get_region_at()`: 170-230 = DESERT, 150-170/230-250 = transition blend
+- Desert vegetation spawning: cacti (80% prickly, 20% fruit), palm trees, excludes non-desert trees
+- Desert creature spawning: lizards (1-3 per chunk), tortoises (0-1), no rabbits/birds
+- Oasis terrain depression: pools sit 4 units below surrounding desert floor
+- Transition zone color blending between desert and adjacent biomes
+
+### Flora (Tasks 2, 3)
+
+- **Palm Tree** (`palm_tree.gd`): Procedural Node3D with 4-segment tapered trunk, trunk ring bands, 6 drooping fronds (alternating light/dark green), 2-3 coconuts near crown. All shared static materials.
+- **Cactus** (`cactus.gd`): StaticBody3D with two variants. Main column with vertical ridges, 0-2 branching arms, 8 white spines. Prickly variant: Area3D contact damage (8 HP, 1.5s cooldown). Fruit variant: harvestable red fruit on top, interactable/resource_node groups.
+
+### Fauna (Task 4)
+
+- **Ambient Lizard** (`ambient_lizard.gd`): Fast-darting green/brown lizard, non-huntable, small BoxMesh body with legs and tail
+- **Ambient Tortoise** (`ambient_tortoise.gd`): Slow olive-green tortoise with domed shell, non-huntable
+
+### Desert Oases (Task 6)
+
+- **Desert Oasis** (`desert_oasis.gd`): 3 oases placed in desert ring (2 diamond, 1 opal). Each has swimmable pool (Area3D water detection), 4-6 palm trees, and underwater gem deposits on pool floor.
+- Oasis placement: evenly spaced around desert ring with min 60-unit separation. Desert river routes to opal oasis.
+- Water visual: semi-transparent blue disc at surface + darker deep water layer beneath
+
+### Underwater Gem Mining (Task 5)
+
+- **Gem Node** (`gem_node.gd`): Extends ResourceNode, diamond or opal variants. Crystal cluster of 4 angled columns with emission glow, bright tips, glow halo disc, and OmniLight3D. Requires axe, 4 hits to mine. Shared static materials per variant.
+
+### Diamond Arrow Projectile (Task 8)
+
+- **Diamond Arrow** (`diamond_arrow_projectile.gd`): RigidBody3D arrow that persists after impact. Blue-tinted diamond arrowhead with emission glow. Becomes pickable after hitting terrain or animals (adds to "interactable"/"resource_node" groups with enlarged pickup collision). Player recovers arrows via interaction.
+
+### Bow & Equipment Integration (Task 9)
+
+- Bow system prefers diamond arrows over regular arrows when firing
+- Enchanted bow: 1.67x draw speed, 1.5x arrow velocity
+- Equipment registry: diamond_axe (3.0 effectiveness, 900 durability), enchanted_bow (200 durability)
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/world/chunk_manager.gd` | Modified | DESERT RegionType, region params, oasis generation, desert river, terrain depression |
+| `scripts/world/palm_tree.gd` | Created | Procedural palm tree with shared materials |
+| `scripts/world/cactus.gd` | Created | Prickly/fruit cactus variants with contact damage |
+| `scripts/creatures/ambient_lizard.gd` | Created | Fast-darting desert lizard |
+| `scripts/creatures/ambient_tortoise.gd` | Created | Slow desert tortoise |
+| `scripts/world/desert_oasis.gd` | Created | Oasis with pool, palms, gem deposits |
+| `scripts/resources/gem_node.gd` | Created | Underwater diamond/opal gem resource |
+| `scripts/player/diamond_arrow_projectile.gd` | Created | Recoverable diamond arrow |
+| `scripts/player/bow_system.gd` | Modified | Diamond arrow preference, enchanted bow bonuses |
+| `scripts/player/equipment.gd` | Modified | Diamond axe and enchanted bow stats |
+| `scripts/world/terrain_chunk.gd` | Modified | Desert vegetation/creature spawning, transition blending |
+| `docs/plans/2026-02-23-desert-biome-design.md` | Created | Desert biome design document |
+| `docs/plans/2026-02-23-desert-biome.md` | Created | 16-task implementation plan |
+
+---
+
+## Session 41 - Desert Biome: Items & Crafting Recipes (2026-02-23)
 
 Added desert biome reward-loop items and endgame crafting recipes. Players can now find diamonds and opals in the desert, harvest cactus fruit for food, and craft powerful diamond/enchanted equipment at camp level 3.
 
@@ -5458,7 +5521,7 @@ Added desert biome reward-loop items and endgame crafting recipes. Players can n
 
 ---
 
-## Session 41 - Desert Survival: Hunger Drain, Sandstorms & Heat HUD (2026-02-23)
+## Session 42 - Desert Survival: Hunger Drain, Sandstorms & Heat HUD (2026-02-23)
 
 Implemented the desert survival challenge system: faster hunger drain in desert regions, periodic sandstorm events with particle effects and speed reduction, and HUD indicators for heat and sandstorm visibility.
 
@@ -5503,12 +5566,44 @@ Player enters desert -> `_check_desert_status()` detects DESERT region -> sets h
 
 ---
 
+## Session 43 - Desert Biome: Code Review Fixes (2026-02-23)
+
+Fixed critical and important issues identified during code review of the desert biome implementation.
+
+### Critical Fixes
+
+- **GemNode missing super._ready()**: `gem_node.gd` wasn't calling `super._ready()`, so `node_name`, `original_scale`, and group membership from ResourceNode base were never initialized. Fixed by setting resource properties before calling `super._ready()`.
+- **Cactus DamageArea collision layers**: Default collision_layer=1/mask=1 caused false positives from terrain. Set `collision_layer=0, collision_mask=4` (player layer only).
+- **Oasis WaterArea collision layers**: Same issue as cactus. Set `collision_layer=0, collision_mask=4`.
+
+### Important Fixes
+
+- **Palm tree per-instance materials**: Ring bands and coconuts created new `StandardMaterial3D` per tree instance. Added `shared_ring_material` and `shared_coconut_material` static vars, initialized in `_ensure_shared_materials()`, used in `build()`.
+- **DiamondArrowProjectile unsafe access**: `get_interaction_text()` returned text even when not pickable. `interact()` used `"inventory" in player_node` which doesn't work for @onready vars in GDScript 4.x. Fixed with `is_pickable` guard and `get_node_or_null("Inventory")` pattern.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/world/palm_tree.gd` | Fixed | Shared static materials for ring/coconut |
+| `scripts/world/cactus.gd` | Fixed | DamageArea collision_layer=0, collision_mask=4 |
+| `scripts/world/desert_oasis.gd` | Fixed | WaterArea collision_layer=0, collision_mask=4 |
+| `scripts/resources/gem_node.gd` | Fixed | Call super._ready() with proper property ordering |
+| `scripts/player/diamond_arrow_projectile.gd` | Fixed | is_pickable guard, safe inventory access |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
 1. Remove TEMP test spawn items (bow + 20 arrows + bark_map) once satisfied
-2. Continue play-testing desert survival balance
-3. Bug fixing
+2. Play-test desert biome: oasis discovery, gem mining, cactus interactions, sandstorms
+3. Add distinct visual models for diamond axe and enchanted bow (currently use defaults)
+4. Bug fixing
+
+### Known Issues
+- Diamond axe and enchanted bow have no distinct visual models (fall to stone axe/standard bow defaults)
+- Tortoise materials are per-instance (minor, could be shared static)
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.
