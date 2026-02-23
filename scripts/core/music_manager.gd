@@ -187,9 +187,13 @@ func _on_track_finished(player: AudioStreamPlayer) -> void:
 
 ## Enable or disable music.
 func set_music_enabled(enabled: bool) -> void:
+	var was_enabled: bool = music_enabled
 	music_enabled = enabled
 	# Guard: audio players not yet created (called before _ready)
 	if not active_player:
+		return
+	# No change — don't restart playback
+	if enabled == was_enabled:
 		return
 	if enabled:
 		# Kill any pending fade-out tween to prevent it from stopping playback

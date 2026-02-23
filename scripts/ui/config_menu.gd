@@ -22,16 +22,16 @@ var music_manager: Node
 var hud: Node
 
 # Config state (defaults)
-var hunger_enabled: bool = false
-var health_drain_enabled: bool = false
-var weather_damage_enabled: bool = false
+var hunger_enabled: bool = true
+var health_drain_enabled: bool = true
+var weather_damage_enabled: bool = true
 var weather_enabled: bool = true
 var unlimited_fire_enabled: bool = false
 var show_coordinates_enabled: bool = true
 var tree_respawn_days: float = 7.0
 var day_length_minutes: float = 20.0
 var music_enabled: bool = true
-var music_volume: float = 50.0  # 0-100
+var music_volume: float = 90.0  # 0-100
 
 # UI References
 @onready var panel: PanelContainer = $Panel
@@ -615,16 +615,16 @@ func get_config() -> Dictionary:
 
 ## Apply config from saved data.
 func apply_config(data: Dictionary) -> void:
-	hunger_enabled = data.get("hunger_enabled", false)
-	health_drain_enabled = data.get("health_drain_enabled", false)
-	weather_damage_enabled = data.get("weather_damage_enabled", false)
+	hunger_enabled = data.get("hunger_enabled", true)
+	health_drain_enabled = data.get("health_drain_enabled", true)
+	weather_damage_enabled = data.get("weather_damage_enabled", true)
 	weather_enabled = data.get("weather_enabled", true)
 	unlimited_fire_enabled = data.get("unlimited_fire_enabled", false)
 	show_coordinates_enabled = data.get("show_coordinates_enabled", true)
 	tree_respawn_days = data.get("tree_respawn_days", 7.0)
 	day_length_minutes = data.get("day_length_minutes", 20.0)
 	music_enabled = data.get("music_enabled", true)
-	music_volume = data.get("music_volume", 50.0)
+	music_volume = data.get("music_volume", 90.0)
 	# Update UI sliders/toggles
 	if hunger_toggle:
 		hunger_toggle.button_pressed = hunger_enabled

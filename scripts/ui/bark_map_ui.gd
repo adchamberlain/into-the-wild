@@ -69,9 +69,6 @@ func _process(_delta: float) -> void:
 
 
 func _build_ui() -> void:
-	# Get viewport size for positioning
-	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-
 	# Panel background with transparency
 	map_panel = PanelContainer.new()
 	var panel_style: StyleBoxFlat = StyleBoxFlat.new()
