@@ -114,6 +114,12 @@ const FOOD_VALUES: Dictionary = {
 	# Smoked (smoker - Level 3)
 	"smoked_meat": 45.0,
 	"smoked_fish": 50.0,
+	# Kitchen (cabin)
+	"hearty_stew": 100.0,
+	"preserved_meal": 80.0,
+	"herb_tea": 10.0,
+	"fish_dinner": 40.0,
+	"mushroom_soup": 50.0,
 }
 
 # Healing items (instant health restore)
@@ -121,6 +127,10 @@ const HEALING_ITEMS: Dictionary = {
 	"healing_salve": 30.0,
 	"osha_root": 25.0,  # Alpine medicinal plant - potent healer
 	"hide_bedroll": 40.0,  # Portable bedroll for resting
+	# Kitchen (cabin) - items that also restore health
+	"hearty_stew": 20.0,
+	"herb_tea": 30.0,
+	"mushroom_soup": 10.0,
 }
 
 

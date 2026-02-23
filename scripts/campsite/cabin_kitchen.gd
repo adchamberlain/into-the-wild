@@ -88,28 +88,15 @@ func interact(player: Node) -> bool:
 			return true
 		consumed.append({"type": item, "amount": inputs[item]})
 
-	# Apply effects
-	var hunger_restore: float = recipe.get("hunger_restore", 0.0)
-	var health_restore: float = recipe.get("health_restore", 0.0)
-
-	if player_stats:
-		if health_restore > 0 and player_stats.has_method("heal"):
-			player_stats.heal(health_restore)
-		if hunger_restore > 0 and player_stats.has_method("eat"):
-			player_stats.eat(hunger_restore)
+	# Add cooked food to inventory
+	player_inventory.add_item(best_recipe, 1)
 
 	# Show notification with what was cooked
-	var msg: String = "Cooked %s!" % recipe.get("name")
-	if hunger_restore > 0 and health_restore > 0:
-		msg += " +%.0f hunger, +%.0f health" % [hunger_restore, health_restore]
-	elif hunger_restore > 0:
-		msg += " +%.0f hunger" % hunger_restore
-	elif health_restore > 0:
-		msg += " +%.0f health" % health_restore
-	_show_notification(msg, Color(1.0, 0.85, 0.4))
+	var recipe_name: String = recipe.get("name", best_recipe)
+	_show_notification("Cooked %s!" % recipe_name, Color(1.0, 0.85, 0.4))
 
-	food_cooked.emit(recipe.get("name", best_recipe))
-	print("[Kitchen] Cooked %s! (+%.0f hunger, +%.0f health)" % [recipe.get("name"), hunger_restore, health_restore])
+	food_cooked.emit(recipe_name)
+	print("[Kitchen] Cooked %s (added to inventory)" % recipe_name)
 
 	return true
 
