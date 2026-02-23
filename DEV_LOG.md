@@ -5261,12 +5261,26 @@ Fixed 9 gameplay bugs and added a placement cooldown, covering floating trees, t
 
 ---
 
+## Session 34 - Bow Polish & Arrow Fix (2026-02-22)
+
+**Bow model gap fix**: Closed visible see-through gaps between the grip and limb segments. Limb segments now start at Y=0.02 (overlapping the grip edge at Y=0.03) instead of Y=0.04. Nock positions adjusted to match new limb length.
+
+**Arrow vertical orientation fix**: Arrows shot straight up appeared to fly sideways, and arrows shot straight down were invisible. Root cause: `look_at()` was skipped entirely when velocity was near-vertical (dot product > 0.99 with UP). Fix: switch to `Vector3.FORWARD` as the up reference vector when velocity is within ~25 degrees of vertical, so the arrow always orients along its flight path.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/player/bow_system.gd` | Modified | Limb start Y 0.04→0.02, nock Y 0.245→0.225 |
+| `scripts/player/arrow_projectile.gd` | Modified | Use FORWARD as up vector for near-vertical flight |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Continue play-testing bow and arrow, tune arrow speed/arc/range if needed
-2. Remove TEMP test spawn items (bow + 20 arrows) once satisfied with bow behavior
-3. Continue general play-testing and bug fixing
+1. Remove TEMP test spawn items (bow + 20 arrows) once satisfied with bow behavior
+2. Continue play-testing and bug fixing
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

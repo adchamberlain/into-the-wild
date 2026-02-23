@@ -12,7 +12,7 @@ A solo camping adventure game built in Godot 4.5. Survive in the wilderness by g
 - **Biome variety** - Mixed forests with oak, big oak, birch, and ponderosa pine trees
 - **Natural features** - Ponds, lakes, alpine lakes, and rivers for swimming and fishing
 - **Blocky terrain** - Cell-based terrain with per-cell BoxShape3D collision for pixel-perfect physics
-- **Ambient wildlife** - Rabbits and birds that flee when approached
+- **Ambient wildlife** - Rabbits and birds that flee when approached, huntable with bow and arrow
 - **Cave entrances** - Explorable underground areas in rocky regions (requires torch)
 - **Auto step-up** - Minecraft-style automatic climbing over 1-block terrain steps
 - **Loading screen** - Cycling camping artwork while the world generates
@@ -26,6 +26,7 @@ A solo camping adventure game built in Godot 4.5. Survive in the wilderness by g
 - **Swimming** - Explore underwater with breath mechanics
 - **Save System** - 3 save slots with camp level and timestamp display
 - **Traps** - Place snare traps to catch rabbits and birds for food
+- **Bow & Arrow** - Craft a bow and arrows to hunt wildlife at range; physics-based arrow projectiles with gravity arc
 - **Compass Navigation** - Craft a compass and lodestone from rare ore; place the lodestone as a beacon and the HUD shows a directional arrow with distance back to it
 - **Birch Bark Map** - Harvest birch bark with a machete, craft a wilderness map showing terrain regions, water bodies, caves, and your position
 - **Tool Upgrades** - Craft leather wraps from hide to multiply axe and grappling hook durability (with visible wrap on the tool model)
@@ -82,6 +83,7 @@ Build up your camp through three levels:
 | 13 | Grappling Hook | Ascend cliff faces with arc-based traversal (100 durability) |
 | 23 | Lodestone | Placeable navigation beacon (pick up with E) |
 | 24 | Birch Bark Map | Fullscreen wilderness map showing terrain, water, caves, and player position |
+| 27 | Bow | Hunt wildlife with arrows (80 durability, hold right-click to draw) |
 
 ## Controls
 
@@ -98,6 +100,7 @@ Build up your camp through three levels:
 - **E** - Interact with objects
 - **F** - Eat food / Use healing items
 - **R** - Use equipped tool / Place structure
+- **Right-click (hold)** - Draw bow (when equipped), release to fire
 - **Q** - Unequip current item
 - **1-8** - Equip item in slot
 
@@ -157,6 +160,8 @@ Full controller support with PlayStation button prompts.
 | Grappling Hook | 3 Rope + 2 Metal Ingot + 1 Branch (Camp Lvl 2) |
 | Lantern | 2 Metal Ingot + 1 Crystal (Camp Lvl 3) |
 | Birch Bark Map | 3 Birch Bark + 2 Berry (Camp Lvl 2) |
+| Bow | 2 Rope + 3 Branch (Camp Lvl 2) |
+| Arrow Bundle (x20) | 2 Feathers + 4 Branch (Camp Lvl 2) |
 | Compass & Lodestone | 2 Rare Ore + 1 Metal Ingot + 1 Crystal (Camp Lvl 3) |
 
 ## Cooking
