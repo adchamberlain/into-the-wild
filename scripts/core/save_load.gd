@@ -122,7 +122,7 @@ func save_game() -> bool:
 
 
 ## Save the current game state to a specific slot.
-func save_game_slot(slot: int) -> bool:
+func save_game_slot(slot: int, silent: bool = false) -> bool:
 	if slot < 1 or slot > NUM_SLOTS:
 		var error: String = "Invalid slot number: %d" % slot
 		push_error(error)
@@ -145,7 +145,8 @@ func save_game_slot(slot: int) -> bool:
 	file.close()
 
 	print("[SaveLoad] Game saved to %s (slot %d)" % [filepath, slot])
-	game_saved.emit(filepath, slot)
+	if not silent:
+		game_saved.emit(filepath, slot)
 	return true
 
 

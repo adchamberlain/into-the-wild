@@ -837,6 +837,17 @@ func _on_player_died() -> void:
 	# Close any open UI menus and restore mouse capture
 	_close_all_menus()
 
+	# Fade to black, then respawn while screen is dark
+	var hud: Node = get_tree().get_first_node_in_group("hud")
+	if hud and hud.has_method("fade_to_black_and_back"):
+		hud.fade_to_black_and_back(1.0, 1.0, 1.0, _respawn_after_fade)
+	else:
+		# Fallback if HUD not available
+		_respawn_after_fade()
+
+
+## Phase 2 of death: runs while screen is black during fade.
+func _respawn_after_fade() -> void:
 	# Teleport player to respawn point
 	velocity = Vector3.ZERO
 	is_falling = false
@@ -852,11 +863,10 @@ func _on_player_died() -> void:
 		else:
 			hud.show_notification("You blacked out and woke up at camp", Color(1.0, 0.85, 0.3, 1))
 
-	# Auto-save after respawn
+	# Silent auto-save after respawn (no HUD notification)
 	var save_load: Node = get_node_or_null("/root/Main/SaveLoad")
 	if save_load and save_load.has_method("save_game_slot"):
-		# Defer to let position update first - auto-save deaths to slot 5
-		save_load.call_deferred("save_game_slot", 5)
+		save_load.call_deferred("save_game_slot", 5, true)
 		print("[Player] Auto-saved after respawn to slot 5")
 
 
