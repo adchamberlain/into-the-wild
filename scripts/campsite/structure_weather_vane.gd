@@ -66,7 +66,7 @@ func interact(player: Node) -> bool:
 		forecast_lines.append("Tomorrow: %s" % weather_manager.get_next_weather())
 
 	var forecast_text: String = "\n".join(forecast_lines)
-	_show_notification(forecast_text, Color(0.7, 0.85, 1.0))
+	_show_notification(forecast_text, Color(0.7, 0.85, 1.0), 5.0)
 
 	print("[WeatherVane] Forecast: %s" % forecast_text)
 
@@ -100,10 +100,10 @@ func get_interaction_text() -> String:
 	return "Check Weather"
 
 
-func _show_notification(message: String, color: Color) -> void:
+func _show_notification(message: String, color: Color, duration: float = 0.0) -> void:
 	var hud: Node = _find_hud()
 	if hud and hud.has_method("show_notification"):
-		hud.show_notification(message, color)
+		hud.show_notification(message, color, duration)
 
 
 func _find_hud() -> Node:

@@ -626,8 +626,8 @@ func _reset_damage_flash() -> void:
 	_update_protection_display()
 
 
-## Show a notification message. Duration scales with line count for multi-line messages.
-func show_notification(message: String, color: Color = Color.WHITE) -> void:
+## Show a notification message. Duration scales with line count unless overridden.
+func show_notification(message: String, color: Color = Color.WHITE, override_duration: float = 0.0) -> void:
 	if notification_label and notification_panel:
 		notification_label.text = message
 		notification_label.add_theme_color_override("font_color", color)
@@ -635,9 +635,11 @@ func show_notification(message: String, color: Color = Color.WHITE) -> void:
 		# Cancel previous notification timer so it doesn't hide this one early
 		if _notification_timer and _notification_timer.time_left > 0 and _notification_timer.timeout.is_connected(_hide_notification):
 			_notification_timer.timeout.disconnect(_hide_notification)
-		# Duration scales with content: 3s base + 1s per extra line
-		var line_count: int = message.count("\n") + 1
-		var duration: float = 3.0 + max(0, line_count - 1) * 1.0
+		# Use override if provided, otherwise scale with content: 3s base + 1s per extra line
+		var duration: float = override_duration
+		if duration <= 0.0:
+			var line_count: int = message.count("\n") + 1
+			duration = 3.0 + max(0, line_count - 1) * 1.0
 		_notification_timer = get_tree().create_timer(duration)
 		_notification_timer.timeout.connect(_hide_notification)
 
