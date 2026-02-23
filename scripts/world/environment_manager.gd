@@ -606,6 +606,7 @@ func set_weather_overlay(weather: String) -> void:
 	current_weather = weather
 	_apply_weather_effects()
 	_update_night_sky()  # Weather affects star visibility
+	_update_environment()  # Refresh haze and sky colors for new weather
 
 
 func _apply_weather_effects() -> void:
