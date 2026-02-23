@@ -39,6 +39,8 @@ func _ready() -> void:
 
 
 func _build_mesh() -> void:
+	loot_table = {"raw_meat": 1, "hide": 1}
+
 	# Materials
 	var body_mat: StandardMaterial3D = StandardMaterial3D.new()
 	body_mat.albedo_color = body_color

@@ -75,10 +75,19 @@ func _on_body_entered(_body: Node) -> void:
 func _on_area_body_entered(body: Node) -> void:
 	if has_hit:
 		return
+	# Check the body itself and its parent for take_hit
+	var target: Node = null
 	if body.has_method("take_hit"):
+		target = body
+	elif body.get_parent() and body.get_parent().has_method("take_hit"):
+		target = body.get_parent()
+
+	if target:
 		has_hit = true
-		body.take_hit(ARROW_DAMAGE)
-		SFXManager.play_sfx("arrow_hit")
+		target.take_hit(ARROW_DAMAGE)
+		var sfx: Node = get_node_or_null("/root/SFXManager")
+		if sfx and sfx.has_method("play_sfx"):
+			sfx.play_sfx("arrow_hit")
 		queue_free()
 
 

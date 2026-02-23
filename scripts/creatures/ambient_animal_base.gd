@@ -1,7 +1,7 @@
 extends Node3D
 class_name AmbientAnimalBase
 ## Base class for ambient wildlife that provides atmospheric life to the wilderness.
-## Animals flee when the player approaches but cannot be directly hunted.
+## Animals can be hunted with arrows for loot drops.
 
 # State machine
 enum State { IDLE, MOVING, FLEEING }
@@ -41,16 +41,34 @@ var mesh_container: Node3D  # Container for animal mesh (for rotation)
 # RNG for behavior
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
+# Hunting/loot
+var loot_table: Dictionary = {}
+var is_dead: bool = false
+
 
 func _ready() -> void:
 	# Unique seed per animal for varied behavior
 	rng.seed = hash(global_position) + randi()
+	add_to_group("ambient_animal")
 
 	# Create mesh container for rotation BEFORE any awaits
 	# (so _process() doesn't get a null mesh_container)
 	mesh_container = Node3D.new()
 	mesh_container.name = "MeshContainer"
 	add_child(mesh_container)
+
+	# Add a physics body for arrow detection (collision layer 2)
+	var hit_body: StaticBody3D = StaticBody3D.new()
+	hit_body.name = "HitBody"
+	hit_body.collision_layer = 2  # Animal detection layer
+	hit_body.collision_mask = 0   # Doesn't detect anything itself
+	var hit_shape: CollisionShape3D = CollisionShape3D.new()
+	var hit_box: BoxShape3D = BoxShape3D.new()
+	hit_box.size = Vector3(0.6, 0.6, 0.6)
+	hit_shape.shape = hit_box
+	hit_shape.position = Vector3(0, 0.3, 0)
+	hit_body.add_child(hit_shape)
+	add_child(hit_body)
 
 	# Find player, chunk manager, and SFX manager (cache for performance)
 	await get_tree().process_frame
@@ -253,3 +271,49 @@ func _get_random_nearby_position(max_distance: float) -> Vector3:
 	var distance: float = rng.randf_range(max_distance * 0.3, max_distance)
 	var offset: Vector3 = Vector3(cos(angle) * distance, 0, sin(angle) * distance)
 	return global_position + offset
+
+
+## Called when hit by an arrow or other weapon.
+func take_hit(damage: float) -> void:
+	if is_dead:
+		return
+	is_dead = true
+
+	# Drop loot items directly to player inventory
+	_drop_loot()
+
+	# Play death visual - tip over
+	if mesh_container:
+		var tween: Tween = create_tween()
+		tween.tween_property(mesh_container, "rotation_degrees:x", 90.0, 0.3)
+
+	# Play hit sound
+	if sfx_manager and sfx_manager.has_method("play_sfx"):
+		sfx_manager.play_sfx("arrow_hit")
+
+	# Despawn after brief delay
+	var timer: SceneTreeTimer = get_tree().create_timer(1.0)
+	timer.timeout.connect(queue_free)
+
+
+## Drop loot items to player inventory.
+func _drop_loot() -> void:
+	var player_node: Node = get_tree().get_first_node_in_group("player")
+	if not player_node:
+		return
+	var inv: Inventory = player_node.inventory if "inventory" in player_node else null
+	if not inv:
+		return
+
+	var hud: Node = get_tree().get_first_node_in_group("hud")
+	var loot_msg: String = ""
+
+	for item_type: String in loot_table:
+		var amount: int = loot_table[item_type]
+		inv.add_item(item_type, amount)
+		if loot_msg != "":
+			loot_msg += ", "
+		loot_msg += "%dx %s" % [amount, item_type.replace("_", " ")]
+
+	if hud and hud.has_method("show_notification") and loot_msg != "":
+		hud.show_notification("Hunted: " + loot_msg, Color(0.6, 1.0, 0.6))
