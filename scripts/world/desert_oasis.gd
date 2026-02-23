@@ -86,6 +86,8 @@ func _create_water_area() -> void:
 	# Water area for swimming detection - matches fishing_spot.gd pattern
 	var water_area: Area3D = Area3D.new()
 	water_area.name = "WaterArea"
+	water_area.collision_layer = 0
+	water_area.collision_mask = 4  # Player layer
 
 	var area_shape: CollisionShape3D = CollisionShape3D.new()
 	var area_box: BoxShape3D = BoxShape3D.new()

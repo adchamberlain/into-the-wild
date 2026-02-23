@@ -134,11 +134,15 @@ func _become_pickable() -> void:
 
 
 func get_interaction_text() -> String:
-	return "Pick up diamond arrow"
+	if is_pickable:
+		return "Pick up diamond arrow"
+	return ""
 
 
 func interact(player_node: Node) -> bool:
-	var inv: Inventory = player_node.inventory if "inventory" in player_node else null
+	if not is_pickable:
+		return false
+	var inv: Node = player_node.get_node_or_null("Inventory")
 	if not inv:
 		return false
 

@@ -18,7 +18,7 @@ static var _materials_initialized: bool = false
 func _ready() -> void:
 	_ensure_shared_materials()
 
-	# Configure resource properties based on gem variant
+	# Configure resource properties based on gem variant BEFORE super._ready()
 	match gem_type:
 		"opal":
 			resource_type = "opal"
@@ -34,12 +34,9 @@ func _ready() -> void:
 	chops_required = 4
 	adjust_to_terrain = false  # Placed at specific position on pool floor
 
-	# Store original scale
-	original_scale = scale
+	# Call super to set original_scale, node_name, and add to groups
+	super._ready()
 
-	# Add to groups
-	add_to_group("interactable")
-	add_to_group("resource_node")
 	add_to_group("gem")
 
 	# Build the visual mesh

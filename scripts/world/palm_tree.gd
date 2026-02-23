@@ -5,6 +5,8 @@ class_name PalmTree
 static var shared_trunk_material: StandardMaterial3D
 static var shared_frond_material: StandardMaterial3D
 static var shared_frond_dark_material: StandardMaterial3D
+static var shared_ring_material: StandardMaterial3D
+static var shared_coconut_material: StandardMaterial3D
 
 var tree_height: float = 6.0
 
@@ -22,6 +24,10 @@ static func _ensure_shared_materials() -> void:
 	shared_frond_material.albedo_color = Color(0.25, 0.55, 0.20)
 	shared_frond_dark_material = StandardMaterial3D.new()
 	shared_frond_dark_material.albedo_color = Color(0.18, 0.42, 0.15)
+	shared_ring_material = StandardMaterial3D.new()
+	shared_ring_material.albedo_color = Color(0.42, 0.30, 0.18)
+	shared_coconut_material = StandardMaterial3D.new()
+	shared_coconut_material.albedo_color = Color(0.45, 0.30, 0.15)
 
 
 func build(rng: RandomNumberGenerator) -> void:
@@ -48,13 +54,11 @@ func build(rng: RandomNumberGenerator) -> void:
 		add_child(trunk_seg)
 
 	# Trunk ring details (darker bands)
-	var ring_mat: StandardMaterial3D = StandardMaterial3D.new()
-	ring_mat.albedo_color = Color(0.42, 0.30, 0.18)
 	for i: int in range(3):
 		var ring: MeshInstance3D = MeshInstance3D.new()
 		var ring_box: BoxMesh = BoxMesh.new()
 		ring_box.size = Vector3(0.38, 0.06, 0.38)
-		ring_box.material = ring_mat
+		ring_box.material = shared_ring_material
 		ring.mesh = ring_box
 		ring.position.y = tree_height * 0.3 + i * tree_height * 0.25
 		add_child(ring)
@@ -80,14 +84,12 @@ func build(rng: RandomNumberGenerator) -> void:
 		add_child(frond)
 
 	# Coconut cluster (2-3 small brown spheres near crown)
-	var coconut_mat: StandardMaterial3D = StandardMaterial3D.new()
-	coconut_mat.albedo_color = Color(0.45, 0.30, 0.15)
 	var coconut_count: int = rng.randi_range(2, 3)
 	for i: int in range(coconut_count):
 		var coconut: MeshInstance3D = MeshInstance3D.new()
 		var coconut_box: BoxMesh = BoxMesh.new()
 		coconut_box.size = Vector3(0.18, 0.18, 0.18)
-		coconut_box.material = coconut_mat
+		coconut_box.material = shared_coconut_material
 		coconut.mesh = coconut_box
 		var c_angle: float = TAU * i / coconut_count
 		coconut.position = crown_pos + Vector3(cos(c_angle) * 0.2, -0.4, sin(c_angle) * 0.2)
