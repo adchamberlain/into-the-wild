@@ -773,10 +773,11 @@ func _apply_fall_damage() -> void:
 
 	if stats:
 		stats.take_damage(damage)
+		SFXManager.play_sfx("fall_hurt")
 		# Show damage notification via HUD
 		var hud: Node = get_tree().get_first_node_in_group("hud")
 		if hud and hud.has_method("show_notification"):
-			hud.show_notification("Fall damage! -%.0f HP" % damage, Color(1.0, 0.4, 0.4, 1))
+			hud.show_notification("Ouch! -%.0f HP" % damage, Color(1.0, 0.4, 0.4, 1))
 		print("[Player] Fall damage: %.1f HP (fell %.1f units)" % [damage, fall_distance])
 
 

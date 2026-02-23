@@ -16,6 +16,7 @@ const DEFAULT_COOLDOWNS: Dictionary = {
 	"footstep": 0.3,
 	"chop": 0.15,
 	"swing": 0.2,
+	"fall_hurt": 0.5,
 	"pickup": 0.1,
 	"berry_pluck": 0.15,
 	"tree_fall": 0.5,
@@ -149,6 +150,9 @@ func _preload_sounds() -> void:
 		if ResourceLoader.exists(path):
 			loaded_sfx[sound_name] = load(path)
 
+	# Generate procedural sounds
+	loaded_sfx["fall_hurt"] = _generate_fall_hurt_sound()
+
 	# Preload footsteps
 	for surface in FOOTSTEP_PATHS.keys():
 		loaded_footsteps[surface] = []
@@ -229,6 +233,42 @@ func play_sfx(sound_name: String) -> void:
 ## Set the SFX volume (0.0 to 1.0).
 func set_volume(volume: float) -> void:
 	sfx_volume = clampf(volume, 0.0, 1.0)
+
+
+## Generate a procedural "ouch" grunt sound for fall damage.
+## Short low-frequency burst with quick decay to simulate a pain grunt.
+func _generate_fall_hurt_sound() -> AudioStreamWAV:
+	var sample_rate: int = 22050
+	var duration: float = 0.25
+	var num_samples: int = int(sample_rate * duration)
+	var data: PackedByteArray = PackedByteArray()
+	data.resize(num_samples * 2)  # 16-bit samples = 2 bytes each
+
+	for i: int in range(num_samples):
+		var t: float = float(i) / sample_rate
+		# Quick exponential decay envelope
+		var envelope: float = exp(-t * 16.0)
+		# Low grunt tone (~120 Hz) with harmonics for roughness
+		var wave: float = sin(t * 120.0 * TAU) * 0.5
+		wave += sin(t * 180.0 * TAU) * 0.25
+		wave += sin(t * 85.0 * TAU) * 0.2
+		# Add a bit of noise for breathiness
+		wave += (randf() * 2.0 - 1.0) * 0.15
+		# Downward pitch bend (grunt falling off)
+		var bend: float = 1.0 - t * 2.0
+		wave = sin(t * 120.0 * bend * TAU) * 0.4 + wave * 0.6
+
+		var sample: float = wave * envelope * 0.7
+		var sample_int: int = clampi(int(sample * 32767.0), -32768, 32767)
+		data[i * 2] = sample_int & 0xFF
+		data[i * 2 + 1] = (sample_int >> 8) & 0xFF
+
+	var stream: AudioStreamWAV = AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = sample_rate
+	stream.stereo = false
+	stream.data = data
+	return stream
 
 
 ## Get the current SFX volume.
