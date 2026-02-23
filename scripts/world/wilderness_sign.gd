@@ -18,6 +18,13 @@ var overlay_layer: CanvasLayer
 var is_overlay_visible: bool = false
 var close_hint_label: Label
 
+# Labels and containers for dynamic scaling
+var _scaled_labels: Array[Dictionary] = []  # [{label, base_size}]
+var _inner_style: StyleBoxFlat
+var _content_vbox: VBoxContainer
+var _tree_logo: Control
+const REFERENCE_HEIGHT: float = 1080.0  # Design reference resolution
+
 
 func _ready() -> void:
 	structure_type = "wilderness_sign"
@@ -239,32 +246,28 @@ func _build_overlay() -> void:
 
 	# Inner panel - tan/cream
 	var inner_panel: PanelContainer = PanelContainer.new()
-	var inner_style: StyleBoxFlat = StyleBoxFlat.new()
-	inner_style.bg_color = Color(0.72, 0.68, 0.55)
-	inner_style.corner_radius_top_left = 8
-	inner_style.corner_radius_top_right = 8
-	inner_style.corner_radius_bottom_left = 8
-	inner_style.corner_radius_bottom_right = 8
-	inner_style.content_margin_left = 40.0
-	inner_style.content_margin_right = 40.0
-	inner_style.content_margin_top = 30.0
-	inner_style.content_margin_bottom = 30.0
-	inner_panel.add_theme_stylebox_override("panel", inner_style)
+	_inner_style = StyleBoxFlat.new()
+	_inner_style.bg_color = Color(0.72, 0.68, 0.55)
+	_inner_style.corner_radius_top_left = 8
+	_inner_style.corner_radius_top_right = 8
+	_inner_style.corner_radius_bottom_left = 8
+	_inner_style.corner_radius_bottom_right = 8
+	_inner_style.content_margin_left = 40.0
+	_inner_style.content_margin_right = 40.0
+	_inner_style.content_margin_top = 30.0
+	_inner_style.content_margin_bottom = 30.0
+	inner_panel.add_theme_stylebox_override("panel", _inner_style)
 	outer_panel.add_child(inner_panel)
 
 	# Content VBox
-	var vbox: VBoxContainer = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 16)
-	inner_panel.add_child(vbox)
+	_content_vbox = VBoxContainer.new()
+	_content_vbox.add_theme_constant_override("separation", 16)
+	inner_panel.add_child(_content_vbox)
+	var vbox: VBoxContainer = _content_vbox
 
 	# Title
-	var title: Label = Label.new()
-	title.text = "CARLSTON WILDERNESS"
-	title.add_theme_font_override("font", HUD_FONT)
-	title.add_theme_font_size_override("font_size", 56)
-	title.add_theme_color_override("font_color", Color(0.30, 0.18, 0.05))
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(title)
+	var title: Label = _make_label(vbox, "CARLSTON WILDERNESS", 56,
+		Color(0.30, 0.18, 0.05), HORIZONTAL_ALIGNMENT_CENTER)
 
 	# Separator
 	var sep: HSeparator = HSeparator.new()
@@ -275,23 +278,21 @@ func _build_overlay() -> void:
 	sep.add_theme_stylebox_override("separator", sep_style)
 	vbox.add_child(sep)
 
+	# Tree logo emblem (centered between title and subtitle)
+	var logo_container: CenterContainer = CenterContainer.new()
+	_tree_logo = Control.new()
+	_tree_logo.custom_minimum_size = Vector2(80, 90)
+	_tree_logo.set_script(_create_tree_logo_script())
+	logo_container.add_child(_tree_logo)
+	vbox.add_child(logo_container)
+
 	# Subtitle
-	var subtitle: Label = Label.new()
-	subtitle.text = "Welcome to Carlston Wilderness"
-	subtitle.add_theme_font_override("font", HUD_FONT)
-	subtitle.add_theme_font_size_override("font_size", 36)
-	subtitle.add_theme_color_override("font_color", Color(0.30, 0.18, 0.05))
-	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(subtitle)
+	_make_label(vbox, "Welcome to Carlston Wilderness", 36,
+		Color(0.30, 0.18, 0.05), HORIZONTAL_ALIGNMENT_CENTER)
 
 	# Section header
-	var section_header: Label = Label.new()
-	section_header.text = "REGULATIONS & INFORMATION"
-	section_header.add_theme_font_override("font", HUD_FONT)
-	section_header.add_theme_font_size_override("font_size", 32)
-	section_header.add_theme_color_override("font_color", Color(0.30, 0.18, 0.05))
-	section_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(section_header)
+	_make_label(vbox, "REGULATIONS & INFORMATION", 32,
+		Color(0.30, 0.18, 0.05), HORIZONTAL_ALIGNMENT_CENTER)
 
 	# Bullet points
 	var bullets: Array[String] = [
@@ -304,13 +305,9 @@ func _build_overlay() -> void:
 	]
 
 	for bullet_text: String in bullets:
-		var bullet: Label = Label.new()
-		bullet.text = "\u2022  " + bullet_text
-		bullet.add_theme_font_override("font", HUD_FONT)
-		bullet.add_theme_font_size_override("font_size", 28)
-		bullet.add_theme_color_override("font_color", Color(0.30, 0.18, 0.05))
+		var bullet: Label = _make_label(vbox, "\u2022  " + bullet_text, 28,
+			Color(0.30, 0.18, 0.05))
 		bullet.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		vbox.add_child(bullet)
 
 	# Expanding spacer
 	var spacer: Control = Control.new()
@@ -318,12 +315,81 @@ func _build_overlay() -> void:
 	vbox.add_child(spacer)
 
 	# Close hint (text updated dynamically in _show_overlay)
-	close_hint_label = Label.new()
-	close_hint_label.add_theme_font_override("font", HUD_FONT)
-	close_hint_label.add_theme_font_size_override("font_size", 28)
-	close_hint_label.add_theme_color_override("font_color", Color(0.45, 0.40, 0.30))
-	close_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(close_hint_label)
+	close_hint_label = _make_label(vbox, "", 28,
+		Color(0.45, 0.40, 0.30), HORIZONTAL_ALIGNMENT_CENTER)
+
+
+func _create_tree_logo_script() -> GDScript:
+	## Returns an inline GDScript for the tree logo Control that draws via _draw().
+	var src: String = """extends Control
+
+func _draw() -> void:
+	var w: float = size.x
+	var h: float = size.y
+	var cx: float = w / 2.0
+
+	# Dark background square
+	draw_rect(Rect2(0, 0, w, h), Color(0.12, 0.18, 0.10))
+
+	# Tree crown - dark green triangle (outline/shadow)
+	var outer: PackedVector2Array = PackedVector2Array([
+		Vector2(cx, h * 0.08),
+		Vector2(cx + w * 0.42, h * 0.72),
+		Vector2(cx - w * 0.42, h * 0.72),
+	])
+	draw_colored_polygon(outer, Color(0.15, 0.28, 0.12))
+
+	# Tree crown - lighter green triangle (inner)
+	var inner: PackedVector2Array = PackedVector2Array([
+		Vector2(cx, h * 0.15),
+		Vector2(cx + w * 0.32, h * 0.68),
+		Vector2(cx - w * 0.32, h * 0.68),
+	])
+	draw_colored_polygon(inner, Color(0.22, 0.42, 0.18))
+
+	# Trunk - small brown rectangle
+	var trunk_w: float = w * 0.10
+	var trunk_h: float = h * 0.15
+	draw_rect(Rect2(cx - trunk_w / 2.0, h * 0.70, trunk_w, trunk_h), Color(0.35, 0.22, 0.12))
+"""
+	var script: GDScript = GDScript.new()
+	script.source_code = src
+	script.reload()
+	return script
+
+
+func _make_label(parent: Node, text: String, base_size: int, color: Color,
+		alignment: HorizontalAlignment = HORIZONTAL_ALIGNMENT_LEFT) -> Label:
+	var label: Label = Label.new()
+	label.text = text
+	label.add_theme_font_override("font", HUD_FONT)
+	label.add_theme_font_size_override("font_size", base_size)
+	label.add_theme_color_override("font_color", color)
+	label.horizontal_alignment = alignment
+	parent.add_child(label)
+	_scaled_labels.append({"label": label, "base_size": base_size})
+	return label
+
+
+func _scale_fonts() -> void:
+	var viewport_height: float = get_viewport().get_visible_rect().size.y
+	var sf: float = viewport_height / REFERENCE_HEIGHT
+	for entry: Dictionary in _scaled_labels:
+		var label: Label = entry["label"] as Label
+		var base_size: int = entry["base_size"] as int
+		if is_instance_valid(label):
+			label.add_theme_font_size_override("font_size", int(base_size * sf))
+	# Scale panel margins and vbox spacing
+	if _inner_style:
+		_inner_style.content_margin_left = 40.0 * sf
+		_inner_style.content_margin_right = 40.0 * sf
+		_inner_style.content_margin_top = 30.0 * sf
+		_inner_style.content_margin_bottom = 30.0 * sf
+	if _content_vbox:
+		_content_vbox.add_theme_constant_override("separation", int(16 * sf))
+	if _tree_logo:
+		_tree_logo.custom_minimum_size = Vector2(80 * sf, 90 * sf)
+		_tree_logo.queue_redraw()
 
 
 func interact(player_node: Node) -> bool:
@@ -358,6 +424,9 @@ func _show_overlay(player_node: Node) -> void:
 		return
 	is_overlay_visible = true
 	overlay_layer.visible = true
+
+	# Scale fonts to current viewport size
+	_scale_fonts()
 
 	# Update close hint with current input device
 	var input_mgr: Node = get_node_or_null("/root/InputManager")
