@@ -1,5 +1,5 @@
 extends CanvasLayer
-class_name BarkMapUI
+class_name MapUI
 ## HUD minimap overlay showing terrain, water, caves, structures, and player position.
 ## Displays on the right side below the time/camp level panel with transparency.
 

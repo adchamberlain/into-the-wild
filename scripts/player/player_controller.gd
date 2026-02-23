@@ -184,7 +184,7 @@ func _ready() -> void:
 	if inventory:
 		inventory.add_item("bow", 1)
 		inventory.add_item("arrows", 20)
-		inventory.add_item("bark_map", 1)
+		inventory.add_item("map", 1)
 
 
 

@@ -32,7 +32,7 @@ func _auto_detect_ui_scale() -> float:
 
 ## Set the UI scale and persist it.
 func set_ui_scale(scale: float) -> void:
-	ui_scale = clampf(scale, 0.5, 1.5)
+	ui_scale = clampf(scale, 0.25, 1.5)
 	_apply_ui_scale()
 	_save_display_config()
 

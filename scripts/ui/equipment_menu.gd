@@ -31,7 +31,7 @@ const EQUIPMENT_SLOTS: Array = [
 	{"key": "-", "type": "canvas_tent_kit", "name": "Canvas Tent Kit"},
 	{"key": "=", "type": "cabin_kit", "name": "Cabin Kit"},
 	{"key": "[", "type": "grappling_hook", "name": "Grappling Hook"},
-	{"key": "]", "type": "bark_map", "name": "Birch Bark Map"},
+	{"key": "]", "type": "map", "name": "Map"},
 	{"key": "\\", "type": "bow", "name": "Bow"},
 	{"key": "", "type": "metal_axe", "name": "Metal Axe"},
 	{"key": "", "type": "snare_trap_kit", "name": "Snare Trap Kit"},

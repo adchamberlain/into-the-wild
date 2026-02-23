@@ -230,10 +230,10 @@ func _load_recipes() -> void:
 			"requires_bench": true,
 			"min_camp_level": 3
 		},
-		"bark_map": {
-			"name": "Birch Bark Map",
+		"map": {
+			"name": "Map",
 			"inputs": {"birch_bark": 3, "berry": 2},
-			"output_type": "bark_map",
+			"output_type": "map",
 			"output_amount": 1,
 			"description": "A hand-drawn map of the surrounding wilderness.",
 			"requires_bench": true,

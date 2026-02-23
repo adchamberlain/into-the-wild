@@ -197,7 +197,7 @@ func _create_ui_scale_control() -> void:
 
 	# Slider
 	ui_scale_slider = HSlider.new()
-	ui_scale_slider.min_value = 0.5
+	ui_scale_slider.min_value = 0.25
 	ui_scale_slider.max_value = 1.5
 	ui_scale_slider.step = 0.05
 	ui_scale_slider.value = game_state.ui_scale

@@ -151,8 +151,8 @@ const EQUIPPABLE_ITEMS: Dictionary = {
 		"has_light": false,
 		"placeable": true
 	},
-	"bark_map": {
-		"name": "Birch Bark Map",
+	"map": {
+		"name": "Map",
 		"slot": 24,
 		"has_light": false,
 		"tool_type": "map"
@@ -1797,13 +1797,13 @@ func _use_map() -> bool:
 	# Block further calls until R2 is released, regardless of open or close
 	_map_open_blocked = true
 
-	# If map is already open, don't do anything — BarkMapUI handles its own closing
+	# If map is already open, don't do anything — MapUI handles its own closing
 	var existing: Node = player.get_tree().get_first_node_in_group("map_ui")
 	if existing and is_instance_valid(existing):
 		return true
 
 	# Open map overlay
-	var map_ui: CanvasLayer = BarkMapUI.new()
+	var map_ui: CanvasLayer = MapUI.new()
 	player.get_tree().root.add_child(map_ui)
 	return true
 
