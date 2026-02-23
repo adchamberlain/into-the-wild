@@ -184,6 +184,11 @@ func _ready() -> void:
 				equipment.durability_changed.connect(_on_durability_changed)
 				equipment.tool_broken.connect(_on_tool_broken)
 
+		# Connect to bow system for arrow count updates
+		var bow: Node = player.get_node_or_null("BowSystem")
+		if bow and bow.has_signal("arrow_count_changed"):
+			bow.arrow_count_changed.connect(func(_count: int) -> void: _update_equipped_display())
+
 	# Connect to campsite manager
 	if campsite_manager_path:
 		campsite_manager = get_node_or_null(campsite_manager_path)
@@ -357,6 +362,16 @@ func _update_equipped_display() -> void:
 			# Fishing is done by interacting with fishing spots, not use_equipped
 			var interact_key: String = _get_button_prompt("interact")
 			equipped_label.text += " [%s fish, %s unequip]" % [interact_key, unequip_key]
+		elif equipped_type == "bow":
+			var arrow_count: int = 0
+			var player_node: Node = get_tree().get_first_node_in_group("player")
+			if player_node:
+				var inv: Node = player_node.get_node_or_null("Inventory")
+				if not inv and "inventory" in player_node:
+					inv = player_node.inventory
+				if inv and inv.has_method("get_item_count"):
+					arrow_count = inv.get_item_count("arrows")
+			equipped_label.text += " (%d arrows) [R-click aim, %s unequip]" % [arrow_count, unequip_key]
 		elif equipped_type == "bark_map":
 			equipped_label.text += " [%s open map, %s unequip]" % [use_key, unequip_key]
 		else:
