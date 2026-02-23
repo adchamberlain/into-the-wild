@@ -122,6 +122,7 @@ custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 min_value = 1.0
 max_value = 60.0
+step = 1.0
 value = 20.0
 
 [node name="DayLengthValue" type="Label" parent="Panel/VBoxContainer/DayLengthContainer"]
