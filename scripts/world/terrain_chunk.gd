@@ -1619,13 +1619,13 @@ func _create_scatter_log(pos: Vector3, rng: RandomNumberGenerator) -> void:
 
 	if is_stump:
 		# Short vertical stack of 2-3 flat boxes
-		var stump_radius: float = rng.randf_range(0.25, 0.4)
+		var stump_radius: float = rng.randf_range(0.5, 0.7)
 		var layers: int = rng.randi_range(2, 3)
 		var y_offset: float = 0.0
 		for i: int in range(layers):
 			var box: MeshInstance3D = MeshInstance3D.new()
 			var mesh: BoxMesh = BoxMesh.new()
-			var layer_h: float = rng.randf_range(0.1, 0.18)
+			var layer_h: float = rng.randf_range(0.2, 0.35)
 			var shrink: float = 1.0 - float(i) * 0.1
 			mesh.size = Vector3(stump_radius * 2.0 * shrink, layer_h, stump_radius * 2.0 * shrink)
 			box.mesh = mesh
