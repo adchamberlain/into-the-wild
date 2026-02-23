@@ -317,6 +317,8 @@ func _input(event: InputEvent) -> void:
 		_try_equip_slot(13)
 	elif event.physical_keycode == KEY_BRACKETRIGHT:
 		_try_equip_slot(24)
+	elif event.physical_keycode == KEY_BACKSLASH:
+		_try_equip_slot(27)
 
 
 ## Check if any UI menu is open that should block equipment input.

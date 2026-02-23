@@ -32,6 +32,7 @@ const EQUIPMENT_SLOTS: Array = [
 	{"key": "=", "type": "cabin_kit", "name": "Cabin Kit"},
 	{"key": "[", "type": "grappling_hook", "name": "Grappling Hook"},
 	{"key": "]", "type": "bark_map", "name": "Birch Bark Map"},
+	{"key": "\\", "type": "bow", "name": "Bow"},
 	{"key": "", "type": "metal_axe", "name": "Metal Axe"},
 	{"key": "", "type": "snare_trap_kit", "name": "Snare Trap Kit"},
 	{"key": "", "type": "smithing_station_kit", "name": "Smithing Station Kit"},
