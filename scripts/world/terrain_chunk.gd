@@ -942,6 +942,10 @@ func _spawn_chunk_trees() -> void:
 				if tree.scene_file_path.ends_with("birch_tree_resource.tscn"):
 					_try_apply_bark_strip(tree)
 
+				# Register tree for wind sway animation
+				if chunk_manager.tree_sway:
+					chunk_manager.tree_sway.register_tree(tree, rng.randf() * TAU)
+
 				# Batch yielding - pause every N trees to prevent frame stuttering
 				trees_spawned_this_batch += 1
 				if trees_spawned_this_batch >= TREES_PER_BATCH:

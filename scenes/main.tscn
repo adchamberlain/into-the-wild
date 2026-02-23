@@ -1,4 +1,4 @@
-[gd_scene load_steps=23 format=3 uid="uid://main001"]
+[gd_scene load_steps=24 format=3 uid="uid://main001"]
 
 [ext_resource type="PackedScene" uid="uid://world001" path="res://scenes/world/world.tscn" id="1_world"]
 [ext_resource type="Script" path="res://scripts/ui/loading_screen.gd" id="23_loading"]
@@ -24,6 +24,7 @@
 [ext_resource type="PackedScene" uid="uid://berrybush001" path="res://scenes/resources/berry_bush.tscn" id="21_berry_bush"]
 [ext_resource type="PackedScene" uid="uid://pause_menu001" path="res://scenes/ui/pause_menu.tscn" id="22_pause_menu"]
 [ext_resource type="Script" path="res://scripts/world/cloud_manager.gd" id="23_cloud"]
+[ext_resource type="Script" path="res://scripts/world/tree_sway.gd" id="24_tree_sway"]
 
 [sub_resource type="Environment" id="Environment_1"]
 background_mode = 1
@@ -141,6 +142,9 @@ time_manager_path = NodePath("../TimeManager")
 player_path = NodePath("../Player")
 campsite_manager_path = NodePath("../CampsiteManager")
 environment_manager_path = NodePath("../EnvironmentManager")
+
+[node name="TreeSway" type="Node" parent="."]
+script = ExtResource("24_tree_sway")
 
 [node name="ResourceManager" type="Node" parent="."]
 script = ExtResource("13_resource_manager")

@@ -176,6 +176,9 @@ var spawned_cave_indices: Array[int] = []  # Track which cave entrances have bee
 # Resource manager reference (for registering chunk-spawned trees)
 var resource_manager: ResourceManager
 
+# Tree sway manager reference
+var tree_sway: TreeSway
+
 # Shared material for all chunks
 var terrain_material: StandardMaterial3D
 
@@ -209,6 +212,7 @@ func _ready() -> void:
 	var main_node: Node = get_parent().get_parent()  # World -> Main
 	if main_node:
 		resource_manager = main_node.get_node_or_null("ResourceManager") as ResourceManager
+		tree_sway = main_node.get_node_or_null("TreeSway") as TreeSway
 
 	# Find player node
 	await get_tree().process_frame
