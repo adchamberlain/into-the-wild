@@ -5143,6 +5143,21 @@ Fixed 9 gameplay bugs and added a placement cooldown, covering floating trees, t
 
 ---
 
+## Session 29 - Smoker & Drying Rack Require Pickup (2026-02-22)
+
+**Require player pickup**: Smoker and drying rack no longer auto-add finished products to the player's inventory. Output is always stored in `pending_output`, requiring the player to return and interact with the structure to collect it. A gold HUD notification ("Smoker finished! Collect your food." / "Drying rack finished! Collect your food.") alerts the player when processing completes.
+
+**What changed**: Removed the auto-add-to-inventory path from `_complete_smoking()` and `_complete_drying()`. The existing `pending_output` + collect-on-interact mechanism (previously only a fallback) is now the primary path. No changes needed to `interact()`, `get_interaction_text()`, save/load, or food visuals — those already handled `pending_output` correctly.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/campsite/structure_smoker.gd` | Modified | `_complete_smoking()` always stores in `pending_output`, adds HUD notification |
+| `scripts/campsite/structure_drying_rack.gd` | Modified | `_complete_drying()` always stores in `pending_output`, adds HUD notification |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
