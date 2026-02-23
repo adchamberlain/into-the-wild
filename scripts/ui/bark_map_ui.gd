@@ -300,7 +300,15 @@ func _draw_structure_icon(pos: Vector2, structure_type: String) -> void:
 	map_control.draw_rect(rect, Color(1, 1, 1, 0.6), false, 1.0)
 
 
+var _opened_frame: int = 0
+
+func _enter_tree() -> void:
+	_opened_frame = Engine.get_process_frames()
+
 func _input(event: InputEvent) -> void:
+	# Skip the same frame's input to avoid the open event immediately closing the map
+	if Engine.get_process_frames() <= _opened_frame + 1:
+		return
 	# Close map on use_equipped action (R key / R2 trigger)
 	if event.is_action_pressed("use_equipped"):
 		close_map()
