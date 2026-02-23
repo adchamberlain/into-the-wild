@@ -1179,12 +1179,12 @@ func _create_heat_indicator() -> void:
 	style.content_margin_bottom = 8.0
 	heat_panel.add_theme_stylebox_override("panel", style)
 
-	# Position to the right of the StatsPanel (avoiding compass panel area)
+	# Position below the StatsPanel (avoids overlapping air bubbles)
 	heat_panel.anchors_preset = Control.PRESET_TOP_LEFT
-	heat_panel.offset_left = 525.0
-	heat_panel.offset_top = 20.0
-	heat_panel.offset_right = 700.0
-	heat_panel.offset_bottom = 65.0
+	heat_panel.offset_left = 20.0
+	heat_panel.offset_top = 185.0
+	heat_panel.offset_right = 195.0
+	heat_panel.offset_bottom = 230.0
 
 	# Label for heat text
 	heat_label = Label.new()
