@@ -1750,7 +1750,7 @@ func _create_scatter_log(pos: Vector3, rng: RandomNumberGenerator) -> void:
 			var gw: float = rng.randf_range(0.08, 0.15)
 			tuft_mesh.size = Vector3(gw, gh, gw)
 			tuft.mesh = tuft_mesh
-			tuft.material_override = _get_grass_material()
+			tuft.material_override = _get_flower_stem_material()
 			var g_angle: float = rng.randf() * TAU
 			var g_radius: float = stump_radius + rng.randf_range(0.05, 0.2)
 			tuft.position = Vector3(
