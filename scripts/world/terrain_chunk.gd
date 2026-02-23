@@ -1370,8 +1370,8 @@ func _spawn_chunk_animals() -> void:
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = chunk_seed
 
-	# 40% of chunks have animals
-	if rng.randf() > 0.40:
+	# 65% of chunks have animals
+	if rng.randf() > 0.65:
 		return
 
 	# Get the dominant region for this chunk (sample center)
@@ -1386,22 +1386,22 @@ func _spawn_chunk_animals() -> void:
 	match region:
 		ChunkManager.RegionType.MEADOW:
 			rabbit_count = rng.randi_range(1, 2)
-			bird_count = rng.randi_range(1, 2)
+			bird_count = rng.randi_range(2, 3)
 		ChunkManager.RegionType.FOREST:
 			rabbit_count = rng.randi_range(1, 2)
-			bird_count = rng.randi_range(0, 2)
+			bird_count = rng.randi_range(1, 3)
 		ChunkManager.RegionType.HILLS:
 			rabbit_count = rng.randi_range(0, 1)
-			bird_count = rng.randi_range(1, 2)
+			bird_count = rng.randi_range(2, 3)
 		ChunkManager.RegionType.ROCKY:
 			rabbit_count = 0
-			bird_count = rng.randi_range(0, 1)
+			bird_count = rng.randi_range(1, 2)
 		ChunkManager.RegionType.MOUNTAIN:
 			rabbit_count = 0
-			bird_count = rng.randi_range(1, 2)
+			bird_count = rng.randi_range(2, 3)
 
 	# Cap total animals per chunk for performance
-	var max_animals: int = 4
+	var max_animals: int = 5
 	var total_requested: int = rabbit_count + bird_count
 	if total_requested > max_animals:
 		# Scale down proportionally
