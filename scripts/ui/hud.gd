@@ -38,6 +38,10 @@ const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 # Eat action hint
 var eat_hint_label: Label
 
+# Air bubble display (drowning)
+var bubble_container: HBoxContainer
+var bubble_labels: Array[Label] = []
+
 # Notification
 @onready var notification_panel: PanelContainer = $NotificationPanel
 @onready var notification_label: Label = $NotificationPanel/NotificationLabel
@@ -948,6 +952,50 @@ func _create_compass_panel() -> void:
 
 	add_child(compass_panel)
 	compass_panel.visible = false
+
+
+## Show/hide air bubbles when player is submerged. Called via group by player_controller.
+func update_air_bubbles(count: int, submerged: bool) -> void:
+	# Lazily create the bubble container on first call
+	if not bubble_container:
+		_create_bubble_container()
+
+	if not submerged:
+		bubble_container.visible = false
+		return
+
+	bubble_container.visible = true
+	for i: int in bubble_labels.size():
+		if i < count:
+			# Filled bubble — light blue
+			bubble_labels[i].add_theme_color_override("font_color", Color(0.6, 0.85, 1.0, 1))
+		else:
+			# Lost bubble — dim grey
+			bubble_labels[i].add_theme_color_override("font_color", Color(0.3, 0.3, 0.3, 0.3))
+
+
+func _create_bubble_container() -> void:
+	# Place bubbles to the right of the health bar inside HealthContainer
+	var health_container: Node = null
+	if health_bar:
+		health_container = health_bar.get_parent()
+	if not health_container:
+		return
+
+	bubble_container = HBoxContainer.new()
+	bubble_container.name = "BubbleContainer"
+	bubble_container.add_theme_constant_override("separation", 4)
+	bubble_container.visible = false
+	health_container.add_child(bubble_container)
+
+	for i: int in 5:
+		var lbl: Label = Label.new()
+		lbl.text = "●"
+		lbl.add_theme_font_override("font", HUD_FONT)
+		lbl.add_theme_font_size_override("font_size", 20)
+		lbl.add_theme_color_override("font_color", Color(0.6, 0.85, 1.0, 1))
+		bubble_container.add_child(lbl)
+		bubble_labels.append(lbl)
 
 
 func _update_compass_display() -> void:

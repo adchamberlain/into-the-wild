@@ -90,6 +90,13 @@ var swim_rise_speed: float = 2.5  # How fast player rises when pressing space
 var swim_move_speed: float = 2.5  # Movement speed while swimming
 var water_surface_y: float = 0.15  # Y position of water surface (matches pond_height in fishing_spot)
 
+# Breath / drowning
+var air_bubbles: int = 5  # Current bubbles remaining (5 = full breath)
+var breath_timer: float = 0.0  # Time since last bubble lost
+var is_camera_submerged: bool = false  # Camera below water surface
+const BREATH_BUBBLE_INTERVAL: float = 4.0  # Seconds per bubble lost
+const MAX_AIR_BUBBLES: int = 5
+
 # Food values (hunger restored per item)
 const FOOD_VALUES: Dictionary = {
 	# Raw foods
@@ -315,6 +322,9 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 
+	# Breath / drowning check
+	_update_breath(delta)
+
 	# Play footstep/splash sounds based on actual movement (after collision resolution)
 	var horizontal_speed: float = Vector2(velocity.x, velocity.z).length()
 	if horizontal_speed > 0.5 and (is_on_floor() or actually_swimming):
@@ -490,6 +500,34 @@ func _process_swimming(delta: float) -> void:
 		# Decelerate smoothly (faster in water - more drag)
 		velocity.x = move_toward(velocity.x, 0, swim_move_speed * 2)
 		velocity.z = move_toward(velocity.z, 0, swim_move_speed * 2)
+
+
+## Track breath while camera is submerged. Lose 1 bubble every 4 seconds; die at 0.
+func _update_breath(delta: float) -> void:
+	var was_submerged: bool = is_camera_submerged
+	is_camera_submerged = is_in_water and camera and camera.global_position.y < water_surface_y
+
+	if is_camera_submerged:
+		if not was_submerged:
+			# Just went under — reset timer, show bubbles
+			breath_timer = 0.0
+			get_tree().call_group("hud", "update_air_bubbles", air_bubbles, true)
+		else:
+			breath_timer += delta
+			if breath_timer >= BREATH_BUBBLE_INTERVAL:
+				breath_timer -= BREATH_BUBBLE_INTERVAL
+				air_bubbles -= 1
+				if air_bubbles < 0:
+					air_bubbles = 0
+				get_tree().call_group("hud", "update_air_bubbles", air_bubbles, true)
+				if air_bubbles <= 0 and stats:
+					# Drown — instant death
+					stats.take_damage(stats.health)
+	elif was_submerged:
+		# Surfaced — replenish and hide bubbles
+		air_bubbles = MAX_AIR_BUBBLES
+		breath_timer = 0.0
+		get_tree().call_group("hud", "update_air_bubbles", air_bubbles, false)
 
 
 func _update_interaction_target() -> void:
@@ -815,6 +853,12 @@ func _on_player_died() -> void:
 	is_climbing = false
 	resting_in_structure = null
 	climbing_structure = null
+
+	# Reset breath state
+	air_bubbles = MAX_AIR_BUBBLES
+	breath_timer = 0.0
+	is_camera_submerged = false
+	get_tree().call_group("hud", "update_air_bubbles", air_bubbles, false)
 
 	# Reset water state (player may die while swimming)
 	if is_in_water:
