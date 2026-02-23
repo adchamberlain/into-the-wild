@@ -282,14 +282,13 @@ func take_hit(damage: float) -> void:
 	# Spawn loot drop at death location
 	_spawn_loot_drop()
 
-	# Play death visual - tip over
+	# Play death visual - tip over then despawn immediately
 	if mesh_container:
 		var tween: Tween = create_tween()
 		tween.tween_property(mesh_container, "rotation_degrees:x", 90.0, 0.3)
-
-	# Despawn after brief delay
-	var timer: SceneTreeTimer = get_tree().create_timer(1.0)
-	timer.timeout.connect(queue_free)
+		tween.tween_callback(queue_free)
+	else:
+		queue_free()
 
 
 ## Spawn a loot drop pickup at the animal's death location.

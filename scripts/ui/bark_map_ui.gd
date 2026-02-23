@@ -240,7 +240,7 @@ func _on_map_draw() -> void:
 	for cave in cave_entrances_data:
 		var center: Vector2 = cave.get("center", Vector2.ZERO)
 		var map_pos: Vector2 = _world_to_map(center.x, center.y)
-		var cave_size: float = 6.0
+		var cave_size: float = 12.0
 		var cave_rect: Rect2 = Rect2(map_pos.x - cave_size / 2.0, map_pos.y - cave_size / 2.0, cave_size, cave_size)
 		map_control.draw_rect(cave_rect, Color(0.15, 0.1, 0.1, 1))
 		map_control.draw_rect(cave_rect, Color(0.5, 0.35, 0.35, 1), false, 1.0)

@@ -592,7 +592,7 @@ func _generate_river_path(source: Vector2, rng: RandomNumberGenerator) -> Array[
 	var path: Array[Vector2] = [source]
 	var current: Vector2 = source
 	var segment_length: float = 18.0
-	var max_segments: int = 10
+	var max_segments: int = 20
 	var direction: Vector2 = Vector2.ZERO
 	var spawn_exclusion_radius: float = 40.0  # Keep rivers away from spawn area
 
@@ -640,13 +640,22 @@ func _generate_river_path(source: Vector2, rng: RandomNumberGenerator) -> Array[
 		if near_water:
 			continue
 
+		# Don't get too close to cave entrances
+		var near_cave: bool = false
+		for cave in cave_entrances:
+			if next_pos.distance_to(cave["center"]) < 20.0:
+				near_cave = true
+				break
+		if near_cave:
+			continue
+
 		path.append(next_pos)
 		direction = (next_pos - current).normalized()
 		current = next_pos
 
 		# Stop if we've reached MEADOW
 		var region: RegionType = get_region_at(current.x, current.y)
-		if region == RegionType.MEADOW and path.size() >= 4:
+		if region == RegionType.MEADOW and path.size() >= 8:
 			break
 
 	return path
@@ -706,18 +715,13 @@ func _catmull_rom(p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, t: float) 
 
 
 func _place_fishing_pools(river_path: Array[Vector2]) -> Array[Vector2]:
-	## Place fishing pools along the river path at regular intervals
+	## Place one fishing pool near the middle of the river
 	var pools: Array[Vector2] = []
-	var accumulated_distance: float = 0.0
+	if river_path.size() < 2:
+		return pools
 
-	for i in range(1, river_path.size()):
-		var segment_length: float = river_path[i].distance_to(river_path[i - 1])
-		accumulated_distance += segment_length
-
-		if accumulated_distance >= river_fishing_pool_spacing:
-			pools.append(river_path[i])
-			accumulated_distance = 0.0
-
+	var mid_index: int = river_path.size() / 2
+	pools.append(river_path[mid_index])
 	return pools
 
 
@@ -768,6 +772,19 @@ func _generate_cave_entrances() -> void:
 		for body in water_bodies:
 			if candidate.distance_to(body["center"]) < body["radius"] + 20.0:
 				too_close = true
+				break
+
+		if too_close:
+			continue
+
+		# Check distance from rivers
+		for river in rivers:
+			var river_path: Array = river["path"]
+			for seg_i in range(1, river_path.size()):
+				if _point_to_segment_distance(candidate, river_path[seg_i - 1], river_path[seg_i]) < 20.0:
+					too_close = true
+					break
+			if too_close:
 				break
 
 		if too_close:
