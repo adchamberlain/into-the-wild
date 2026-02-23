@@ -230,8 +230,8 @@ var fish_caught_tween: Tween = null
 const PLACEMENT_COOLDOWN: float = 0.5
 var placement_cooldown_timer: float = 0.0
 
-# Map toggle state to prevent rapid on/off from controller triggers
-var map_toggle_held: bool = false
+# Map toggle — frame-based cooldown to prevent rapid on/off from controller triggers
+var _map_toggle_frame: int = -100
 
 
 func _ready() -> void:
@@ -243,9 +243,6 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if placement_cooldown_timer > 0.0:
 		placement_cooldown_timer -= delta
-	# Clear map toggle hold when the action is released
-	if map_toggle_held and not Input.is_action_pressed("use_equipped"):
-		map_toggle_held = false
 
 
 func _setup_references() -> void:
@@ -1786,10 +1783,11 @@ func _use_map() -> bool:
 	if not player:
 		return false
 
-	# Prevent rapid toggling — only toggle once per press/release cycle
-	if map_toggle_held:
+	# Frame-based cooldown — ignore inputs within 15 frames (~0.25s) of last toggle
+	var now: int = Engine.get_process_frames()
+	if now - _map_toggle_frame < 15:
 		return true
-	map_toggle_held = true
+	_map_toggle_frame = now
 
 	# Check if map is already open
 	var existing: Node = player.get_tree().get_first_node_in_group("map_ui")
