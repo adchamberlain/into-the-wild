@@ -854,10 +854,10 @@ func _on_player_died() -> void:
 
 	# Auto-save after respawn
 	var save_load: Node = get_node_or_null("/root/Main/SaveLoad")
-	if save_load and save_load.has_method("save_game"):
-		# Defer to let position update first
-		save_load.call_deferred("save_game")
-		print("[Player] Auto-saved after respawn")
+	if save_load and save_load.has_method("save_game_slot"):
+		# Defer to let position update first - auto-save deaths to slot 5
+		save_load.call_deferred("save_game_slot", 5)
+		print("[Player] Auto-saved after respawn to slot 5")
 
 
 ## Update respawn position from the latest shelter/bed structure.

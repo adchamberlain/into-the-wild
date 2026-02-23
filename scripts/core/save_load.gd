@@ -10,7 +10,7 @@ signal load_failed(error: String)
 const SAVE_DIR: String = "user://saves/"
 const SAVE_FILE: String = "save.json"  # Legacy single save file (backward compatibility)
 const SAVE_VERSION: int = 1
-const NUM_SLOTS: int = 3
+const NUM_SLOTS: int = 5
 # Node references (set in _ready or via exported paths)
 @export var player_path: NodePath
 @export var time_manager_path: NodePath

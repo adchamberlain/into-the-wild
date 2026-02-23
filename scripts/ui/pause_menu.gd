@@ -339,8 +339,8 @@ func _create_slot_panel() -> void:
 	var sep: HSeparator = HSeparator.new()
 	vbox.add_child(sep)
 
-	# Create 3 slot buttons
-	for i: int in range(3):
+	# Create 5 slot buttons
+	for i: int in range(5):
 		var btn: Button = Button.new()
 		btn.name = "Slot%dButton" % (i + 1)
 		btn.text = "Slot %d: Empty" % (i + 1)
@@ -382,7 +382,7 @@ func _update_slot_panel() -> void:
 		title.text = "Save to Slot" if is_saving else "Load from Slot"
 
 	var slots_info: Array[Dictionary] = save_load.get_all_slots_info()
-	for i: int in range(min(3, slot_buttons.size() - 1)):  # -1 to exclude cancel button
+	for i: int in range(min(5, slot_buttons.size() - 1)):  # -1 to exclude cancel button
 		var btn: Button = slot_buttons[i]
 		var info: Dictionary = slots_info[i]
 		if info["empty"]:
