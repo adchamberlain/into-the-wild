@@ -256,6 +256,24 @@ func _load_recipes() -> void:
 			"description": "Reinforces grappling hook rope. Triples hook durability.",
 			"requires_bench": true,
 			"min_camp_level": 2
+		},
+		"bow": {
+			"name": "Bow",
+			"inputs": {"rope": 2, "branch": 3},
+			"output_type": "bow",
+			"output_amount": 1,
+			"description": "A hunting bow for shooting arrows.",
+			"requires_bench": true,
+			"min_camp_level": 2
+		},
+		"arrow_bundle": {
+			"name": "Arrow Bundle",
+			"inputs": {"feathers": 2, "branch": 4},
+			"output_type": "arrows",
+			"output_amount": 20,
+			"description": "A bundle of 20 arrows for the bow.",
+			"requires_bench": true,
+			"min_camp_level": 2
 		}
 	}
 
