@@ -203,7 +203,7 @@ func _update_hint_label() -> void:
 		return
 	var input_mgr: Node = get_node_or_null("/root/InputManager")
 	if input_mgr and input_mgr.is_using_controller():
-		hint_label.text = "[○ to resume]"
+		hint_label.text = "[✕ to resume]"
 	else:
 		hint_label.text = "[ESC to resume]"
 
