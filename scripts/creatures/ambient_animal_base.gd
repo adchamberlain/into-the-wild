@@ -279,8 +279,8 @@ func take_hit(damage: float) -> void:
 		return
 	is_dead = true
 
-	# Drop loot items directly to player inventory
-	_drop_loot()
+	# Spawn loot drop at death location
+	_spawn_loot_drop()
 
 	# Play death visual - tip over
 	if mesh_container:
@@ -292,24 +292,12 @@ func take_hit(damage: float) -> void:
 	timer.timeout.connect(queue_free)
 
 
-## Drop loot items to player inventory.
-func _drop_loot() -> void:
-	var player_node: Node = get_tree().get_first_node_in_group("player")
-	if not player_node:
-		return
-	var inv: Inventory = player_node.inventory if "inventory" in player_node else null
-	if not inv:
+## Spawn a loot drop pickup at the animal's death location.
+func _spawn_loot_drop() -> void:
+	if loot_table.is_empty():
 		return
 
-	var hud: Node = get_tree().get_first_node_in_group("hud")
-	var loot_msg: String = ""
-
-	for item_type: String in loot_table:
-		var amount: int = loot_table[item_type]
-		inv.add_item(item_type, amount)
-		if loot_msg != "":
-			loot_msg += ", "
-		loot_msg += "%dx %s" % [amount, item_type.replace("_", " ")]
-
-	if hud and hud.has_method("show_notification") and loot_msg != "":
-		hud.show_notification("Hunted: " + loot_msg, Color(0.6, 1.0, 0.6))
+	var drop: LootDrop = LootDrop.new()
+	drop.loot = loot_table.duplicate()
+	drop.global_position = global_position
+	get_tree().root.add_child(drop)

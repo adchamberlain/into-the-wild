@@ -22,7 +22,9 @@ var region_grid: Array = []  # Array of {x, z, region, in_water}
 var cave_entrances_data: Array = []
 var structure_positions: Array = []  # Array of {x, z, type}
 var player_pos: Vector3 = Vector3.ZERO
-var map_center: Vector2 = Vector2.ZERO  # World XZ center of map (player pos when opened)
+var map_center: Vector2 = Vector2.ZERO  # World XZ center of map (tracks player)
+var _last_gather_center: Vector2 = Vector2.ZERO  # Center when data was last sampled
+const REGATHER_DISTANCE: float = 40.0  # Re-sample terrain when player moves this far
 
 # UI nodes
 var map_panel: PanelContainer
@@ -59,12 +61,16 @@ func _process(_delta: float) -> void:
 		close_map()
 		return
 
-	# Update player position marker in real-time as they walk
+	# Track player position and keep map centered on them
 	var player_node: Node = get_tree().get_first_node_in_group("player")
 	if player_node and is_instance_valid(player_node):
 		var new_pos: Vector3 = player_node.global_position
 		if new_pos != player_pos:
 			player_pos = new_pos
+			map_center = Vector2(player_pos.x, player_pos.z)
+			# Re-sample terrain when player has moved far enough
+			if map_center.distance_to(_last_gather_center) > REGATHER_DISTANCE:
+				_gather_map_data()
 			map_control.queue_redraw()
 
 
@@ -118,6 +124,7 @@ func _gather_map_data() -> void:
 	if player_node:
 		player_pos = player_node.global_position
 		map_center = Vector2(player_pos.x, player_pos.z)
+	_last_gather_center = map_center
 
 	# Build water body and river lookup data
 	var water_bodies: Array = []
@@ -143,6 +150,7 @@ func _gather_map_data() -> void:
 			x += SAMPLE_INTERVAL
 
 	# Copy cave entrances
+	cave_entrances_data.clear()
 	if chunk_manager and "cave_entrances" in chunk_manager:
 		for cave in chunk_manager.cave_entrances:
 			cave_entrances_data.append(cave.duplicate())
