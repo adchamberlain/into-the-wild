@@ -469,6 +469,19 @@ func _add_top_face_cached(st: SurfaceTool, x: float, z: float, size: float, heig
 	var region_colors: Dictionary = chunk_manager.get_region_colors(region)
 	var grass_color: Color = region_colors["grass"]
 
+	# Desert transition zone blending
+	var spawn_dist: float = Vector2(center_x, center_z).length()
+	if spawn_dist >= 150.0 and spawn_dist < 170.0:
+		# Inner transition: blend from normal region to desert
+		var blend: float = (spawn_dist - 150.0) / 20.0
+		var desert_colors: Dictionary = chunk_manager.region_colors[ChunkManager.RegionType.DESERT]
+		grass_color = grass_color.lerp(desert_colors["grass"], blend)
+	elif spawn_dist > 230.0 and spawn_dist <= 250.0:
+		# Outer transition: blend from desert to normal region
+		var blend: float = 1.0 - (spawn_dist - 230.0) / 20.0
+		var desert_colors: Dictionary = chunk_manager.region_colors[ChunkManager.RegionType.DESERT]
+		grass_color = grass_color.lerp(desert_colors["grass"], blend)
+
 	# Color variation based on world position for consistency across chunks
 	var world_cx: int = chunk_coord.x * chunk_manager.chunk_size_cells + cx
 	var world_cz: int = chunk_coord.y * chunk_manager.chunk_size_cells + cz
@@ -626,6 +639,21 @@ func _add_side_quad_ao(st: SurfaceTool, v0: Vector3, v1: Vector3, v2: Vector3, v
 	var region_colors: Dictionary = chunk_manager.get_region_colors(region)
 	var grass_color: Color = region_colors["grass"]
 	var dirt_color: Color = region_colors["dirt"]
+
+	# Desert transition zone blending
+	var spawn_dist: float = Vector2(center_x, center_z).length()
+	if spawn_dist >= 150.0 and spawn_dist < 170.0:
+		# Inner transition: blend from normal region to desert
+		var blend: float = (spawn_dist - 150.0) / 20.0
+		var desert_colors: Dictionary = chunk_manager.region_colors[ChunkManager.RegionType.DESERT]
+		grass_color = grass_color.lerp(desert_colors["grass"], blend)
+		dirt_color = dirt_color.lerp(desert_colors["dirt"], blend)
+	elif spawn_dist > 230.0 and spawn_dist <= 250.0:
+		# Outer transition: blend from desert to normal region
+		var blend: float = 1.0 - (spawn_dist - 230.0) / 20.0
+		var desert_colors: Dictionary = chunk_manager.region_colors[ChunkManager.RegionType.DESERT]
+		grass_color = grass_color.lerp(desert_colors["grass"], blend)
+		dirt_color = dirt_color.lerp(desert_colors["dirt"], blend)
 
 	var grass_thickness: float = 0.25
 	var total_height: float = v0.y - v2.y
@@ -940,6 +968,75 @@ func _spawn_chunk_trees() -> void:
 			# Get region type and tree multiplier
 			var region: ChunkManager.RegionType = chunk_manager.get_region_at(world_x, world_z)
 			var tree_multiplier: float = chunk_manager.get_vegetation_multiplier(region, "tree")
+
+			# Desert region: spawn cactuses and palms instead of normal trees
+			if region == ChunkManager.RegionType.DESERT:
+				# Skip oasis areas - don't spawn vegetation on top of oases
+				var skip_oasis: bool = false
+				for oasis: Dictionary in chunk_manager.desert_oases:
+					var oasis_center: Vector2 = oasis["center"]
+					if Vector2(world_x, world_z).distance_to(oasis_center) < 10.0:
+						skip_oasis = true
+						break
+				if skip_oasis:
+					z += tree_grid_size
+					continue
+
+				var vegetation: Dictionary = chunk_manager.region_vegetation[ChunkManager.RegionType.DESERT]
+				var cactus_chance: float = vegetation.get("cactus", 0.0)
+				var palm_chance: float = vegetation.get("palm", 0.0)
+
+				# Use density noise to modulate spawn chance (same as trees)
+				var density_value_desert: float = (chunk_manager.forest_noise.get_noise_2d(world_x, world_z) + 1.0) * 0.5
+				if density_value_desert > 0.35:
+					var base_chance: float = tree_density * (density_value_desert - 0.35) / 0.65 * 2.5
+					if rng.randf() < base_chance * 0.7 * cactus_chance:
+						var jitter_x: float = rng.randf_range(-tree_grid_size * 0.4, tree_grid_size * 0.4)
+						var jitter_z: float = rng.randf_range(-tree_grid_size * 0.4, tree_grid_size * 0.4)
+						var cactus_x: float = world_x + jitter_x
+						var cactus_z: float = world_z + jitter_z
+						var cactus_y: float = _get_cached_height_at(cactus_x, cactus_z)
+						if cactus_y >= 0:
+							var cactus: Cactus = Cactus.new()
+							cactus.build(rng, rng.randf() < 0.2)  # 20% fruit-bearing
+							cactus.position = Vector3(cactus_x, cactus_y, cactus_z)
+							cactus.name = "Cactus_C%d_%d_%d" % [chunk_coord.x, chunk_coord.y, local_tree_index]
+							local_tree_index += 1
+							trees_container.add_child(cactus)
+							spawned_trees.append(cactus)
+							trees_spawned_this_batch += 1
+							if trees_spawned_this_batch >= TREES_PER_BATCH:
+								trees_spawned_this_batch = 0
+								if not is_inside_tree():
+									return
+								await get_tree().process_frame
+								if not is_inside_tree():
+									return
+					elif rng.randf() < base_chance * 0.3 * palm_chance:
+						var jitter_x: float = rng.randf_range(-tree_grid_size * 0.4, tree_grid_size * 0.4)
+						var jitter_z: float = rng.randf_range(-tree_grid_size * 0.4, tree_grid_size * 0.4)
+						var palm_x: float = world_x + jitter_x
+						var palm_z: float = world_z + jitter_z
+						var palm_y: float = _get_cached_height_at(palm_x, palm_z)
+						if palm_y >= 0:
+							var palm: PalmTree = PalmTree.new()
+							palm.build(rng)
+							palm.position = Vector3(palm_x, palm_y, palm_z)
+							palm.rotation.y = rng.randf() * TAU
+							palm.name = "Palm_C%d_%d_%d" % [chunk_coord.x, chunk_coord.y, local_tree_index]
+							local_tree_index += 1
+							trees_container.add_child(palm)
+							spawned_trees.append(palm)
+							trees_spawned_this_batch += 1
+							if trees_spawned_this_batch >= TREES_PER_BATCH:
+								trees_spawned_this_batch = 0
+								if not is_inside_tree():
+									return
+								await get_tree().process_frame
+								if not is_inside_tree():
+									return
+				z += tree_grid_size
+				continue  # Skip normal tree logic
 
 			# Get forest density from noise
 			var density_value: float = (chunk_manager.forest_noise.get_noise_2d(world_x, world_z) + 1.0) * 0.5
@@ -1820,6 +1917,9 @@ func _spawn_chunk_animals() -> void:
 		ChunkManager.RegionType.MOUNTAIN:
 			rabbit_count = 0
 			bird_count = rng.randi_range(2, 3)
+		ChunkManager.RegionType.DESERT:
+			rabbit_count = 0
+			bird_count = 0
 
 	# Cap total animals per chunk for performance
 	var max_animals: int = 5
@@ -1841,6 +1941,19 @@ func _spawn_chunk_animals() -> void:
 		var spawn_pos: Vector3 = _find_animal_spawn_position(rng, chunk_world_x, chunk_world_z, chunk_world_size)
 		if spawn_pos != Vector3.ZERO:
 			_spawn_bird(spawn_pos)
+
+	# Spawn desert creatures (lizards and tortoises)
+	if region == ChunkManager.RegionType.DESERT:
+		var lizard_count: int = rng.randi_range(1, 3)
+		var tortoise_count: int = rng.randi_range(0, 1)
+		for _i in range(lizard_count):
+			var spawn_pos: Vector3 = _find_animal_spawn_position(rng, chunk_world_x, chunk_world_z, chunk_world_size)
+			if spawn_pos != Vector3.ZERO:
+				_spawn_lizard(spawn_pos)
+		for _i in range(tortoise_count):
+			var spawn_pos: Vector3 = _find_animal_spawn_position(rng, chunk_world_x, chunk_world_z, chunk_world_size)
+			if spawn_pos != Vector3.ZERO:
+				_spawn_tortoise(spawn_pos)
 
 
 func _find_animal_spawn_position(rng: RandomNumberGenerator, chunk_x: float, chunk_z: float, chunk_size: float) -> Vector3:
@@ -1882,6 +1995,20 @@ func _spawn_bird(pos: Vector3) -> void:
 	bird.position = pos
 	add_child(bird)
 	spawned_animals.append(bird)
+
+
+func _spawn_lizard(pos: Vector3) -> void:
+	var lizard: AmbientLizard = AmbientLizard.new()
+	lizard.position = pos
+	add_child(lizard)
+	spawned_animals.append(lizard)
+
+
+func _spawn_tortoise(pos: Vector3) -> void:
+	var tortoise: AmbientTortoise = AmbientTortoise.new()
+	tortoise.position = pos
+	add_child(tortoise)
+	spawned_animals.append(tortoise)
 
 
 func unload() -> void:
