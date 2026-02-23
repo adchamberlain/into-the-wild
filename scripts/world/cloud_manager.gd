@@ -22,6 +22,11 @@ var wind_speed: float = 2.5
 var wind_direction: Vector2 = Vector2(1.0, 0.0)  # Normalized XZ direction
 var target_wind_speed: float = 2.5
 
+# Time scale: clouds drift faster when game days are shorter
+# Baseline is 20-minute days; at 2-minute days, clouds move 10x faster
+const BASELINE_DAY_LENGTH: float = 20.0
+var time_scale: float = 1.0
+
 # Weather state
 var active_cloud_count: int = 8
 var target_cloud_count: int = 8
@@ -57,6 +62,9 @@ func _ready() -> void:
 	time_manager = get_node_or_null("../../TimeManager")
 	if time_manager and time_manager.has_signal("time_changed"):
 		time_manager.time_changed.connect(_on_time_changed)
+		# Scale cloud speed to match game time pace
+		if "day_length_minutes" in time_manager:
+			time_scale = BASELINE_DAY_LENGTH / time_manager.day_length_minutes
 
 	# Apply initial state
 	_apply_cloud_visibility()
@@ -158,10 +166,11 @@ func _process(delta: float) -> void:
 
 
 func _drift_clouds(delta: float) -> void:
+	var scaled_speed: float = wind_speed * time_scale
 	var drift: Vector3 = Vector3(
-		wind_direction.x * wind_speed * delta,
+		wind_direction.x * scaled_speed * delta,
 		0.0,
-		wind_direction.y * wind_speed * delta
+		wind_direction.y * scaled_speed * delta
 	)
 
 	var wrap_radius: float = CLOUD_FIELD_RADIUS + CLOUD_WRAP_MARGIN
