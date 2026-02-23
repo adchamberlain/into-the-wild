@@ -1925,7 +1925,12 @@ func _spawn_wilderness_sign(min_x: float, max_x: float, min_z: float, max_z: flo
 	var sign_node: StaticBody3D = StaticBody3D.new()
 	sign_node.set_script(wilderness_sign_script)
 	sign_node.name = "WildernessSign"
+	# Sample multiple points across the sign footprint and use the minimum height
+	# so the posts sit on (or slightly in) the ground, never floating
 	var terrain_y: float = get_height_at(sign_x, sign_z)
+	for offset: Vector2 in [Vector2(-1.3, 0), Vector2(1.3, 0), Vector2(0, 0.3), Vector2(0, -0.3)]:
+		var sample_y: float = get_height_at(sign_x + offset.x, sign_z + offset.y)
+		terrain_y = min(terrain_y, sample_y)
 	sign_node.position = Vector3(sign_x, terrain_y, sign_z)
 	sign_node.rotation.y = atan2(-sign_x, -sign_z)
 	add_child(sign_node)
