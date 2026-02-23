@@ -59,6 +59,12 @@ var cave_count: int = 2  # Target number of cave entrances (reduced for performa
 var cave_min_spacing: float = 100.0  # Min distance between caves (must exceed 2x ramp radius)
 var cave_spawn_min_distance: float = 85.0  # Min distance from spawn
 
+# Desert oasis settings
+var desert_oases: Array[Dictionary] = []  # {center: Vector2, gem_type: String, gem_count: int, radius: float, depth: float}
+var desert_inner_radius: float = 170.0
+var desert_outer_radius: float = 230.0
+var spawned_oasis_indices: Array[int] = []  # Track which oases have been spawned
+
 # Region-specific pond sizes {radius_min, radius_max, depth}
 var region_pond_params: Dictionary = {
 	RegionType.MEADOW: {"radius_min": 10.0, "radius_max": 14.0, "depth": 2.5},
@@ -214,6 +220,7 @@ func _ready() -> void:
 	_setup_noise()
 	_generate_water_bodies()
 	_generate_cave_entrances()
+	_generate_desert_oases()
 	_setup_material()
 	_setup_world_floor()
 	_load_scenes()
@@ -822,6 +829,113 @@ func _generate_cave_entrances() -> void:
 		print("[ChunkManager] Generated %s cave #%d at (%.0f, %.0f)" % [
 			cave_type, caves_generated, candidate.x, candidate.y
 		])
+
+
+func _generate_desert_oases() -> void:
+	## Place 3 oases ~120 degrees apart in the desert ring (~200 units from spawn)
+	desert_oases.clear()
+
+	var oasis_distance: float = 200.0  # Distance from spawn
+	var oasis_configs: Array[Dictionary] = [
+		{"angle_deg": 0.0, "gem_type": "diamond", "gem_count": 3},
+		{"angle_deg": 120.0, "gem_type": "diamond", "gem_count": 2},
+		{"angle_deg": 240.0, "gem_type": "opal", "gem_count": 3},
+	]
+
+	for config: Dictionary in oasis_configs:
+		var angle_rad: float = deg_to_rad(config["angle_deg"])
+		var raw_x: float = cos(angle_rad) * oasis_distance
+		var raw_z: float = sin(angle_rad) * oasis_distance
+
+		# Snap to cell_size grid (multiples of 3.0)
+		var snapped_x: float = roundf(raw_x / cell_size) * cell_size
+		var snapped_z: float = roundf(raw_z / cell_size) * cell_size
+
+		var oasis_data: Dictionary = {
+			"center": Vector2(snapped_x, snapped_z),
+			"gem_type": config["gem_type"],
+			"gem_count": config["gem_count"],
+			"radius": 6.0,
+			"depth": 4.0
+		}
+		desert_oases.append(oasis_data)
+
+		# Also add oasis as a water body so terrain gets depressed
+		water_bodies.append({
+			"type": WaterBodyType.POND,
+			"center": Vector2(snapped_x, snapped_z),
+			"radius": 6.0,
+			"depth": 4.0
+		})
+
+		print("[ChunkManager] Generated desert oasis #%d (%s) at (%.0f, %.0f)" % [
+			desert_oases.size(), config["gem_type"], snapped_x, snapped_z
+		])
+
+	# Generate desert river leading to the opal oasis (index 2)
+	_generate_desert_river()
+
+	# Update legacy pond_locations
+	_update_legacy_pond_locations()
+
+	print("[ChunkManager] Desert oases generated: %d oases" % desert_oases.size())
+
+
+func _generate_desert_river() -> void:
+	## Generate a river segment in the desert ring that leads to the opal oasis (index 2)
+	if desert_oases.size() < 3:
+		return
+
+	var opal_center: Vector2 = desert_oases[2]["center"]
+
+	# River starts ~60 units away from the opal oasis in the desert ring
+	# Direction: from further out in the desert ring toward the oasis
+	var to_spawn: Vector2 = -opal_center.normalized()  # Direction toward spawn
+	var river_start_offset: Vector2 = to_spawn.rotated(deg_to_rad(45.0)) * 60.0
+	var river_start: Vector2 = opal_center + river_start_offset
+
+	# Snap start to grid
+	river_start.x = roundf(river_start.x / cell_size) * cell_size
+	river_start.y = roundf(river_start.y / cell_size) * cell_size
+
+	# Build a simple path from start to oasis center with some curves
+	var river_path: Array[Vector2] = []
+	var segments: int = 8
+	for i: int in range(segments + 1):
+		var t: float = float(i) / float(segments)
+		var pos: Vector2 = river_start.lerp(opal_center, t)
+		# Add perpendicular offset for natural curves (sinusoidal)
+		var perp: Vector2 = (opal_center - river_start).normalized().rotated(PI / 2.0)
+		var curve_amount: float = sin(t * PI * 2.0) * 8.0
+		pos += perp * curve_amount
+		river_path.append(pos)
+
+	# Smooth the path
+	river_path = _smooth_river_path(river_path)
+
+	# Place fishing pool near the middle
+	var fishing_pools: Array[Vector2] = _place_fishing_pools(river_path)
+
+	rivers.append({
+		"path": river_path,
+		"width": river_base_width,
+		"fishing_pools": fishing_pools
+	})
+
+	print("[ChunkManager] Generated desert river toward opal oasis: start (%.0f, %.0f) -> end (%.0f, %.0f), %d segments" % [
+		river_start.x, river_start.y, opal_center.x, opal_center.y, river_path.size()
+	])
+
+
+func is_near_oasis(world_x: float, world_z: float, buffer: float = 2.0) -> bool:
+	## Check if a world position is near any desert oasis (for tree/resource exclusion)
+	for oasis: Dictionary in desert_oases:
+		var center: Vector2 = oasis["center"]
+		var radius: float = oasis["radius"]
+		var dist: float = Vector2(world_x - center.x, world_z - center.y).length()
+		if dist < radius + buffer:
+			return true
+	return false
 
 
 func _has_carved_neighbor(x: float, z: float, threshold: float) -> bool:
@@ -1494,6 +1608,9 @@ func _load_chunk(chunk_coord: Vector2i) -> void:
 	# Spawn cave entrances in this chunk
 	_spawn_cave_entrances_in_chunk(chunk_min_x, chunk_max_x, chunk_min_z, chunk_max_z)
 
+	# Spawn desert oases in this chunk
+	_spawn_oases_in_chunk(chunk_min_x, chunk_max_x, chunk_min_z, chunk_max_z)
+
 	# Spawn wilderness sign near spawn
 	_spawn_wilderness_sign(chunk_min_x, chunk_max_x, chunk_min_z, chunk_max_z)
 
@@ -1923,6 +2040,50 @@ func _spawn_cave_entrance(cave_idx: int) -> void:
 
 	print("[ChunkManager] Spawned %s cave entrance #%d at (%.0f, %.0f)" % [
 		cave_type, cave_idx, cave_center.x, cave_center.y
+	])
+
+
+func _spawn_oases_in_chunk(min_x: float, max_x: float, min_z: float, max_z: float) -> void:
+	## Spawn desert oases when their center falls within this chunk
+	for oasis_idx: int in range(desert_oases.size()):
+		if oasis_idx in spawned_oasis_indices:
+			continue
+
+		var oasis_center: Vector2 = desert_oases[oasis_idx]["center"]
+		if oasis_center.x >= min_x and oasis_center.x < max_x and \
+		   oasis_center.y >= min_z and oasis_center.y < max_z:
+			_spawn_oasis(oasis_idx)
+
+
+func _spawn_oasis(oasis_idx: int) -> void:
+	## Spawn a single desert oasis at the specified index
+	if oasis_idx in spawned_oasis_indices or oasis_idx >= desert_oases.size():
+		return
+
+	var oasis_data: Dictionary = desert_oases[oasis_idx]
+	var oasis_center: Vector2 = oasis_data["center"]
+
+	var oasis: DesertOasis = DesertOasis.new()
+	oasis.name = "DesertOasis_%d" % oasis_idx
+	oasis.oasis_radius = oasis_data["radius"]
+	oasis.oasis_depth = oasis_data["depth"]
+	oasis.gem_type = oasis_data["gem_type"]
+	oasis.gem_count = oasis_data["gem_count"]
+
+	# Position at terrain height (should be depressed by water body system)
+	var terrain_y: float = 0.0  # Water surface at y=0 for oasis
+	oasis.position = Vector3(oasis_center.x, terrain_y, oasis_center.y)
+
+	# Build with deterministic RNG based on oasis index
+	var oasis_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	oasis_rng.seed = noise_seed + 5000 + oasis_idx * 100
+
+	add_child(oasis)
+	oasis.build(oasis_rng)
+	spawned_oasis_indices.append(oasis_idx)
+
+	print("[ChunkManager] Spawned desert oasis #%d (%s) at (%.0f, %.0f)" % [
+		oasis_idx, oasis_data["gem_type"], oasis_center.x, oasis_center.y
 	])
 
 
