@@ -69,17 +69,17 @@ static func _get_rock_material(variant: int) -> StandardMaterial3D:
 		0:
 			if not _rock_gray_mat:
 				_rock_gray_mat = StandardMaterial3D.new()
-				_rock_gray_mat.albedo_color = Color(0.55, 0.53, 0.5)
+				_rock_gray_mat.albedo_color = Color(0.62, 0.6, 0.55)
 			return _rock_gray_mat
 		1:
 			if not _rock_brown_mat:
 				_rock_brown_mat = StandardMaterial3D.new()
-				_rock_brown_mat.albedo_color = Color(0.45, 0.38, 0.3)
+				_rock_brown_mat.albedo_color = Color(0.5, 0.48, 0.4)
 			return _rock_brown_mat
 		_:
 			if not _rock_dark_mat:
 				_rock_dark_mat = StandardMaterial3D.new()
-				_rock_dark_mat.albedo_color = Color(0.4, 0.4, 0.42)
+				_rock_dark_mat.albedo_color = Color(0.45, 0.47, 0.4)
 			return _rock_dark_mat
 
 
@@ -1555,31 +1555,35 @@ func _create_flower(pos: Vector3, petal_color: Color, rng: RandomNumberGenerator
 
 
 func _create_scatter_rock(pos: Vector3, rng: RandomNumberGenerator) -> void:
-	var rock: Node3D = Node3D.new()
-	var num_boxes: int = rng.randi_range(1, 4)
+	## Creates a flat, wide boulder (2-4 overlapping slabs) — visually distinct from collectible rocks
+	var boulder: Node3D = Node3D.new()
+	var num_slabs: int = rng.randi_range(2, 4)
 	var mat_variant: int = rng.randi_range(0, 2)
-	var base_scale: float = rng.randf_range(0.3, 0.7)
+	var base_width: float = rng.randf_range(0.6, 1.2)
 
-	for i: int in range(num_boxes):
-		var box: MeshInstance3D = MeshInstance3D.new()
+	# Main slab — wide and flat
+	for i: int in range(num_slabs):
+		var slab: MeshInstance3D = MeshInstance3D.new()
 		var mesh: BoxMesh = BoxMesh.new()
-		var sx: float = base_scale * rng.randf_range(0.4, 1.0)
-		var sy: float = base_scale * rng.randf_range(0.3, 0.7)
-		var sz: float = base_scale * rng.randf_range(0.4, 1.0)
-		mesh.size = Vector3(sx, sy, sz)
-		box.mesh = mesh
-		box.material_override = _get_rock_material(mat_variant if i == 0 else rng.randi_range(0, 2))
-		box.position = Vector3(
-			rng.randf_range(-0.15, 0.15) * base_scale,
-			sy * 0.5,
-			rng.randf_range(-0.15, 0.15) * base_scale
+		var width: float = base_width * rng.randf_range(0.5, 1.0)
+		var height: float = base_width * rng.randf_range(0.1, 0.25)  # Very flat
+		var depth: float = base_width * rng.randf_range(0.5, 0.9)
+		mesh.size = Vector3(width, height, depth)
+		slab.mesh = mesh
+		slab.material_override = _get_rock_material(mat_variant if i == 0 else rng.randi_range(0, 2))
+		# Stack slabs slightly with offsets for irregularity
+		slab.position = Vector3(
+			rng.randf_range(-0.15, 0.15),
+			float(i) * base_width * 0.12 + height * 0.5,
+			rng.randf_range(-0.15, 0.15)
 		)
-		box.rotation.y = rng.randf() * TAU
-		rock.add_child(box)
+		slab.rotation.y = rng.randf_range(-0.3, 0.3)
+		slab.rotation.x = rng.randf_range(-0.08, 0.08)
+		boulder.add_child(slab)
 
-	rock.position = pos
-	rock.rotation.y = rng.randf() * TAU
-	decorations_container.add_child(rock)
+	boulder.position = pos
+	boulder.rotation.y = rng.randf() * TAU
+	decorations_container.add_child(boulder)
 
 
 func _create_scatter_bush(pos: Vector3, rng: RandomNumberGenerator) -> void:
