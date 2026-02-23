@@ -205,8 +205,10 @@ func _ready() -> void:
 	_setup_world_floor()
 	_load_scenes()
 
-	# Find resource manager
-	resource_manager = get_parent().get_node_or_null("ResourceManager") as ResourceManager
+	# Find resource manager (ResourceManager is a sibling of World, which is our parent)
+	var main_node: Node = get_parent().get_parent()  # World -> Main
+	if main_node:
+		resource_manager = main_node.get_node_or_null("ResourceManager") as ResourceManager
 
 	# Find player node
 	await get_tree().process_frame

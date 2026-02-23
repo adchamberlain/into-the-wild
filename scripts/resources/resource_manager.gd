@@ -325,6 +325,14 @@ func get_depleted_data() -> Array[Dictionary]:
 
 ## Restore depleted state from save data.
 func load_depleted_data(data: Array) -> void:
+	# First, respawn any currently depleted resources (clean slate for load)
+	for info: Dictionary in depleted_resources:
+		var resource: ResourceNode = info["node"]
+		if is_instance_valid(resource):
+			resource.respawn()
+	depleted_resources.clear()
+	saved_depleted_data.clear()
+
 	for saved_info: Dictionary in data:
 		var node_name: String = saved_info.get("node_name", "")
 		if node_name.is_empty():
