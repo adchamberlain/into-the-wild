@@ -35,6 +35,9 @@ const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 @onready var durability_bar: ProgressBar = $EquippedPanel/EquippedContainer/DurabilityBar
 @onready var equip_hint_label: Label = $EquippedPanel/EquippedContainer/EquipHintLabel
 
+# Eat action hint
+var eat_hint_label: Label
+
 # Notification
 @onready var notification_panel: PanelContainer = $NotificationPanel
 @onready var notification_label: Label = $NotificationPanel/NotificationLabel
@@ -199,6 +202,9 @@ func _ready() -> void:
 	# Create compass panel programmatically
 	_create_compass_panel()
 
+	# Create eat hint label at the bottom of the inventory panel
+	_create_eat_hint_label()
+
 	# Initialize displays
 	_update_inventory_display()
 	_update_equipped_display()
@@ -259,6 +265,7 @@ func _on_input_device_changed(_is_controller: bool) -> void:
 	# Update any visible prompts
 	_update_equipped_display()
 	_update_resting_prompt()
+	_update_eat_hint()
 
 
 func _on_interaction_cleared() -> void:
@@ -436,6 +443,9 @@ func _update_inventory_display() -> void:
 		var label: Label = item_labels[resource_type]
 		label.queue_free()
 		item_labels.erase(resource_type)
+
+	# Update eat hint visibility
+	_update_eat_hint()
 
 
 func _on_campsite_level_changed(new_level: int) -> void:
@@ -813,6 +823,31 @@ func fade_to_black_and_back(fade_out_duration: float, hold_duration: float, fade
 
 	# Hide overlay when done
 	tween.tween_callback(func(): fade_overlay.visible = false)
+
+
+func _update_eat_hint() -> void:
+	if not eat_hint_label:
+		return
+
+	var has_food: bool = player and player.has_method("has_consumable") and player.has_consumable()
+	eat_hint_label.visible = has_food
+	if has_food:
+		var eat_key: String = _get_button_prompt("eat")
+		eat_hint_label.text = "[%s] Eat" % eat_key
+
+
+func _create_eat_hint_label() -> void:
+	var vbox: VBoxContainer = inventory_panel.get_node_or_null("VBoxContainer") if inventory_panel else null
+	if not vbox:
+		return
+
+	eat_hint_label = Label.new()
+	eat_hint_label.name = "EatHintLabel"
+	eat_hint_label.add_theme_font_override("font", HUD_FONT)
+	eat_hint_label.add_theme_font_size_override("font_size", 28)
+	eat_hint_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6, 1))
+	eat_hint_label.visible = false
+	vbox.add_child(eat_hint_label)
 
 
 func _create_compass_panel() -> void:

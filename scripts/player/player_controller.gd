@@ -124,6 +124,19 @@ const HEALING_ITEMS: Dictionary = {
 }
 
 
+## Returns true if the player has any food or healing items in inventory.
+func has_consumable() -> bool:
+	if not inventory:
+		return false
+	for food_type: String in FOOD_VALUES:
+		if inventory.has_item(food_type):
+			return true
+	for heal_type: String in HEALING_ITEMS:
+		if inventory.has_item(heal_type):
+			return true
+	return false
+
+
 func _ready() -> void:
 	# Add to player group for identification
 	add_to_group("player")

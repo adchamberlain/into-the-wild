@@ -232,6 +232,8 @@ func _create_item_button(parent: VBoxContainer, item_type: String, count: int, i
 	label.add_theme_font_override("font", HUD_FONT)
 	label.add_theme_font_size_override("font_size", 28)
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.clip_text = false
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	container.add_child(label)
 
 	# Transfer button (move one)
