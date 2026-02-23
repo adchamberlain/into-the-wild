@@ -225,6 +225,8 @@ func _on_player_contact(body: Node) -> void:
 	if player_stats and player_stats.has_method("take_damage"):
 		player_stats.take_damage(DAMAGE_AMOUNT)
 
+	SFXManager.play_sfx("fall_hurt")
+
 	# Show damage notification via HUD
 	var hud: Node = body.get_tree().get_first_node_in_group("hud")
 	if hud and hud.has_method("show_notification"):
