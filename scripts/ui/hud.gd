@@ -1116,13 +1116,14 @@ func _update_compass_display() -> void:
 
 
 func set_overlay_mode(enabled: bool) -> void:
+	## Hide or show persistent HUD panels for full-screen overlay display.
+	## Notification and interaction prompt panels are excluded — they have
+	## their own timer/raycast-driven visibility and should not be force-shown.
 	var panels: Array[Control] = [
 		get_node_or_null("TimePanel"),
 		get_node_or_null("StatsPanel"),
 		get_node_or_null("EquippedPanel"),
 		inventory_panel,
-		interaction_prompt_panel,
-		notification_panel,
 	]
 	var compass: Control = get_node_or_null("CompassPanel")
 	if compass:
@@ -1130,5 +1131,11 @@ func set_overlay_mode(enabled: bool) -> void:
 	for panel: Control in panels:
 		if panel:
 			panel.visible = not enabled
+	# Hide dynamic panels when entering overlay, but don't force-show on exit
+	if enabled:
+		if interaction_prompt_panel:
+			interaction_prompt_panel.visible = false
+		if notification_panel:
+			notification_panel.visible = false
 	if crosshair:
 		crosshair.visible = not enabled

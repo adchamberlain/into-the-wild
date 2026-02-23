@@ -16,6 +16,7 @@ static var _materials_initialized: bool = false
 # Overlay UI
 var overlay_layer: CanvasLayer
 var is_overlay_visible: bool = false
+var close_hint_label: Label
 
 
 func _ready() -> void:
@@ -316,14 +317,13 @@ func _build_overlay() -> void:
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(spacer)
 
-	# Close hint
-	var close_hint: Label = Label.new()
-	close_hint.text = "[E] Close"
-	close_hint.add_theme_font_override("font", HUD_FONT)
-	close_hint.add_theme_font_size_override("font_size", 28)
-	close_hint.add_theme_color_override("font_color", Color(0.45, 0.40, 0.30))
-	close_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(close_hint)
+	# Close hint (text updated dynamically in _show_overlay)
+	close_hint_label = Label.new()
+	close_hint_label.add_theme_font_override("font", HUD_FONT)
+	close_hint_label.add_theme_font_size_override("font_size", 28)
+	close_hint_label.add_theme_color_override("font_color", Color(0.45, 0.40, 0.30))
+	close_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(close_hint_label)
 
 
 func interact(player_node: Node) -> bool:
@@ -358,6 +358,14 @@ func _show_overlay(player_node: Node) -> void:
 		return
 	is_overlay_visible = true
 	overlay_layer.visible = true
+
+	# Update close hint with current input device
+	var input_mgr: Node = get_node_or_null("/root/InputManager")
+	var interact_key: String = "E"
+	if input_mgr and input_mgr.has_method("get_prompt"):
+		interact_key = input_mgr.get_prompt("interact")
+	if close_hint_label:
+		close_hint_label.text = "[%s] Close" % interact_key
 
 	# Freeze player movement
 	if player_node and player_node.has_method("set_resting"):
