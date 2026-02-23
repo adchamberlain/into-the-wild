@@ -279,15 +279,14 @@ func take_hit(damage: float) -> void:
 		return
 	is_dead = true
 
-	# Spawn loot drop at death location
-	_spawn_loot_drop()
-
-	# Play death visual - tip over then despawn immediately
+	# Play death visual - tip over, then spawn loot and despawn
 	if mesh_container:
 		var tween: Tween = create_tween()
 		tween.tween_property(mesh_container, "rotation_degrees:x", 90.0, 0.3)
+		tween.tween_callback(_spawn_loot_drop)
 		tween.tween_callback(queue_free)
 	else:
+		_spawn_loot_drop()
 		queue_free()
 
 

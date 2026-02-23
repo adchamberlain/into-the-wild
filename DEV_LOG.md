@@ -5385,7 +5385,7 @@ All scatter objects use shared static materials for performance, respect exclusi
 
 **3D sign structure**: Two dark-brown posts with cross beam, angled V-roof with ridge cap, olive/tan information board at eye height, darker header strip, dark frame edges, and angled support braces. All built from BoxMesh primitives with shared static materials matching the project's procedural art style.
 
-**Readable overlay**: Pressing [E] opens a full-screen overlay (CanvasLayer 100) styled as a national-park-style information board with forest-green outer panel, tan/cream inner panel, and dark-brown text. Displays the "CARLSTON WILDERNESS" title, welcome message, five regulation bullet points (hunting, swimming, pits, resource collection, care), and a close hint. Overlay freezes the player via `set_resting()` and hides the HUD via a new `set_overlay_mode()` method.
+**Readable overlay**: Pressing [E] opens a full-screen overlay (CanvasLayer 100) styled as a national-park-style information board with forest-green outer panel, tan/cream inner panel, and dark-brown text. Displays the "CARLSTON WILDERNESS" title, welcome message, six regulation bullet points (hunting, swimming, pits, resource collection, severe weather, care), and a close hint. Overlay freezes the player via `set_resting()` and hides the HUD via a new `set_overlay_mode()` method.
 
 **HUD overlay mode**: Added `set_overlay_mode(enabled)` to `hud.gd` that hides/shows all HUD panels (time, stats, equipped, inventory, interaction prompt, notification, compass) when an overlay is active. The HUD was already in the "hud" group from a previous session.
 

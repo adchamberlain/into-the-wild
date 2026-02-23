@@ -1130,3 +1130,5 @@ func set_overlay_mode(enabled: bool) -> void:
 	for panel: Control in panels:
 		if panel:
 			panel.visible = not enabled
+	if crosshair:
+		crosshair.visible = not enabled

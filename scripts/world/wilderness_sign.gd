@@ -298,6 +298,7 @@ func _build_overlay() -> void:
 		"Swimming areas are unmarked. Exercise caution near water \u2014 currents can be dangerous.",
 		"Deep pits and sinkholes are present in this area. Watch your step.",
 		"Collection of wood, stone, and natural resources is permitted.",
+		"Severe weather may occur without warning. Seek cover immediately during storms.",
 		"Take care of the wilderness.",
 	]
 
@@ -339,6 +340,11 @@ func get_interaction_text() -> String:
 	return "Read Sign"
 
 
+func _exit_tree() -> void:
+	if is_overlay_visible:
+		_hide_overlay()
+
+
 func _input(event: InputEvent) -> void:
 	if not is_overlay_visible:
 		return
@@ -373,7 +379,7 @@ func _hide_overlay() -> void:
 	# Unfreeze player
 	var player_node: Node = get_tree().get_first_node_in_group("player")
 	if player_node and player_node.has_method("set_resting"):
-		player_node.set_resting(false, self)
+		player_node.set_resting(false)
 
 	# Show HUD
 	var hud_nodes: Array[Node] = get_tree().get_nodes_in_group("hud")
