@@ -5170,7 +5170,9 @@ Fixed 9 gameplay bugs and added a placement cooldown, covering floating trees, t
 
 **Bubble pop sound**: Each time a bubble is lost underwater, a procedural "pop" sound plays. Generated using the same AudioStreamWAV pattern as the fall_hurt sound — high-frequency ping (~800Hz) with rapid decay and noise burst.
 
-**Bubble blink warning**: When the player is down to 2 or fewer bubbles, remaining bubbles turn red and blink on/off (0.35s toggle) to warn of imminent drowning. Blinking stops when player surfaces or has more than 2 bubbles.
+**Bubble blink warning**: When the player is down to 2 or fewer bubbles, remaining bubbles blink on/off (0.35s toggle, staying blue) to warn of imminent drowning. Blinking stops when player surfaces or has more than 2 bubbles.
+
+**Smithing station visual feedback**: Smelter now shows clear visual changes during use. Idle: dim fire and light. Smelting: fire flares up (3x emission, pulsing light), ore piece appears on forge and gradually glows orange-hot as progress increases. Complete: ore becomes silver ingot with emission glow, gold HUD notification "Smelting complete! Collect your ingot." Also switched to pickup-required pattern matching smoker/drying rack.
 
 ### Files Changed
 
@@ -5180,6 +5182,7 @@ Fixed 9 gameplay bugs and added a placement cooldown, covering floating trees, t
 | `scripts/ui/hud.gd` | Modified | Doubled bubble size (20→40px), added blink state/timer, blink warning at ≤2 bubbles |
 | `scripts/player/player_controller.gd` | Modified | Play bubble_pop SFX when losing a bubble |
 | `scripts/core/sfx_manager.gd` | Modified | Added procedural bubble_pop sound generator, cooldown entry |
+| `scripts/campsite/structure_smithing_station.gd` | Modified | Added fire intensity changes, ore/ingot visuals, smelting progress glow, HUD notification, pickup-required pattern |
 
 ---
 
