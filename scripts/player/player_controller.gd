@@ -70,6 +70,7 @@ const SAFE_POSITION_UPDATE_INTERVAL: float = 0.5  # Update safe position every 0
 # Fall damage
 var fall_start_y: float = 0.0  # Y position when player started falling
 var is_falling: bool = false  # Whether player is currently in a fall
+var _spawn_landing: bool = true  # Skip fall damage on first landing (spawn drop)
 const FALL_DAMAGE_THRESHOLD: float = 4.0  # Minimum fall distance before damage (units)
 const FALL_DAMAGE_PER_UNIT: float = 8.0  # HP damage per unit fallen beyond threshold
 const FALL_DAMAGE_MAX: float = 80.0  # Maximum fall damage cap
@@ -358,7 +359,10 @@ func _process_normal_movement(delta: float) -> void:
 	else:
 		# Just landed — check for fall damage
 		if is_falling:
-			_apply_fall_damage()
+			if _spawn_landing:
+				_spawn_landing = false
+			else:
+				_apply_fall_damage()
 			is_falling = false
 
 	# Handle jump (works with both keyboard and controller via action)
