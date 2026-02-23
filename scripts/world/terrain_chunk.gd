@@ -18,6 +18,7 @@ var spawned_trees: Array[Node3D] = []
 var spawned_resources: Array[Node3D] = []
 var spawned_animals: Array[Node3D] = []
 var is_generated: bool = false
+var __local_resource_index: int = 0  # Deterministic naming counter for chunk resources
 
 # Shared materials (static to avoid shader compilation per decoration)
 static var _grass_mat: StandardMaterial3D = null
@@ -996,7 +997,7 @@ func _spawn_chunk_resources() -> void:
 
 	var resource_grid_size: float = 5.0  # Larger grid for resources - fewer checks, better performance
 	var resources_spawned_this_batch: int = 0
-	var local_resource_index: int = 0
+	__local_resource_index = 0
 
 	var x: float = 0.0
 	while x < chunk_world_size:
@@ -1144,8 +1145,8 @@ func _spawn_resource(scene: PackedScene, x: float, y: float, z: float, rng: Rand
 	var resource: Node3D = scene.instantiate()
 
 	# Deterministic name for save/load identification
-	resource.name = "Res_C%d_%d_%d" % [chunk_coord.x, chunk_coord.y, local_resource_index]
-	local_resource_index += 1
+	resource.name = "Res_C%d_%d_%d" % [chunk_coord.x, chunk_coord.y, _local_resource_index]
+	_local_resource_index += 1
 
 	# Place resource at the terrain height of its own cell position.
 	# The y parameter is already get_height_at(x, z) which snaps to cell centers internally,
