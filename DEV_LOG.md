@@ -5310,13 +5310,45 @@ Fixed 9 gameplay bugs and added a placement cooldown, covering floating trees, t
 
 ---
 
+## Session 37 - Sky Improvements: Blocky Clouds & Horizon Haze (2026-02-23)
+
+**Blocky voxel clouds**: Added a full cloud system with 30 pre-allocated BoxMesh cloud clusters that drift across the sky. Each cluster is 4-8 overlapping boxes creating puffy rectangular shapes, matching the game's blocky art style. Clouds use a single shared static material for performance.
+
+**Weather integration**: Cloud count, color, opacity, and wind speed change per weather type with smooth 3-second tween transitions:
+- Clear: 8 scattered white clouds
+- Rain: 18 gray clouds, denser coverage
+- Storm: 28 dark clouds, fast movement
+- Fog: 5 pale thin clouds
+- Heat Wave: 0 clouds (realistic clear sky)
+- Cold Snap: 10 ice-tinted clouds
+
+**Time-of-day tinting**: Clouds pick up warm orange-pink tint at dawn/dusk, dim to blue at night (0.3 alpha so stars show through), and appear white during daytime.
+
+**Horizon haze**: Added atmospheric haze band near the horizon using a large inverted cylinder mesh with a gradient shader (quadratic falloff). Color shifts with time of day (warm at dawn/dusk, blue during day, dark at night) and responds to weather (fog intensifies haze, storms darken it).
+
+**Time-scaled cloud speed**: Cloud drift speed scales proportionally with game day length — at 2-minute days, clouds move 10x faster than at the default 20-minute days.
+
+**Day length slider fix**: Config menu slider now increments in whole minutes instead of fractional values.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/world/cloud_manager.gd` | Created | 30-cloud pool, BoxMesh clusters, weather/time integration, wind drift with wrapping, time-scaled speed |
+| `scripts/world/environment_manager.gd` | Modified | Added horizon haze (CylinderMesh + gradient shader), haze time-of-day colors, weather modifiers, camera tracking |
+| `scenes/main.tscn` | Modified | Added CloudManager node as child of EnvironmentManager |
+| `scenes/ui/config_menu.tscn` | Modified | Day length slider step set to 1.0 (whole minutes) |
+| `docs/plans/2026-02-23-sky-clouds-haze-design.md` | Created | Design document for sky improvements |
+| `docs/plans/2026-02-23-sky-clouds-haze.md` | Created | Implementation plan |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Environment improvements — add clouds and other atmospheric polish
-2. Add desert biome far from spawn site
-3. Remove TEMP test spawn items (bow + 20 arrows + bark_map) once satisfied
-4. Continue play-testing and bug fixing
+1. Add desert biome far from spawn site
+2. Remove TEMP test spawn items (bow + 20 arrows + bark_map) once satisfied
+3. Continue play-testing and bug fixing
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.
