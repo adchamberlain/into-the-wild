@@ -230,8 +230,6 @@ var fish_caught_tween: Tween = null
 const PLACEMENT_COOLDOWN: float = 0.5
 var placement_cooldown_timer: float = 0.0
 
-# Map toggle — frame-based cooldown to prevent rapid on/off from controller triggers
-var _map_toggle_frame: int = -100
 
 
 func _ready() -> void:
@@ -1789,16 +1787,9 @@ func _use_map() -> bool:
 	if not player:
 		return false
 
-	# Frame-based cooldown — ignore inputs within 15 frames (~0.25s) of last toggle
-	var now: int = Engine.get_process_frames()
-	if now - _map_toggle_frame < 15:
-		return true
-	_map_toggle_frame = now
-
-	# Check if map is already open
+	# If map is already open, don't do anything — BarkMapUI handles its own closing
 	var existing: Node = player.get_tree().get_first_node_in_group("map_ui")
 	if existing and is_instance_valid(existing):
-		existing.close_map()
 		return true
 
 	# Open map overlay
