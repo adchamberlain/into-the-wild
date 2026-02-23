@@ -70,6 +70,15 @@ static func _init_materials() -> void:
 
 
 func _build_mesh() -> void:
+	# Scale the entire sign to 70% of original size
+	const SIGN_SCALE: float = 0.7
+
+	# Mesh container (scaled down, collision stays separate)
+	var mesh_root: Node3D = Node3D.new()
+	mesh_root.name = "MeshRoot"
+	mesh_root.scale = Vector3(SIGN_SCALE, SIGN_SCALE, SIGN_SCALE)
+	add_child(mesh_root)
+
 	# --- Left post ---
 	var left_post: MeshInstance3D = MeshInstance3D.new()
 	var left_post_mesh: BoxMesh = BoxMesh.new()
@@ -77,7 +86,7 @@ func _build_mesh() -> void:
 	left_post.mesh = left_post_mesh
 	left_post.material_override = _mat_post
 	left_post.position = Vector3(-1.3, 1.75, 0.0)
-	add_child(left_post)
+	mesh_root.add_child(left_post)
 
 	# --- Right post ---
 	var right_post: MeshInstance3D = MeshInstance3D.new()
@@ -86,7 +95,7 @@ func _build_mesh() -> void:
 	right_post.mesh = right_post_mesh
 	right_post.material_override = _mat_post
 	right_post.position = Vector3(1.3, 1.75, 0.0)
-	add_child(right_post)
+	mesh_root.add_child(right_post)
 
 	# --- Cross beam at top ---
 	var cross_beam: MeshInstance3D = MeshInstance3D.new()
@@ -95,7 +104,7 @@ func _build_mesh() -> void:
 	cross_beam.mesh = cross_beam_mesh
 	cross_beam.material_override = _mat_post
 	cross_beam.position = Vector3(0.0, 3.45, 0.0)
-	add_child(cross_beam)
+	mesh_root.add_child(cross_beam)
 
 	# --- Angled roof - left slab ---
 	var roof_left: MeshInstance3D = MeshInstance3D.new()
@@ -105,7 +114,7 @@ func _build_mesh() -> void:
 	roof_left.material_override = _mat_roof
 	roof_left.position = Vector3(-0.65, 3.65, 0.0)
 	roof_left.rotation_degrees.z = 8.0
-	add_child(roof_left)
+	mesh_root.add_child(roof_left)
 
 	# --- Angled roof - right slab ---
 	var roof_right: MeshInstance3D = MeshInstance3D.new()
@@ -115,7 +124,7 @@ func _build_mesh() -> void:
 	roof_right.material_override = _mat_roof
 	roof_right.position = Vector3(0.65, 3.65, 0.0)
 	roof_right.rotation_degrees.z = -8.0
-	add_child(roof_right)
+	mesh_root.add_child(roof_right)
 
 	# --- Ridge cap ---
 	var ridge: MeshInstance3D = MeshInstance3D.new()
@@ -124,7 +133,7 @@ func _build_mesh() -> void:
 	ridge.mesh = ridge_mesh
 	ridge.material_override = _mat_post
 	ridge.position = Vector3(0.0, 3.75, 0.0)
-	add_child(ridge)
+	mesh_root.add_child(ridge)
 
 	# --- Main information board ---
 	var board: MeshInstance3D = MeshInstance3D.new()
@@ -133,7 +142,7 @@ func _build_mesh() -> void:
 	board.mesh = board_mesh
 	board.material_override = _mat_board
 	board.position = Vector3(0.0, 2.25, 0.05)
-	add_child(board)
+	mesh_root.add_child(board)
 
 	# --- Header strip ---
 	var header: MeshInstance3D = MeshInstance3D.new()
@@ -142,7 +151,7 @@ func _build_mesh() -> void:
 	header.mesh = header_mesh
 	header.material_override = _mat_header
 	header.position = Vector3(0.0, 2.85, 0.09)
-	add_child(header)
+	mesh_root.add_child(header)
 
 	# --- Frame edges (thin dark strips) ---
 	# Top edge
@@ -152,7 +161,7 @@ func _build_mesh() -> void:
 	frame_top.mesh = frame_top_mesh
 	frame_top.material_override = _mat_frame
 	frame_top.position = Vector3(0.0, 3.02, 0.09)
-	add_child(frame_top)
+	mesh_root.add_child(frame_top)
 
 	# Bottom edge
 	var frame_bottom: MeshInstance3D = MeshInstance3D.new()
@@ -161,7 +170,7 @@ func _build_mesh() -> void:
 	frame_bottom.mesh = frame_bottom_mesh
 	frame_bottom.material_override = _mat_frame
 	frame_bottom.position = Vector3(0.0, 1.48, 0.09)
-	add_child(frame_bottom)
+	mesh_root.add_child(frame_bottom)
 
 	# Left edge
 	var frame_left: MeshInstance3D = MeshInstance3D.new()
@@ -170,7 +179,7 @@ func _build_mesh() -> void:
 	frame_left.mesh = frame_left_mesh
 	frame_left.material_override = _mat_frame
 	frame_left.position = Vector3(-1.22, 2.25, 0.09)
-	add_child(frame_left)
+	mesh_root.add_child(frame_left)
 
 	# Right edge
 	var frame_right: MeshInstance3D = MeshInstance3D.new()
@@ -179,7 +188,7 @@ func _build_mesh() -> void:
 	frame_right.mesh = frame_right_mesh
 	frame_right.material_override = _mat_frame
 	frame_right.position = Vector3(1.22, 2.25, 0.09)
-	add_child(frame_right)
+	mesh_root.add_child(frame_right)
 
 	# --- Support braces (angled from posts to board) ---
 	var brace_left: MeshInstance3D = MeshInstance3D.new()
@@ -189,7 +198,7 @@ func _build_mesh() -> void:
 	brace_left.material_override = _mat_post
 	brace_left.position = Vector3(-1.15, 1.2, 0.0)
 	brace_left.rotation_degrees.z = 25.0
-	add_child(brace_left)
+	mesh_root.add_child(brace_left)
 
 	var brace_right: MeshInstance3D = MeshInstance3D.new()
 	var brace_right_mesh: BoxMesh = BoxMesh.new()
@@ -198,14 +207,14 @@ func _build_mesh() -> void:
 	brace_right.material_override = _mat_post
 	brace_right.position = Vector3(1.15, 1.2, 0.0)
 	brace_right.rotation_degrees.z = -25.0
-	add_child(brace_right)
+	mesh_root.add_child(brace_right)
 
-	# --- Collision shape for interaction raycast ---
+	# --- Collision shape (scaled separately — Godot warns about scaled collision parents) ---
 	var col_shape: CollisionShape3D = CollisionShape3D.new()
 	var box: BoxShape3D = BoxShape3D.new()
-	box.size = Vector3(2.8, 3.5, 0.5)
+	box.size = Vector3(2.8 * SIGN_SCALE, 3.5 * SIGN_SCALE, 0.5 * SIGN_SCALE)
 	col_shape.shape = box
-	col_shape.position = Vector3(0.0, 1.75, 0.0)
+	col_shape.position = Vector3(0.0, 1.75 * SIGN_SCALE, 0.0)
 	add_child(col_shape)
 
 
