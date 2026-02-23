@@ -855,6 +855,11 @@ func _confirm_placement() -> void:
 	# Play placement confirm sound
 	SFXManager.play_sfx("place_confirm")
 
+	# Update player spawn point when a shelter is placed
+	if current_structure_type in ["cabin", "canvas_tent", "basic_shelter"]:
+		if player and player.has_method("_update_respawn_from_structures"):
+			player._update_respawn_from_structures()
+
 	# Emit signal
 	placement_confirmed.emit(current_structure_type, place_pos)
 	print("[PlacementSystem] Placed %s at %s" % [current_structure_type, place_pos])

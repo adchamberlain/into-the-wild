@@ -22,6 +22,7 @@ var region_grid: Array = []  # Array of {x, z, region, in_water}
 var cave_entrances_data: Array = []
 var structure_positions: Array = []  # Array of {x, z, type}
 var player_pos: Vector3 = Vector3.ZERO
+var map_center: Vector2 = Vector2.ZERO  # World XZ center of map (player pos when opened)
 
 # UI nodes
 var map_panel: PanelContainer
@@ -105,10 +106,11 @@ func _gather_map_data() -> void:
 	# Get chunk manager for terrain data
 	var chunk_manager: Node = tree.get_first_node_in_group("chunk_manager")
 
-	# Get player position
+	# Get player position and set map center
 	var player_node: Node = tree.get_first_node_in_group("player")
 	if player_node:
 		player_pos = player_node.global_position
+		map_center = Vector2(player_pos.x, player_pos.z)
 
 	# Build water body and river lookup data
 	var water_bodies: Array = []
@@ -119,14 +121,14 @@ func _gather_map_data() -> void:
 		if "rivers" in chunk_manager:
 			rivers = chunk_manager.rivers
 
-	# Sample terrain regions and mark water cells
+	# Sample terrain regions and mark water cells centered on player position
 	region_grid.clear()
 	if chunk_manager and chunk_manager.has_method("get_region_at"):
 		var half: float = MAP_EXTENT
-		var x: float = -half
-		while x <= half:
-			var z: float = -half
-			while z <= half:
+		var x: float = map_center.x - half
+		while x <= map_center.x + half:
+			var z: float = map_center.y - half
+			while z <= map_center.y + half:
 				var region: int = chunk_manager.get_region_at(x, z)
 				var in_water: bool = _is_in_water(x, z, water_bodies, rivers)
 				region_grid.append({"x": x, "z": z, "region": region, "in_water": in_water})
@@ -193,8 +195,8 @@ func _gather_structures() -> void:
 
 func _world_to_map(world_x: float, world_z: float) -> Vector2:
 	## Convert world XZ coordinates to pixel position on the map control.
-	var norm_x: float = (world_x + MAP_EXTENT) / (MAP_EXTENT * 2.0)
-	var norm_z: float = (world_z + MAP_EXTENT) / (MAP_EXTENT * 2.0)
+	var norm_x: float = (world_x - map_center.x + MAP_EXTENT) / (MAP_EXTENT * 2.0)
+	var norm_z: float = (world_z - map_center.y + MAP_EXTENT) / (MAP_EXTENT * 2.0)
 	return Vector2(
 		MAP_PADDING + norm_x * (MAP_SIZE - MAP_PADDING * 2.0),
 		MAP_PADDING + norm_z * (MAP_SIZE - MAP_PADDING * 2.0)
@@ -233,18 +235,21 @@ func _on_map_draw() -> void:
 		var map_pos: Vector2 = _world_to_map(struct["x"], struct["z"])
 		_draw_structure_icon(map_pos, struct["type"])
 
-	# Draw campsite at (0,0)
-	var camp_pos: Vector2 = _world_to_map(0.0, 0.0)
-	map_control.draw_circle(camp_pos, 4.0, Color(1.0, 0.85, 0.3, 1))
-	map_control.draw_circle(camp_pos, 4.0, Color(0.8, 0.65, 0.1, 1), false, 1.5)
+	# Draw campsite origin (0,0) if within map bounds
+	var camp_offset_x: float = abs(0.0 - map_center.x)
+	var camp_offset_z: float = abs(0.0 - map_center.y)
+	if camp_offset_x <= MAP_EXTENT and camp_offset_z <= MAP_EXTENT:
+		var camp_pos: Vector2 = _world_to_map(0.0, 0.0)
+		map_control.draw_circle(camp_pos, 4.0, Color(1.0, 0.85, 0.3, 1))
+		map_control.draw_circle(camp_pos, 4.0, Color(0.8, 0.65, 0.1, 1), false, 1.5)
 
 	# Draw player position as X marker with edge clamping
 	var raw_player_pos: Vector2 = _world_to_map(player_pos.x, player_pos.z)
 	var map_min: float = MAP_PADDING
 	var map_max: float = MAP_SIZE - MAP_PADDING
 
-	var is_off_map: bool = (player_pos.x < -MAP_EXTENT or player_pos.x > MAP_EXTENT
-		or player_pos.z < -MAP_EXTENT or player_pos.z > MAP_EXTENT)
+	var is_off_map: bool = (abs(player_pos.x - map_center.x) > MAP_EXTENT
+		or abs(player_pos.z - map_center.y) > MAP_EXTENT)
 
 	var player_map_pos: Vector2 = Vector2(
 		clamp(raw_player_pos.x, map_min, map_max),
