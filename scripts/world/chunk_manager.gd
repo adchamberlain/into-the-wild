@@ -1918,24 +1918,49 @@ func _spawn_cave_entrance(cave_idx: int) -> void:
 func _spawn_wilderness_sign(min_x: float, max_x: float, min_z: float, max_z: float) -> void:
 	if wilderness_sign_spawned or not wilderness_sign_script:
 		return
-	var sign_x: float = 6.0
-	var sign_z: float = -4.0
-	if sign_x < min_x or sign_x >= max_x or sign_z < min_z or sign_z >= max_z:
+	# Find the flattest spot near spawn for the sign
+	var best_pos: Vector2 = _find_flat_spot_for_sign()
+	if best_pos.x < min_x or best_pos.x >= max_x or best_pos.y < min_z or best_pos.y >= max_z:
 		return
 	var sign_node: StaticBody3D = StaticBody3D.new()
 	sign_node.set_script(wilderness_sign_script)
 	sign_node.name = "WildernessSign"
-	# Sample multiple points across the sign footprint and use the maximum height
-	# so the sign sits on top of the highest nearby block, never clipping through terrain
-	var terrain_y: float = get_height_at(sign_x, sign_z)
-	for offset: Vector2 in [Vector2(-1.0, 0), Vector2(1.0, 0), Vector2(0, 0.5), Vector2(0, -0.5),
-			Vector2(-1.0, 0.5), Vector2(1.0, 0.5), Vector2(-1.0, -0.5), Vector2(1.0, -0.5)]:
-		var sample_y: float = get_height_at(sign_x + offset.x, sign_z + offset.y)
-		terrain_y = max(terrain_y, sample_y)
-	sign_node.position = Vector3(sign_x, terrain_y, sign_z)
-	sign_node.rotation.y = atan2(-sign_x, -sign_z)
+	var terrain_y: float = get_height_at(best_pos.x, best_pos.y)
+	sign_node.position = Vector3(best_pos.x, terrain_y, best_pos.y)
+	# Face toward spawn (0,0)
+	sign_node.rotation.y = atan2(-best_pos.x, -best_pos.y)
 	add_child(sign_node)
 	wilderness_sign_spawned = true
+
+
+func _find_flat_spot_for_sign() -> Vector2:
+	## Search candidate positions near spawn and pick the one with least height variation.
+	## Candidates are on a grid from 4-8 units out, avoiding the immediate spawn area.
+	var best_candidate: Vector2 = Vector2(6.0, -4.0)
+	var best_variance: float = 999.0
+	# Footprint sample offsets (sign is ~2 units wide after 0.7 scale)
+	var footprint: Array[Vector2] = [
+		Vector2(0, 0), Vector2(-1.0, 0), Vector2(1.0, 0),
+		Vector2(0, 0.5), Vector2(0, -0.5),
+	]
+	# Search grid: ring around spawn at 5-8 unit distance, stepping by cell_size (3.0)
+	for cx: float in range(-8, 9, 3):
+		for cz: float in range(-8, 9, 3):
+			var dist: float = Vector2(cx, cz).length()
+			if dist < 4.0 or dist > 9.0:
+				continue
+			# Sample heights across the sign footprint at this candidate
+			var h_min: float = 999.0
+			var h_max: float = -999.0
+			for fp: Vector2 in footprint:
+				var h: float = get_height_at(cx + fp.x, cz + fp.y)
+				h_min = min(h_min, h)
+				h_max = max(h_max, h)
+			var variance: float = h_max - h_min
+			if variance < best_variance:
+				best_variance = variance
+				best_candidate = Vector2(cx, cz)
+	return best_candidate
 
 
 # Debug info
