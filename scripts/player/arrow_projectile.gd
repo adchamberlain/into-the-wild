@@ -60,10 +60,12 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 		return
 
-	# Orient arrow along velocity
+	# Orient arrow along velocity (guard against vertical alignment with UP)
 	var vel: Vector3 = linear_velocity
 	if vel.length_squared() > 0.01:
-		look_at(global_position + vel, Vector3.UP)
+		var vel_norm: Vector3 = vel.normalized()
+		if absf(vel_norm.dot(Vector3.UP)) < 0.99:
+			look_at(global_position + vel, Vector3.UP)
 
 
 func _on_body_entered(_body: Node) -> void:

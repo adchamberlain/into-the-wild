@@ -156,25 +156,21 @@ func _spawn_arrow() -> void:
 	if not camera:
 		return
 
-	var arrow: ArrowProjectile = ArrowProjectile.new()
-
-	# Position: slightly in front of camera
+	# Calculate spawn position and velocity before creating the arrow
 	var forward: Vector3 = -camera.global_basis.z
-	arrow.global_position = camera.global_position + forward * 1.5
-
-	# Direction: camera forward with slight upward angle
+	var spawn_pos: Vector3 = camera.global_position + forward * 1.5
 	var up_angle_rad: float = deg_to_rad(ARROW_LAUNCH_ANGLE)
 	var launch_dir: Vector3 = (forward + camera.global_basis.y * tan(up_angle_rad)).normalized()
-
-	# Speed scaled by draw progress (60%-100%)
 	var speed: float = lerpf(0.6, 1.0, draw_progress) * ARROW_SPEED
 
-	arrow.linear_velocity = launch_dir * speed
+	var arrow: ArrowProjectile = ArrowProjectile.new()
 
-	# Add to scene tree
+	# Add to scene tree first, then set position and velocity
 	var scene_root: Node = get_tree().current_scene
 	if scene_root:
 		scene_root.add_child(arrow)
+		arrow.global_position = spawn_pos
+		arrow.linear_velocity = launch_dir * speed
 
 
 ## Returns true when the bow is the currently equipped item.

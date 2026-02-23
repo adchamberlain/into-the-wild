@@ -116,7 +116,7 @@ const TOOL_ITEMS: Array = [
 	"drying_rack_kit", "garden_plot_kit", "canvas_tent_kit", "cabin_kit",
 	"snare_trap_kit", "smithing_station_kit", "smoker_kit", "weather_vane_kit",
 	"machete", "lantern", "grappling_hook", "lodestone", "bark_map",
-	"leather_axe_wrap", "leather_hook_wrap", "compass"
+	"leather_axe_wrap", "leather_hook_wrap", "compass", "bow", "arrows"
 ]
 
 # Items classified as food (edible + healing)
@@ -184,10 +184,8 @@ func _ready() -> void:
 				equipment.durability_changed.connect(_on_durability_changed)
 				equipment.tool_broken.connect(_on_tool_broken)
 
-		# Connect to bow system for arrow count updates
-		var bow: Node = player.get_node_or_null("BowSystem")
-		if bow and bow.has_signal("arrow_count_changed"):
-			bow.arrow_count_changed.connect(func(_count: int) -> void: _update_equipped_display())
+		# Connect to bow system for arrow count updates (deferred to handle initialization order)
+		call_deferred("_connect_bow_system")
 
 	# Connect to campsite manager
 	if campsite_manager_path:
@@ -331,6 +329,14 @@ func _update_hunger_bar(value: float, max_value: float) -> void:
 	if hunger_bar:
 		hunger_bar.max_value = max_value
 		hunger_bar.value = value
+
+
+func _connect_bow_system() -> void:
+	if not player:
+		return
+	var bow: Node = player.get_node_or_null("BowSystem")
+	if bow and bow.has_signal("arrow_count_changed"):
+		bow.arrow_count_changed.connect(func(_count: int) -> void: _update_equipped_display())
 
 
 func _on_item_equipped(item_type: String) -> void:

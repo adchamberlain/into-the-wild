@@ -1453,9 +1453,7 @@ func _remove_bow_model() -> void:
 	var bow_system: Node = get_parent().get_node_or_null("BowSystem") if get_parent() else null
 	if bow_system and bow_system.has_method("clear_bow_model"):
 		bow_system.clear_bow_model()
-	if bow_model:
-		bow_model.queue_free()
-		bow_model = null
+	bow_model = null
 
 
 func _place_item() -> bool:
