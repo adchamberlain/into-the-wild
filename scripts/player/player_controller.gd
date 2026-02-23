@@ -180,10 +180,11 @@ func _ready() -> void:
 	if stats:
 		stats.player_died.connect(_on_player_died)
 
-	# TEMP: Testing spawn - give bow and arrows for testing
+	# TEMP: Testing spawn - give items for testing
 	if inventory:
 		inventory.add_item("bow", 1)
 		inventory.add_item("arrows", 20)
+		inventory.add_item("bark_map", 1)
 
 
 
