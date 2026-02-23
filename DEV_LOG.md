@@ -5190,6 +5190,8 @@ Fixed 9 gameplay bugs and added a placement cooldown, covering floating trees, t
 
 ### Planned Tasks
 1. Continue play-testing and bug fixing
+2. Find a crafting use for feathers (currently a resource with no recipes)
+3. Understand how osha root is used in the game (review current implementation and purpose)
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.

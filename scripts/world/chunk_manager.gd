@@ -1699,7 +1699,7 @@ func _spawn_entire_river(river_idx: int, river: Dictionary) -> void:
 	var river_root: Node3D = Node3D.new()
 	river_root.name = "River_%d" % river_idx
 
-	# Create the water mesh using SurfaceTool
+	# Create grid-snapped water mesh (cell-aligned quads matching terrain depression)
 	var water_mesh: MeshInstance3D = MeshInstance3D.new()
 	water_mesh.name = "WaterMesh"
 
@@ -1707,103 +1707,70 @@ func _spawn_entire_river(river_idx: int, river: Dictionary) -> void:
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 
 	var water_y: float = 0.05
-	var half_width: float = width / 2.0
 	var water_color: Color = Color(0.2, 0.45, 0.6, 0.7)
 	var normal: Vector3 = Vector3.UP
 
-	# Calculate edge vertices for each waypoint
-	var left_edges: Array[Vector3] = []
-	var right_edges: Array[Vector3] = []
+	# Compute bounding box of river path with padding for max possible width
+	var pad: float = max(width, river_fishing_pool_width) / 2.0 + cell_size
+	var bb_min_x: float = INF
+	var bb_max_x: float = -INF
+	var bb_min_z: float = INF
+	var bb_max_z: float = -INF
+	for point in path:
+		bb_min_x = min(bb_min_x, point.x - pad)
+		bb_max_x = max(bb_max_x, point.x + pad)
+		bb_min_z = min(bb_min_z, point.y - pad)
+		bb_max_z = max(bb_max_z, point.y + pad)
 
-	# Taper settings - river narrows at start and end
-	var taper_points: int = 8  # Number of points to taper over (increased for smoother taper)
-	var min_width_factor: float = 0.1  # Minimum width as fraction of full width
+	# Snap bounding box to cell grid
+	var start_cx: int = int(floor(bb_min_x / cell_size))
+	var end_cx: int = int(floor(bb_max_x / cell_size)) + 1
+	var start_cz: int = int(floor(bb_min_z / cell_size))
+	var end_cz: int = int(floor(bb_max_z / cell_size)) + 1
 
-	for i in range(path.size()):
-		var current: Vector2 = path[i]
-		var perpendicular: Vector2
+	# Generate grid-aligned water quads for each cell inside the river
+	var quad_count: int = 0
+	var half_cell: float = cell_size / 2.0
+	for cx in range(start_cx, end_cx):
+		for cz in range(start_cz, end_cz):
+			# Snap to cell center (same formula as get_height_at)
+			var snapped_x: float = (float(cx) + 0.5) * cell_size
+			var snapped_z: float = (float(cz) + 0.5) * cell_size
 
-		if i == 0:
-			# First point - use perpendicular to next segment
-			var direction: Vector2 = (path[1] - path[0]).normalized()
-			perpendicular = Vector2(-direction.y, direction.x)
-		elif i == path.size() - 1:
-			# Last point - use perpendicular to previous segment
-			var direction: Vector2 = (path[i] - path[i - 1]).normalized()
-			perpendicular = Vector2(-direction.y, direction.x)
-		else:
-			# Middle points - calculate proper miter perpendicular
-			var dir_in: Vector2 = (path[i] - path[i - 1]).normalized()
-			var dir_out: Vector2 = (path[i + 1] - path[i]).normalized()
+			var river_info: Dictionary = _get_river_info_at(snapped_x, snapped_z, river)
+			if river_info["in_river"]:
+				var v0: Vector3 = Vector3(snapped_x - half_cell, water_y, snapped_z - half_cell)
+				var v1: Vector3 = Vector3(snapped_x + half_cell, water_y, snapped_z - half_cell)
+				var v2: Vector3 = Vector3(snapped_x + half_cell, water_y, snapped_z + half_cell)
+				var v3: Vector3 = Vector3(snapped_x - half_cell, water_y, snapped_z + half_cell)
 
-			# Calculate the miter direction (bisector of the angle)
-			# Check sum length BEFORE normalizing to detect near-180-degree bends
-			var miter_sum: Vector2 = dir_in + dir_out
-			if miter_sum.length() < 0.1:
-				# Directions nearly opposite — use perpendicular to incoming
-				perpendicular = Vector2(-dir_in.y, dir_in.x)
-			else:
-				var miter: Vector2 = miter_sum.normalized()
-				perpendicular = Vector2(-miter.y, miter.x)
+				# Triangle 1: v0, v1, v2
+				st.set_color(water_color)
+				st.set_normal(normal)
+				st.add_vertex(v0)
+				st.set_color(water_color)
+				st.set_normal(normal)
+				st.add_vertex(v1)
+				st.set_color(water_color)
+				st.set_normal(normal)
+				st.add_vertex(v2)
 
-				# Calculate miter length factor to maintain consistent width
-				var perp_in: Vector2 = Vector2(-dir_in.y, dir_in.x)
-				var dot: float = perpendicular.dot(perp_in)
-				if abs(dot) > 0.1:
-					# Limit miter extension to prevent spikes at sharp corners
-					var miter_scale: float = 1.0 / abs(dot)
-					miter_scale = min(miter_scale, 2.0)  # Cap at 2x to avoid extreme spikes
-					perpendicular = perpendicular * miter_scale
+				# Triangle 2: v0, v2, v3
+				st.set_color(water_color)
+				st.set_normal(normal)
+				st.add_vertex(v0)
+				st.set_color(water_color)
+				st.set_normal(normal)
+				st.add_vertex(v2)
+				st.set_color(water_color)
+				st.set_normal(normal)
+				st.add_vertex(v3)
 
-				perpendicular = perpendicular.normalized()
+				quad_count += 1
 
-		# Calculate taper factor for start and end of river
-		var taper: float = 1.0
-		if i < taper_points:
-			# Taper at start - use smooth easing
-			var t: float = float(i) / float(taper_points)
-			taper = min_width_factor + (1.0 - min_width_factor) * (t * t)  # Quadratic ease-in
-		elif i > path.size() - 1 - taper_points:
-			# Taper at end - use smooth easing
-			var dist_from_end: int = path.size() - 1 - i
-			var t: float = float(dist_from_end) / float(taper_points)
-			taper = min_width_factor + (1.0 - min_width_factor) * (t * t)  # Quadratic ease-in
-
-		var current_half_width: float = half_width * taper
-		var left: Vector2 = current + perpendicular * current_half_width
-		var right: Vector2 = current - perpendicular * current_half_width
-
-		left_edges.append(Vector3(left.x, water_y, left.y))
-		right_edges.append(Vector3(right.x, water_y, right.y))
-
-	# Create quads between consecutive edge pairs
-	for i in range(path.size() - 1):
-		var v0: Vector3 = left_edges[i]      # Start left
-		var v1: Vector3 = right_edges[i]     # Start right
-		var v2: Vector3 = right_edges[i + 1] # End right
-		var v3: Vector3 = left_edges[i + 1]  # End left
-
-		# Triangle 1: v0, v1, v2
-		st.set_color(water_color)
-		st.set_normal(normal)
-		st.add_vertex(v0)
-		st.set_color(water_color)
-		st.set_normal(normal)
-		st.add_vertex(v1)
-		st.set_color(water_color)
-		st.set_normal(normal)
-		st.add_vertex(v2)
-
-		# Triangle 2: v0, v2, v3
-		st.set_color(water_color)
-		st.set_normal(normal)
-		st.add_vertex(v0)
-		st.set_color(water_color)
-		st.set_normal(normal)
-		st.add_vertex(v2)
-		st.set_color(water_color)
-		st.set_normal(normal)
-		st.add_vertex(v3)
+	if quad_count == 0:
+		river_root.queue_free()
+		return
 
 	water_mesh.mesh = st.commit()
 
@@ -1838,7 +1805,7 @@ func _spawn_entire_river(river_idx: int, river: Dictionary) -> void:
 		river_root.add_child(water_area)
 
 	add_child(river_root)
-	print("[ChunkManager] Spawned river %d mesh with %d segments" % [river_idx, path.size() - 1])
+	print("[ChunkManager] Spawned river %d mesh with %d grid quads" % [river_idx, quad_count])
 
 
 func _spawn_river_fishing_pool(pool_pos: Vector2) -> void:
