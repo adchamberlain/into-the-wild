@@ -31,6 +31,9 @@ var weather_damage_enabled: bool = false
 # Weather effects
 var hunger_multiplier: float = 1.0
 
+# Desert effects
+var desert_hunger_multiplier: float = 1.0  # 1.5x when in desert
+
 # Reference to player for checking sprint state
 var player: CharacterBody3D
 
@@ -58,6 +61,9 @@ func _update_hunger(delta: float) -> void:
 
 	# Apply weather multiplier (e.g., heat wave)
 	depletion *= hunger_multiplier
+
+	# Apply desert heat multiplier (1.5x when in desert)
+	depletion *= desert_hunger_multiplier
 
 	# Check if player is sprinting
 	if player and "is_sprinting" in player and player.is_sprinting:

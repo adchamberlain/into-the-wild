@@ -80,6 +80,11 @@ var respawn_position: Vector3 = Vector3(0, 5, 0)  # Default spawn, updated when 
 var has_respawn_shelter: bool = false  # Whether player has a shelter to respawn at
 
 
+# Desert environment check
+var _desert_check_timer: float = 0.0
+var _is_in_desert: bool = false
+var _sandstorm: Sandstorm = null
+
 # Footstep sound timing
 var footstep_timer: float = 0.0
 const FOOTSTEP_INTERVAL: float = 0.4  # Time between footstep sounds
@@ -175,6 +180,13 @@ func _ready() -> void:
 	var bow_system: BowSystem = BowSystem.new()
 	bow_system.name = "BowSystem"
 	add_child(bow_system)
+
+	# Create sandstorm system (follows player, activates in desert)
+	_sandstorm = Sandstorm.new()
+	_sandstorm.name = "Sandstorm"
+	add_child(_sandstorm)
+	_sandstorm.sandstorm_started.connect(_on_sandstorm_started)
+	_sandstorm.sandstorm_ended.connect(_on_sandstorm_ended)
 
 	# Connect death signal for respawn
 	if stats:
@@ -308,6 +320,12 @@ func _physics_process(delta: float) -> void:
 	# Fall-through protection: track safe position and recover if fallen
 	_update_fall_protection(delta)
 
+	# Desert environment check (every 2 seconds)
+	_desert_check_timer += delta
+	if _desert_check_timer >= 2.0:
+		_desert_check_timer = 0.0
+		_check_desert_status()
+
 	# Camera collision: prevent clipping into ceilings/terrain (runs every frame)
 	_update_camera_collision(delta)
 
@@ -407,6 +425,10 @@ func _process_normal_movement(delta: float) -> void:
 	# Handle sprint (works with both keyboard and controller via action)
 	is_sprinting = Input.is_action_pressed("sprint") and is_on_floor() and not _is_ui_blocking_input()
 	current_speed = sprint_speed if is_sprinting else walk_speed
+
+	# Apply sandstorm speed reduction (30% slower during sandstorms)
+	if _sandstorm and _sandstorm.is_active:
+		current_speed *= Sandstorm.SPEED_MULTIPLIER
 
 	# Get input direction from actions (supports both keyboard and controller)
 	# Block movement when UI menus are open
@@ -1080,3 +1102,47 @@ func _close_all_menus() -> void:
 			node.close_map()
 	# Ensure mouse is recaptured for gameplay
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+
+
+## Check if player is in the desert region and update hunger/sandstorm/HUD accordingly.
+func _check_desert_status() -> void:
+	var chunk_mgr: Node = get_tree().get_first_node_in_group("chunk_manager")
+	if not chunk_mgr or not chunk_mgr.has_method("get_region_at"):
+		return
+	var region: int = chunk_mgr.get_region_at(global_position.x, global_position.z)
+	_is_in_desert = (region == ChunkManager.RegionType.DESERT)
+
+	# Update hunger multiplier on PlayerStats
+	if stats:
+		stats.desert_hunger_multiplier = 1.5 if _is_in_desert else 1.0
+
+	# Update sandstorm system
+	if _sandstorm:
+		_sandstorm.set_in_desert(_is_in_desert)
+
+	# Notify HUD for heat indicator
+	var hud_nodes: Array[Node] = get_tree().get_nodes_in_group("hud")
+	if hud_nodes.size() > 0 and hud_nodes[0].has_method("set_desert_heat_active"):
+		hud_nodes[0].set_desert_heat_active(_is_in_desert)
+
+
+## Called when a sandstorm starts - notify HUD to show overlay.
+func _on_sandstorm_started() -> void:
+	var hud_nodes: Array[Node] = get_tree().get_nodes_in_group("hud")
+	if hud_nodes.size() > 0 and hud_nodes[0].has_method("show_sandstorm_overlay"):
+		hud_nodes[0].show_sandstorm_overlay()
+	show_notification("A sandstorm is approaching!", Color(1.0, 0.7, 0.3, 1))
+
+
+## Called when a sandstorm ends - notify HUD to hide overlay.
+func _on_sandstorm_ended() -> void:
+	var hud_nodes: Array[Node] = get_tree().get_nodes_in_group("hud")
+	if hud_nodes.size() > 0 and hud_nodes[0].has_method("hide_sandstorm_overlay"):
+		hud_nodes[0].hide_sandstorm_overlay()
+
+
+## Show a notification via HUD.
+func show_notification(message: String, color: Color) -> void:
+	var hud: Node = get_tree().get_first_node_in_group("hud")
+	if hud and hud.has_method("show_notification"):
+		hud.show_notification(message, color)

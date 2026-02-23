@@ -71,6 +71,14 @@ var compass_panel: PanelContainer
 var compass_label: Label
 var camera: Camera3D
 
+# Desert heat indicator
+var heat_panel: PanelContainer
+var heat_label: Label
+
+# Sandstorm overlay
+var sandstorm_overlay: ColorRect
+var sandstorm_tween: Tween
+
 # Config for coordinates visibility
 var show_coordinates: bool = true
 
@@ -246,6 +254,12 @@ func _ready() -> void:
 
 	# Create eat hint label at the bottom of the inventory panel
 	_create_eat_hint_label()
+
+	# Create desert heat indicator (hidden by default)
+	_create_heat_indicator()
+
+	# Create sandstorm overlay (hidden by default)
+	_create_sandstorm_overlay()
 
 	# Initialize displays
 	_update_inventory_display()
@@ -1132,6 +1146,8 @@ func set_overlay_mode(enabled: bool) -> void:
 	var compass: Control = get_node_or_null("CompassPanel")
 	if compass:
 		panels.append(compass)
+	if heat_panel:
+		panels.append(heat_panel)
 	for panel: Control in panels:
 		if panel:
 			panel.visible = not enabled
@@ -1143,3 +1159,82 @@ func set_overlay_mode(enabled: bool) -> void:
 			notification_panel.visible = false
 	if crosshair:
 		crosshair.visible = not enabled
+
+
+## Create the desert heat indicator panel (positioned near the hunger bar).
+func _create_heat_indicator() -> void:
+	heat_panel = PanelContainer.new()
+	heat_panel.name = "HeatPanel"
+
+	# Style: semi-transparent dark background matching HUD style
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color(0.1, 0.1, 0.12, 0.8)
+	style.corner_radius_top_left = 10
+	style.corner_radius_top_right = 10
+	style.corner_radius_bottom_left = 10
+	style.corner_radius_bottom_right = 10
+	style.content_margin_left = 16.0
+	style.content_margin_right = 16.0
+	style.content_margin_top = 8.0
+	style.content_margin_bottom = 8.0
+	heat_panel.add_theme_stylebox_override("panel", style)
+
+	# Position to the right of the StatsPanel (avoiding compass panel area)
+	heat_panel.anchors_preset = Control.PRESET_TOP_LEFT
+	heat_panel.offset_left = 525.0
+	heat_panel.offset_top = 20.0
+	heat_panel.offset_right = 700.0
+	heat_panel.offset_bottom = 65.0
+
+	# Label for heat text
+	heat_label = Label.new()
+	heat_label.name = "HeatLabel"
+	heat_label.add_theme_font_override("font", HUD_FONT)
+	heat_label.add_theme_font_size_override("font_size", 28)
+	heat_label.add_theme_color_override("font_color", Color(1.0, 0.5, 0.5, 1))
+	heat_label.text = "HEAT 1.5x"
+	heat_panel.add_child(heat_label)
+
+	add_child(heat_panel)
+	heat_panel.visible = false
+
+
+## Create the full-screen sandstorm overlay (sandy brown tint).
+func _create_sandstorm_overlay() -> void:
+	sandstorm_overlay = ColorRect.new()
+	sandstorm_overlay.name = "SandstormOverlay"
+	sandstorm_overlay.anchors_preset = Control.PRESET_FULL_RECT
+	sandstorm_overlay.anchor_right = 1.0
+	sandstorm_overlay.anchor_bottom = 1.0
+	sandstorm_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	sandstorm_overlay.color = Color(0.82, 0.72, 0.55, 0.0)
+	sandstorm_overlay.visible = false
+	add_child(sandstorm_overlay)
+
+
+## Show or hide the desert heat indicator.
+func set_desert_heat_active(active: bool) -> void:
+	if heat_panel:
+		heat_panel.visible = active and not _overlay_active
+
+
+## Fade in the sandstorm overlay.
+func show_sandstorm_overlay() -> void:
+	if not sandstorm_overlay:
+		return
+	sandstorm_overlay.visible = true
+	if sandstorm_tween and sandstorm_tween.is_valid():
+		sandstorm_tween.kill()
+	sandstorm_tween = create_tween()
+	sandstorm_tween.tween_property(sandstorm_overlay, "color:a", 0.3, 2.0)
+
+
+## Fade out the sandstorm overlay.
+func hide_sandstorm_overlay() -> void:
+	if not sandstorm_overlay:
+		return
+	if sandstorm_tween and sandstorm_tween.is_valid():
+		sandstorm_tween.kill()
+	sandstorm_tween = create_tween()
+	sandstorm_tween.tween_property(sandstorm_overlay, "color:a", 0.0, 2.0)
+	sandstorm_tween.tween_callback(func() -> void: sandstorm_overlay.visible = false)

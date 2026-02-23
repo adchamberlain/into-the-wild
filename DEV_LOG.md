@@ -5458,12 +5458,57 @@ Added desert biome reward-loop items and endgame crafting recipes. Players can n
 
 ---
 
+## Session 41 - Desert Survival: Hunger Drain, Sandstorms & Heat HUD (2026-02-23)
+
+Implemented the desert survival challenge system: faster hunger drain in desert regions, periodic sandstorm events with particle effects and speed reduction, and HUD indicators for heat and sandstorm visibility.
+
+### Desert Hunger Drain (Task 11)
+
+- Added `desert_hunger_multiplier` to `PlayerStats` (1.5x when in desert, 1.0x otherwise)
+- Multiplier applied alongside existing weather hunger multiplier in `_update_hunger()`
+- Player controller checks desert status every 2 seconds via `_check_desert_status()`
+- Uses `ChunkManager.get_region_at()` to determine if player is in DESERT region
+
+### Sandstorm System (Task 12)
+
+- Created `Sandstorm` (Node3D) class at `scripts/world/sandstorm.gd`
+- Periodic storms: 3-5 minute random delay between storms, 30-45 second duration
+- 800 GPUParticles3D sand particles with turbulence, horizontal wind direction
+- Sandy brown particle color (0.82, 0.72, 0.55) with alpha transparency
+- 30% movement speed reduction during active storms (`SPEED_MULTIPLIER = 0.7`)
+- Signals: `sandstorm_started` / `sandstorm_ended` for HUD integration
+- Automatically ends storm when player leaves desert
+
+### Heat HUD Indicator & Sandstorm Overlay (Task 13)
+
+- Heat indicator panel: "HEAT 1.5x" in warning red, positioned right of StatsPanel
+- Styled with standard HUD font (28px), dark semi-transparent background
+- Sandstorm overlay: full-screen ColorRect with sandy brown tint (alpha 0.3)
+- Smooth 2-second fade in/out transitions via Tween
+- Both elements hidden during overlay mode (map, menus)
+- Notification "A sandstorm is approaching!" shown when storm starts
+
+### Integration Flow
+
+Player enters desert -> `_check_desert_status()` detects DESERT region -> sets hunger multiplier to 1.5x, shows heat HUD indicator, enables sandstorm timer -> after random delay, sandstorm starts -> particles emit, speed reduced 30%, sandy overlay fades in, notification shown -> storm ends after 30-45s -> overlay fades out, speed restored -> cycle repeats while in desert
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/world/sandstorm.gd` | Created | Sandstorm system with particles, timing, speed reduction |
+| `scripts/player/player_stats.gd` | Modified | Added desert_hunger_multiplier, applied in _update_hunger() |
+| `scripts/player/player_controller.gd` | Modified | Desert check timer, sandstorm creation, speed reduction, HUD notifications |
+| `scripts/ui/hud.gd` | Modified | Heat indicator panel, sandstorm overlay with fade transitions |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Add desert biome far from spawn site
-2. Remove TEMP test spawn items (bow + 20 arrows + bark_map) once satisfied
-3. Continue play-testing and bug fixing
+1. Remove TEMP test spawn items (bow + 20 arrows + bark_map) once satisfied
+2. Continue play-testing desert survival balance
+3. Bug fixing
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.
