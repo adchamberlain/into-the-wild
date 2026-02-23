@@ -5158,6 +5158,31 @@ Fixed 9 gameplay bugs and added a placement cooldown, covering floating trees, t
 
 ---
 
+## Session 30 - Save Slot Confirmation & Bubble Improvements (2026-02-22)
+
+**Save slot overwrite confirmation**: Saving to an occupied slot now shows "Overwrite Slot X?" with Yes/No confirmation instead of silently overwriting. Saving to empty slots still works immediately. Default focus on "No" for safety.
+
+**Save slot delete**: Each occupied slot now shows a "Del" button. Pressing it shows "Delete Slot X save?" with Yes/No confirmation. Deleting refreshes the slot list. Delete buttons are hidden for empty slots.
+
+**Confirmation dialog**: New reusable confirmation panel built programmatically (same dark styling as slot panel). Full D-pad/controller navigation support. ui_cancel dismisses back to slot list. Both overwrite and delete share the same panel.
+
+**Bubble HUD doubled size**: Underwater breath bubbles increased from 20px to 40px font size for better visibility.
+
+**Bubble pop sound**: Each time a bubble is lost underwater, a procedural "pop" sound plays. Generated using the same AudioStreamWAV pattern as the fall_hurt sound — high-frequency ping (~800Hz) with rapid decay and noise burst.
+
+**Bubble blink warning**: When the player is down to 2 or fewer bubbles, remaining bubbles turn red and blink on/off (0.35s toggle) to warn of imminent drowning. Blinking stops when player surfaces or has more than 2 bubbles.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/ui/pause_menu.gd` | Modified | Added confirmation dialog panel, delete buttons per slot, overwrite guard, confirm navigation |
+| `scripts/ui/hud.gd` | Modified | Doubled bubble size (20→40px), added blink state/timer, blink warning at ≤2 bubbles |
+| `scripts/player/player_controller.gd` | Modified | Play bubble_pop SFX when losing a bubble |
+| `scripts/core/sfx_manager.gd` | Modified | Added procedural bubble_pop sound generator, cooldown entry |
+
+---
+
 ## Next Session
 
 ### Planned Tasks

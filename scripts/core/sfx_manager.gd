@@ -39,6 +39,7 @@ const DEFAULT_COOLDOWNS: Dictionary = {
 	"grapple_fire": 0.3,
 	"grapple_attach": 0.3,
 	"grapple_land": 0.3,
+	"bubble_pop": 0.3,
 }
 
 # Anti-repetition tracking for footsteps
@@ -152,6 +153,7 @@ func _preload_sounds() -> void:
 
 	# Generate procedural sounds
 	loaded_sfx["fall_hurt"] = _generate_fall_hurt_sound()
+	loaded_sfx["bubble_pop"] = _generate_bubble_pop_sound()
 
 	# Preload footsteps
 	for surface in FOOTSTEP_PATHS.keys():
@@ -259,6 +261,42 @@ func _generate_fall_hurt_sound() -> AudioStreamWAV:
 		wave = sin(t * 120.0 * bend * TAU) * 0.4 + wave * 0.6
 
 		var sample: float = wave * envelope * 0.7
+		var sample_int: int = clampi(int(sample * 32767.0), -32768, 32767)
+		data[i * 2] = sample_int & 0xFF
+		data[i * 2 + 1] = (sample_int >> 8) & 0xFF
+
+	var stream: AudioStreamWAV = AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = sample_rate
+	stream.stereo = false
+	stream.data = data
+	return stream
+
+
+## Generate a procedural bubble pop sound.
+## Short high-frequency ping with rapid decay to simulate an underwater bubble popping.
+func _generate_bubble_pop_sound() -> AudioStreamWAV:
+	var sample_rate: int = 22050
+	var duration: float = 0.15
+	var num_samples: int = int(sample_rate * duration)
+	var data: PackedByteArray = PackedByteArray()
+	data.resize(num_samples * 2)
+
+	for i: int in range(num_samples):
+		var t: float = float(i) / sample_rate
+		# Very fast decay for a short pop
+		var envelope: float = exp(-t * 40.0)
+		# High-pitched pop tone (~800 Hz) with a harmonic
+		var wave: float = sin(t * 800.0 * TAU) * 0.6
+		wave += sin(t * 1200.0 * TAU) * 0.25
+		# Slight upward pitch bend (bubble release)
+		var bend: float = 1.0 + t * 3.0
+		wave = sin(t * 800.0 * bend * TAU) * 0.5 + wave * 0.5
+		# Tiny noise burst at the start for the "pop" attack
+		var noise_env: float = exp(-t * 80.0)
+		wave += (randf() * 2.0 - 1.0) * 0.3 * noise_env
+
+		var sample: float = wave * envelope * 0.5
 		var sample_int: int = clampi(int(sample * 32767.0), -32768, 32767)
 		data[i * 2] = sample_int & 0xFF
 		data[i * 2 + 1] = (sample_int >> 8) & 0xFF

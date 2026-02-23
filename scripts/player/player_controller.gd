@@ -519,6 +519,7 @@ func _update_breath(delta: float) -> void:
 				air_bubbles -= 1
 				if air_bubbles < 0:
 					air_bubbles = 0
+				SFXManager.play_sfx("bubble_pop")
 				get_tree().call_group("hud", "update_air_bubbles", air_bubbles, true)
 				if air_bubbles <= 0 and stats:
 					# Drown — instant death

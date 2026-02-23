@@ -41,6 +41,10 @@ var eat_hint_label: Label
 # Air bubble display (drowning)
 var bubble_container: HBoxContainer
 var bubble_labels: Array[Label] = []
+var bubble_blink_timer: float = 0.0
+var bubble_blink_visible: bool = true
+var bubble_blink_active: bool = false
+const BUBBLE_BLINK_RATE: float = 0.35  # seconds per toggle
 
 # Notification
 @onready var notification_panel: PanelContainer = $NotificationPanel
@@ -576,6 +580,14 @@ func _process(delta: float) -> void:
 	# Update grapple reticle
 	_update_grapple_reticle()
 
+	# Blink remaining bubbles when low on air
+	if bubble_blink_active:
+		bubble_blink_timer += delta
+		if bubble_blink_timer >= BUBBLE_BLINK_RATE:
+			bubble_blink_timer -= BUBBLE_BLINK_RATE
+			bubble_blink_visible = not bubble_blink_visible
+			_update_bubble_blink()
+
 
 func _on_weather_changed(weather_type: String) -> void:
 	_update_weather_display()
@@ -962,6 +974,7 @@ func update_air_bubbles(count: int, submerged: bool) -> void:
 
 	if not submerged:
 		bubble_container.visible = false
+		bubble_blink_active = false
 		return
 
 	bubble_container.visible = true
@@ -972,6 +985,19 @@ func update_air_bubbles(count: int, submerged: bool) -> void:
 		else:
 			# Lost bubble — dim grey
 			bubble_labels[i].add_theme_color_override("font_color", Color(0.3, 0.3, 0.3, 0.3))
+
+	# Activate blinking when 2 or fewer bubbles remain
+	if count <= 2 and count > 0:
+		if not bubble_blink_active:
+			bubble_blink_active = true
+			bubble_blink_timer = 0.0
+			bubble_blink_visible = true
+	else:
+		bubble_blink_active = false
+		# Ensure all filled bubbles are fully visible when not blinking
+		for i2: int in bubble_labels.size():
+			if i2 < count:
+				bubble_labels[i2].add_theme_color_override("font_color", Color(0.6, 0.85, 1.0, 1))
 
 
 func _create_bubble_container() -> void:
@@ -992,10 +1018,22 @@ func _create_bubble_container() -> void:
 		var lbl: Label = Label.new()
 		lbl.text = "●"
 		lbl.add_theme_font_override("font", HUD_FONT)
-		lbl.add_theme_font_size_override("font_size", 20)
+		lbl.add_theme_font_size_override("font_size", 40)
 		lbl.add_theme_color_override("font_color", Color(0.6, 0.85, 1.0, 1))
 		bubble_container.add_child(lbl)
 		bubble_labels.append(lbl)
+
+
+## Toggle filled bubble visibility for the blink warning effect.
+func _update_bubble_blink() -> void:
+	for i: int in bubble_labels.size():
+		var color: Color = bubble_labels[i].get_theme_color("font_color")
+		# Only blink filled bubbles (alpha > 0.5 means filled)
+		if color.a > 0.5:
+			if bubble_blink_visible:
+				bubble_labels[i].add_theme_color_override("font_color", Color(1.0, 0.4, 0.4, 1))  # Red warning
+			else:
+				bubble_labels[i].add_theme_color_override("font_color", Color(1.0, 0.4, 0.4, 0.2))  # Faded out
 
 
 func _update_compass_display() -> void:
