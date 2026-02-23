@@ -5330,12 +5330,17 @@ Fixed 9 gameplay bugs and added a placement cooldown, covering floating trees, t
 
 **Day length slider fix**: Config menu slider now increments in whole minutes instead of fractional values.
 
+**Floating grass fix**: Decorative grass and flowers were using raw noise height (`chunk_manager.get_height_at()`) instead of the post-processed height cache (`_get_cached_height_at()`). Rocky terrain applies pit prevention and flat smoothing that lower isolated peaks, but decorations were placed at the un-smoothed height, causing them to float above terrain.
+
+**Moon phase fix**: Moon phases now use alpha transparency instead of a dark shadow overlay. Previously, a dark box was overlaid on the moon to simulate phases, making the new moon appear as a visible black square. Now: full moon = fully visible (alpha 1.0), quarter = partially transparent (0.65), crescent = mostly transparent (0.35), new moon = completely invisible (0.0). Moonlight intensity also scales with phase.
+
 ### Files Changed
 
 | File | Status | Changes |
 |------|--------|---------|
 | `scripts/world/cloud_manager.gd` | Created | 30-cloud pool, BoxMesh clusters, weather/time integration, wind drift with wrapping, time-scaled speed |
-| `scripts/world/environment_manager.gd` | Modified | Added horizon haze (CylinderMesh + gradient shader), haze time-of-day colors, weather modifiers, camera tracking |
+| `scripts/world/environment_manager.gd` | Modified | Added horizon haze, moon phase transparency (replacing shadow overlay), haze time-of-day/weather integration |
+| `scripts/world/terrain_chunk.gd` | Modified | Fixed grass/flower placement to use `_get_cached_height_at()` instead of raw noise height |
 | `scenes/main.tscn` | Modified | Added CloudManager node as child of EnvironmentManager |
 | `scenes/ui/config_menu.tscn` | Modified | Day length slider step set to 1.0 (whole minutes) |
 | `docs/plans/2026-02-23-sky-clouds-haze-design.md` | Created | Design document for sky improvements |
