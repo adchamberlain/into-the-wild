@@ -21,12 +21,50 @@ var has_fuel: bool = false
 var player_inventory: Node = null
 var pending_output: String = ""  # Product awaiting player pickup
 
+# Visual references (found in _ready from placement_system children)
+var fire_mesh: MeshInstance3D
+var forge_light: OmniLight3D
+var ore_mesh: MeshInstance3D
+var ore_material: StandardMaterial3D
+var fire_material: StandardMaterial3D
+
 
 func _ready() -> void:
 	super._ready()
 	structure_type = "smithing_station"
 	structure_name = "Smithing Station"
 	interaction_text = "Use Smithing Station"
+	call_deferred("_setup_visuals")
+
+
+func _setup_visuals() -> void:
+	# Find the fire mesh and light created by placement_system
+	for child: Node in get_children():
+		if child is OmniLight3D:
+			forge_light = child as OmniLight3D
+		elif child is MeshInstance3D:
+			var mi: MeshInstance3D = child as MeshInstance3D
+			if mi.material_override and mi.material_override is StandardMaterial3D:
+				var mat: StandardMaterial3D = mi.material_override as StandardMaterial3D
+				if mat.emission_enabled:
+					fire_mesh = mi
+					fire_material = mat
+
+	# Create ore/ingot mesh that sits on the forge
+	ore_material = StandardMaterial3D.new()
+	ore_material.albedo_color = Color(0.5, 0.35, 0.3)
+
+	ore_mesh = MeshInstance3D.new()
+	var mesh: BoxMesh = BoxMesh.new()
+	mesh.size = Vector3(0.2, 0.15, 0.2)
+	ore_mesh.mesh = mesh
+	ore_mesh.position = Vector3(0, 0.98, 0)
+	ore_mesh.material_override = ore_material
+	ore_mesh.visible = false
+	add_child(ore_mesh)
+
+	# Set initial visual state
+	_update_forge_visuals()
 
 
 func _process(delta: float) -> void:
@@ -34,6 +72,8 @@ func _process(delta: float) -> void:
 		smelt_progress += delta
 		if smelt_progress >= SMELT_TIME:
 			_complete_smelting()
+		else:
+			_update_smelting_visuals()
 
 
 func interact(player: Node) -> bool:
@@ -50,6 +90,7 @@ func interact(player: Node) -> bool:
 		print("[SmithingStation] Collected: +1 %s" % pending_output)
 		pending_output = ""
 		interaction_text = "Use Smithing Station"
+		_update_forge_visuals()
 		return true
 
 	if is_smelting:
@@ -95,35 +136,91 @@ func _start_smelting(ore_type: String) -> void:
 	has_fuel = true
 	smelt_progress = 0.0
 	interaction_text = "Check Smelting Progress"
+	_update_forge_visuals()
 	print("[SmithingStation] Started smelting %s (using %d wood)" % [ore_type, FUEL_REQUIRED])
 
 
 func _complete_smelting() -> void:
 	var output_type: String = SMELT_RECIPES.get(current_ore, "metal_ingot")
 
-	# Find player inventory fresh (cached reference may be stale after save/load)
-	if not is_instance_valid(player_inventory):
-		var p: Node = get_tree().get_first_node_in_group("player")
-		if p and p.has_method("get_inventory"):
-			player_inventory = p.get_inventory()
-
-	# Add output to player inventory
-	if is_instance_valid(player_inventory):
-		player_inventory.add_item(output_type, 1)
-		print("[SmithingStation] Smelting complete! +1 %s" % output_type)
-	else:
-		# Store product for later pickup instead of losing it
-		pending_output = output_type
-		print("[SmithingStation] Smelting complete! %s stored for pickup" % output_type)
+	# Store for player pickup (matching smoker/drying rack pattern)
+	pending_output = output_type
+	print("[SmithingStation] Smelting complete! %s ready for pickup" % output_type)
 
 	smelting_complete.emit(output_type, 1)
 
-	# Reset state
+	# Reset smelting state but keep pending_output
 	is_smelting = false
 	has_fuel = false
 	current_ore = ""
 	smelt_progress = 0.0
-	interaction_text = "Collect Ingot" if pending_output != "" else "Use Smithing Station"
+	interaction_text = "Collect Ingot"
+	_update_forge_visuals()
+
+	# Notify player via HUD
+	var hud: Node = get_tree().get_first_node_in_group("hud")
+	if hud and hud.has_method("show_notification"):
+		hud.show_notification("Smelting complete! Collect your ingot.", Color(1, 0.85, 0.3, 1))
+
+
+## Update visuals based on current state (idle, smelting, or output ready).
+func _update_forge_visuals() -> void:
+	if is_smelting:
+		# Active smelting: bright fire, show ore
+		if fire_material:
+			fire_material.emission_energy_multiplier = 3.0
+			fire_material.albedo_color = Color(1.0, 0.6, 0.1)
+			fire_material.emission = Color(1.0, 0.5, 0.0)
+		if forge_light:
+			forge_light.light_energy = 4.0
+		if ore_mesh:
+			ore_mesh.visible = true
+			ore_material.albedo_color = Color(0.5, 0.35, 0.3)  # Raw ore color
+			ore_material.emission_enabled = false
+	elif pending_output != "":
+		# Finished: show glowing ingot, moderate fire
+		if fire_material:
+			fire_material.emission_energy_multiplier = 2.0
+			fire_material.albedo_color = Color(1.0, 0.5, 0.1)
+			fire_material.emission = Color(1.0, 0.4, 0.0)
+		if forge_light:
+			forge_light.light_energy = 3.0
+		if ore_mesh:
+			ore_mesh.visible = true
+			ore_material.albedo_color = Color(0.75, 0.7, 0.65)  # Silver ingot
+			ore_material.emission_enabled = true
+			ore_material.emission = Color(0.9, 0.6, 0.2)
+			ore_material.emission_energy_multiplier = 1.5
+	else:
+		# Idle: dim fire, hide ore
+		if fire_material:
+			fire_material.emission_energy_multiplier = 1.5
+			fire_material.albedo_color = Color(1.0, 0.5, 0.1)
+			fire_material.emission = Color(1.0, 0.4, 0.0)
+		if forge_light:
+			forge_light.light_energy = 2.0
+		if ore_mesh:
+			ore_mesh.visible = false
+			ore_material.emission_enabled = false
+
+
+## Gradually change ore color from raw to glowing hot during smelting.
+func _update_smelting_visuals() -> void:
+	if not ore_mesh or not ore_material:
+		return
+	var progress: float = smelt_progress / SMELT_TIME
+	# Ore transitions from raw brownish to glowing orange-hot
+	var raw_color: Color = Color(0.5, 0.35, 0.3)
+	var hot_color: Color = Color(1.0, 0.55, 0.15)
+	ore_material.albedo_color = raw_color.lerp(hot_color, progress)
+	# Start emitting once past 30% progress
+	if progress > 0.3:
+		ore_material.emission_enabled = true
+		ore_material.emission = Color(1.0, 0.4, 0.0)
+		ore_material.emission_energy_multiplier = (progress - 0.3) * 3.0
+	# Pulse the fire light slightly for visual interest
+	if forge_light:
+		forge_light.light_energy = 4.0 + sin(smelt_progress * 3.0) * 0.5
 
 
 func get_save_data() -> Dictionary:
@@ -147,6 +244,7 @@ func load_save_data(data: Dictionary) -> void:
 		interaction_text = "Collect Ingot"
 	elif is_smelting:
 		interaction_text = "Check Smelting Progress"
+	call_deferred("_update_forge_visuals")
 
 
 func get_interaction_text() -> String:
