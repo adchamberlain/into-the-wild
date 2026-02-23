@@ -127,6 +127,8 @@ var hud_update_timer: float = 0.0
 
 
 func _ready() -> void:
+	add_to_group("hud")
+
 	# Connect to time manager
 	if time_manager_path:
 		time_manager = get_node_or_null(time_manager_path)
