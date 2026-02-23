@@ -53,7 +53,8 @@ func _create_water_visual() -> void:
 	var water_mesh: MeshInstance3D = MeshInstance3D.new()
 	water_mesh.name = "WaterSurface"
 	var box_mesh: BoxMesh = BoxMesh.new()
-	box_mesh.size = Vector3(oasis_radius * 2.0, 0.15, oasis_radius * 2.0)
+	# Cover the full pool depression including the 3-unit ramp zone at edges
+	box_mesh.size = Vector3((oasis_radius + 3.5) * 2.0, 0.15, (oasis_radius + 3.5) * 2.0)
 	water_mesh.mesh = box_mesh
 
 	var mat: StandardMaterial3D = StandardMaterial3D.new()
@@ -70,7 +71,7 @@ func _create_water_visual() -> void:
 	var deep_mesh: MeshInstance3D = MeshInstance3D.new()
 	deep_mesh.name = "DeepWater"
 	var deep_box: BoxMesh = BoxMesh.new()
-	deep_box.size = Vector3(oasis_radius * 1.2, 0.12, oasis_radius * 1.2)
+	deep_box.size = Vector3(oasis_radius * 2.0, 0.12, oasis_radius * 2.0)
 	deep_mesh.mesh = deep_box
 
 	var deep_mat: StandardMaterial3D = StandardMaterial3D.new()
@@ -92,7 +93,7 @@ func _create_water_area() -> void:
 	var area_shape: CollisionShape3D = CollisionShape3D.new()
 	var area_box: BoxShape3D = BoxShape3D.new()
 	# Match the water volume, slightly larger to catch player entering
-	area_box.size = Vector3(oasis_radius * 2.0 + 1.0, oasis_depth + 1.0, oasis_radius * 2.0 + 1.0)
+	area_box.size = Vector3((oasis_radius + 3.5) * 2.0 + 1.0, oasis_depth + 1.0, (oasis_radius + 3.5) * 2.0 + 1.0)
 	area_shape.shape = area_box
 	# Position: surface at y=0, extends down to pool floor
 	area_shape.position = Vector3(0, -oasis_depth / 2.0, 0)
