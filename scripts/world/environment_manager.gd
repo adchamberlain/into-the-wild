@@ -19,6 +19,7 @@ var sun_container: Node3D
 
 # Moon phase tracking
 var current_moon_phase: int = 0  # 0-7, 0 = Full Moon
+var _moon_phase_alpha: float = 1.0  # Phase-based visibility (1.0=full, 0.0=new)
 const LUNAR_CYCLE_DAYS: int = 8  # 8 phases, 1 day each
 const MOON_PHASES: Array[String] = [
 	"Full Moon",
@@ -282,9 +283,10 @@ func _setup_moon() -> void:
 	box.size = Vector3(moon_size, moon_size, moon_size * 0.15)  # Flat square
 	moon_mesh.mesh = box
 
-	# Moon material (pale yellow-white, unshaded for consistent look)
+	# Moon material (pale yellow-white, unshaded, alpha for phases)
 	var moon_material := StandardMaterial3D.new()
-	moon_material.albedo_color = Color(0.95, 0.95, 0.88)
+	moon_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	moon_material.albedo_color = Color(0.95, 0.95, 0.88, 1.0)
 	moon_material.emission_enabled = true
 	moon_material.emission = Color(0.85, 0.85, 0.75)
 	moon_material.emission_energy_multiplier = 1.0
@@ -545,52 +547,44 @@ func _update_celestial_facing() -> void:
 
 
 func _update_moon_phase() -> void:
-	if not time_manager or not moon_shadow:
+	if not time_manager or not moon_mesh:
 		return
 
 	# Calculate moon phase from day (0-7, starts at full moon on day 1)
 	var day: int = time_manager.get_current_day()
 	current_moon_phase = (day - 1) % LUNAR_CYCLE_DAYS
 
-	# Update shadow position and size based on phase
-	# Shadow covers different portions of the moon for each phase
-	var shadow_visible: bool = true
-	var shadow_x: float = 0.0  # Local X offset
-	var shadow_scale_x: float = 0.55  # Width of shadow
-
+	# Moon phase controls alpha: full moon = fully visible, new moon = invisible
+	# Phases progress: Full(1.0) → Waning Gibbous(0.85) → Last Quarter(0.65)
+	# → Waning Crescent(0.35) → New(0.0) → Waxing Crescent(0.35)
+	# → First Quarter(0.65) → Waxing Gibbous(0.85)
+	var phase_alpha: float = 1.0
 	match current_moon_phase:
-		0:  # Full Moon - no shadow
-			shadow_visible = false
-		1:  # Waning Gibbous - small shadow on right
-			shadow_x = moon_size * 0.35
-			shadow_scale_x = 0.35
-		2:  # Last Quarter - half shadow on right
-			shadow_x = moon_size * 0.27
-			shadow_scale_x = 0.55
-		3:  # Waning Crescent - large shadow on right
-			shadow_x = moon_size * 0.1
-			shadow_scale_x = 0.85
-		4:  # New Moon - full shadow
-			shadow_x = 0.0
-			shadow_scale_x = 1.1
-		5:  # Waxing Crescent - large shadow on left
-			shadow_x = -moon_size * 0.1
-			shadow_scale_x = 0.85
-		6:  # First Quarter - half shadow on left
-			shadow_x = -moon_size * 0.27
-			shadow_scale_x = 0.55
-		7:  # Waxing Gibbous - small shadow on left
-			shadow_x = -moon_size * 0.35
-			shadow_scale_x = 0.35
+		0:  # Full Moon
+			phase_alpha = 1.0
+		1:  # Waning Gibbous
+			phase_alpha = 0.85
+		2:  # Last Quarter
+			phase_alpha = 0.65
+		3:  # Waning Crescent
+			phase_alpha = 0.35
+		4:  # New Moon
+			phase_alpha = 0.0
+		5:  # Waxing Crescent
+			phase_alpha = 0.35
+		6:  # First Quarter
+			phase_alpha = 0.65
+		7:  # Waxing Gibbous
+			phase_alpha = 0.85
 
-	moon_shadow.visible = shadow_visible
-	if shadow_visible:
-		moon_shadow.position = Vector3(shadow_x, 0, -moon_size * 0.05)  # Slightly in front
-		var shadow_mesh: BoxMesh = moon_shadow.mesh as BoxMesh
-		if shadow_mesh:
-			shadow_mesh.size = Vector3(moon_size * shadow_scale_x, moon_size * 1.05, moon_size * 0.2)
+	# Store phase alpha for use in _update_night_sky
+	_moon_phase_alpha = phase_alpha
 
-	print("[EnvironmentManager] Moon phase: %s (day %d)" % [MOON_PHASES[current_moon_phase], day])
+	# Hide shadow overlay — phases are now alpha-based
+	if moon_shadow:
+		moon_shadow.visible = false
+
+	print("[EnvironmentManager] Moon phase: %s (day %d, alpha %.2f)" % [MOON_PHASES[current_moon_phase], day, phase_alpha])
 
 
 func get_moon_phase_name() -> String:
@@ -691,10 +685,12 @@ func _update_night_sky() -> void:
 
 	# Update moon visibility and position
 	if moon_mesh:
+		# Combined alpha: night visibility * moon phase
+		var moon_alpha: float = night_alpha * _moon_phase_alpha
 		var moon_mat: StandardMaterial3D = moon_mesh.material_override as StandardMaterial3D
 		if moon_mat:
-			moon_mat.albedo_color.a = night_alpha
-			moon_mat.emission_energy_multiplier = night_alpha * 0.5
+			moon_mat.albedo_color.a = moon_alpha
+			moon_mat.emission_energy_multiplier = moon_alpha * 0.5
 
 		# Move moon across night sky
 		# Moon rises in east (positive X), sets in west (negative X)
@@ -710,11 +706,11 @@ func _update_night_sky() -> void:
 		var moon_y: float = sin(moon_angle) * moon_distance * 0.6 + 50.0  # Keep above horizon
 		var moon_z: float = -moon_distance * 0.5
 		moon_mesh.position = Vector3(moon_x, moon_y, moon_z)
-		moon_mesh.visible = night_alpha > 0.05
+		moon_mesh.visible = moon_alpha > 0.05
 
-	# Update moon light
+	# Update moon light (also scales with phase — new moon = no moonlight)
 	if moon_light:
-		moon_light.light_energy = night_alpha * 0.35
+		moon_light.light_energy = night_alpha * _moon_phase_alpha * 0.35
 		# Point moon light downward from moon direction
 		if moon_mesh:
 			moon_light.look_at_from_position(moon_mesh.position, Vector3.ZERO)
