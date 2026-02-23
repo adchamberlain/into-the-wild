@@ -1159,9 +1159,13 @@ func get_region_at(x: float, z: float) -> RegionType:
 	if spawn_distance < 60.0:
 		return RegionType.FOREST
 
-	# Desert ring: 150-250 units from spawn
-	# Transition zones: 150-170 (blend in), 230-250 (blend out)
-	if spawn_distance >= 170.0 and spawn_distance <= 230.0:
+	# Desert ring with organic noise-based boundaries
+	var desert_angle: float = atan2(z, x)
+	var inner_offset: float = _desert_boundary_offset(desert_angle)
+	var outer_offset: float = _desert_boundary_offset(desert_angle + 1.0)
+	var desert_inner: float = 170.0 + inner_offset
+	var desert_outer: float = 230.0 + outer_offset
+	if spawn_distance >= desert_inner and spawn_distance <= desert_outer:
 		return RegionType.DESERT
 
 	var value: float = region_noise.get_noise_2d(x, z)
@@ -1179,6 +1183,21 @@ func get_region_at(x: float, z: float) -> RegionType:
 		return RegionType.HILLS
 	else:
 		return RegionType.ROCKY
+
+
+## Returns a noise-based offset for the desert ring boundary at a given angle.
+## Uses multiple sine frequencies for organic variation (max ~±19 units).
+func _desert_boundary_offset(angle: float) -> float:
+	return sin(angle * 3.0) * 10.0 + sin(angle * 7.0 + 1.5) * 6.0 + sin(angle * 13.0 + 3.0) * 3.0
+
+
+## Returns the desert inner and outer radii at a given world position.
+## Used by terrain_chunk.gd for transition blending.
+func get_desert_boundaries(x: float, z: float) -> Vector2:
+	var angle: float = atan2(z, x)
+	var inner: float = 170.0 + _desert_boundary_offset(angle)
+	var outer: float = 230.0 + _desert_boundary_offset(angle + 1.0)
+	return Vector2(inner, outer)
 
 
 func get_region_colors(region: RegionType) -> Dictionary:

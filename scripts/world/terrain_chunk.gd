@@ -469,16 +469,19 @@ func _add_top_face_cached(st: SurfaceTool, x: float, z: float, size: float, heig
 	var region_colors: Dictionary = chunk_manager.get_region_colors(region)
 	var grass_color: Color = region_colors["grass"]
 
-	# Desert transition zone blending
+	# Desert transition zone blending (organic boundaries)
 	var spawn_dist: float = Vector2(center_x, center_z).length()
-	if spawn_dist >= 150.0 and spawn_dist < 170.0:
+	var desert_bounds: Vector2 = chunk_manager.get_desert_boundaries(center_x, center_z)
+	var d_inner: float = desert_bounds.x
+	var d_outer: float = desert_bounds.y
+	if spawn_dist >= d_inner - 20.0 and spawn_dist < d_inner:
 		# Inner transition: blend from normal region to desert
-		var blend: float = (spawn_dist - 150.0) / 20.0
+		var blend: float = (spawn_dist - (d_inner - 20.0)) / 20.0
 		var desert_colors: Dictionary = chunk_manager.region_colors[ChunkManager.RegionType.DESERT]
 		grass_color = grass_color.lerp(desert_colors["grass"], blend)
-	elif spawn_dist > 230.0 and spawn_dist <= 250.0:
+	elif spawn_dist > d_outer and spawn_dist <= d_outer + 20.0:
 		# Outer transition: blend from desert to normal region
-		var blend: float = 1.0 - (spawn_dist - 230.0) / 20.0
+		var blend: float = 1.0 - (spawn_dist - d_outer) / 20.0
 		var desert_colors: Dictionary = chunk_manager.region_colors[ChunkManager.RegionType.DESERT]
 		grass_color = grass_color.lerp(desert_colors["grass"], blend)
 
@@ -640,17 +643,20 @@ func _add_side_quad_ao(st: SurfaceTool, v0: Vector3, v1: Vector3, v2: Vector3, v
 	var grass_color: Color = region_colors["grass"]
 	var dirt_color: Color = region_colors["dirt"]
 
-	# Desert transition zone blending
+	# Desert transition zone blending (organic boundaries)
 	var spawn_dist: float = Vector2(center_x, center_z).length()
-	if spawn_dist >= 150.0 and spawn_dist < 170.0:
+	var desert_bounds: Vector2 = chunk_manager.get_desert_boundaries(center_x, center_z)
+	var d_inner: float = desert_bounds.x
+	var d_outer: float = desert_bounds.y
+	if spawn_dist >= d_inner - 20.0 and spawn_dist < d_inner:
 		# Inner transition: blend from normal region to desert
-		var blend: float = (spawn_dist - 150.0) / 20.0
+		var blend: float = (spawn_dist - (d_inner - 20.0)) / 20.0
 		var desert_colors: Dictionary = chunk_manager.region_colors[ChunkManager.RegionType.DESERT]
 		grass_color = grass_color.lerp(desert_colors["grass"], blend)
 		dirt_color = dirt_color.lerp(desert_colors["dirt"], blend)
-	elif spawn_dist > 230.0 and spawn_dist <= 250.0:
+	elif spawn_dist > d_outer and spawn_dist <= d_outer + 20.0:
 		# Outer transition: blend from desert to normal region
-		var blend: float = 1.0 - (spawn_dist - 230.0) / 20.0
+		var blend: float = 1.0 - (spawn_dist - d_outer) / 20.0
 		var desert_colors: Dictionary = chunk_manager.region_colors[ChunkManager.RegionType.DESERT]
 		grass_color = grass_color.lerp(desert_colors["grass"], blend)
 		dirt_color = dirt_color.lerp(desert_colors["dirt"], blend)
