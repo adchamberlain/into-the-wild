@@ -1,4 +1,4 @@
-[gd_scene load_steps=22 format=3 uid="uid://main001"]
+[gd_scene load_steps=23 format=3 uid="uid://main001"]
 
 [ext_resource type="PackedScene" uid="uid://world001" path="res://scenes/world/world.tscn" id="1_world"]
 [ext_resource type="Script" path="res://scripts/ui/loading_screen.gd" id="23_loading"]
@@ -23,6 +23,7 @@
 [ext_resource type="Script" path="res://scripts/core/music_manager.gd" id="20_music"]
 [ext_resource type="PackedScene" uid="uid://berrybush001" path="res://scenes/resources/berry_bush.tscn" id="21_berry_bush"]
 [ext_resource type="PackedScene" uid="uid://pause_menu001" path="res://scenes/ui/pause_menu.tscn" id="22_pause_menu"]
+[ext_resource type="Script" path="res://scripts/world/cloud_manager.gd" id="23_cloud"]
 
 [sub_resource type="Environment" id="Environment_1"]
 background_mode = 1
@@ -73,6 +74,9 @@ environment = SubResource("Environment_1")
 script = ExtResource("4_env")
 time_manager_path = NodePath("../TimeManager")
 sun_light_path = NodePath("../DirectionalLight3D")
+
+[node name="CloudManager" type="Node3D" parent="EnvironmentManager"]
+script = ExtResource("23_cloud")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 20, 0)
