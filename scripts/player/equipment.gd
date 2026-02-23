@@ -230,7 +230,8 @@ var fish_caught_tween: Tween = null
 const PLACEMENT_COOLDOWN: float = 0.5
 var placement_cooldown_timer: float = 0.0
 
-
+# Block map reopening until use_equipped is fully released
+var _map_open_blocked: bool = false
 
 func _ready() -> void:
 	# Get references from parent (player)
@@ -241,6 +242,8 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if placement_cooldown_timer > 0.0:
 		placement_cooldown_timer -= delta
+	if _map_open_blocked and not Input.is_action_pressed("use_equipped"):
+		_map_open_blocked = false
 
 
 func _setup_references() -> void:
@@ -1787,12 +1790,17 @@ func _use_map() -> bool:
 	if not player:
 		return false
 
+	# Block reopening until use_equipped is fully released after last open/close
+	if _map_open_blocked:
+		return true
+
 	# If map is already open, don't do anything — BarkMapUI handles its own closing
 	var existing: Node = player.get_tree().get_first_node_in_group("map_ui")
 	if existing and is_instance_valid(existing):
 		return true
 
 	# Open map overlay
+	_map_open_blocked = true
 	var map_ui: CanvasLayer = BarkMapUI.new()
 	player.get_tree().root.add_child(map_ui)
 	return true
