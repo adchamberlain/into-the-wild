@@ -171,6 +171,11 @@ func _ready() -> void:
 	# Initialize fall-through protection with spawn position
 	call_deferred("_init_safe_position")
 
+	# Create bow system
+	var bow_system: BowSystem = BowSystem.new()
+	bow_system.name = "BowSystem"
+	add_child(bow_system)
+
 	# Connect death signal for respawn
 	if stats:
 		stats.player_died.connect(_on_player_died)
@@ -233,6 +238,10 @@ func _input(event: InputEvent) -> void:
 
 	# Handle using equipped item (R key or R2 trigger) - disabled while resting or placing
 	if event.is_action_pressed("use_equipped") and not is_resting:
+		# Let BowSystem handle input when bow is equipped
+		var bow: Node = get_node_or_null("BowSystem")
+		if bow and bow.has_method("is_bow_active") and bow.is_bow_active():
+			return
 		var placement: Node = get_node_or_null("PlacementSystem")
 		if placement and ("is_placing" in placement and placement.is_placing or "is_moving" in placement and placement.is_moving):
 			return  # Let PlacementSystem handle this input
