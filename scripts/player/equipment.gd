@@ -2178,10 +2178,9 @@ func _use_upgrade(upgrade_item: String, upgrade_data: Dictionary) -> bool:
 	if not tool_durability.has(target_tool):
 		tool_durability[target_tool] = base_max
 
-	# Scale current durability proportionally
+	# Restore durability to full (new max) when wrap is applied
 	var current: int = tool_durability[target_tool]
-	var ratio: float = float(current) / float(base_max)
-	tool_durability[target_tool] = int(new_max * ratio)
+	tool_durability[target_tool] = new_max
 
 	# Update the max durability reference (store in upgrade tracking)
 	if not has_meta("durability_upgrades"):
