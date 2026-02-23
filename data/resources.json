@@ -9,9 +9,9 @@
       "edible": false
     },
     "river_rock": {
-      "name": "River Rock",
+      "name": "Rock",
       "category": "stone",
-      "description": "A smooth stone from the riverbed. Good for tools and fire rings.",
+      "description": "A smooth stone. Good for tools and fire rings.",
       "gather_amount": 1,
       "interaction_text": "Pick up",
       "edible": false

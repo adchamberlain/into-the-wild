@@ -220,7 +220,10 @@ func _complete_harvest(player: Node) -> void:
 
 ## Get the text to show in interaction prompt.
 func get_interaction_text() -> String:
-	var text: String = "%s %s" % [interaction_text, resource_type.capitalize()]
+	var display_name: String = resource_type.capitalize().replace("_", " ")
+	if display_name == "River Rock":
+		display_name = "Rock"
+	var text: String = "%s %s" % [interaction_text, display_name]
 
 	# For resources requiring a tool, check if player has it equipped
 	if required_tool != "":
