@@ -222,14 +222,15 @@ func build_bow_model() -> Node3D:
 	var seg_z_offsets: Array[float] = [0.0, 0.006, 0.014, 0.024]
 	var seg_x_tilts: Array[float] = [0.0, -4.0, -9.0, -15.0]  # Tilt back toward player
 
-	# Upper limb
+	# Upper limb (start from inside grip to avoid gaps)
+	var limb_start: float = 0.02
 	for i: int in range(4):
 		var seg: MeshInstance3D = MeshInstance3D.new()
 		var mesh: BoxMesh = BoxMesh.new()
 		mesh.size = Vector3(seg_widths[i], seg_height, seg_depths[i])
 		mesh.material = wood_mat
 		seg.mesh = mesh
-		seg.position = Vector3(0, 0.04 + seg_height * (float(i) + 0.5), seg_z_offsets[i])
+		seg.position = Vector3(0, limb_start + seg_height * (float(i) + 0.5), seg_z_offsets[i])
 		seg.rotation_degrees.x = seg_x_tilts[i]
 		bow_model.add_child(seg)
 
@@ -240,7 +241,7 @@ func build_bow_model() -> Node3D:
 		mesh.size = Vector3(seg_widths[i], seg_height, seg_depths[i])
 		mesh.material = wood_mat
 		seg.mesh = mesh
-		seg.position = Vector3(0, -(0.04 + seg_height * (float(i) + 0.5)), seg_z_offsets[i])
+		seg.position = Vector3(0, -(limb_start + seg_height * (float(i) + 0.5)), seg_z_offsets[i])
 		seg.rotation_degrees.x = -seg_x_tilts[i]
 		bow_model.add_child(seg)
 
@@ -249,8 +250,8 @@ func build_bow_model() -> Node3D:
 	nock_mesh.size = Vector3(0.008, 0.012, 0.008)
 	nock_mesh.material = tip_mat
 
-	# Store nock positions for string attachment
-	string_nock_y = 0.245
+	# Store nock positions for string attachment (limb_start + 4 segments * seg_height + small gap)
+	string_nock_y = 0.225
 	string_nock_z = seg_z_offsets[3] + 0.005  # Slightly past last segment toward player
 
 	var upper_nock: MeshInstance3D = MeshInstance3D.new()
