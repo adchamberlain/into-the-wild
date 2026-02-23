@@ -1717,28 +1717,40 @@ func _create_scatter_log(pos: Vector3, rng: RandomNumberGenerator) -> void:
 		var top_mesh: BoxMesh = BoxMesh.new()
 		var top_shrink: float = 1.0 - float(layers - 1) * 0.1
 		var top_size: float = stump_radius * 2.0 * top_shrink
-		top_mesh.size = Vector3(top_size, 0.05, top_size)
+		top_mesh.size = Vector3(top_size * rng.randf_range(0.9, 1.0), 0.05, top_size * rng.randf_range(0.9, 1.0))
 		top.mesh = top_mesh
 		top.material_override = _get_stump_top_material()
-		top.position.y = y_offset + 0.025
+		top.position = Vector3(rng.randf_range(-0.04, 0.04), y_offset + 0.025, rng.randf_range(-0.04, 0.04))
+		top.rotation.y = rng.randf_range(-0.2, 0.2)
 		obj.add_child(top)
 
-		# Darker ring detail (slightly smaller, on top)
-		var ring: MeshInstance3D = MeshInstance3D.new()
-		var ring_mesh: BoxMesh = BoxMesh.new()
-		ring_mesh.size = Vector3(top_size * 0.65, 0.06, top_size * 0.65)
-		ring.mesh = ring_mesh
-		ring.material_override = _get_stump_ring_material()
-		ring.position.y = y_offset + 0.03
-		obj.add_child(ring)
+		# Irregular ring details (2-3 off-center rings)
+		var num_rings: int = rng.randi_range(2, 3)
+		for r: int in range(num_rings):
+			var ring: MeshInstance3D = MeshInstance3D.new()
+			var ring_mesh: BoxMesh = BoxMesh.new()
+			var ring_scale: float = rng.randf_range(0.35, 0.75)
+			var ring_w: float = top_size * ring_scale * rng.randf_range(0.8, 1.2)
+			var ring_d: float = top_size * ring_scale * rng.randf_range(0.8, 1.2)
+			ring_mesh.size = Vector3(ring_w, 0.06, ring_d)
+			ring.mesh = ring_mesh
+			ring.material_override = _get_stump_ring_material()
+			ring.position = Vector3(
+				rng.randf_range(-0.06, 0.06),
+				y_offset + 0.03 + float(r) * 0.005,
+				rng.randf_range(-0.06, 0.06)
+			)
+			ring.rotation.y = rng.randf_range(-0.4, 0.4)
+			obj.add_child(ring)
 
-		# Inner light center
+		# Off-center inner light spot
 		var center: MeshInstance3D = MeshInstance3D.new()
 		var center_mesh: BoxMesh = BoxMesh.new()
-		center_mesh.size = Vector3(top_size * 0.3, 0.07, top_size * 0.3)
+		center_mesh.size = Vector3(top_size * rng.randf_range(0.2, 0.35), 0.07, top_size * rng.randf_range(0.2, 0.35))
 		center.mesh = center_mesh
 		center.material_override = _get_stump_top_material()
-		center.position.y = y_offset + 0.035
+		center.position = Vector3(rng.randf_range(-0.05, 0.05), y_offset + 0.035, rng.randf_range(-0.05, 0.05))
+		center.rotation.y = rng.randf_range(-0.5, 0.5)
 		obj.add_child(center)
 
 		# Small grass tufts around base
