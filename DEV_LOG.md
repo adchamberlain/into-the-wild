@@ -5186,12 +5186,25 @@ Fixed 9 gameplay bugs and added a placement cooldown, covering floating trees, t
 
 ---
 
+## Session 31 - Fix Osha Root Spawning (2026-02-22)
+
+**Osha root never spawning**: Osha root was configured with elevation thresholds far above actual terrain heights, making it effectively impossible to find. The non-MOUNTAIN check required `res_y > 25.0`, but HILLS terrain tops out at ~10 and ROCKY at ~14. The MOUNTAIN check (`res_y > 20.0`) was barely reachable since mountains peak around 24. Lowered thresholds to match real terrain: MOUNTAIN >8, ROCKY >6, HILLS >5. Also made each region an explicit check instead of a catch-all `elif`.
+
+**Osha root usage**: It's a dual-purpose consumable — restores 20 hunger (like raw meat) and heals 25 health (nearly as good as healing salve at 30). It's the only item that's both food and medicine.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/world/terrain_chunk.gd` | Modified | Lowered osha elevation thresholds to match actual terrain heights per region |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
 1. Continue play-testing and bug fixing
 2. Find a crafting use for feathers (currently a resource with no recipes)
-3. Understand how osha root is used in the game (review current implementation and purpose)
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.
