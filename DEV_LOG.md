@@ -5348,6 +5348,37 @@ Fixed 9 gameplay bugs and added a placement cooldown, covering floating trees, t
 
 ---
 
+## Session 38 - Environment Polish: Tree Sway & Terrain Scatter (2026-02-23)
+
+**Tree sway animation**: Added a single-manager system (`TreeSway`) that handles wind sway for all trees. Instead of per-tree `_process`, one manager updates 50 trees per frame in a round-robin batch. Foliage nodes translate laterally using sine waves, with higher foliage swaying more (height factor). Distance culling at 80 units. Periodic cleanup of freed tree references every 5 seconds.
+
+**Terrain scatter decorations**: Added three types of purely decorative (no collision) scatter objects to terrain chunks:
+
+- **Boulders**: 2-4 wide, flat overlapping slabs in earthy gray/brown tones. Spawn in all regions with density multipliers (3x rocky, 4x mountain, 2x hills). Visually distinct from small cubic collectible rocks.
+- **Bushes**: Organic multi-box clusters with dark/light green core, 3-5 leaf clusters at varied angles, and lighter green top tuft. Forest regions only.
+- **Logs/Stumps**: 50/50 chance of fallen log (3-5 unit tapered trunk) or tree stump (solid bark body with inset light wood top face showing ring pattern, grass tufts at base). Forest regions only, sparse.
+
+All scatter objects use shared static materials for performance, respect exclusion zones (ponds, caves, campsite), use `_get_cached_height_at()` for correct placement, and batch-yield during spawning to prevent frame stuttering.
+
+**Slope check**: Added `_is_steep_slope()` helper that samples 4 neighboring terrain heights and rejects decoration placement if any height differs by more than 0.5 units. Prevents boulders and stumps from clipping into terrain step edges.
+
+**Renamed "River Rock" to "Rock"**: Updated display name in `resources.json` and fixed `resource_node.gd` interaction prompt to show "Pick up Rock" instead of "Pick up River Rock".
+
+**Removed legacy markers**: Removed the three placeholder brown box markers (Rock1/Rock2/Rock3) from `main.tscn` that were leftover from early development.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/world/tree_sway.gd` | Created | Single-manager tree sway system with batched updates, distance culling, cleanup |
+| `scripts/world/terrain_chunk.gd` | Modified | Added scatter rock/bush/log/stump spawning and mesh builders, shared static materials, slope check, registered trees with TreeSway |
+| `scripts/world/chunk_manager.gd` | Modified | Added `tree_sway` reference for terrain chunks to register trees |
+| `scripts/resources/resource_node.gd` | Modified | Fixed interaction text to show "Rock" instead of "River Rock" |
+| `data/resources.json` | Modified | Changed river_rock display name from "River Rock" to "Rock" |
+| `scenes/main.tscn` | Modified | Added TreeSway node, removed legacy Markers/Rock1-3 nodes |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
