@@ -1430,8 +1430,8 @@ func _remove_grappling_hook() -> void:
 
 # Bow visual
 var bow_model: Node3D = null
-const BOW_REST_POSITION: Vector3 = Vector3(0.35, -0.15, -0.55)
-const BOW_REST_ROTATION: Vector3 = Vector3(0, 0, -15)
+const BOW_REST_POSITION: Vector3 = Vector3(0.25, -0.12, -0.45)
+const BOW_REST_ROTATION: Vector3 = Vector3(5, 10, -10)
 
 
 func _create_bow_model() -> void:

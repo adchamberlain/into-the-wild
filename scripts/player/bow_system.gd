@@ -23,7 +23,7 @@ var draw_progress: float = 0.0
 var bow_model: Node3D = null
 var string_mesh: MeshInstance3D = null
 var string_rest_z: float = 0.0
-var string_drawn_z: float = 0.08
+var string_drawn_z: float = 0.04
 
 
 func _ready() -> void:
@@ -200,53 +200,97 @@ func is_bow_active() -> bool:
 
 ## Build the procedural bow visual model (called by equipment system when bow is equipped).
 ## Returns the bow_model Node3D to be attached to the camera.
+## Uses multiple segments per limb to create a curved bow shape.
 func build_bow_model() -> Node3D:
 	bow_model = Node3D.new()
 	bow_model.name = "BowModel"
 
-	# --- Lower limb ---
-	var lower_limb: MeshInstance3D = MeshInstance3D.new()
-	lower_limb.name = "LowerLimb"
-	var lower_mesh: BoxMesh = BoxMesh.new()
-	lower_mesh.size = Vector3(0.04, 0.3, 0.04)
+	# Shared materials
 	var wood_mat: StandardMaterial3D = StandardMaterial3D.new()
 	wood_mat.albedo_color = Color(0.5, 0.35, 0.18)
-	lower_mesh.material = wood_mat
-	lower_limb.mesh = lower_mesh
-	lower_limb.position = Vector3(0, -0.2, 0)
-	lower_limb.rotation_degrees.z = -8.0
-	bow_model.add_child(lower_limb)
 
-	# --- Upper limb ---
-	var upper_limb: MeshInstance3D = MeshInstance3D.new()
-	upper_limb.name = "UpperLimb"
-	var upper_mesh: BoxMesh = BoxMesh.new()
-	upper_mesh.size = Vector3(0.04, 0.3, 0.04)
-	upper_mesh.material = wood_mat
-	upper_limb.mesh = upper_mesh
-	upper_limb.position = Vector3(0, 0.2, 0)
-	upper_limb.rotation_degrees.z = 8.0
-	bow_model.add_child(upper_limb)
+	var dark_wood_mat: StandardMaterial3D = StandardMaterial3D.new()
+	dark_wood_mat.albedo_color = Color(0.38, 0.24, 0.12)
 
-	# --- Grip ---
+	var tip_mat: StandardMaterial3D = StandardMaterial3D.new()
+	tip_mat.albedo_color = Color(0.42, 0.30, 0.15)
+
+	# --- Curved limbs (4 segments each, progressively angled for curve) ---
+	# Each segment is placed end-to-end, with increasing forward curve (z offset)
+	# Segments taper: thicker near grip, thinner at tips
+	var seg_height: float = 0.05  # Height of each segment
+	var seg_depths: Array[float] = [0.025, 0.022, 0.018, 0.014]  # Tapering depth
+	var seg_widths: Array[float] = [0.018, 0.016, 0.013, 0.010]  # Tapering width
+	# Cumulative z-offsets per segment to create the curve (bow bends forward)
+	var seg_z_offsets: Array[float] = [0.0, -0.006, -0.014, -0.024]
+	var seg_x_tilts: Array[float] = [0.0, 4.0, 9.0, 15.0]  # Progressive tilt outward
+
+	# Upper limb (segments going upward from grip)
+	for i: int in range(4):
+		var seg: MeshInstance3D = MeshInstance3D.new()
+		var mesh: BoxMesh = BoxMesh.new()
+		mesh.size = Vector3(seg_widths[i], seg_height, seg_depths[i])
+		mesh.material = wood_mat
+		seg.mesh = mesh
+		seg.position = Vector3(0, 0.04 + seg_height * (float(i) + 0.5), seg_z_offsets[i])
+		seg.rotation_degrees.x = seg_x_tilts[i]
+		bow_model.add_child(seg)
+
+	# Lower limb (mirror of upper, going downward)
+	for i: int in range(4):
+		var seg: MeshInstance3D = MeshInstance3D.new()
+		var mesh: BoxMesh = BoxMesh.new()
+		mesh.size = Vector3(seg_widths[i], seg_height, seg_depths[i])
+		mesh.material = wood_mat
+		seg.mesh = mesh
+		seg.position = Vector3(0, -(0.04 + seg_height * (float(i) + 0.5)), seg_z_offsets[i])
+		seg.rotation_degrees.x = -seg_x_tilts[i]
+		bow_model.add_child(seg)
+
+	# --- Tip nocks (small knobs where string attaches) ---
+	var nock_mesh: BoxMesh = BoxMesh.new()
+	nock_mesh.size = Vector3(0.008, 0.012, 0.008)
+	nock_mesh.material = tip_mat
+
+	var upper_nock: MeshInstance3D = MeshInstance3D.new()
+	upper_nock.mesh = nock_mesh
+	upper_nock.position = Vector3(0, 0.245, seg_z_offsets[3] - 0.005)
+	bow_model.add_child(upper_nock)
+
+	var lower_nock: MeshInstance3D = MeshInstance3D.new()
+	lower_nock.mesh = nock_mesh
+	lower_nock.position = Vector3(0, -0.245, seg_z_offsets[3] - 0.005)
+	bow_model.add_child(lower_nock)
+
+	# --- Grip wrap (darker leather binding at center) ---
 	var grip: MeshInstance3D = MeshInstance3D.new()
 	grip.name = "Grip"
 	var grip_mesh: BoxMesh = BoxMesh.new()
-	grip_mesh.size = Vector3(0.05, 0.1, 0.05)
-	var grip_mat: StandardMaterial3D = StandardMaterial3D.new()
-	grip_mat.albedo_color = Color(0.35, 0.22, 0.1)
-	grip_mesh.material = grip_mat
+	grip_mesh.size = Vector3(0.022, 0.06, 0.028)
+	grip_mesh.material = dark_wood_mat
 	grip.mesh = grip_mesh
 	grip.position = Vector3.ZERO
 	bow_model.add_child(grip)
 
-	# --- String ---
+	# Grip accent strips (cord wrapping)
+	var wrap_mat: StandardMaterial3D = StandardMaterial3D.new()
+	wrap_mat.albedo_color = Color(0.3, 0.18, 0.08)
+	for j: int in range(3):
+		var wrap: MeshInstance3D = MeshInstance3D.new()
+		var wrap_mesh: BoxMesh = BoxMesh.new()
+		wrap_mesh.size = Vector3(0.024, 0.005, 0.030)
+		wrap_mesh.material = wrap_mat
+		wrap.mesh = wrap_mesh
+		wrap.position = Vector3(0, -0.02 + 0.02 * j, 0)
+		bow_model.add_child(wrap)
+
+	# --- String (thin line from tip to tip) ---
 	string_mesh = MeshInstance3D.new()
 	string_mesh.name = "BowString"
 	var string_box: BoxMesh = BoxMesh.new()
-	string_box.size = Vector3(0.008, 0.65, 0.008)
+	string_box.size = Vector3(0.004, 0.49, 0.004)
 	var string_mat: StandardMaterial3D = StandardMaterial3D.new()
-	string_mat.albedo_color = Color(0.85, 0.82, 0.75)
+	string_mat.albedo_color = Color(0.82, 0.78, 0.70)
 	string_box.material = string_mat
 	string_mesh.mesh = string_box
 	string_mesh.position = Vector3(0, 0, string_rest_z)
