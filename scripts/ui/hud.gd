@@ -81,6 +81,9 @@ var celebration_tween: Tween = null
 # Notification timer tracking
 var _notification_timer: SceneTreeTimer = null
 
+# Overlay mode suppresses interaction prompt updates
+var _overlay_active: bool = false
+
 # Grapple reticle (uses existing Crosshair label)
 @onready var crosshair: Label = $Crosshair
 var default_crosshair_color: Color = Color(1, 1, 1, 0.8)
@@ -287,7 +290,7 @@ func _on_interaction_target_changed(target: Node, interaction_text: String) -> v
 				var move_key: String = _get_button_prompt("move_structure")
 				prompt_text += "  [%s] Move" % move_key
 		interaction_prompt.text = prompt_text
-	if interaction_prompt_panel:
+	if interaction_prompt_panel and not _overlay_active:
 		interaction_prompt_panel.visible = true
 
 
@@ -1117,8 +1120,7 @@ func _update_compass_display() -> void:
 
 func set_overlay_mode(enabled: bool) -> void:
 	## Hide or show persistent HUD panels for full-screen overlay display.
-	## Notification and interaction prompt panels are excluded — they have
-	## their own timer/raycast-driven visibility and should not be force-shown.
+	_overlay_active = enabled
 	var panels: Array[Control] = [
 		get_node_or_null("TimePanel"),
 		get_node_or_null("StatsPanel"),
