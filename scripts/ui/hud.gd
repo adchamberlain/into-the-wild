@@ -44,6 +44,7 @@ var bubble_labels: Array[Label] = []
 var bubble_blink_timer: float = 0.0
 var bubble_blink_visible: bool = true
 var bubble_blink_active: bool = false
+var bubble_count: int = 0
 const BUBBLE_BLINK_RATE: float = 0.35  # seconds per toggle
 
 # Notification
@@ -986,6 +987,8 @@ func update_air_bubbles(count: int, submerged: bool) -> void:
 			# Lost bubble — dim grey
 			bubble_labels[i].add_theme_color_override("font_color", Color(0.3, 0.3, 0.3, 0.3))
 
+	bubble_count = count
+
 	# Activate blinking when 2 or fewer bubbles remain
 	if count <= 2 and count > 0:
 		if not bubble_blink_active:
@@ -1027,9 +1030,7 @@ func _create_bubble_container() -> void:
 ## Toggle filled bubble visibility for the blink warning effect.
 func _update_bubble_blink() -> void:
 	for i: int in bubble_labels.size():
-		var color: Color = bubble_labels[i].get_theme_color("font_color")
-		# Only blink filled bubbles (alpha > 0.5 means filled)
-		if color.a > 0.5:
+		if i < bubble_count:
 			if bubble_blink_visible:
 				bubble_labels[i].add_theme_color_override("font_color", Color(0.6, 0.85, 1.0, 1))
 			else:
