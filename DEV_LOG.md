@@ -5313,8 +5313,10 @@ Fixed 9 gameplay bugs and added a placement cooldown, covering floating trees, t
 ## Next Session
 
 ### Planned Tasks
-1. Remove TEMP test spawn items (bow + 20 arrows + bark_map) once satisfied
-2. Continue play-testing and bug fixing
+1. Environment improvements — add clouds and other atmospheric polish
+2. Add desert biome far from spawn site
+3. Remove TEMP test spawn items (bow + 20 arrows + bark_map) once satisfied
+4. Continue play-testing and bug fixing
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.
