@@ -1355,6 +1355,21 @@ func _spawn_chunk_decorations() -> void:
 
 		attempts += 1
 
+	# Force-spawn one of each scatter type near campsite for showcase
+	if chunk_coord == Vector2i(0, 0):
+		var showcase_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+		showcase_rng.seed = 12345
+		var y_boulder: float = _get_cached_height_at(8.0, -6.0)
+		_create_scatter_rock(Vector3(8.0, y_boulder, -6.0), showcase_rng)
+		var y_bush: float = _get_cached_height_at(-7.0, -5.0)
+		_create_scatter_bush(Vector3(-7.0, y_bush, -5.0), showcase_rng)
+		var y_stump: float = _get_cached_height_at(6.0, 8.0)
+		showcase_rng.seed = 99999  # Force stump (randf() > 0.5 = true)
+		_create_scatter_log(Vector3(6.0, y_stump, 8.0), showcase_rng)
+		var y_log: float = _get_cached_height_at(-8.0, 7.0)
+		showcase_rng.seed = 1  # Force log (randf() > 0.5 = false)
+		_create_scatter_log(Vector3(-8.0, y_log, 7.0), showcase_rng)
+
 	# Spawn scatter rocks (all regions, denser on rocky/mountain)
 	var target_rocks: int = int(6 * area_ratio)
 	var region_sample_x: float = chunk_world_x + chunk_world_size * 0.5
