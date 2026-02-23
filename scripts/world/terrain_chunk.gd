@@ -18,7 +18,7 @@ var spawned_trees: Array[Node3D] = []
 var spawned_resources: Array[Node3D] = []
 var spawned_animals: Array[Node3D] = []
 var is_generated: bool = false
-var __local_resource_index: int = 0  # Deterministic naming counter for chunk resources
+var _local_resource_index: int = 0  # Deterministic naming counter for chunk resources
 
 # Shared materials (static to avoid shader compilation per decoration)
 static var _grass_mat: StandardMaterial3D = null
