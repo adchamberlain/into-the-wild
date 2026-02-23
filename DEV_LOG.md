@@ -5276,10 +5276,29 @@ Fixed 9 gameplay bugs and added a placement cooldown, covering floating trees, t
 
 ---
 
+## Session 35 - Map Toggle Fix & Equipment Key Bindings (2026-02-22)
+
+**Map R2 toggle fix**: Birch bark map flickered rapidly when toggling with R2 controller trigger. Root cause was twofold: (1) BarkMapUI's `_input` handler caught the same event that opened the map, immediately closing it, and (2) analog trigger jitter generated multiple events per press causing rapid open/close cycles. After several iterations, solved by moving close detection entirely to `_process` using `Input.is_action_just_pressed()` (Godot's built-in one-frame-per-press debouncing) with a release gate — the map waits for R2 to be fully released before accepting a close press. Equipment side also blocks `_use_map` until R2 is released after each call to prevent reopening.
+
+**Equipment key binding fixes**: Bow and birch bark map were missing from the equipment menu and keyboard shortcuts. Added bow (`\` key, slot 27) to equipment menu. Fixed `]` and other special keys not working on Mac by checking both `physical_keycode` and `keycode` as fallback for all equipment key bindings.
+
+**TEMP test items**: Added birch bark map to test spawn inventory alongside bow and arrows.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/ui/bark_map_ui.gd` | Modified | Replaced `_input` close handler with `_process`-based `is_action_just_pressed` + release gate |
+| `scripts/player/equipment.gd` | Modified | Added `_map_open_blocked` release tracking, dual keycode/physical_keycode checks, `\` key for bow |
+| `scripts/ui/equipment_menu.gd` | Modified | Added bow entry with `\` key binding |
+| `scripts/player/player_controller.gd` | Modified | Added bark_map to TEMP test spawn |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Remove TEMP test spawn items (bow + 20 arrows) once satisfied with bow behavior
+1. Remove TEMP test spawn items (bow + 20 arrows + bark_map) once satisfied
 2. Continue play-testing and bug fixing
 
 ### Reference
