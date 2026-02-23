@@ -21,9 +21,12 @@ var inventory: Inventory = null
 var is_drawing: bool = false
 var draw_progress: float = 0.0
 var bow_model: Node3D = null
-var string_mesh: MeshInstance3D = null
-var string_rest_z: float = 0.0
-var string_drawn_z: float = 0.04
+# String is two segments (upper + lower) meeting at a pull point
+var string_upper: MeshInstance3D = null
+var string_lower: MeshInstance3D = null
+var string_nock_y: float = 0.245  # Y position of nock tips (set during build)
+var string_nock_z: float = 0.0  # Z position of nock tips (set during build)
+var string_pull_max_z: float = 0.06  # How far back the pull point moves at full draw
 
 
 func _ready() -> void:
@@ -89,10 +92,8 @@ func _process(delta: float) -> void:
 		# Increment draw progress toward 1.0
 		draw_progress = minf(draw_progress + delta / DRAW_TIME, 1.0)
 
-		# Animate string pull-back
-		if string_mesh:
-			var target_z: float = lerpf(string_rest_z, string_drawn_z, draw_progress)
-			string_mesh.position.z = target_z
+		# Animate string V-pull
+		_update_string(draw_progress)
 
 
 func _start_draw() -> void:
@@ -141,15 +142,13 @@ func _fire() -> void:
 	# Reset state
 	is_drawing = false
 	draw_progress = 0.0
-	if string_mesh:
-		string_mesh.position.z = string_rest_z
+	_update_string(0.0)
 
 
 func _cancel_draw() -> void:
 	is_drawing = false
 	draw_progress = 0.0
-	if string_mesh:
-		string_mesh.position.z = string_rest_z
+	_update_string(0.0)
 
 
 func _spawn_arrow() -> void:
@@ -200,7 +199,7 @@ func is_bow_active() -> bool:
 
 ## Build the procedural bow visual model (called by equipment system when bow is equipped).
 ## Returns the bow_model Node3D to be attached to the camera.
-## Uses multiple segments per limb to create a curved bow shape.
+## Limbs curve TOWARD the player (+Z), string is on the player-facing side.
 func build_bow_model() -> Node3D:
 	bow_model = Node3D.new()
 	bow_model.name = "BowModel"
@@ -215,17 +214,15 @@ func build_bow_model() -> Node3D:
 	var tip_mat: StandardMaterial3D = StandardMaterial3D.new()
 	tip_mat.albedo_color = Color(0.42, 0.30, 0.15)
 
-	# --- Curved limbs (4 segments each, progressively angled for curve) ---
-	# Each segment is placed end-to-end, with increasing forward curve (z offset)
-	# Segments taper: thicker near grip, thinner at tips
-	var seg_height: float = 0.05  # Height of each segment
-	var seg_depths: Array[float] = [0.025, 0.022, 0.018, 0.014]  # Tapering depth
-	var seg_widths: Array[float] = [0.018, 0.016, 0.013, 0.010]  # Tapering width
-	# Cumulative z-offsets per segment to create the curve (bow bends forward)
-	var seg_z_offsets: Array[float] = [0.0, -0.006, -0.014, -0.024]
-	var seg_x_tilts: Array[float] = [0.0, 4.0, 9.0, 15.0]  # Progressive tilt outward
+	# --- Curved limbs (4 segments each, curving toward player = +Z) ---
+	var seg_height: float = 0.05
+	var seg_depths: Array[float] = [0.025, 0.022, 0.018, 0.014]  # Tapering
+	var seg_widths: Array[float] = [0.018, 0.016, 0.013, 0.010]
+	# Positive Z = toward player (bow curves back like a recurve)
+	var seg_z_offsets: Array[float] = [0.0, 0.006, 0.014, 0.024]
+	var seg_x_tilts: Array[float] = [0.0, -4.0, -9.0, -15.0]  # Tilt back toward player
 
-	# Upper limb (segments going upward from grip)
+	# Upper limb
 	for i: int in range(4):
 		var seg: MeshInstance3D = MeshInstance3D.new()
 		var mesh: BoxMesh = BoxMesh.new()
@@ -236,7 +233,7 @@ func build_bow_model() -> Node3D:
 		seg.rotation_degrees.x = seg_x_tilts[i]
 		bow_model.add_child(seg)
 
-	# Lower limb (mirror of upper, going downward)
+	# Lower limb (mirror)
 	for i: int in range(4):
 		var seg: MeshInstance3D = MeshInstance3D.new()
 		var mesh: BoxMesh = BoxMesh.new()
@@ -247,22 +244,26 @@ func build_bow_model() -> Node3D:
 		seg.rotation_degrees.x = -seg_x_tilts[i]
 		bow_model.add_child(seg)
 
-	# --- Tip nocks (small knobs where string attaches) ---
+	# --- Tip nocks ---
 	var nock_mesh: BoxMesh = BoxMesh.new()
 	nock_mesh.size = Vector3(0.008, 0.012, 0.008)
 	nock_mesh.material = tip_mat
 
+	# Store nock positions for string attachment
+	string_nock_y = 0.245
+	string_nock_z = seg_z_offsets[3] + 0.005  # Slightly past last segment toward player
+
 	var upper_nock: MeshInstance3D = MeshInstance3D.new()
 	upper_nock.mesh = nock_mesh
-	upper_nock.position = Vector3(0, 0.245, seg_z_offsets[3] - 0.005)
+	upper_nock.position = Vector3(0, string_nock_y, string_nock_z)
 	bow_model.add_child(upper_nock)
 
 	var lower_nock: MeshInstance3D = MeshInstance3D.new()
 	lower_nock.mesh = nock_mesh
-	lower_nock.position = Vector3(0, -0.245, seg_z_offsets[3] - 0.005)
+	lower_nock.position = Vector3(0, -string_nock_y, string_nock_z)
 	bow_model.add_child(lower_nock)
 
-	# --- Grip wrap (darker leather binding at center) ---
+	# --- Grip wrap ---
 	var grip: MeshInstance3D = MeshInstance3D.new()
 	grip.name = "Grip"
 	var grip_mesh: BoxMesh = BoxMesh.new()
@@ -272,7 +273,7 @@ func build_bow_model() -> Node3D:
 	grip.position = Vector3.ZERO
 	bow_model.add_child(grip)
 
-	# Grip accent strips (cord wrapping)
+	# Grip accent strips
 	var wrap_mat: StandardMaterial3D = StandardMaterial3D.new()
 	wrap_mat.albedo_color = Color(0.3, 0.18, 0.08)
 	for j: int in range(3):
@@ -284,19 +285,70 @@ func build_bow_model() -> Node3D:
 		wrap.position = Vector3(0, -0.02 + 0.02 * j, 0)
 		bow_model.add_child(wrap)
 
-	# --- String (thin line from tip to tip) ---
-	string_mesh = MeshInstance3D.new()
-	string_mesh.name = "BowString"
-	var string_box: BoxMesh = BoxMesh.new()
-	string_box.size = Vector3(0.004, 0.49, 0.004)
+	# --- V-String (two segments: upper nock→pull point, lower nock→pull point) ---
 	var string_mat: StandardMaterial3D = StandardMaterial3D.new()
 	string_mat.albedo_color = Color(0.82, 0.78, 0.70)
-	string_box.material = string_mat
-	string_mesh.mesh = string_box
-	string_mesh.position = Vector3(0, 0, string_rest_z)
-	bow_model.add_child(string_mesh)
+
+	# Upper string half (nock to center)
+	string_upper = MeshInstance3D.new()
+	string_upper.name = "StringUpper"
+	var upper_str_mesh: BoxMesh = BoxMesh.new()
+	upper_str_mesh.size = Vector3(0.004, 1.0, 0.004)  # Unit size, scaled dynamically
+	upper_str_mesh.material = string_mat
+	string_upper.mesh = upper_str_mesh
+	bow_model.add_child(string_upper)
+
+	# Lower string half (nock to center)
+	string_lower = MeshInstance3D.new()
+	string_lower.name = "StringLower"
+	var lower_str_mesh: BoxMesh = BoxMesh.new()
+	lower_str_mesh.size = Vector3(0.004, 1.0, 0.004)
+	lower_str_mesh.material = string_mat
+	string_lower.mesh = lower_str_mesh
+	bow_model.add_child(string_lower)
+
+	# Set initial string position (no draw)
+	_update_string(0.0)
 
 	return bow_model
+
+
+## Update the V-string segments based on draw progress (0.0 = at rest, 1.0 = full draw).
+## Each half stretches from its nock point to the center pull point.
+func _update_string(progress: float) -> void:
+	if not string_upper or not string_lower:
+		return
+
+	# Pull point: center (y=0), pulled back toward player by progress
+	var pull_z: float = string_nock_z + progress * string_pull_max_z
+
+	# Upper half: from upper nock (0, +nock_y, nock_z) to pull point (0, 0, pull_z)
+	var upper_start: Vector3 = Vector3(0, string_nock_y, string_nock_z)
+	var upper_end: Vector3 = Vector3(0, 0, pull_z)
+	_position_string_segment(string_upper, upper_start, upper_end)
+
+	# Lower half: from lower nock (0, -nock_y, nock_z) to pull point (0, 0, pull_z)
+	var lower_start: Vector3 = Vector3(0, -string_nock_y, string_nock_z)
+	var lower_end: Vector3 = Vector3(0, 0, pull_z)
+	_position_string_segment(string_lower, lower_start, lower_end)
+
+
+## Position and scale a string segment mesh to stretch between two points.
+func _position_string_segment(seg: MeshInstance3D, from: Vector3, to: Vector3) -> void:
+	var midpoint: Vector3 = (from + to) * 0.5
+	var diff: Vector3 = to - from
+	var length: float = diff.length()
+
+	seg.position = midpoint
+	seg.scale = Vector3(1, length, 1)
+
+	# Orient the segment along the from→to direction
+	if length > 0.001:
+		# Calculate rotation to align Y-axis with the segment direction
+		var dir: Vector3 = diff.normalized()
+		# Angle from Y-axis in the YZ plane
+		var angle: float = atan2(dir.z, dir.y)
+		seg.rotation = Vector3(angle, 0, 0)
 
 
 ## Remove and clean up the bow visual model.
@@ -304,5 +356,6 @@ func clear_bow_model() -> void:
 	if bow_model and is_instance_valid(bow_model):
 		bow_model.queue_free()
 	bow_model = null
-	string_mesh = null
+	string_upper = null
+	string_lower = null
 	_cancel_draw()
