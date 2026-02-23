@@ -20,12 +20,25 @@ var drying_progress: float = 0.0
 var player_inventory: Node = null
 var pending_output: String = ""  # Product awaiting player pickup
 
+# Visual food on racks
+var food_meshes: Array[MeshInstance3D] = []
+
+# Food type colors
+const FOOD_COLORS: Dictionary = {
+	"fish": Color(0.55, 0.6, 0.65),       # Silvery
+	"berry": Color(0.45, 0.15, 0.3),       # Dark berry purple
+	"mushroom": Color(0.55, 0.45, 0.35),   # Tan-brown
+	"herb": Color(0.3, 0.5, 0.25),         # Green
+}
+const DRIED_COLOR: Color = Color(0.4, 0.3, 0.2)  # Generic dried brown
+
 
 func _ready() -> void:
 	super._ready()
 	structure_type = "drying_rack"
 	structure_name = "Drying Rack"
 	interaction_text = "Use Drying Rack"
+	call_deferred("_create_food_visuals")
 
 
 func _process(delta: float) -> void:
@@ -49,6 +62,7 @@ func interact(player: Node) -> bool:
 		print("[DryingRack] Collected: +1 %s" % pending_output)
 		pending_output = ""
 		interaction_text = "Use Drying Rack"
+		_update_food_visuals()
 		return true
 
 	if is_drying:
@@ -78,6 +92,7 @@ func _start_drying(food_type: String) -> void:
 	is_drying = true
 	drying_progress = 0.0
 	interaction_text = "Check Drying Progress"
+	_update_food_visuals()
 	print("[DryingRack] Started drying %s" % food_type)
 
 
@@ -106,6 +121,7 @@ func _complete_drying() -> void:
 	current_food = ""
 	drying_progress = 0.0
 	interaction_text = "Collect Dried Food" if pending_output != "" else "Use Drying Rack"
+	_update_food_visuals()
 
 
 func get_save_data() -> Dictionary:
@@ -127,6 +143,7 @@ func load_save_data(data: Dictionary) -> void:
 		interaction_text = "Collect Dried Food"
 	elif is_drying:
 		interaction_text = "Check Drying Progress"
+	call_deferred("_update_food_visuals")
 
 
 func get_interaction_text() -> String:
@@ -145,3 +162,48 @@ func get_interaction_text() -> String:
 					return "Dry Food"
 			return "Need Food to Dry"
 	return "Dry Food"
+
+
+func _create_food_visuals() -> void:
+	# Create food pieces on the rack bars, hidden by default
+	# Bar positions from placement_system: y=0.4, y=0.75, y=1.1
+	var food_mat: StandardMaterial3D = StandardMaterial3D.new()
+	food_mat.albedo_color = Color(0.55, 0.28, 0.22)
+
+	# Strips on top two bars (hanging below)
+	var bar_ys: Array[float] = [1.1, 0.75]
+	var strip_mesh: BoxMesh = BoxMesh.new()
+	strip_mesh.size = Vector3(0.08, 0.18, 0.03)
+
+	for bar_y: float in bar_ys:
+		var count: int = 4 if bar_y > 1.0 else 3
+		var spread: float = 0.25
+		var start_x: float = -(count - 1) * spread / 2.0
+		for i: int in range(count):
+			var piece: MeshInstance3D = MeshInstance3D.new()
+			piece.mesh = strip_mesh
+			piece.position = Vector3(start_x + i * spread, bar_y - 0.1, 0)
+			piece.material_override = food_mat
+			piece.visible = false
+			piece.name = "FoodPiece"
+			add_child(piece)
+			food_meshes.append(piece)
+
+
+func _update_food_visuals() -> void:
+	var show_food: bool = is_drying or pending_output != ""
+	# Pick color based on food type
+	var target_color: Color
+	if pending_output != "":
+		target_color = DRIED_COLOR
+	elif FOOD_COLORS.has(current_food):
+		target_color = FOOD_COLORS[current_food]
+	else:
+		target_color = Color(0.55, 0.28, 0.22)
+
+	for piece: MeshInstance3D in food_meshes:
+		if not is_instance_valid(piece):
+			continue
+		piece.visible = show_food
+		if show_food and piece.material_override:
+			piece.material_override.albedo_color = target_color

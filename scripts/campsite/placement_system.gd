@@ -1711,32 +1711,6 @@ func _create_drying_rack() -> StaticBody3D:
 			lash.material_override = rope_mat
 			rack.add_child(lash)
 
-	# Hanging items: strips of meat/fish and herb bundles
-	var strip_mesh: BoxMesh = BoxMesh.new()
-	strip_mesh.size = Vector3(0.08, 0.18, 0.03)
-	var herb_bundle_mesh: BoxMesh = BoxMesh.new()
-	herb_bundle_mesh.size = Vector3(0.06, 0.14, 0.06)
-
-	# Items on top bar
-	for i: int in range(4):
-		var item: MeshInstance3D = MeshInstance3D.new()
-		if i % 2 == 0:
-			item.mesh = strip_mesh
-			item.material_override = meat_mat
-		else:
-			item.mesh = herb_bundle_mesh
-			item.material_override = herb_mat
-		item.position = Vector3(-0.35 + i * 0.25, 1.0, 0)
-		rack.add_child(item)
-
-	# Items on middle bar
-	for i: int in range(3):
-		var item: MeshInstance3D = MeshInstance3D.new()
-		item.mesh = strip_mesh
-		item.material_override = meat_mat if i != 1 else herb_mat
-		item.position = Vector3(-0.25 + i * 0.25, 0.58, 0)
-		rack.add_child(item)
-
 	# Hanging cord details (small vertical ropes)
 	var cord_mesh: BoxMesh = BoxMesh.new()
 	cord_mesh.size = Vector3(0.015, 0.08, 0.015)
