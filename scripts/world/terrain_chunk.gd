@@ -1387,12 +1387,12 @@ func _spawn_chunk_decorations() -> void:
 		_create_scatter_rock(Vector3(8.0, y_boulder, -6.0), showcase_rng)
 		var y_bush: float = _get_cached_height_at(-7.0, -5.0)
 		_create_scatter_bush(Vector3(-7.0, y_bush, -5.0), showcase_rng)
-		var y_stump: float = _get_cached_height_at(6.0, 8.0)
+		var y_stump: float = _get_cached_height_at(5.0, 4.0)
 		showcase_rng.seed = 99999  # Force stump (randf() > 0.5 = true)
-		_create_scatter_log(Vector3(6.0, y_stump, 8.0), showcase_rng)
-		var y_log: float = _get_cached_height_at(-8.0, 7.0)
+		_create_scatter_log(Vector3(5.0, y_stump, 4.0), showcase_rng)
+		var y_log: float = _get_cached_height_at(-6.0, 4.0)
 		showcase_rng.seed = 1  # Force log (randf() > 0.5 = false)
-		_create_scatter_log(Vector3(-8.0, y_log, 7.0), showcase_rng)
+		_create_scatter_log(Vector3(-6.0, y_log, 4.0), showcase_rng)
 
 	# Spawn scatter rocks (all regions, denser on rocky/mountain)
 	var target_rocks: int = int(6 * area_ratio)
@@ -1520,7 +1520,7 @@ func _spawn_chunk_decorations() -> void:
 			var noise_val: float = (decoration_noise.get_noise_2d(world_x * 0.5, world_z * 0.5) + 1.0) * 0.5
 			if noise_val > 0.55:
 				var y: float = _get_cached_height_at(world_x, world_z)
-				if _is_steep_slope(world_x, world_z, y, 1.0):
+				if _is_steep_slope(world_x, world_z, y, 2.0):
 					attempts += 1
 					continue
 				_create_scatter_log(Vector3(world_x, y, world_z), rng)
@@ -1664,22 +1664,24 @@ func _create_scatter_bush(pos: Vector3, rng: RandomNumberGenerator) -> void:
 		)
 		bush.add_child(box)
 
-	# Scatter white blossoms across the bush surface
-	var num_blossoms: int = rng.randi_range(5, 10)
+	# Scatter white blossoms on top and edges of the bush
+	var num_blossoms: int = rng.randi_range(6, 12)
 	for b: int in range(num_blossoms):
 		var blossom: MeshInstance3D = MeshInstance3D.new()
 		var blossom_mesh: BoxMesh = BoxMesh.new()
-		var bsize: float = rng.randf_range(0.15, 0.28)
+		var bsize: float = rng.randf_range(0.12, 0.22)
 		blossom_mesh.size = Vector3(bsize, bsize * 0.5, bsize)
 		blossom.mesh = blossom_mesh
 		blossom.material_override = _get_blossom_material()
+		# Place on top surface and outer edges so they're visible
+		var angle: float = rng.randf() * TAU
+		var radius: float = base_size * rng.randf_range(0.2, 0.6)
 		blossom.position = Vector3(
-			rng.randf_range(-0.5, 0.5) * base_size,
-			base_size * rng.randf_range(0.3, 0.9),
-			rng.randf_range(-0.5, 0.5) * base_size
+			cos(angle) * radius,
+			base_size * rng.randf_range(0.7, 1.1),
+			sin(angle) * radius
 		)
 		blossom.rotation.y = rng.randf() * TAU
-		blossom.rotation.x = rng.randf_range(-0.3, 0.3)
 		bush.add_child(blossom)
 
 	bush.position = pos
@@ -1738,6 +1740,26 @@ func _create_scatter_log(pos: Vector3, rng: RandomNumberGenerator) -> void:
 		center.material_override = _get_stump_top_material()
 		center.position.y = y_offset + 0.035
 		obj.add_child(center)
+
+		# Small grass tufts around base
+		var num_grass: int = rng.randi_range(4, 7)
+		for g: int in range(num_grass):
+			var tuft: MeshInstance3D = MeshInstance3D.new()
+			var tuft_mesh: BoxMesh = BoxMesh.new()
+			var gh: float = rng.randf_range(0.15, 0.3)
+			var gw: float = rng.randf_range(0.08, 0.15)
+			tuft_mesh.size = Vector3(gw, gh, gw)
+			tuft.mesh = tuft_mesh
+			tuft.material_override = _get_grass_material()
+			var g_angle: float = rng.randf() * TAU
+			var g_radius: float = stump_radius + rng.randf_range(0.05, 0.2)
+			tuft.position = Vector3(
+				cos(g_angle) * g_radius,
+				gh * 0.5,
+				sin(g_angle) * g_radius
+			)
+			tuft.rotation.y = rng.randf() * TAU
+			obj.add_child(tuft)
 	else:
 		# Horizontal fallen log - thick trunk with taper
 		var log_length: float = rng.randf_range(3.0, 5.0)
