@@ -1645,45 +1645,47 @@ func _create_scatter_rock(pos: Vector3, rng: RandomNumberGenerator) -> void:
 
 func _create_scatter_bush(pos: Vector3, rng: RandomNumberGenerator) -> void:
 	var bush: Node3D = Node3D.new()
-	var num_boxes: int = rng.randi_range(3, 5)
-	var base_size: float = rng.randf_range(0.8, 1.4)
+	var base_size: float = rng.randf_range(0.6, 1.0)
 
-	for i: int in range(num_boxes):
-		var box: MeshInstance3D = MeshInstance3D.new()
-		var mesh: BoxMesh = BoxMesh.new()
-		var sx: float = base_size * rng.randf_range(0.5, 1.0)
-		var sy: float = base_size * rng.randf_range(0.5, 0.9)
-		var sz: float = base_size * rng.randf_range(0.5, 1.0)
-		mesh.size = Vector3(sx, sy, sz)
-		box.mesh = mesh
-		box.material_override = _get_bush_material(rng.randf() > 0.5)
-		box.position = Vector3(
-			rng.randf_range(-0.3, 0.3) * base_size,
-			sy * 0.5 + rng.randf_range(0.0, 0.15),
-			rng.randf_range(-0.3, 0.3) * base_size
-		)
-		bush.add_child(box)
+	# Core body — large rounded mass
+	var core: MeshInstance3D = MeshInstance3D.new()
+	var core_mesh: BoxMesh = BoxMesh.new()
+	core_mesh.size = Vector3(base_size, base_size * 0.7, base_size)
+	core.mesh = core_mesh
+	core.material_override = _get_bush_material(true)
+	core.position.y = base_size * 0.35
+	bush.add_child(core)
 
-	# Scatter pink-white blossoms on the outer surface of the bush
-	var num_blossoms: int = rng.randi_range(10, 16)
-	for b: int in range(num_blossoms):
-		var blossom: MeshInstance3D = MeshInstance3D.new()
-		var blossom_mesh: BoxMesh = BoxMesh.new()
-		var bsize: float = rng.randf_range(0.08, 0.14)
-		blossom_mesh.size = Vector3(bsize, bsize * 0.6, bsize)
-		blossom.mesh = blossom_mesh
-		blossom.material_override = _get_blossom_material()
-		# Push to outer surface of bush so they're visible (beyond green box edges)
-		var angle: float = rng.randf() * TAU
-		var radius: float = base_size * rng.randf_range(0.55, 0.85)
-		var blossom_y: float = base_size * rng.randf_range(0.1, 0.85)
-		blossom.position = Vector3(
-			cos(angle) * radius,
-			blossom_y,
-			sin(angle) * radius
+	# 3-5 overlapping leaf clusters at different angles for volume
+	var num_clusters: int = rng.randi_range(3, 5)
+	for i: int in range(num_clusters):
+		var cluster: MeshInstance3D = MeshInstance3D.new()
+		var cluster_mesh: BoxMesh = BoxMesh.new()
+		var cw: float = base_size * rng.randf_range(0.4, 0.8)
+		var ch: float = base_size * rng.randf_range(0.3, 0.6)
+		var cd: float = base_size * rng.randf_range(0.4, 0.8)
+		cluster_mesh.size = Vector3(cw, ch, cd)
+		cluster.mesh = cluster_mesh
+		cluster.material_override = _get_bush_material(rng.randf() > 0.4)
+		var c_angle: float = rng.randf() * TAU
+		var c_radius: float = base_size * rng.randf_range(0.15, 0.35)
+		cluster.position = Vector3(
+			cos(c_angle) * c_radius,
+			base_size * rng.randf_range(0.2, 0.55),
+			sin(c_angle) * c_radius
 		)
-		blossom.rotation.y = rng.randf() * TAU
-		bush.add_child(blossom)
+		cluster.rotation.y = rng.randf() * TAU
+		bush.add_child(cluster)
+
+	# Top tuft — lighter green, slightly above core
+	var top_tuft: MeshInstance3D = MeshInstance3D.new()
+	var top_mesh: BoxMesh = BoxMesh.new()
+	top_mesh.size = Vector3(base_size * 0.6, base_size * 0.35, base_size * 0.6)
+	top_tuft.mesh = top_mesh
+	top_tuft.material_override = _get_bush_material(false)
+	top_tuft.position = Vector3(rng.randf_range(-0.1, 0.1), base_size * 0.6, rng.randf_range(-0.1, 0.1))
+	top_tuft.rotation.y = rng.randf_range(-0.3, 0.3)
+	bush.add_child(top_tuft)
 
 	bush.position = pos
 	bush.rotation.y = rng.randf() * TAU
@@ -1696,63 +1698,52 @@ func _create_scatter_log(pos: Vector3, rng: RandomNumberGenerator) -> void:
 	var is_stump: bool = rng.randf() > 0.5
 
 	if is_stump:
-		# Short vertical stack of 2-3 flat boxes
-		var stump_radius: float = rng.randf_range(0.5, 0.7)
-		var layers: int = rng.randi_range(2, 3)
-		var y_offset: float = 0.0
-		for i: int in range(layers):
-			var box: MeshInstance3D = MeshInstance3D.new()
-			var mesh: BoxMesh = BoxMesh.new()
-			var layer_h: float = rng.randf_range(0.2, 0.35)
-			var shrink: float = 1.0 - float(i) * 0.1
-			mesh.size = Vector3(stump_radius * 2.0 * shrink, layer_h, stump_radius * 2.0 * shrink)
-			box.mesh = mesh
-			box.material_override = _get_stump_material()
-			box.position.y = y_offset + layer_h * 0.5
-			box.rotation.y = rng.randf_range(-0.1, 0.1)
-			obj.add_child(box)
-			y_offset += layer_h
+		var stump_radius: float = rng.randf_range(0.4, 0.6)
+		var stump_height: float = rng.randf_range(0.5, 0.8)
+		var diameter: float = stump_radius * 2.0
 
-		# Light wood top face — sized to match top bark layer
+		# Single solid bark body
+		var bark: MeshInstance3D = MeshInstance3D.new()
+		var bark_mesh: BoxMesh = BoxMesh.new()
+		bark_mesh.size = Vector3(diameter, stump_height, diameter)
+		bark.mesh = bark_mesh
+		bark.material_override = _get_stump_material()
+		bark.position.y = stump_height * 0.5
+		obj.add_child(bark)
+
+		# Light wood top face — inset slightly inside the bark edges
+		var inset: float = 0.06
 		var top: MeshInstance3D = MeshInstance3D.new()
 		var top_mesh: BoxMesh = BoxMesh.new()
-		var top_shrink: float = 1.0 - float(layers - 1) * 0.1
-		var top_size: float = stump_radius * 2.0 * top_shrink
-		top_mesh.size = Vector3(top_size * rng.randf_range(0.9, 1.0), 0.04, top_size * rng.randf_range(0.9, 1.0))
+		var top_w: float = diameter - inset * 2.0
+		top_mesh.size = Vector3(top_w, stump_height + 0.01, top_w)
 		top.mesh = top_mesh
 		top.material_override = _get_stump_top_material()
-		top.position = Vector3(rng.randf_range(-0.04, 0.04), y_offset + 0.02, rng.randf_range(-0.04, 0.04))
-		top.rotation.y = rng.randf_range(-0.2, 0.2)
+		top.position.y = stump_height * 0.5
 		obj.add_child(top)
 
-		# Irregular ring details (2-3 off-center rings) — stacked above the top face
-		var num_rings: int = rng.randi_range(2, 3)
-		for r: int in range(num_rings):
-			var ring: MeshInstance3D = MeshInstance3D.new()
-			var ring_mesh: BoxMesh = BoxMesh.new()
-			var ring_scale: float = rng.randf_range(0.35, 0.75)
-			var ring_w: float = top_size * ring_scale * rng.randf_range(0.8, 1.2)
-			var ring_d: float = top_size * ring_scale * rng.randf_range(0.8, 1.2)
-			ring_mesh.size = Vector3(ring_w, 0.03, ring_d)
-			ring.mesh = ring_mesh
-			ring.material_override = _get_stump_ring_material()
-			ring.position = Vector3(
-				rng.randf_range(-0.06, 0.06),
-				y_offset + 0.06 + float(r) * 0.035,
-				rng.randf_range(-0.06, 0.06)
-			)
-			ring.rotation.y = rng.randf_range(-0.4, 0.4)
-			obj.add_child(ring)
+		# Ring detail — inset further, same height so it shows on top face only
+		var ring: MeshInstance3D = MeshInstance3D.new()
+		var ring_mesh: BoxMesh = BoxMesh.new()
+		var ring_w: float = (diameter - inset * 2.0) * rng.randf_range(0.55, 0.7)
+		var ring_d: float = (diameter - inset * 2.0) * rng.randf_range(0.55, 0.7)
+		ring_mesh.size = Vector3(ring_w, stump_height + 0.02, ring_d)
+		ring.mesh = ring_mesh
+		ring.material_override = _get_stump_ring_material()
+		ring.position = Vector3(rng.randf_range(-0.03, 0.03), stump_height * 0.5, rng.randf_range(-0.03, 0.03))
+		ring.rotation.y = rng.randf_range(-0.3, 0.3)
+		obj.add_child(ring)
 
-		# Off-center inner light spot — on top of rings
-		var center: MeshInstance3D = MeshInstance3D.new()
-		var center_mesh: BoxMesh = BoxMesh.new()
-		center_mesh.size = Vector3(top_size * rng.randf_range(0.2, 0.35), 0.03, top_size * rng.randf_range(0.2, 0.35))
-		center.mesh = center_mesh
-		center.material_override = _get_stump_top_material()
-		center.position = Vector3(rng.randf_range(-0.05, 0.05), y_offset + 0.06 + float(num_rings) * 0.035, rng.randf_range(-0.05, 0.05))
-		center.rotation.y = rng.randf_range(-0.5, 0.5)
-		obj.add_child(center)
+		# Inner heartwood — smallest, shows on top
+		var heart: MeshInstance3D = MeshInstance3D.new()
+		var heart_mesh: BoxMesh = BoxMesh.new()
+		var heart_w: float = (diameter - inset * 2.0) * rng.randf_range(0.2, 0.35)
+		heart_mesh.size = Vector3(heart_w, stump_height + 0.03, heart_w)
+		heart.mesh = heart_mesh
+		heart.material_override = _get_stump_top_material()
+		heart.position = Vector3(rng.randf_range(-0.03, 0.03), stump_height * 0.5, rng.randf_range(-0.03, 0.03))
+		heart.rotation.y = rng.randf_range(-0.4, 0.4)
+		obj.add_child(heart)
 
 		# Small grass tufts around base
 		var num_grass: int = rng.randi_range(4, 7)
@@ -1765,7 +1756,7 @@ func _create_scatter_log(pos: Vector3, rng: RandomNumberGenerator) -> void:
 			tuft.mesh = tuft_mesh
 			tuft.material_override = _get_flower_stem_material()
 			var g_angle: float = rng.randf() * TAU
-			var g_radius: float = stump_radius + rng.randf_range(0.05, 0.2)
+			var g_radius: float = stump_radius + rng.randf_range(0.05, 0.15)
 			tuft.position = Vector3(
 				cos(g_angle) * g_radius,
 				gh * 0.5,
