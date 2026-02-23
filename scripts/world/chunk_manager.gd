@@ -3,7 +3,7 @@ class_name ChunkManager
 ## Manages dynamic loading/unloading of terrain chunks around the player.
 
 # Region types for terrain variety
-enum RegionType { MEADOW, FOREST, HILLS, ROCKY, MOUNTAIN }
+enum RegionType { MEADOW, FOREST, HILLS, ROCKY, MOUNTAIN, DESERT }
 
 # Water body types
 enum WaterBodyType { POND, LAKE, RIVER }
@@ -106,7 +106,11 @@ var region_colors: Dictionary = {
 	RegionType.MOUNTAIN: {
 		"grass": Color(0.38, 0.45, 0.35),  # Alpine grey-green
 		"dirt": Color(0.42, 0.40, 0.38)     # Mountain grey
-	}
+	},
+	RegionType.DESERT: {
+		"grass": Color(0.82, 0.72, 0.55),  # Sandy tan
+		"dirt": Color(0.70, 0.58, 0.40)     # Darker sand
+	},
 }
 
 # Region-specific height parameters
@@ -115,7 +119,8 @@ var region_height_params: Dictionary = {
 	RegionType.FOREST: {"scale": 5.0, "step": 1.0},   # Current default
 	RegionType.HILLS: {"scale": 22.0, "step": 1.0},   # Dramatic hills with jumpable steps
 	RegionType.ROCKY: {"scale": 12.0, "step": 1.0},   # Jagged cliffs with jumpable steps
-	RegionType.MOUNTAIN: {"scale": 24.0, "step": 1.0} # Tall peaks with stable geometry
+	RegionType.MOUNTAIN: {"scale": 24.0, "step": 1.0}, # Tall peaks with stable geometry
+	RegionType.DESERT: {"scale": 4.0, "step": 0.5},  # Gentle rolling dunes
 }
 
 # Region-specific vegetation multipliers
@@ -124,7 +129,8 @@ var region_vegetation: Dictionary = {
 	RegionType.FOREST: {"tree": 1.5, "rock": 1.0, "berry": 1.0, "herb": 1.0, "osha": 0.0},
 	RegionType.HILLS: {"tree": 0.6, "rock": 1.5, "berry": 0.8, "herb": 0.8, "osha": 0.5},
 	RegionType.ROCKY: {"tree": 0.2, "rock": 5.0, "berry": 0.2, "herb": 0.2, "osha": 0.3},
-	RegionType.MOUNTAIN: {"tree": 0.8, "rock": 3.0, "berry": 0.3, "herb": 0.5, "osha": 2.0}
+	RegionType.MOUNTAIN: {"tree": 0.8, "rock": 3.0, "berry": 0.3, "herb": 0.5, "osha": 2.0},
+	RegionType.DESERT: {"tree": 0.0, "rock": 0.3, "berry": 0.0, "herb": 0.0, "osha": 0.0, "cactus": 1.0, "palm": 0.3},
 }
 
 # Noise generators
@@ -1038,6 +1044,11 @@ func get_region_at(x: float, z: float) -> RegionType:
 	var spawn_distance: float = Vector2(x, z).length()
 	if spawn_distance < 60.0:
 		return RegionType.FOREST
+
+	# Desert ring: 150-250 units from spawn
+	# Transition zones: 150-170 (blend in), 230-250 (blend out)
+	if spawn_distance >= 170.0 and spawn_distance <= 230.0:
+		return RegionType.DESERT
 
 	var value: float = region_noise.get_noise_2d(x, z)
 
