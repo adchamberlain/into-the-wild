@@ -6,6 +6,7 @@ signal resource_respawned(resource_node: ResourceNode)
 
 # Respawn settings (in game hours)
 @export var respawn_time_hours: float = 6.0  # Game hours until respawn for regular resources
+@export var rock_respawn_time_hours: float = 24.0  # Game hours until rock respawn (1 day)
 @export var tree_respawn_time_hours: float = 48.0  # Game hours until tree respawn (2 days)
 @export var respawn_enabled: bool = true
 
@@ -193,8 +194,11 @@ func _check_respawns() -> void:
 		# Determine respawn time based on resource type
 		var resource: ResourceNode = info["node"]
 		var respawn_minutes: float = respawn_time_hours * 60.0
-		if is_instance_valid(resource) and resource.resource_type == "wood":
-			respawn_minutes = tree_respawn_time_hours * 60.0
+		if is_instance_valid(resource):
+			if resource.resource_type == "wood":
+				respawn_minutes = tree_respawn_time_hours * 60.0
+			elif resource.resource_type == "river_rock":
+				respawn_minutes = rock_respawn_time_hours * 60.0
 
 		# Calculate total elapsed time using tracked day rollovers
 		var elapsed: float = current_time_minutes - depleted_time_minutes
@@ -229,7 +233,11 @@ func _check_respawns() -> void:
 
 		# Use stored resource type to determine respawn time
 		var saved_type: String = info.get("resource_type", "wood")
-		var respawn_minutes: float = tree_respawn_time_hours * 60.0 if saved_type == "wood" else respawn_time_hours * 60.0
+		var respawn_minutes: float = respawn_time_hours * 60.0
+		if saved_type == "wood":
+			respawn_minutes = tree_respawn_time_hours * 60.0
+		elif saved_type == "river_rock":
+			respawn_minutes = rock_respawn_time_hours * 60.0
 
 		var elapsed: float = current_time_minutes - depleted_time_minutes
 		var days_elapsed: int = info.get("days_elapsed", 0)

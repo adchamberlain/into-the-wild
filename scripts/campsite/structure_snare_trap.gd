@@ -195,7 +195,7 @@ func _collect_catch() -> void:
 		for item: String in catch_loot:
 			var amount: int = catch_loot[item]
 			player_inventory.add_item(item, amount)
-			var item_display: String = item.capitalize().replace("_", " ")
+			var item_display: String = item.capitalize().replace("_", " ").replace("River Rock", "Rock")
 			loot_parts.append("+%d %s" % [amount, item_display])
 			print("[SnareTrap] +%d %s" % [amount, item])
 

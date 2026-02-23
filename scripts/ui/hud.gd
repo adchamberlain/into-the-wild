@@ -388,7 +388,7 @@ func _on_durability_changed(item_type: String, current: int, max_durability: int
 
 
 func _on_tool_broken(item_type: String) -> void:
-	var display_name: String = item_type.capitalize().replace("_", " ")
+	var display_name: String = item_type.capitalize().replace("_", " ").replace("River Rock", "Rock")
 	show_notification("%s broke!" % display_name, Color(1.0, 0.4, 0.4))
 	_update_equipped_display()
 
@@ -417,7 +417,7 @@ func _update_inventory_display() -> void:
 	for resource_type: String in items:
 		seen_items.append(resource_type)
 		var count: int = items[resource_type]
-		var display_name: String = resource_type.capitalize().replace("_", " ")
+		var display_name: String = resource_type.capitalize().replace("_", " ").replace("River Rock", "Rock")
 
 		if item_labels.has(resource_type):
 			# Update existing label

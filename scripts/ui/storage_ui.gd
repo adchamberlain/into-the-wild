@@ -224,7 +224,7 @@ func _create_item_button(parent: VBoxContainer, item_type: String, count: int, i
 	var container: HBoxContainer = HBoxContainer.new()
 	container.add_theme_constant_override("separation", 10)
 
-	var display_name: String = item_type.capitalize().replace("_", " ")
+	var display_name: String = item_type.capitalize().replace("_", " ").replace("River Rock", "Rock")
 
 	# Item label
 	var label: Label = Label.new()

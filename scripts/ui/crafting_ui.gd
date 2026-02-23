@@ -221,7 +221,7 @@ func _refresh_recipe_list(preserve_focus: bool = false) -> void:
 		var ingredient_parts: Array[String] = []
 		for resource: String in inputs:
 			var amount: int = inputs[resource]
-			var display_name: String = resource.capitalize().replace("_", " ")
+			var display_name: String = resource.capitalize().replace("_", " ").replace("River Rock", "Rock")
 			ingredient_parts.append("%d %s" % [amount, display_name])
 		ingredients_text += ", ".join(ingredient_parts)
 

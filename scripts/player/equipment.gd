@@ -1820,7 +1820,7 @@ func _use_upgrade(upgrade_item: String, upgrade_data: Dictionary) -> bool:
 	# Notify player
 	var hud: Node = player.get_tree().root.get_node_or_null("Main/HUD")
 	if hud and hud.has_method("show_notification"):
-		var tool_display: String = target_tool.capitalize().replace("_", " ")
+		var tool_display: String = target_tool.capitalize().replace("_", " ").replace("River Rock", "Rock")
 		hud.show_notification("%s upgraded! Durability x%d" % [tool_display, multiplier], Color(0.6, 1.0, 0.6))
 
 	print("[Equipment] Applied %s to %s: durability now %d/%d" % [upgrade_item, target_tool, tool_durability[target_tool], new_max])
