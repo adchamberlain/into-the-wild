@@ -130,7 +130,7 @@ static func _get_stump_ring_material() -> StandardMaterial3D:
 static func _get_blossom_material() -> StandardMaterial3D:
 	if not _blossom_mat:
 		_blossom_mat = StandardMaterial3D.new()
-		_blossom_mat.albedo_color = Color(0.95, 0.92, 0.88)  # Warm white
+		_blossom_mat.albedo_color = Color(0.95, 0.85, 0.88)  # Soft pink-white
 	return _blossom_mat
 
 
@@ -1664,21 +1664,21 @@ func _create_scatter_bush(pos: Vector3, rng: RandomNumberGenerator) -> void:
 		)
 		bush.add_child(box)
 
-	# Scatter white blossoms on top and edges of the bush
-	var num_blossoms: int = rng.randi_range(6, 12)
+	# Scatter small white blossoms across all sides of the bush
+	var num_blossoms: int = rng.randi_range(8, 14)
 	for b: int in range(num_blossoms):
 		var blossom: MeshInstance3D = MeshInstance3D.new()
 		var blossom_mesh: BoxMesh = BoxMesh.new()
-		var bsize: float = rng.randf_range(0.12, 0.22)
-		blossom_mesh.size = Vector3(bsize, bsize * 0.5, bsize)
+		var bsize: float = rng.randf_range(0.06, 0.1)
+		blossom_mesh.size = Vector3(bsize, bsize * 0.6, bsize)
 		blossom.mesh = blossom_mesh
 		blossom.material_override = _get_blossom_material()
-		# Place on top surface and outer edges so they're visible
+		# Distribute across the bush surface at all heights
 		var angle: float = rng.randf() * TAU
-		var radius: float = base_size * rng.randf_range(0.2, 0.6)
+		var radius: float = base_size * rng.randf_range(0.3, 0.55)
 		blossom.position = Vector3(
 			cos(angle) * radius,
-			base_size * rng.randf_range(0.7, 1.1),
+			base_size * rng.randf_range(0.15, 0.95),
 			sin(angle) * radius
 		)
 		blossom.rotation.y = rng.randf() * TAU
