@@ -66,22 +66,27 @@ func build(rng: RandomNumberGenerator) -> void:
 	# Crown position (top of trunk with sway offset)
 	var crown_pos: Vector3 = Vector3(sway_x, tree_height, sway_z)
 
-	# Fronds - 6 drooping leaf clusters radiating outward
+	# Fronds - 6 drooping leaves radiating from crown via pivot nodes
 	var frond_count: int = 6
 	for i: int in range(frond_count):
 		var angle: float = TAU * i / frond_count + rng.randf_range(-0.2, 0.2)
 		var frond_len: float = rng.randf_range(2.0, 3.0)
 
-		# Main frond leaf
+		# Pivot at crown so frond rotates from the attachment point
+		var pivot: Node3D = Node3D.new()
+		pivot.position = crown_pos
+		pivot.rotation.y = angle
+		pivot.rotation.x = deg_to_rad(25.0)  # Droop down
+
+		# Frond leaf - offset so base starts at crown, extends outward
 		var frond: MeshInstance3D = MeshInstance3D.new()
 		var frond_box: BoxMesh = BoxMesh.new()
 		frond_box.size = Vector3(0.5, 0.05, frond_len)
 		frond_box.material = shared_frond_material if i % 2 == 0 else shared_frond_dark_material
 		frond.mesh = frond_box
-		frond.position = crown_pos + Vector3(cos(angle) * frond_len * 0.4, -0.3, sin(angle) * frond_len * 0.4)
-		frond.rotation.y = angle
-		frond.rotation.x = deg_to_rad(25.0)  # Droop down
-		add_child(frond)
+		frond.position = Vector3(0, 0, -frond_len * 0.5)
+		pivot.add_child(frond)
+		add_child(pivot)
 
 	# Coconut cluster (2-3 small brown spheres near crown)
 	var coconut_count: int = rng.randi_range(2, 3)
