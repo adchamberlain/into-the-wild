@@ -1582,7 +1582,7 @@ func _is_steep_slope(world_x: float, world_z: float, center_y: float, check_radi
 	var y_nz: float = _get_cached_height_at(world_x, world_z - check_radius)
 	var max_diff: float = maxf(maxf(absf(y_px - center_y), absf(y_nx - center_y)),
 							   maxf(absf(y_pz - center_y), absf(y_nz - center_y)))
-	return max_diff > 1.0
+	return max_diff > 0.5
 
 
 func _create_flower(pos: Vector3, petal_color: Color, rng: RandomNumberGenerator) -> void:
@@ -1664,21 +1664,22 @@ func _create_scatter_bush(pos: Vector3, rng: RandomNumberGenerator) -> void:
 		)
 		bush.add_child(box)
 
-	# Scatter small white blossoms on top
-	var num_blossoms: int = rng.randi_range(4, 8)
+	# Scatter white blossoms across the bush surface
+	var num_blossoms: int = rng.randi_range(5, 10)
 	for b: int in range(num_blossoms):
 		var blossom: MeshInstance3D = MeshInstance3D.new()
 		var blossom_mesh: BoxMesh = BoxMesh.new()
-		var bsize: float = rng.randf_range(0.08, 0.15)
-		blossom_mesh.size = Vector3(bsize, bsize * 0.6, bsize)
+		var bsize: float = rng.randf_range(0.15, 0.28)
+		blossom_mesh.size = Vector3(bsize, bsize * 0.5, bsize)
 		blossom.mesh = blossom_mesh
 		blossom.material_override = _get_blossom_material()
 		blossom.position = Vector3(
-			rng.randf_range(-0.4, 0.4) * base_size,
-			base_size * rng.randf_range(0.4, 0.85),
-			rng.randf_range(-0.4, 0.4) * base_size
+			rng.randf_range(-0.5, 0.5) * base_size,
+			base_size * rng.randf_range(0.3, 0.9),
+			rng.randf_range(-0.5, 0.5) * base_size
 		)
 		blossom.rotation.y = rng.randf() * TAU
+		blossom.rotation.x = rng.randf_range(-0.3, 0.3)
 		bush.add_child(blossom)
 
 	bush.position = pos
@@ -1709,10 +1710,11 @@ func _create_scatter_log(pos: Vector3, rng: RandomNumberGenerator) -> void:
 			obj.add_child(box)
 			y_offset += layer_h
 
-		# Light wood top face
+		# Light wood top face — sized to match top bark layer
 		var top: MeshInstance3D = MeshInstance3D.new()
 		var top_mesh: BoxMesh = BoxMesh.new()
-		var top_size: float = stump_radius * 1.8
+		var top_shrink: float = 1.0 - float(layers - 1) * 0.1
+		var top_size: float = stump_radius * 2.0 * top_shrink
 		top_mesh.size = Vector3(top_size, 0.05, top_size)
 		top.mesh = top_mesh
 		top.material_override = _get_stump_top_material()
