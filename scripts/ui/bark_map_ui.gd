@@ -49,10 +49,13 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	# Track when the open action is released so we can accept close input
+	# Wait for the open press to be fully released before accepting close
 	if not _action_released:
 		if not Input.is_action_pressed("use_equipped"):
 			_action_released = true
+	elif Input.is_action_just_pressed("use_equipped"):
+		close_map()
+		return
 
 	# Update player position marker in real-time as they walk
 	var player_node: Node = get_tree().get_first_node_in_group("player")
@@ -303,19 +306,6 @@ func _draw_structure_icon(pos: Vector2, structure_type: String) -> void:
 	var rect: Rect2 = Rect2(pos.x - icon_size / 2.0, pos.y - icon_size / 2.0, icon_size, icon_size)
 	map_control.draw_rect(rect, icon_color)
 	map_control.draw_rect(rect, Color(1, 1, 1, 0.6), false, 1.0)
-
-
-# Wait for the action that opened the map to be fully released before accepting close input
-var _action_released: bool = false
-
-func _input(event: InputEvent) -> void:
-	# Don't close until the open press has been fully released
-	if not _action_released:
-		return
-	# Close map on use_equipped action (R key / R2 trigger)
-	if event.is_action_pressed("use_equipped"):
-		close_map()
-		get_viewport().set_input_as_handled()
 
 
 func close_map() -> void:
