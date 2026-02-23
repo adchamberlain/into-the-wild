@@ -33,6 +33,8 @@ static var _bush_dark_mat: StandardMaterial3D = null
 static var _bush_mid_mat: StandardMaterial3D = null
 static var _log_mat: StandardMaterial3D = null
 static var _stump_mat: StandardMaterial3D = null
+static var _stump_top_mat: StandardMaterial3D = null
+static var _stump_ring_mat: StandardMaterial3D = null
 
 
 static func _get_grass_material() -> StandardMaterial3D:
@@ -108,6 +110,20 @@ static func _get_stump_material() -> StandardMaterial3D:
 		_stump_mat = StandardMaterial3D.new()
 		_stump_mat.albedo_color = Color(0.45, 0.32, 0.18)
 	return _stump_mat
+
+
+static func _get_stump_top_material() -> StandardMaterial3D:
+	if not _stump_top_mat:
+		_stump_top_mat = StandardMaterial3D.new()
+		_stump_top_mat.albedo_color = Color(0.78, 0.65, 0.45)  # Light wood
+	return _stump_top_mat
+
+
+static func _get_stump_ring_material() -> StandardMaterial3D:
+	if not _stump_ring_mat:
+		_stump_ring_mat = StandardMaterial3D.new()
+		_stump_ring_mat.albedo_color = Color(0.55, 0.42, 0.28)  # Darker ring
+	return _stump_ring_mat
 
 
 func setup(coord: Vector2i, manager: Node) -> void:
@@ -1649,6 +1665,34 @@ func _create_scatter_log(pos: Vector3, rng: RandomNumberGenerator) -> void:
 			box.rotation.y = rng.randf_range(-0.1, 0.1)
 			obj.add_child(box)
 			y_offset += layer_h
+
+		# Light wood top face
+		var top: MeshInstance3D = MeshInstance3D.new()
+		var top_mesh: BoxMesh = BoxMesh.new()
+		var top_size: float = stump_radius * 1.8
+		top_mesh.size = Vector3(top_size, 0.05, top_size)
+		top.mesh = top_mesh
+		top.material_override = _get_stump_top_material()
+		top.position.y = y_offset + 0.025
+		obj.add_child(top)
+
+		# Darker ring detail (slightly smaller, on top)
+		var ring: MeshInstance3D = MeshInstance3D.new()
+		var ring_mesh: BoxMesh = BoxMesh.new()
+		ring_mesh.size = Vector3(top_size * 0.65, 0.06, top_size * 0.65)
+		ring.mesh = ring_mesh
+		ring.material_override = _get_stump_ring_material()
+		ring.position.y = y_offset + 0.03
+		obj.add_child(ring)
+
+		# Inner light center
+		var center: MeshInstance3D = MeshInstance3D.new()
+		var center_mesh: BoxMesh = BoxMesh.new()
+		center_mesh.size = Vector3(top_size * 0.3, 0.07, top_size * 0.3)
+		center.mesh = center_mesh
+		center.material_override = _get_stump_top_material()
+		center.position.y = y_offset + 0.035
+		obj.add_child(center)
 	else:
 		# Horizontal fallen log - thick trunk with taper
 		var log_length: float = rng.randf_range(3.0, 5.0)
