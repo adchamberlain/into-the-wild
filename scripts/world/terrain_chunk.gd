@@ -1232,7 +1232,7 @@ func _spawn_chunk_decorations() -> void:
 
 		var noise_value: float = (decoration_noise.get_noise_2d(world_x, world_z) + 1.0) * 0.5
 		if noise_value > 0.3:
-			var y: float = chunk_manager.get_height_at(world_x, world_z)
+			var y: float = _get_cached_height_at(world_x, world_z)
 			_create_grass_tuft(Vector3(world_x, y + 0.01, world_z), rng)
 			grass_count += 1
 
@@ -1276,7 +1276,7 @@ func _spawn_chunk_decorations() -> void:
 
 		var noise_value: float = (decoration_noise.get_noise_2d(world_x * 1.5, world_z * 1.5) + 1.0) * 0.5
 		if noise_value > 0.5:
-			var y: float = chunk_manager.get_height_at(world_x, world_z)
+			var y: float = _get_cached_height_at(world_x, world_z)
 			var color: Color
 			if flower_count < target_red_flowers:
 				color = Color(0.85, 0.15, 0.15)  # Red
