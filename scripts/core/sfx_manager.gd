@@ -40,6 +40,10 @@ const DEFAULT_COOLDOWNS: Dictionary = {
 	"grapple_attach": 0.3,
 	"grapple_land": 0.3,
 	"bubble_pop": 0.3,
+	# Bow sounds
+	"bow_draw": 0.3,
+	"bow_fire": 0.2,
+	"arrow_hit": 0.15,
 }
 
 # Anti-repetition tracking for footsteps
@@ -154,6 +158,9 @@ func _preload_sounds() -> void:
 	# Generate procedural sounds
 	loaded_sfx["fall_hurt"] = _generate_fall_hurt_sound()
 	loaded_sfx["bubble_pop"] = _generate_bubble_pop_sound()
+	loaded_sfx["bow_draw"] = _generate_bow_draw_sound()
+	loaded_sfx["bow_fire"] = _generate_bow_fire_sound()
+	loaded_sfx["arrow_hit"] = _generate_arrow_hit_sound()
 
 	# Preload footsteps
 	for surface in FOOTSTEP_PATHS.keys():
@@ -297,6 +304,96 @@ func _generate_bubble_pop_sound() -> AudioStreamWAV:
 		wave += (randf() * 2.0 - 1.0) * 0.3 * noise_env
 
 		var sample: float = wave * envelope * 0.5
+		var sample_int: int = clampi(int(sample * 32767.0), -32768, 32767)
+		data[i * 2] = sample_int & 0xFF
+		data[i * 2 + 1] = (sample_int >> 8) & 0xFF
+
+	var stream: AudioStreamWAV = AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = sample_rate
+	stream.stereo = false
+	stream.data = data
+	return stream
+
+
+## Generate a procedural bow draw (creak) sound.
+func _generate_bow_draw_sound() -> AudioStreamWAV:
+	var sample_rate: int = 22050
+	var duration: float = 0.35
+	var num_samples: int = int(sample_rate * duration)
+	var data: PackedByteArray = PackedByteArray()
+	data.resize(num_samples * 2)
+
+	for i: int in range(num_samples):
+		var t: float = float(i) / sample_rate
+		var envelope: float = minf(t * 6.0, 1.0) * exp(-t * 2.0)
+		var wobble: float = sin(t * 8.0 * TAU) * 0.15
+		var wave: float = sin(t * (150.0 + wobble * 30.0) * TAU) * 0.4
+		wave += sin(t * 220.0 * TAU) * 0.2
+		wave += (randf() * 2.0 - 1.0) * 0.1
+
+		var sample: float = wave * envelope * 0.4
+		var sample_int: int = clampi(int(sample * 32767.0), -32768, 32767)
+		data[i * 2] = sample_int & 0xFF
+		data[i * 2 + 1] = (sample_int >> 8) & 0xFF
+
+	var stream: AudioStreamWAV = AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = sample_rate
+	stream.stereo = false
+	stream.data = data
+	return stream
+
+
+## Generate a procedural bow fire (twang) sound.
+func _generate_bow_fire_sound() -> AudioStreamWAV:
+	var sample_rate: int = 22050
+	var duration: float = 0.3
+	var num_samples: int = int(sample_rate * duration)
+	var data: PackedByteArray = PackedByteArray()
+	data.resize(num_samples * 2)
+
+	for i: int in range(num_samples):
+		var t: float = float(i) / sample_rate
+		var envelope: float = exp(-t * 12.0)
+		var wave: float = sin(t * 400.0 * TAU) * 0.5
+		wave += sin(t * 800.0 * TAU) * 0.25
+		wave += sin(t * 600.0 * TAU) * 0.15
+		var bend: float = 1.0 - t * 1.5
+		wave = sin(t * 400.0 * bend * TAU) * 0.4 + wave * 0.6
+		var attack: float = exp(-t * 60.0)
+		wave += (randf() * 2.0 - 1.0) * 0.2 * attack
+
+		var sample: float = wave * envelope * 0.5
+		var sample_int: int = clampi(int(sample * 32767.0), -32768, 32767)
+		data[i * 2] = sample_int & 0xFF
+		data[i * 2 + 1] = (sample_int >> 8) & 0xFF
+
+	var stream: AudioStreamWAV = AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = sample_rate
+	stream.stereo = false
+	stream.data = data
+	return stream
+
+
+## Generate a procedural arrow hit (thud) sound.
+func _generate_arrow_hit_sound() -> AudioStreamWAV:
+	var sample_rate: int = 22050
+	var duration: float = 0.2
+	var num_samples: int = int(sample_rate * duration)
+	var data: PackedByteArray = PackedByteArray()
+	data.resize(num_samples * 2)
+
+	for i: int in range(num_samples):
+		var t: float = float(i) / sample_rate
+		var envelope: float = exp(-t * 25.0)
+		var wave: float = sin(t * 100.0 * TAU) * 0.5
+		wave += sin(t * 60.0 * TAU) * 0.3
+		var impact: float = exp(-t * 50.0)
+		wave += (randf() * 2.0 - 1.0) * 0.4 * impact
+
+		var sample: float = wave * envelope * 0.6
 		var sample_int: int = clampi(int(sample * 32767.0), -32768, 32767)
 		data[i * 2] = sample_int & 0xFF
 		data[i * 2 + 1] = (sample_int >> 8) & 0xFF
