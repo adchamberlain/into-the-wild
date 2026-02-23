@@ -48,6 +48,8 @@ func _ready() -> void:
 	map_control.queue_redraw()
 
 
+var _action_released: bool = false
+
 func _process(_delta: float) -> void:
 	# Wait for the open press to be fully released before accepting close
 	if not _action_released:
