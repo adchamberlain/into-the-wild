@@ -290,6 +290,11 @@ func _build_overlay() -> void:
 	_make_label(vbox, "Welcome to Carlston Wilderness", 36,
 		Color(0.30, 0.18, 0.05), HORIZONTAL_ALIGNMENT_CENTER)
 
+	# Spacer between subtitle and section header
+	var mid_spacer: Control = Control.new()
+	mid_spacer.custom_minimum_size = Vector2(0, 12)
+	vbox.add_child(mid_spacer)
+
 	# Section header
 	_make_label(vbox, "REGULATIONS & INFORMATION", 32,
 		Color(0.30, 0.18, 0.05), HORIZONTAL_ALIGNMENT_CENTER)
