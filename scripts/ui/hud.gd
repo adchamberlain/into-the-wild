@@ -1113,3 +1113,20 @@ func _update_compass_display() -> void:
 	var index: int = int(round(fmod(angle + TAU, TAU) / (TAU / 8.0))) % 8
 	compass_label.text = "Lodestone  %s  %dm" % [arrows[index], int(distance)]
 	compass_panel.visible = true
+
+
+func set_overlay_mode(enabled: bool) -> void:
+	var panels: Array[Control] = [
+		get_node_or_null("TimePanel"),
+		get_node_or_null("StatsPanel"),
+		get_node_or_null("EquippedPanel"),
+		inventory_panel,
+		interaction_prompt_panel,
+		notification_panel,
+	]
+	var compass: Control = get_node_or_null("CompassPanel")
+	if compass:
+		panels.append(compass)
+	for panel: Control in panels:
+		if panel:
+			panel.visible = not enabled

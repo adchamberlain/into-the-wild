@@ -5379,6 +5379,26 @@ All scatter objects use shared static materials for performance, respect exclusi
 
 ---
 
+## Session 39 - Carlston Wilderness Information Sign (2026-02-23)
+
+**Wilderness information kiosk**: Added a covered kiosk-style sign near the player spawn at (6, terrain_y, -4) that displays Carlston Wilderness regulations when the player reads it. The sign is a world fixture (not moveable, not saved) that spawns fresh each session.
+
+**3D sign structure**: Two dark-brown posts with cross beam, angled V-roof with ridge cap, olive/tan information board at eye height, darker header strip, dark frame edges, and angled support braces. All built from BoxMesh primitives with shared static materials matching the project's procedural art style.
+
+**Readable overlay**: Pressing [E] opens a full-screen overlay (CanvasLayer 100) styled as a national-park-style information board with forest-green outer panel, tan/cream inner panel, and dark-brown text. Displays the "CARLSTON WILDERNESS" title, welcome message, five regulation bullet points (hunting, swimming, pits, resource collection, care), and a close hint. Overlay freezes the player via `set_resting()` and hides the HUD via a new `set_overlay_mode()` method.
+
+**HUD overlay mode**: Added `set_overlay_mode(enabled)` to `hud.gd` that hides/shows all HUD panels (time, stats, equipped, inventory, interaction prompt, notification, compass) when an overlay is active. The HUD was already in the "hud" group from a previous session.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/world/wilderness_sign.gd` | Created | Full wilderness sign script: StructureBase subclass, shared static materials, 3D kiosk mesh, readable overlay with regulations, interaction toggle, player freeze/HUD hide |
+| `scripts/ui/hud.gd` | Modified | Added `set_overlay_mode()` method to hide/show all HUD panels |
+| `scripts/world/chunk_manager.gd` | Modified | Added `wilderness_sign_script`/`wilderness_sign_spawned` vars, load script in `_load_scenes()`, spawn sign near player spawn in chunk loading |
+
+---
+
 ## Next Session
 
 ### Planned Tasks

@@ -173,6 +173,10 @@ var spawned_river_fishing_pools: Array[Vector2] = []  # Track spawned river fish
 var cave_entrance_script: GDScript
 var spawned_cave_indices: Array[int] = []  # Track which cave entrances have been spawned
 
+# Wilderness sign
+var wilderness_sign_script: GDScript
+var wilderness_sign_spawned: bool = false
+
 # Resource manager reference (for registering chunk-spawned trees)
 var resource_manager: ResourceManager
 
@@ -1013,6 +1017,9 @@ func _load_scenes() -> void:
 	# Load cave entrance script
 	cave_entrance_script = load("res://scripts/world/cave_entrance.gd")
 
+	# Load wilderness sign script
+	wilderness_sign_script = load("res://scripts/world/wilderness_sign.gd")
+
 	if not tree_scene:
 		push_warning("[ChunkManager] Failed to load tree scene")
 	if not ponderosa_pine_scene:
@@ -1476,6 +1483,9 @@ func _load_chunk(chunk_coord: Vector2i) -> void:
 	# Spawn cave entrances in this chunk
 	_spawn_cave_entrances_in_chunk(chunk_min_x, chunk_max_x, chunk_min_z, chunk_max_z)
 
+	# Spawn wilderness sign near spawn
+	_spawn_wilderness_sign(chunk_min_x, chunk_max_x, chunk_min_z, chunk_max_z)
+
 
 func _unload_chunk(chunk_coord: Vector2i) -> void:
 	if not loaded_chunks.has(chunk_coord):
@@ -1903,6 +1913,23 @@ func _spawn_cave_entrance(cave_idx: int) -> void:
 	print("[ChunkManager] Spawned %s cave entrance #%d at (%.0f, %.0f)" % [
 		cave_type, cave_idx, cave_center.x, cave_center.y
 	])
+
+
+func _spawn_wilderness_sign(min_x: float, max_x: float, min_z: float, max_z: float) -> void:
+	if wilderness_sign_spawned or not wilderness_sign_script:
+		return
+	var sign_x: float = 6.0
+	var sign_z: float = -4.0
+	if sign_x < min_x or sign_x >= max_x or sign_z < min_z or sign_z >= max_z:
+		return
+	var sign_node: StaticBody3D = StaticBody3D.new()
+	sign_node.set_script(wilderness_sign_script)
+	sign_node.name = "WildernessSign"
+	var terrain_y: float = get_height_at(sign_x, sign_z)
+	sign_node.position = Vector3(sign_x, terrain_y, sign_z)
+	sign_node.rotation.y = atan2(-sign_x, -sign_z)
+	add_child(sign_node)
+	wilderness_sign_spawned = true
 
 
 # Debug info
