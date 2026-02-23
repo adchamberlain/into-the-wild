@@ -25,6 +25,14 @@ static var _grass_mat: StandardMaterial3D = null
 static var _flower_stem_mat: StandardMaterial3D = null
 static var _flower_red_mat: StandardMaterial3D = null
 static var _flower_yellow_mat: StandardMaterial3D = null
+# Scatter decoration materials
+static var _rock_gray_mat: StandardMaterial3D = null
+static var _rock_brown_mat: StandardMaterial3D = null
+static var _rock_dark_mat: StandardMaterial3D = null
+static var _bush_dark_mat: StandardMaterial3D = null
+static var _bush_mid_mat: StandardMaterial3D = null
+static var _log_mat: StandardMaterial3D = null
+static var _stump_mat: StandardMaterial3D = null
 
 
 static func _get_grass_material() -> StandardMaterial3D:
@@ -54,6 +62,52 @@ static func _get_flower_material(color: Color) -> StandardMaterial3D:
 			_flower_yellow_mat = StandardMaterial3D.new()
 			_flower_yellow_mat.albedo_color = Color(0.95, 0.9, 0.2)
 		return _flower_yellow_mat
+
+
+static func _get_rock_material(variant: int) -> StandardMaterial3D:
+	match variant:
+		0:
+			if not _rock_gray_mat:
+				_rock_gray_mat = StandardMaterial3D.new()
+				_rock_gray_mat.albedo_color = Color(0.55, 0.53, 0.5)
+			return _rock_gray_mat
+		1:
+			if not _rock_brown_mat:
+				_rock_brown_mat = StandardMaterial3D.new()
+				_rock_brown_mat.albedo_color = Color(0.45, 0.38, 0.3)
+			return _rock_brown_mat
+		_:
+			if not _rock_dark_mat:
+				_rock_dark_mat = StandardMaterial3D.new()
+				_rock_dark_mat.albedo_color = Color(0.4, 0.4, 0.42)
+			return _rock_dark_mat
+
+
+static func _get_bush_material(dark: bool) -> StandardMaterial3D:
+	if dark:
+		if not _bush_dark_mat:
+			_bush_dark_mat = StandardMaterial3D.new()
+			_bush_dark_mat.albedo_color = Color(0.15, 0.35, 0.12)
+		return _bush_dark_mat
+	else:
+		if not _bush_mid_mat:
+			_bush_mid_mat = StandardMaterial3D.new()
+			_bush_mid_mat.albedo_color = Color(0.2, 0.45, 0.18)
+		return _bush_mid_mat
+
+
+static func _get_log_material() -> StandardMaterial3D:
+	if not _log_mat:
+		_log_mat = StandardMaterial3D.new()
+		_log_mat.albedo_color = Color(0.4, 0.28, 0.15)
+	return _log_mat
+
+
+static func _get_stump_material() -> StandardMaterial3D:
+	if not _stump_mat:
+		_stump_mat = StandardMaterial3D.new()
+		_stump_mat.albedo_color = Color(0.45, 0.32, 0.18)
+	return _stump_mat
 
 
 func setup(coord: Vector2i, manager: Node) -> void:
@@ -1301,6 +1355,142 @@ func _spawn_chunk_decorations() -> void:
 
 		attempts += 1
 
+	# Spawn scatter rocks (all regions, denser on rocky/mountain)
+	var target_rocks: int = int(6 * area_ratio)
+	var region_sample_x: float = chunk_world_x + chunk_world_size * 0.5
+	var region_sample_z: float = chunk_world_z + chunk_world_size * 0.5
+	var chunk_region: ChunkManager.RegionType = chunk_manager.get_region_at(region_sample_x, region_sample_z)
+	# Density multiplier: ROCKY=3x, MOUNTAIN=4x, HILLS=2x, others=1x
+	var rock_multiplier: float = 1.0
+	if chunk_region == ChunkManager.RegionType.ROCKY:
+		rock_multiplier = 3.0
+	elif chunk_region == ChunkManager.RegionType.MOUNTAIN:
+		rock_multiplier = 4.0
+	elif chunk_region == ChunkManager.RegionType.HILLS:
+		rock_multiplier = 2.0
+	target_rocks = int(float(target_rocks) * rock_multiplier)
+
+	var rock_count: int = 0
+	attempts = 0
+	max_attempts = target_rocks * 6
+
+	while rock_count < target_rocks and attempts < max_attempts:
+		var x: float = rng.randf_range(0, chunk_world_size)
+		var z: float = rng.randf_range(0, chunk_world_size)
+		var world_x: float = chunk_world_x + x
+		var world_z: float = chunk_world_z + z
+
+		if chunk_manager.is_near_any_pond(world_x, world_z, 1.5):
+			attempts += 1
+			continue
+		if chunk_manager.is_near_cave_entrance(world_x, world_z):
+			attempts += 1
+			continue
+		var dist_from_camp2: float = Vector2(world_x, world_z).length()
+		if dist_from_camp2 < 10.0:
+			attempts += 1
+			continue
+
+		var noise_val: float = (decoration_noise.get_noise_2d(world_x * 0.8, world_z * 0.8) + 1.0) * 0.5
+		if noise_val > 0.35:
+			var y: float = _get_cached_height_at(world_x, world_z)
+			_create_scatter_rock(Vector3(world_x, y, world_z), rng)
+			rock_count += 1
+
+			decorations_spawned_this_batch += 1
+			if decorations_spawned_this_batch >= DECORATIONS_PER_BATCH:
+				decorations_spawned_this_batch = 0
+				if not is_inside_tree():
+					return
+				await get_tree().process_frame
+				if not is_inside_tree():
+					return
+
+		attempts += 1
+
+	# Spawn bushes (forest regions only)
+	var is_forest: bool = chunk_region == ChunkManager.RegionType.FOREST
+	if is_forest:
+		var target_bushes: int = int(5 * area_ratio)
+		var bush_count: int = 0
+		attempts = 0
+		max_attempts = target_bushes * 6
+
+		while bush_count < target_bushes and attempts < max_attempts:
+			var x: float = rng.randf_range(0, chunk_world_size)
+			var z: float = rng.randf_range(0, chunk_world_size)
+			var world_x: float = chunk_world_x + x
+			var world_z: float = chunk_world_z + z
+
+			if chunk_manager.is_near_any_pond(world_x, world_z, 1.5):
+				attempts += 1
+				continue
+			if chunk_manager.is_near_cave_entrance(world_x, world_z):
+				attempts += 1
+				continue
+			var dist_from_camp3: float = Vector2(world_x, world_z).length()
+			if dist_from_camp3 < 10.0:
+				attempts += 1
+				continue
+
+			var noise_val: float = (decoration_noise.get_noise_2d(world_x * 1.2, world_z * 1.2) + 1.0) * 0.5
+			if noise_val > 0.45:
+				var y: float = _get_cached_height_at(world_x, world_z)
+				_create_scatter_bush(Vector3(world_x, y, world_z), rng)
+				bush_count += 1
+
+				decorations_spawned_this_batch += 1
+				if decorations_spawned_this_batch >= DECORATIONS_PER_BATCH:
+					decorations_spawned_this_batch = 0
+					if not is_inside_tree():
+						return
+					await get_tree().process_frame
+					if not is_inside_tree():
+						return
+
+			attempts += 1
+
+	# Spawn logs and stumps (forest regions, sparse)
+	if is_forest:
+		var target_logs: int = int(3 * area_ratio)
+		var log_count: int = 0
+		attempts = 0
+		max_attempts = target_logs * 8
+
+		while log_count < target_logs and attempts < max_attempts:
+			var x: float = rng.randf_range(0, chunk_world_size)
+			var z: float = rng.randf_range(0, chunk_world_size)
+			var world_x: float = chunk_world_x + x
+			var world_z: float = chunk_world_z + z
+
+			if chunk_manager.is_near_any_pond(world_x, world_z, 2.0):
+				attempts += 1
+				continue
+			if chunk_manager.is_near_cave_entrance(world_x, world_z):
+				attempts += 1
+				continue
+			var dist_from_camp4: float = Vector2(world_x, world_z).length()
+			if dist_from_camp4 < 12.0:
+				attempts += 1
+				continue
+
+			var noise_val: float = (decoration_noise.get_noise_2d(world_x * 0.5, world_z * 0.5) + 1.0) * 0.5
+			if noise_val > 0.55:
+				var y: float = _get_cached_height_at(world_x, world_z)
+				_create_scatter_log(Vector3(world_x, y, world_z), rng)
+				log_count += 1
+
+				decorations_spawned_this_batch += 1
+				if decorations_spawned_this_batch >= DECORATIONS_PER_BATCH:
+					decorations_spawned_this_batch = 0
+					if not is_inside_tree():
+						return
+					await get_tree().process_frame
+					if not is_inside_tree():
+						return
+
+			attempts += 1
+
 
 func _create_grass_tuft(pos: Vector3, rng: RandomNumberGenerator) -> void:
 	var grass: MeshInstance3D = MeshInstance3D.new()
@@ -1362,6 +1552,107 @@ func _create_flower(pos: Vector3, petal_color: Color, rng: RandomNumberGenerator
 	flower.position = pos
 	flower.rotation.y = rng.randf() * TAU
 	decorations_container.add_child(flower)
+
+
+func _create_scatter_rock(pos: Vector3, rng: RandomNumberGenerator) -> void:
+	var rock: Node3D = Node3D.new()
+	var num_boxes: int = rng.randi_range(1, 4)
+	var mat_variant: int = rng.randi_range(0, 2)
+	var base_scale: float = rng.randf_range(0.3, 0.7)
+
+	for i: int in range(num_boxes):
+		var box: MeshInstance3D = MeshInstance3D.new()
+		var mesh: BoxMesh = BoxMesh.new()
+		var sx: float = base_scale * rng.randf_range(0.4, 1.0)
+		var sy: float = base_scale * rng.randf_range(0.3, 0.7)
+		var sz: float = base_scale * rng.randf_range(0.4, 1.0)
+		mesh.size = Vector3(sx, sy, sz)
+		box.mesh = mesh
+		box.material_override = _get_rock_material(mat_variant if i == 0 else rng.randi_range(0, 2))
+		box.position = Vector3(
+			rng.randf_range(-0.15, 0.15) * base_scale,
+			sy * 0.5,
+			rng.randf_range(-0.15, 0.15) * base_scale
+		)
+		box.rotation.y = rng.randf() * TAU
+		rock.add_child(box)
+
+	rock.position = pos
+	rock.rotation.y = rng.randf() * TAU
+	decorations_container.add_child(rock)
+
+
+func _create_scatter_bush(pos: Vector3, rng: RandomNumberGenerator) -> void:
+	var bush: Node3D = Node3D.new()
+	var num_boxes: int = rng.randi_range(2, 4)
+	var base_size: float = rng.randf_range(0.4, 0.8)
+
+	for i: int in range(num_boxes):
+		var box: MeshInstance3D = MeshInstance3D.new()
+		var mesh: BoxMesh = BoxMesh.new()
+		var sx: float = base_size * rng.randf_range(0.5, 1.0)
+		var sy: float = base_size * rng.randf_range(0.4, 0.8)
+		var sz: float = base_size * rng.randf_range(0.5, 1.0)
+		mesh.size = Vector3(sx, sy, sz)
+		box.mesh = mesh
+		box.material_override = _get_bush_material(rng.randf() > 0.5)
+		box.position = Vector3(
+			rng.randf_range(-0.2, 0.2) * base_size,
+			sy * 0.5 + rng.randf_range(0.0, 0.1),
+			rng.randf_range(-0.2, 0.2) * base_size
+		)
+		bush.add_child(box)
+
+	bush.position = pos
+	bush.rotation.y = rng.randf() * TAU
+	decorations_container.add_child(bush)
+
+
+func _create_scatter_log(pos: Vector3, rng: RandomNumberGenerator) -> void:
+	## Creates either a fallen log (horizontal) or a stump (short vertical stack)
+	var obj: Node3D = Node3D.new()
+	var is_stump: bool = rng.randf() > 0.5
+
+	if is_stump:
+		# Short vertical stack of 2-3 flat boxes
+		var stump_radius: float = rng.randf_range(0.25, 0.4)
+		var layers: int = rng.randi_range(2, 3)
+		var y_offset: float = 0.0
+		for i: int in range(layers):
+			var box: MeshInstance3D = MeshInstance3D.new()
+			var mesh: BoxMesh = BoxMesh.new()
+			var layer_h: float = rng.randf_range(0.1, 0.18)
+			var shrink: float = 1.0 - float(i) * 0.1
+			mesh.size = Vector3(stump_radius * 2.0 * shrink, layer_h, stump_radius * 2.0 * shrink)
+			box.mesh = mesh
+			box.material_override = _get_stump_material()
+			box.position.y = y_offset + layer_h * 0.5
+			box.rotation.y = rng.randf_range(-0.1, 0.1)
+			obj.add_child(box)
+			y_offset += layer_h
+	else:
+		# Horizontal fallen log - 2-3 stretched boxes
+		var log_length: float = rng.randf_range(1.0, 2.0)
+		var log_thickness: float = rng.randf_range(0.15, 0.25)
+		var segments: int = rng.randi_range(2, 3)
+		for i: int in range(segments):
+			var box: MeshInstance3D = MeshInstance3D.new()
+			var mesh: BoxMesh = BoxMesh.new()
+			var seg_len: float = log_length / float(segments) * rng.randf_range(0.9, 1.1)
+			var thick: float = log_thickness * rng.randf_range(0.85, 1.15)
+			mesh.size = Vector3(seg_len, thick, thick)
+			box.mesh = mesh
+			box.material_override = _get_log_material()
+			box.position = Vector3(
+				(float(i) - float(segments) * 0.5) * (log_length / float(segments)),
+				thick * 0.5,
+				rng.randf_range(-0.05, 0.05)
+			)
+			obj.add_child(box)
+
+	obj.position = pos
+	obj.rotation.y = rng.randf() * TAU
+	decorations_container.add_child(obj)
 
 
 func _spawn_chunk_animals() -> void:
