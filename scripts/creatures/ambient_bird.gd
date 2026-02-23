@@ -44,8 +44,8 @@ var beak_color: Color = Color(0.75, 0.55, 0.30)  # Orange-brown
 
 func _ready() -> void:
 	# Bird-specific configuration
-	flee_distance = 12.0
-	awareness_distance = 18.0
+	flee_distance = 9.0
+	awareness_distance = 15.0
 	move_speed = 5.0
 	flee_speed = 10.0
 
@@ -55,12 +55,12 @@ func _ready() -> void:
 	chirp_timer = rng.randf_range(chirp_interval_min, chirp_interval_max)
 
 	# Decide initial perch height (ground or elevated)
-	if rng.randf() < 0.3:
-		# Perch on ground
+	if rng.randf() < 0.55:
+		# Perch on ground (foraging)
 		perch_height = 0.0
 	else:
 		# Perch elevated (simulating tree branch or rock)
-		perch_height = rng.randf_range(2.0, 5.0)
+		perch_height = rng.randf_range(1.5, 4.0)
 
 	_update_perch_position()
 
@@ -414,11 +414,11 @@ func _pick_new_flight_target() -> void:
 func _start_landing() -> void:
 	bird_state = BirdState.LANDING
 
-	# Pick new perch height
-	if rng.randf() < 0.3:
+	# Pick new perch height — prefer ground for foraging
+	if rng.randf() < 0.55:
 		perch_height = 0.0
 	else:
-		perch_height = rng.randf_range(2.0, 5.0)
+		perch_height = rng.randf_range(1.5, 4.0)
 
 
 func _update_perch_position() -> void:
@@ -467,6 +467,10 @@ func _on_enter_idle() -> void:
 	# Land if flying
 	if bird_state == BirdState.FLYING:
 		_start_landing()
+	# Ground-perched birds forage longer, giving hunting opportunities
+	if perch_height < 0.1:
+		idle_duration = rng.randf_range(6.0, 15.0)
+		state_timer = idle_duration
 
 
 func _get_flee_duration() -> float:
