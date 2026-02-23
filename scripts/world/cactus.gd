@@ -197,7 +197,7 @@ func _build_damage_area(body_height: float, body_width: float) -> void:
 	var area: Area3D = Area3D.new()
 	area.name = "DamageArea"
 	area.collision_layer = 0
-	area.collision_mask = 4  # Player layer
+	area.collision_mask = 1  # Player is on layer 1
 
 	var area_shape: CollisionShape3D = CollisionShape3D.new()
 	var area_box: BoxShape3D = BoxShape3D.new()

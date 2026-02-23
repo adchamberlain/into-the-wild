@@ -87,7 +87,7 @@ func _create_water_area() -> void:
 	var water_area: Area3D = Area3D.new()
 	water_area.name = "WaterArea"
 	water_area.collision_layer = 0
-	water_area.collision_mask = 4  # Player layer
+	water_area.collision_mask = 1  # Player is on layer 1
 
 	var area_shape: CollisionShape3D = CollisionShape3D.new()
 	var area_box: BoxShape3D = BoxShape3D.new()
