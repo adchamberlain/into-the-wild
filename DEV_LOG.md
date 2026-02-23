@@ -5126,6 +5126,23 @@ Fixed 9 gameplay bugs and added a placement cooldown, covering floating trees, t
 
 ---
 
+## Session 28 - Death Fade-to-Black & Silent Auto-Save (2026-02-22)
+
+**Death screen fade**: Player death now triggers a cinematic fade-to-black sequence instead of instant teleport. Screen fades to black over 1s, holds black for 1s while the player is teleported to the respawn point, then fades back in over 1s. Uses the existing `HUD.fade_to_black_and_back()` system.
+
+**Silent death auto-save**: The auto-save to slot 5 on death no longer shows "Saved to Slot 5!" notification. Added `silent` parameter to `save_game_slot()` that skips the `game_saved` signal emission, preventing the HUD notification.
+
+**Implementation**: Split `_on_player_died()` into two phases — phase 1 resets stats/states and triggers the fade, phase 2 (`_respawn_after_fade()`) runs as a callback while the screen is black to teleport and notify.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/player/player_controller.gd` | Modified | Split death into fade phases, silent auto-save call |
+| `scripts/core/save_load.gd` | Modified | Added `silent` param to `save_game_slot()` |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
