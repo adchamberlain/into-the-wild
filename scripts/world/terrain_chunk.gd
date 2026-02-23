@@ -1004,7 +1004,7 @@ func _spawn_chunk_trees() -> void:
 						var cactus_y: float = _get_cached_height_at(cactus_x, cactus_z)
 						if cactus_y >= 0:
 							var cactus: Cactus = Cactus.new()
-							cactus.build(rng, rng.randf() < 0.2)  # 20% fruit-bearing
+							cactus.build(rng, rng.randf() < 0.1)  # 10% fruit-bearing
 							cactus.position = Vector3(cactus_x, cactus_y, cactus_z)
 							cactus.name = "Cactus_C%d_%d_%d" % [chunk_coord.x, chunk_coord.y, local_tree_index]
 							local_tree_index += 1
