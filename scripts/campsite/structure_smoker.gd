@@ -108,31 +108,19 @@ func _start_smoking(meat_type: String) -> void:
 
 func _complete_smoking() -> void:
 	var output_type: String = SMOKE_RECIPES.get(current_meat, "smoked_meat")
-
-	# Find player inventory fresh (cached reference may be stale after save/load)
-	if not is_instance_valid(player_inventory):
-		var p: Node = get_tree().get_first_node_in_group("player")
-		if p and p.has_method("get_inventory"):
-			player_inventory = p.get_inventory()
-
-	# Add output to player inventory
-	if is_instance_valid(player_inventory):
-		player_inventory.add_item(output_type, 1)
-		print("[Smoker] Smoking complete! +1 %s" % output_type)
-	else:
-		# Store product for later pickup instead of losing it
-		pending_output = output_type
-		print("[Smoker] Smoking complete! %s stored for pickup" % output_type)
-
+	pending_output = output_type
 	smoking_complete.emit(output_type, 1)
-
-	# Reset state
+	# Reset smoking state but keep pending_output
 	is_smoking = false
 	has_fuel = false
 	current_meat = ""
 	smoke_progress = 0.0
-	interaction_text = "Collect Smoked Food" if pending_output != "" else "Use Smoker"
+	interaction_text = "Collect Smoked Food"
 	_update_food_visuals()
+	# Notify player via HUD
+	var hud: Node = get_tree().get_first_node_in_group("hud")
+	if hud and hud.has_method("show_notification"):
+		hud.show_notification("Smoker finished! Collect your food.", Color(1, 0.85, 0.3, 1))
 
 
 func get_save_data() -> Dictionary:

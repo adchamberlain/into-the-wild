@@ -98,30 +98,18 @@ func _start_drying(food_type: String) -> void:
 
 func _complete_drying() -> void:
 	var dried_type: String = DRYING_RECIPES.get(current_food, "dried_food")
-
-	# Find player inventory fresh (cached reference may be stale after save/load)
-	if not is_instance_valid(player_inventory):
-		var p: Node = get_tree().get_first_node_in_group("player")
-		if p and p.has_method("get_inventory"):
-			player_inventory = p.get_inventory()
-
-	# Add dried food to player inventory
-	if is_instance_valid(player_inventory):
-		player_inventory.add_item(dried_type, 1)
-		print("[DryingRack] Drying complete! +1 %s" % dried_type)
-	else:
-		# Store product for later pickup instead of losing it
-		pending_output = dried_type
-		print("[DryingRack] Drying complete! %s stored for pickup" % dried_type)
-
+	pending_output = dried_type
 	food_dried.emit(current_food, dried_type)
-
-	# Reset state
+	# Reset drying state but keep pending_output
 	is_drying = false
 	current_food = ""
 	drying_progress = 0.0
-	interaction_text = "Collect Dried Food" if pending_output != "" else "Use Drying Rack"
+	interaction_text = "Collect Dried Food"
 	_update_food_visuals()
+	# Notify player via HUD
+	var hud: Node = get_tree().get_first_node_in_group("hud")
+	if hud and hud.has_method("show_notification"):
+		hud.show_notification("Drying rack finished! Collect your food.", Color(1, 0.85, 0.3, 1))
 
 
 func get_save_data() -> Dictionary:
