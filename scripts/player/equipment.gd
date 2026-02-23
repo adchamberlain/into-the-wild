@@ -289,35 +289,39 @@ func _input(event: InputEvent) -> void:
 	if not event is InputEventKey or not event.pressed or event.echo:
 		return
 
-	if event.physical_keycode == KEY_1:
+	# Check both physical_keycode and keycode for Mac compatibility
+	var pkey: int = event.physical_keycode
+	var kkey: int = event.keycode
+
+	if pkey == KEY_1 or kkey == KEY_1:
 		_try_equip_slot(1)
-	elif event.physical_keycode == KEY_2:
+	elif pkey == KEY_2 or kkey == KEY_2:
 		_try_equip_slot(2)
-	elif event.physical_keycode == KEY_3:
+	elif pkey == KEY_3 or kkey == KEY_3:
 		_try_equip_slot(3)
-	elif event.physical_keycode == KEY_4:
+	elif pkey == KEY_4 or kkey == KEY_4:
 		_try_equip_slot(4)
-	elif event.physical_keycode == KEY_5:
+	elif pkey == KEY_5 or kkey == KEY_5:
 		_try_equip_slot(5)
-	elif event.physical_keycode == KEY_6:
+	elif pkey == KEY_6 or kkey == KEY_6:
 		_try_equip_slot(6)
-	elif event.physical_keycode == KEY_7:
+	elif pkey == KEY_7 or kkey == KEY_7:
 		_try_equip_slot(7)
-	elif event.physical_keycode == KEY_8:
+	elif pkey == KEY_8 or kkey == KEY_8:
 		_try_equip_slot(8)
-	elif event.physical_keycode == KEY_9:
+	elif pkey == KEY_9 or kkey == KEY_9:
 		_try_equip_slot(9)
-	elif event.physical_keycode == KEY_0:
+	elif pkey == KEY_0 or kkey == KEY_0:
 		_try_equip_slot(10)
-	elif event.physical_keycode == KEY_MINUS:
+	elif pkey == KEY_MINUS or kkey == KEY_MINUS:
 		_try_equip_slot(11)
-	elif event.physical_keycode == KEY_EQUAL:
+	elif pkey == KEY_EQUAL or kkey == KEY_EQUAL:
 		_try_equip_slot(12)
-	elif event.physical_keycode == KEY_BRACKETLEFT:
+	elif pkey == KEY_BRACKETLEFT or kkey == KEY_BRACKETLEFT:
 		_try_equip_slot(13)
-	elif event.physical_keycode == KEY_BRACKETRIGHT:
+	elif pkey == KEY_BRACKETRIGHT or kkey == KEY_BRACKETRIGHT:
 		_try_equip_slot(24)
-	elif event.physical_keycode == KEY_BACKSLASH:
+	elif pkey == KEY_BACKSLASH or kkey == KEY_BACKSLASH:
 		_try_equip_slot(27)
 
 
