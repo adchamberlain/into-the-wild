@@ -20,6 +20,7 @@ var inventory: Inventory = null
 # State
 var is_drawing: bool = false
 var draw_progress: float = 0.0
+var _using_diamond_arrow: bool = false
 var bow_model: Node3D = null
 # String is two segments (upper + lower) meeting at a pull point
 var string_upper: MeshInstance3D = null
@@ -90,7 +91,11 @@ func _process(delta: float) -> void:
 			return
 
 		# Increment draw progress toward 1.0
-		draw_progress = minf(draw_progress + delta / DRAW_TIME, 1.0)
+		# Enchanted bow draws ~1.67x faster (0.6x draw time)
+		var draw_rate: float = delta / DRAW_TIME
+		if equipment and equipment.get_equipped() == "enchanted_bow":
+			draw_rate *= 1.0 / 0.6
+		draw_progress = minf(draw_progress + draw_rate, 1.0)
 
 		# Animate string V-pull
 		_update_string(draw_progress)
@@ -123,9 +128,14 @@ func _fire() -> void:
 		_cancel_draw()
 		return
 
-	# Consume 1 arrow
+	# Consume 1 arrow (prefer diamond arrows)
 	if inventory:
-		inventory.remove_item("arrows", 1)
+		if inventory.has_item("diamond_arrows", 1):
+			_using_diamond_arrow = true
+			inventory.remove_item("diamond_arrows", 1)
+		else:
+			_using_diamond_arrow = false
+			inventory.remove_item("arrows", 1)
 	arrow_count_changed.emit(get_arrow_count())
 
 	# Use equipment durability
@@ -162,7 +172,16 @@ func _spawn_arrow() -> void:
 	var launch_dir: Vector3 = (forward + camera.global_basis.y * tan(up_angle_rad)).normalized()
 	var speed: float = lerpf(0.6, 1.0, draw_progress) * ARROW_SPEED
 
-	var arrow: ArrowProjectile = ArrowProjectile.new()
+	# Enchanted bow fires 50% faster arrows
+	if equipment and equipment.get_equipped() == "enchanted_bow":
+		speed *= 1.5
+
+	# Use diamond or regular arrow projectile
+	var arrow: RigidBody3D
+	if _using_diamond_arrow:
+		arrow = DiamondArrowProjectile.new()
+	else:
+		arrow = ArrowProjectile.new()
 
 	# Add to scene tree first, then set position and velocity
 	var scene_root: Node = get_tree().current_scene
@@ -172,23 +191,26 @@ func _spawn_arrow() -> void:
 		arrow.linear_velocity = launch_dir * speed
 
 
-## Returns true when the bow is the currently equipped item.
+## Returns true when any bow (regular or enchanted) is the currently equipped item.
 func _is_bow_equipped() -> bool:
-	return equipment != null and equipment.get_equipped() == "bow"
+	if equipment == null:
+		return false
+	var equipped: String = equipment.get_equipped()
+	return equipped == "bow" or equipped == "enchanted_bow"
 
 
-## Returns true when the player has at least 1 arrow in inventory.
+## Returns true when the player has at least 1 arrow (regular or diamond) in inventory.
 func _has_arrows() -> bool:
 	if not inventory:
 		return false
-	return inventory.has_item("arrows", 1)
+	return inventory.has_item("diamond_arrows", 1) or inventory.has_item("arrows", 1)
 
 
-## Get current arrow count from inventory.
+## Get current arrow count from inventory (regular + diamond).
 func get_arrow_count() -> int:
 	if not inventory:
 		return 0
-	return inventory.get_item_count("arrows")
+	return inventory.get_item_count("arrows") + inventory.get_item_count("diamond_arrows")
 
 
 ## Returns true when the bow is equipped, so player_controller can skip

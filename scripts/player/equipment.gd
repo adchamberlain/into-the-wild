@@ -178,6 +178,19 @@ const EQUIPPABLE_ITEMS: Dictionary = {
 		"slot": 27,
 		"has_light": false,
 		"tool_type": "bow"
+	},
+	"diamond_axe": {
+		"name": "Diamond Axe",
+		"slot": 28,
+		"has_light": false,
+		"tool_type": "axe",
+		"effectiveness": 3.0
+	},
+	"enchanted_bow": {
+		"name": "Enchanted Bow",
+		"slot": 29,
+		"has_light": false,
+		"tool_type": "bow"
 	}
 }
 
@@ -189,7 +202,9 @@ const TOOL_MAX_DURABILITY: Dictionary = {
 	"fishing_rod": 50,
 	"machete": 200,
 	"grappling_hook": 100,
-	"bow": 80
+	"bow": 80,
+	"diamond_axe": 900,
+	"enchanted_bow": 200
 }
 
 # Current durability for each tool (item_type -> current durability)
