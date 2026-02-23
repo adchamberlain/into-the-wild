@@ -180,11 +180,16 @@ func _ready() -> void:
 	if stats:
 		stats.player_died.connect(_on_player_died)
 
-	# TEMP: Testing spawn - give items for testing
+	# Starting equipment based on config
 	if inventory:
-		inventory.add_item("bow", 1)
-		inventory.add_item("arrows", 20)
-		inventory.add_item("map", 1)
+		var config_node: Node = get_tree().get_first_node_in_group("config_menu")
+		var give_bow_map: bool = true
+		if config_node and "start_with_bow_map" in config_node:
+			give_bow_map = config_node.start_with_bow_map
+		if give_bow_map:
+			inventory.add_item("bow", 1)
+			inventory.add_item("arrows", 10)
+			inventory.add_item("map", 1)
 
 
 

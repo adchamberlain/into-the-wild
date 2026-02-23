@@ -73,6 +73,13 @@ theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 32
 text = "Show Coordinates"
 
+[node name="StartWithBowMapToggle" type="CheckButton" parent="Panel/VBoxContainer"]
+layout_mode = 2
+button_pressed = true
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 32
+text = "Start with Bow & Map"
+
 [node name="TreeRespawnContainer" type="VBoxContainer" parent="Panel/VBoxContainer"]
 layout_mode = 2
 

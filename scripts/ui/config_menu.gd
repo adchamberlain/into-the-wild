@@ -28,6 +28,7 @@ var weather_damage_enabled: bool = true
 var weather_enabled: bool = true
 var unlimited_fire_enabled: bool = false
 var show_coordinates_enabled: bool = true
+var start_with_bow_map: bool = true
 var tree_respawn_days: float = 7.0
 var day_length_minutes: float = 20.0
 var music_enabled: bool = true
@@ -41,6 +42,7 @@ var music_volume: float = 90.0  # 0-100
 @onready var weather_toggle: CheckButton = $Panel/VBoxContainer/WeatherToggle
 @onready var unlimited_fire_toggle: CheckButton = $Panel/VBoxContainer/UnlimitedFireToggle
 @onready var show_coordinates_toggle: CheckButton = $Panel/VBoxContainer/ShowCoordinatesToggle
+@onready var start_with_bow_map_toggle: CheckButton = $Panel/VBoxContainer/StartWithBowMapToggle
 @onready var day_length_slider: HSlider = $Panel/VBoxContainer/DayLengthContainer/DayLengthSlider
 @onready var day_length_label: Label = $Panel/VBoxContainer/DayLengthContainer/DayLengthValue
 @onready var tree_respawn_slider: HSlider = $Panel/VBoxContainer/TreeRespawnContainer/TreeRespawnSlider
@@ -124,6 +126,8 @@ func _init_ui() -> void:
 	unlimited_fire_toggle.button_pressed = unlimited_fire_enabled
 	if show_coordinates_toggle:
 		show_coordinates_toggle.button_pressed = show_coordinates_enabled
+	if start_with_bow_map_toggle:
+		start_with_bow_map_toggle.button_pressed = start_with_bow_map
 
 	# Set day length slider
 	if time_manager and "day_length_minutes" in time_manager:
@@ -153,6 +157,8 @@ func _init_ui() -> void:
 	unlimited_fire_toggle.toggled.connect(_on_unlimited_fire_toggled)
 	if show_coordinates_toggle:
 		show_coordinates_toggle.toggled.connect(_on_show_coordinates_toggled)
+	if start_with_bow_map_toggle:
+		start_with_bow_map_toggle.toggled.connect(_on_start_with_bow_map_toggled)
 	day_length_slider.value_changed.connect(_on_day_length_changed)
 	tree_respawn_slider.value_changed.connect(_on_tree_respawn_changed)
 
@@ -522,6 +528,12 @@ func _on_show_coordinates_toggled(pressed: bool) -> void:
 	print("[ConfigMenu] Show coordinates: %s" % ("ON" if pressed else "OFF"))
 
 
+func _on_start_with_bow_map_toggled(pressed: bool) -> void:
+	start_with_bow_map = pressed
+	_apply_config()
+	print("[ConfigMenu] Start with bow & map: %s" % ("ON" if pressed else "OFF"))
+
+
 func _on_day_length_changed(value: float) -> void:
 	day_length_minutes = value
 	day_length_label.text = "%.0f min" % value
@@ -606,6 +618,7 @@ func get_config() -> Dictionary:
 		"weather_enabled": weather_enabled,
 		"unlimited_fire_enabled": unlimited_fire_enabled,
 		"show_coordinates_enabled": show_coordinates_enabled,
+		"start_with_bow_map": start_with_bow_map,
 		"tree_respawn_days": tree_respawn_days,
 		"day_length_minutes": day_length_minutes,
 		"music_enabled": music_enabled,
@@ -621,6 +634,7 @@ func apply_config(data: Dictionary) -> void:
 	weather_enabled = data.get("weather_enabled", true)
 	unlimited_fire_enabled = data.get("unlimited_fire_enabled", false)
 	show_coordinates_enabled = data.get("show_coordinates_enabled", true)
+	start_with_bow_map = data.get("start_with_bow_map", true)
 	tree_respawn_days = data.get("tree_respawn_days", 7.0)
 	day_length_minutes = data.get("day_length_minutes", 20.0)
 	music_enabled = data.get("music_enabled", true)
@@ -638,6 +652,8 @@ func apply_config(data: Dictionary) -> void:
 		unlimited_fire_toggle.button_pressed = unlimited_fire_enabled
 	if show_coordinates_toggle:
 		show_coordinates_toggle.button_pressed = show_coordinates_enabled
+	if start_with_bow_map_toggle:
+		start_with_bow_map_toggle.button_pressed = start_with_bow_map
 	if tree_respawn_slider:
 		tree_respawn_slider.value = tree_respawn_days
 	if tree_respawn_label:
@@ -789,6 +805,8 @@ func _build_focusable_controls() -> void:
 		focusable_controls.append(unlimited_fire_toggle)
 	if show_coordinates_toggle:
 		focusable_controls.append(show_coordinates_toggle)
+	if start_with_bow_map_toggle:
+		focusable_controls.append(start_with_bow_map_toggle)
 	if tree_respawn_slider:
 		focusable_controls.append(tree_respawn_slider)
 	if day_length_slider:
