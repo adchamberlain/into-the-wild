@@ -5379,23 +5379,48 @@ All scatter objects use shared static materials for performance, respect exclusi
 
 ---
 
-## Session 39 - Carlston Wilderness Information Sign (2026-02-23)
+## Session 39 - Wilderness Sign, HUD Polish & Bug Fixes (2026-02-23)
 
-**Wilderness information kiosk**: Added a covered kiosk-style sign near the player spawn at (6, terrain_y, -4) that displays Carlston Wilderness regulations when the player reads it. The sign is a world fixture (not moveable, not saved) that spawns fresh each session.
+**Wilderness information kiosk**: Added a covered kiosk-style sign near the player spawn that displays Carlston Wilderness regulations when the player reads it. The sign is a world fixture (not moveable, not saved) that spawns fresh each session.
 
-**3D sign structure**: Two dark-brown posts with cross beam, angled V-roof with ridge cap, olive/tan information board at eye height, darker header strip, dark frame edges, and angled support braces. All built from BoxMesh primitives with shared static materials matching the project's procedural art style.
+**3D sign structure**: Two dark-brown posts with cross beam, angled V-roof with ridge cap, olive/tan information board at eye height, darker header strip, dark frame edges, and angled support braces. All built from BoxMesh primitives with shared static materials. Scaled to 70% of original size via `SIGN_SCALE` constant with a scaled `MeshRoot` container.
 
-**Readable overlay**: Pressing [E] opens a full-screen overlay (CanvasLayer 100) styled as a national-park-style information board with forest-green outer panel, tan/cream inner panel, and dark-brown text. Displays the "CARLSTON WILDERNESS" title, welcome message, six regulation bullet points (hunting, swimming, pits, resource collection, severe weather, care), and a close hint. Overlay freezes the player via `set_resting()` and hides the HUD via a new `set_overlay_mode()` method.
+**Readable overlay**: Pressing interact opens a full-screen overlay (CanvasLayer 100) styled as a national-park-style information board with forest-green outer panel, tan/cream inner panel, and dark-brown text. Displays "CARLSTON WILDERNESS" title, welcome message, geometric pine tree logo emblem, six regulation bullet points (hunting, swimming, pits, resource collection, severe weather, care), and a dynamic close hint. Overlay freezes the player via `set_resting()` and hides the HUD via `set_overlay_mode()`.
 
-**HUD overlay mode**: Added `set_overlay_mode(enabled)` to `hud.gd` that hides/shows all HUD panels (time, stats, equipped, inventory, interaction prompt, notification, compass) when an overlay is active. The HUD was already in the "hud" group from a previous session.
+**Viewport-relative text scaling**: All overlay fonts, margins, spacing, and the tree logo scale proportionally to the viewport height relative to a 1080px reference. Labels are registered in a `_scaled_labels` array and rescaled on `_notification(NOTIFICATION_RESIZED)`. Ensures the sign looks good on any screen size.
+
+**Tree logo emblem**: Added a geometric pine tree drawn via `_draw()` polygons on a Control node, using an inline GDScript attached at runtime. The logo sits between the subtitle and regulations header.
+
+**Flat terrain placement**: Sign placement uses `_find_flat_spot_for_sign()` which searches a grid of candidate positions 4-8 units from spawn, samples 5 footprint points per candidate, and picks the position with the least height variance. Sign rotates to face spawn.
+
+**Dynamic close hint**: Close prompt uses `InputManager.get_prompt("interact")` to show the correct button for keyboard vs controller input, instead of hardcoded "[E]".
+
+**HUD overlay mode**: Added `set_overlay_mode(enabled)` to `hud.gd` that hides all HUD panels when an overlay is active. Guarded all three paths that show the interaction prompt panel (`_on_interaction_target_changed`, placement prompt, resting prompt) with `_overlay_active` check to prevent duplicate close prompts.
+
+**HUD label changes**: Renamed health bar label from "HP" to "Health" and hunger bar from "FD" to "Hunger". Added border outlines to both progress bars (2px border with muted color matching each bar) for better visibility as meters deplete. Widened StatsPanel to accommodate longer labels.
+
+**Leather axe wrap fix**: When leather wrap upgrade is applied, axe durability now restores to 100% (the new max) instead of keeping the current worn-down value.
+
+**Shelter exit fix**: Flipped shelter exit position from closed side (+Z) to open side (-Z) so player exits through the shelter opening. Player now faces outward from the shelter.
+
+**Tree sway parse error fix**: Removed stray `1` character in `tree_sway.gd` line 87 that caused "Could not parse global class TreeSway" on launch.
+
+**Animal loot timing fix**: Fixed loot drop timing in `ambient_animal_base.gd` so items spawn after the death animation completes (via tween callback) instead of before.
 
 ### Files Changed
 
 | File | Status | Changes |
 |------|--------|---------|
-| `scripts/world/wilderness_sign.gd` | Created | Full wilderness sign script: StructureBase subclass, shared static materials, 3D kiosk mesh, readable overlay with regulations, interaction toggle, player freeze/HUD hide |
-| `scripts/ui/hud.gd` | Modified | Added `set_overlay_mode()` method to hide/show all HUD panels |
-| `scripts/world/chunk_manager.gd` | Modified | Added `wilderness_sign_script`/`wilderness_sign_spawned` vars, load script in `_load_scenes()`, spawn sign near player spawn in chunk loading |
+| `scripts/world/wilderness_sign.gd` | Created | Full wilderness sign: StructureBase subclass, shared static materials, 3D kiosk mesh at 70% scale, readable overlay with regulations, tree logo, viewport-relative font scaling, flat terrain placement, dynamic close hint, interaction toggle, player freeze/HUD hide |
+| `scripts/ui/hud.gd` | Modified | Added `_overlay_active` flag and `set_overlay_mode()` method, guarded all three interaction prompt show paths with overlay check, added `add_to_group("hud")` |
+| `scenes/ui/hud.tscn` | Modified | Renamed HP→Health, FD→Hunger, added 2px border outlines to health/hunger progress bars, widened StatsPanel to 520px |
+| `scripts/world/chunk_manager.gd` | Modified | Added wilderness sign script loading and spawning with `_find_flat_spot_for_sign()` flat terrain search |
+| `scripts/player/equipment.gd` | Modified | Leather axe wrap now restores durability to 100% (new max) |
+| `scripts/campsite/structure_shelter.gd` | Modified | Flipped exit offset to -Z (open side), player faces outward |
+| `scripts/world/tree_sway.gd` | Fixed | Removed stray character causing parse error |
+| `scripts/creatures/ambient_animal_base.gd` | Modified | Loot drops after death animation via tween callback |
+| `docs/plans/2026-02-23-wilderness-sign-design.md` | Created | Design document for wilderness sign |
+| `docs/plans/2026-02-23-wilderness-sign.md` | Created | Implementation plan |
 
 ---
 
