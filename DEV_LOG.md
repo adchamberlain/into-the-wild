@@ -5240,11 +5240,32 @@ Fixed 9 gameplay bugs and added a placement cooldown, covering floating trees, t
 
 ---
 
+## Session 33 - Bow Visual Polish & Bird Hunting Balance (2026-02-22)
+
+**Bow visual improvements** (2 iterations based on play-testing screenshots):
+- Iteration 1: Replaced flat rectangle bow with multi-segment curved limbs (4 segments per side with progressive taper and tilt), added tip nocks, grip wrap accents, thinner string, pushed model further from camera
+- Iteration 2: Flipped bow orientation so limbs curve toward player (+Z) like a real recurve bow. Replaced single sliding straight-line string with two-segment V-string (upper + lower halves from nock tips to center pull point) that creates a realistic V-shape when drawn
+
+**Bird hunting balance**: Birds were nearly impossible to hunt — they had a 12-unit flee distance, only 30% chance to land on the ground, and short idle times. Retuned for huntability:
+- Ground perch chance increased from 30% to 55% (birds forage on ground more)
+- Ground idle duration extended to 6-15 seconds (was 2-8s), giving time to aim
+- Flee distance reduced from 12 to 9 units (bow range is ~40, so plenty of room)
+- Elevated perch heights lowered (1.5-4m vs 2-5m)
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/player/bow_system.gd` | Modified | Flipped limb orientation (+Z curve), V-string with upper/lower segments, `_update_string()` and `_position_string_segment()` methods |
+| `scripts/creatures/ambient_bird.gd` | Modified | Flee distance 12→9, ground perch 30%→55%, ground idle 6-15s, lower perch heights |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test bow and arrow system, tune arrow speed/arc/range
-2. Remove TEMP test spawn items once satisfied with bow behavior
+1. Continue play-testing bow and arrow, tune arrow speed/arc/range if needed
+2. Remove TEMP test spawn items (bow + 20 arrows) once satisfied with bow behavior
 3. Continue general play-testing and bug fixing
 
 ### Reference
