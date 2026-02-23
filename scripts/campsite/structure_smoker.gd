@@ -152,7 +152,23 @@ func load_save_data(data: Dictionary) -> void:
 
 
 func get_interaction_text() -> String:
+	if pending_output != "":
+		return "Collect Smoked Food"
 	if is_smoking:
 		var percent: int = int((smoke_progress / SMOKE_TIME) * 100)
 		return "Smoking %s (%d%%)" % [current_meat.capitalize().replace("_", " "), percent]
+	# Check if player has meat to smoke
+	var p: Node = get_tree().get_first_node_in_group("player")
+	if p and p.has_method("get_inventory"):
+		var inv: Node = p.get_inventory()
+		if inv:
+			var has_meat: bool = false
+			for meat_type: String in SMOKE_RECIPES:
+				if inv.has_item(meat_type):
+					has_meat = true
+					break
+			if not has_meat:
+				return "Need Meat to Smoke"
+			if not inv.has_item("wood", FUEL_REQUIRED):
+				return "Need Wood to Smoke"
 	return "Smoke Meat"
