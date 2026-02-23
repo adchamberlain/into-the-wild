@@ -997,7 +997,7 @@ func _spawn_chunk_resources() -> void:
 
 	var resource_grid_size: float = 5.0  # Larger grid for resources - fewer checks, better performance
 	var resources_spawned_this_batch: int = 0
-	__local_resource_index = 0
+	_local_resource_index = 0
 
 	var x: float = 0.0
 	while x < chunk_world_size:
