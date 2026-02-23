@@ -24,7 +24,7 @@ var structure_positions: Array = []  # Array of {x, z, type}
 var player_pos: Vector3 = Vector3.ZERO
 var map_center: Vector2 = Vector2.ZERO  # World XZ center of map (tracks player)
 var _last_gather_center: Vector2 = Vector2.ZERO  # Center when data was last sampled
-const REGATHER_DISTANCE: float = 40.0  # Re-sample terrain when player moves this far
+const REGATHER_DISTANCE: float = 80.0  # Re-sample terrain when player moves this far
 
 # UI nodes
 var map_panel: PanelContainer
