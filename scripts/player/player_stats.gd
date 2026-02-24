@@ -84,8 +84,8 @@ func _update_health(delta: float) -> void:
 	if hunger <= 0.0 and health_drain_enabled:
 		# Starving: drain health (only if enabled)
 		health = max(0.0, health - health_drain_rate * delta)
-	elif hunger >= max_hunger:
-		# Full: regenerate health
+	elif hunger >= max_hunger * 0.98:
+		# Nearly full: regenerate health (threshold avoids frame-order race with hunger drain)
 		health = min(max_health, health + health_regen_rate * delta)
 
 	if health != old_health:

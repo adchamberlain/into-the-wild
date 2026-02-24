@@ -488,12 +488,16 @@ func _add_top_face_cached(st: SurfaceTool, x: float, z: float, size: float, heig
 	# Color variation based on world position for consistency across chunks
 	var world_cx: int = chunk_coord.x * chunk_manager.chunk_size_cells + cx
 	var world_cz: int = chunk_coord.y * chunk_manager.chunk_size_cells + cz
-	var variation: float = sin(world_cx * 12.9898 + world_cz * 78.233) * 0.08
+	# Desert sand is uniform - reduce variation significantly
+	var is_desert: bool = region == ChunkManager.RegionType.DESERT or (spawn_dist >= d_inner and spawn_dist <= d_outer)
+	var var_scale: float = 0.02 if is_desert else 0.08
+	var clamp_range: float = 0.03 if is_desert else 0.08
+	var variation: float = sin(world_cx * 12.9898 + world_cz * 78.233) * var_scale
 
 	var cell_grass: Color = Color(
-		clamp(grass_color.r + variation, grass_color.r - 0.08, grass_color.r + 0.10),
-		clamp(grass_color.g + variation * 0.5, grass_color.g - 0.07, grass_color.g + 0.10),
-		clamp(grass_color.b + variation * 0.3, grass_color.b - 0.07, grass_color.b + 0.07)
+		clamp(grass_color.r + variation, grass_color.r - clamp_range, grass_color.r + clamp_range),
+		clamp(grass_color.g + variation * 0.5, grass_color.g - clamp_range, grass_color.g + clamp_range),
+		clamp(grass_color.b + variation * 0.3, grass_color.b - clamp_range, grass_color.b + clamp_range)
 	)
 
 	# Calculate vertex AO using cached heights
@@ -502,6 +506,13 @@ func _add_top_face_cached(st: SurfaceTool, x: float, z: float, size: float, heig
 	var ao1: float = _calculate_vertex_ao_cached(cx, cz, height, 1, -1)   # NE corner
 	var ao2: float = _calculate_vertex_ao_cached(cx, cz, height, 1, 1)    # SE corner
 	var ao3: float = _calculate_vertex_ao_cached(cx, cz, height, -1, 1)   # SW corner
+
+	# Desert sand: soften AO so terrain looks uniformly sandy
+	if is_desert:
+		ao0 = lerp(ao0, 1.0, 0.75)
+		ao1 = lerp(ao1, 1.0, 0.75)
+		ao2 = lerp(ao2, 1.0, 0.75)
+		ao3 = lerp(ao3, 1.0, 0.75)
 
 	# Apply AO to colors
 	var color0: Color = cell_grass * ao0
@@ -513,6 +524,8 @@ func _add_top_face_cached(st: SurfaceTool, x: float, z: float, size: float, heig
 	var uvs: Array[Vector2]
 	if region == ChunkManager.RegionType.ROCKY:
 		uvs = TerrainTextures.get_stone_uvs()
+	elif is_desert:
+		uvs = TerrainTextures.get_sand_top_uvs()
 	else:
 		uvs = TerrainTextures.get_top_face_uvs()
 
@@ -664,22 +677,36 @@ func _add_side_quad_ao(st: SurfaceTool, v0: Vector3, v1: Vector3, v2: Vector3, v
 	var grass_thickness: float = 0.25
 	var total_height: float = v0.y - v2.y
 
-	# Color variation based on position
-	var variation: float = sin(v0.x * 12.9898 + v0.z * 78.233 + v0.y * 37.719) * 0.06
+	# Color variation based on position — desert sand is uniform
+	var is_desert: bool = region == ChunkManager.RegionType.DESERT or (spawn_dist >= d_inner and spawn_dist <= d_outer)
+	var var_scale: float = 0.015 if is_desert else 0.06
+	var clamp_range: float = 0.03 if is_desert else 0.08
+	var variation: float = sin(v0.x * 12.9898 + v0.z * 78.233 + v0.y * 37.719) * var_scale
 	var cell_grass: Color = Color(
-		clamp(grass_color.r + variation, grass_color.r - 0.08, grass_color.r + 0.10),
-		clamp(grass_color.g + variation * 0.5, grass_color.g - 0.07, grass_color.g + 0.10),
-		clamp(grass_color.b + variation * 0.3, grass_color.b - 0.07, grass_color.b + 0.07)
+		clamp(grass_color.r + variation, grass_color.r - clamp_range, grass_color.r + clamp_range),
+		clamp(grass_color.g + variation * 0.5, grass_color.g - clamp_range, grass_color.g + clamp_range),
+		clamp(grass_color.b + variation * 0.3, grass_color.b - clamp_range, grass_color.b + clamp_range)
 	)
 	var cell_dirt: Color = Color(
-		clamp(dirt_color.r + variation, dirt_color.r - 0.08, dirt_color.r + 0.10),
-		clamp(dirt_color.g + variation * 0.8, dirt_color.g - 0.08, dirt_color.g + 0.10),
-		clamp(dirt_color.b + variation * 0.5, dirt_color.b - 0.08, dirt_color.b + 0.10)
+		clamp(dirt_color.r + variation, dirt_color.r - clamp_range, dirt_color.r + clamp_range),
+		clamp(dirt_color.g + variation * 0.8, dirt_color.g - clamp_range, dirt_color.g + clamp_range),
+		clamp(dirt_color.b + variation * 0.5, dirt_color.b - clamp_range, dirt_color.b + clamp_range)
 	)
 
+	# Desert sand: soften AO so side faces look uniformly sandy
+	if is_desert:
+		ao_top = lerp(ao_top, 1.0, 0.75)
+		ao_bottom = lerp(ao_bottom, 1.0, 0.75)
+
 	# Get UV coordinates for side faces
-	var side_uvs: Array[Vector2] = TerrainTextures.get_side_face_uvs(total_height > grass_thickness)
-	var dirt_uvs: Array[Vector2] = TerrainTextures.get_side_face_uvs(false)  # Pure dirt UVs
+	var side_uvs: Array[Vector2]
+	var dirt_uvs: Array[Vector2]
+	if is_desert:
+		side_uvs = TerrainTextures.get_sand_side_uvs()
+		dirt_uvs = TerrainTextures.get_sand_side_uvs()
+	else:
+		side_uvs = TerrainTextures.get_side_face_uvs(total_height > grass_thickness)
+		dirt_uvs = TerrainTextures.get_side_face_uvs(false)
 
 	if total_height > grass_thickness:
 		# Split into grass strip + dirt

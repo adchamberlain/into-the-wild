@@ -114,8 +114,8 @@ var region_colors: Dictionary = {
 		"dirt": Color(0.42, 0.40, 0.38)     # Mountain grey
 	},
 	RegionType.DESERT: {
-		"grass": Color(0.82, 0.72, 0.55),  # Sandy tan
-		"dirt": Color(0.70, 0.58, 0.40)     # Darker sand
+		"grass": Color(0.84, 0.75, 0.45),  # Warm yellow-brown sand
+		"dirt": Color(0.72, 0.60, 0.35)     # Deeper brown sand
 	},
 }
 

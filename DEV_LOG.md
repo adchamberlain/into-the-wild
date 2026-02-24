@@ -5660,6 +5660,37 @@ Fixed cabin sensor flickering, added collision to palm trees and scattered decor
 
 ---
 
+## Session 46 - Desert Sand Visuals & Health Regen Fix (2026-02-23)
+
+Overhauled desert terrain to look like realistic, uniform sand instead of a patchy checkerboard. Fixed health regeneration not triggering when hunger bar was full.
+
+### Desert Sand Overhaul
+
+The desert terrain had three problems making it look like a patchwork quilt rather than sand:
+
+1. **Noisy grass texture applied to sand**: The 16x16 grass_top texture has ±0.08 pixel variation and 10% dark spots — great for grass, terrible for sand. Added dedicated `sand_top` and `sand_side` textures to the atlas with only ±0.02 noise for a smooth, uniform appearance.
+
+2. **Too much per-cell color variation**: Each terrain cell got a random ±0.08 color offset, creating visible contrast between adjacent cells. Reduced to ±0.02 for desert regions.
+
+3. **Ambient occlusion too harsh on flat sand**: AO darkened cell corners by up to 36% when neighbors had different heights, making the grid pattern visible. Softened AO by 75% for desert cells (lerp toward 1.0).
+
+Also adjusted desert base colors to warmer yellow-brown: grass `(0.84, 0.75, 0.45)`, dirt `(0.72, 0.60, 0.35)`.
+
+### Health Regen Bug Fix
+
+Health was not regenerating when hunger was full due to a frame-order race condition. `_update_hunger()` runs before `_update_health()` in `_process()`, so even at full hunger, the drain tick reduces it below `max_hunger` before the regen check. Changed threshold from `hunger >= max_hunger` to `hunger >= max_hunger * 0.98`. Especially noticeable in the desert where the 1.5x hunger multiplier drains faster.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/world/terrain_textures.gd` | Modified | Expanded atlas from 32x32 to 48x32, added sand_top/sand_side textures and UV functions |
+| `scripts/world/terrain_chunk.gd` | Modified | Desert cells use sand textures, reduced color variation and AO for desert |
+| `scripts/world/chunk_manager.gd` | Modified | Warmer desert base colors |
+| `scripts/player/player_stats.gd` | Fixed | Health regen threshold 98% instead of exactly full |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
