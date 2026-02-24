@@ -861,12 +861,15 @@ func _generate_desert_oases() -> void:
 		desert_oases.append(oasis_data)
 
 		# Also add oasis as a water body so terrain gets depressed
+		# Mark index as spawned so no fishing spot is created on top of the oasis
+		var oasis_wb_idx: int = water_bodies.size()
 		water_bodies.append({
 			"type": WaterBodyType.POND,
 			"center": Vector2(snapped_x, snapped_z),
 			"radius": 6.0,
 			"depth": 4.0
 		})
+		spawned_pond_indices.append(oasis_wb_idx)
 
 		print("[ChunkManager] Generated desert oasis #%d (%s) at (%.0f, %.0f)" % [
 			desert_oases.size(), config["gem_type"], snapped_x, snapped_z
