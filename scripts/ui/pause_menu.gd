@@ -11,6 +11,7 @@ signal game_quit()
 @onready var save_button: Button = $Panel/VBoxContainer/SaveButton
 @onready var load_button: Button = $Panel/VBoxContainer/LoadButton
 @onready var settings_button: Button = $Panel/VBoxContainer/SettingsButton
+@onready var return_to_camp_button: Button = $Panel/VBoxContainer/ReturnToCampButton
 @onready var credits_button: Button = $Panel/VBoxContainer/CreditsButton
 @onready var quit_button: Button = $Panel/VBoxContainer/QuitButton
 @onready var hint_label: Label = $Panel/VBoxContainer/HintLabel
@@ -61,12 +62,13 @@ func _ready() -> void:
 	save_button.pressed.connect(_on_save_pressed)
 	load_button.pressed.connect(_on_load_pressed)
 	settings_button.pressed.connect(_on_settings_pressed)
+	return_to_camp_button.pressed.connect(_on_return_to_camp_pressed)
 	credits_button.pressed.connect(_on_credits_pressed)
 	quit_button.pressed.connect(_on_quit_pressed)
 	back_button.pressed.connect(_on_back_pressed)
 
 	# Set up button list for controller navigation
-	button_list = [resume_button, save_button, load_button, settings_button, credits_button, quit_button]
+	button_list = [resume_button, save_button, load_button, settings_button, return_to_camp_button, credits_button, quit_button]
 
 	# Create slot selection panel and confirmation dialog
 	_create_slot_panel()
@@ -253,6 +255,37 @@ func _on_settings_pressed() -> void:
 		elif "panel" in config_menu:
 			config_menu.panel.visible = true
 			config_menu.is_visible = true
+
+
+func _on_return_to_camp_pressed() -> void:
+	if not save_load:
+		_show_notification("Save system not found!", Color(1.0, 0.5, 0.5))
+		return
+
+	# Find the most recent save slot by checking timestamps
+	var best_slot: int = 0
+	var best_time: int = 0
+	for slot: int in range(1, 6):
+		if save_load.has_method("has_save_slot") and save_load.has_save_slot(slot):
+			var filepath: String = "user://saves/save_slot_%d.json" % slot
+			var modified: int = FileAccess.get_modified_time(filepath)
+			if modified > best_time:
+				best_time = modified
+				best_slot = slot
+
+	if best_slot == 0:
+		_show_notification("No saved game found!", Color(1.0, 0.5, 0.5))
+		return
+
+	# Load the most recent save
+	panel.visible = false
+	var success: bool = await save_load.load_game_slot(best_slot)
+	if success:
+		_show_notification("Returned to camp", Color(0.6, 1.0, 0.6))
+		resume_game()
+	else:
+		_show_notification("Load Failed!", Color(1.0, 0.5, 0.5))
+		panel.visible = true
 
 
 func _on_quit_pressed() -> void:
