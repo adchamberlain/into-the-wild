@@ -48,43 +48,39 @@ static func _ensure_shared_materials() -> void:
 		return
 	_materials_initialized = true
 
-	# Diamond material: blue-white with emission
+	# Diamond material: blue-white with emission (opaque so it renders through water)
 	_diamond_mat = StandardMaterial3D.new()
-	_diamond_mat.albedo_color = Color(0.7, 0.85, 1.0, 0.85)
+	_diamond_mat.albedo_color = Color(0.7, 0.85, 1.0)
 	_diamond_mat.emission_enabled = true
 	_diamond_mat.emission = Color(0.4, 0.6, 1.0)
 	_diamond_mat.emission_energy_multiplier = 0.8
-	_diamond_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_diamond_mat.roughness = 0.05
 	_diamond_mat.metallic = 0.4
 
 	# Diamond glow (brighter variant for tips/accents)
 	_diamond_glow_mat = StandardMaterial3D.new()
-	_diamond_glow_mat.albedo_color = Color(0.8, 0.92, 1.0, 0.75)
+	_diamond_glow_mat.albedo_color = Color(0.8, 0.92, 1.0)
 	_diamond_glow_mat.emission_enabled = true
 	_diamond_glow_mat.emission = Color(0.5, 0.7, 1.0)
 	_diamond_glow_mat.emission_energy_multiplier = 1.2
-	_diamond_glow_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_diamond_glow_mat.roughness = 0.03
 	_diamond_glow_mat.metallic = 0.5
 
-	# Opal material: purple-white with emission
+	# Opal material: purple-white with emission (opaque so it renders through water)
 	_opal_mat = StandardMaterial3D.new()
-	_opal_mat.albedo_color = Color(0.85, 0.75, 1.0, 0.85)
+	_opal_mat.albedo_color = Color(0.85, 0.75, 1.0)
 	_opal_mat.emission_enabled = true
 	_opal_mat.emission = Color(0.6, 0.4, 0.9)
 	_opal_mat.emission_energy_multiplier = 0.8
-	_opal_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_opal_mat.roughness = 0.05
 	_opal_mat.metallic = 0.4
 
 	# Opal glow (brighter variant for tips/accents)
 	_opal_glow_mat = StandardMaterial3D.new()
-	_opal_glow_mat.albedo_color = Color(0.92, 0.82, 1.0, 0.75)
+	_opal_glow_mat.albedo_color = Color(0.92, 0.82, 1.0)
 	_opal_glow_mat.emission_enabled = true
 	_opal_glow_mat.emission = Color(0.7, 0.5, 1.0)
 	_opal_glow_mat.emission_energy_multiplier = 1.2
-	_opal_glow_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_opal_glow_mat.roughness = 0.03
 	_opal_glow_mat.metallic = 0.5
 
