@@ -8,11 +8,13 @@ A solo camping adventure game built in Godot 4.5. Survive in the wilderness by g
 
 ### Infinite Procedural World
 - **Chunk-based terrain** - Endless exploration with procedurally generated landscapes
-- **Five distinct regions** - Meadow (gentle rolling hills), Forest (dense trees), Hills (dramatic terrain with climbing paths), Rocky (jagged cliffs with caves), Mountain (alpine peaks with ponderosa pines)
-- **Biome variety** - Mixed forests with oak, big oak, birch, and ponderosa pine trees
-- **Natural features** - Ponds, lakes, alpine lakes, and rivers for swimming and fishing
+- **Six distinct regions** - Meadow (gentle rolling hills), Forest (dense trees), Hills (dramatic terrain with climbing paths), Rocky (jagged cliffs with caves), Mountain (alpine peaks with ponderosa pines), Desert (sandy ring with oases)
+- **Desert biome ring** - Organic-shaped desert region at 150-250 units from spawn with cacti, palm trees, oases with underwater gem deposits, sandstorms, and 1.5x hunger drain
+- **Biome variety** - Mixed forests with oak, big oak, birch, and ponderosa pine trees; desert with cacti and palm trees
+- **Natural features** - Ponds, lakes, alpine lakes, rivers, and desert oases for swimming and fishing
 - **Blocky terrain** - Cell-based terrain with per-cell BoxShape3D collision for pixel-perfect physics
-- **Ambient wildlife** - Rabbits and birds that flee when approached, huntable with bow and arrow
+- **Ambient wildlife** - Rabbits and birds that flee when approached, huntable with bow and arrow; desert lizards and tortoises (non-huntable)
+- **Desert oases** - 3 palm oases with swimmable pools containing underwater diamond and opal gem deposits
 - **Cave entrances** - Explorable underground areas in rocky regions (requires torch)
 - **Auto step-up** - Minecraft-style automatic climbing over 1-block terrain steps
 - **Loading screen** - Cycling camping artwork while the world generates
@@ -21,7 +23,8 @@ A solo camping adventure game built in Godot 4.5. Survive in the wilderness by g
 - **Health & Hunger** - Manage your vital stats to stay alive
 - **Fall Damage** - Falls beyond 4 units deal escalating damage (8 HP per unit, max 80 HP)
 - **Death & Respawn** - When HP reaches zero, respawn at your latest shelter with 50% health/hunger, all inventory and structures intact
-- **Weather System** - Dynamic weather including rain, storms, fog, heat waves, and cold snaps with GPU-accelerated particle effects
+- **Weather System** - Dynamic weather including rain, storms, fog, heat waves, cold snaps, and desert sandstorms with GPU-accelerated particle effects
+- **Cactus Hazards** - Prickly cacti deal contact damage; fruit-bearing cacti can be harvested for food
 - **Day/Night Cycle** - 20-minute real-time days with dynamic sky, stars, and moon
 - **Swimming** - Explore underwater with breath mechanics
 - **Save System** - 3 save slots with camp level and timestamp display
@@ -32,10 +35,11 @@ A solo camping adventure game built in Godot 4.5. Survive in the wilderness by g
 - **Tool Upgrades** - Craft leather wraps from hide to multiply axe and grappling hook durability (with visible wrap on the tool model)
 
 ### Gathering & Crafting
-- **Resource Gathering** - Collect branches, rocks, berries, mushrooms, herbs, and wood
+- **Resource Gathering** - Collect branches, rocks, berries, mushrooms, herbs, wood, and cactus fruit
 - **Tree Chopping** - Use the stone axe to chop trees (with first-person swing animation)
 - **Birch Bark Harvesting** - Use the machete on birch trees to harvest bark (3-day regrowth cooldown)
 - **Fishing** - Multi-step fishing mechanic at pond fishing spots
+- **Gem Mining** - Dive underwater in desert oases to mine diamond and opal deposits
 - **Tiered Crafting** - Basic recipes by hand, advanced recipes at crafting bench
 
 ### Campsite Progression
@@ -173,6 +177,7 @@ Cook raw food at a fire pit for better hunger restoration:
 | Berry | Cooked Berries | +25 (vs +15 raw) |
 | Mushroom | Cooked Mushroom | +20 (vs +10 raw) |
 | Fish | Cooked Fish | +40 (vs +25 raw) |
+| Cactus Fruit | Cooked Cactus Fruit | +30 (vs +20 raw) |
 
 ## Weather Effects
 
@@ -183,6 +188,7 @@ Cook raw food at a fire pit for better hunger restoration:
 | Heat Wave | 2x hunger depletion | Eat more |
 | Rain | Reduces fire effectiveness | None needed |
 | Fog | Reduced visibility | None needed |
+| Sandstorm | Reduced visibility + 1 HP/sec | Shelter |
 
 ## Audio
 
