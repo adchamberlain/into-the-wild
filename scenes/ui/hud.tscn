@@ -363,9 +363,9 @@ visible = false
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -200.0
+offset_left = -300.0
 offset_top = 100.0
-offset_right = 200.0
+offset_right = 300.0
 offset_bottom = 160.0
 grow_horizontal = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_notification_bg")
@@ -378,6 +378,7 @@ theme_override_font_sizes/font_size = 44
 text = "Game Saved!"
 horizontal_alignment = 1
 vertical_alignment = 1
+autowrap_mode = 2
 
 [node name="CoordinatesLabel" type="Label" parent="."]
 visible = false
