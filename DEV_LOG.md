@@ -5593,11 +5593,53 @@ Fixed critical and important issues identified during code review of the desert 
 
 ---
 
+## Session 44 - Desert Biome: Play-Test Bug Fixes & Polish (2026-02-23)
+
+Play-tested the desert biome and fixed 11 issues covering collision detection, visual rendering, balance, and art quality.
+
+### Collision & Interaction Fixes
+
+- **Cactus damage not working**: DamageArea `collision_mask` was 4 (layer 3) but player is on layer 1. Changed to `collision_mask=1`. Same fix for oasis WaterArea swimming detection.
+- **Oasis water flashing/Z-fighting**: Oasis registered as POND in `water_bodies` caused a FishingSpot (with its own water mesh) to spawn on top of the oasis water surface. Pre-marked oasis water body indices as spawned to prevent duplicate fishing spots.
+- **River/oasis water overlap**: River water quads rendered on top of oasis water surface. Added oasis proximity check to skip river quads within oasis bounds.
+
+### Visual & Rendering Fixes
+
+- **Gems visible through terrain**: Gem halo had `no_depth_test=true`, rendering through everything. Removed it and reduced OmniLight range/energy.
+- **Gems disappearing under water**: Gem crystal materials used `TRANSPARENCY_ALPHA`, causing rendering order issues with the transparent water surface. Made crystals opaque (emission still gives crystalline look).
+- **Oasis water gaps at edges**: Water surface (radius*2) didn't cover the full terrain depression (radius+3 ramp zone). Expanded water surface to `(radius+3.5)*2`.
+- **Oasis deep water Z-fighting**: Deep water layer was only 0.02 below surface. Moved to 0.15 below.
+- **Palm fronds disconnected**: Fronds were positioned at their center offset from crown. Rewrote to use pivot Node3Ds at crown so fronds rotate from attachment point.
+- **Palm tree ring bands overhanging**: Rings were fixed at 0.38 width but trunk tapers from 0.35 to 0.20. Rings now match trunk width at their height position.
+- **Cactus rough appearance**: Ridges protruded beyond body surface. Made ridges flush, reduced spine size and protrusion.
+
+### Balance & UX
+
+- **HUD overlap**: Heat indicator overlapped with air bubble display. Moved heat panel below StatsPanel.
+- **Desert ring too uniform**: Perfect cylinder shape. Added multi-frequency sine noise to boundaries (±19 unit variation) for organic thicker/thinner sections.
+- **Too many cacti**: Halved spawn density (0.7 → 0.35 multiplier).
+- **Too much cactus fruit**: Reduced fruit variant from 20% to 10%.
+- **Cactus no sound on damage**: Added `fall_hurt` SFX to cactus contact damage.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/world/cactus.gd` | Fixed | collision_mask=1, flush ridges, smaller spines, hurt SFX |
+| `scripts/world/desert_oasis.gd` | Fixed | collision_mask=1, expanded water surface, deep water Y offset |
+| `scripts/world/chunk_manager.gd` | Fixed | Organic desert boundaries, skip river quads in oasis, prevent oasis fishing spots |
+| `scripts/world/terrain_chunk.gd` | Fixed | Dynamic desert transition bounds, halved cactus density, 10% fruit |
+| `scripts/world/palm_tree.gd` | Fixed | Pivot-based fronds, tapered ring bands |
+| `scripts/resources/gem_node.gd` | Fixed | Removed no_depth_test, opaque crystals, reduced light |
+| `scripts/ui/hud.gd` | Fixed | Heat panel below StatsPanel |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
 1. Remove TEMP test spawn items (bow + 20 arrows + bark_map) once satisfied
-2. Play-test desert biome: oasis discovery, gem mining, cactus interactions, sandstorms
+2. Continue play-testing desert biome balance
 3. Add distinct visual models for diamond axe and enchanted bow (currently use defaults)
 4. Bug fixing
 
