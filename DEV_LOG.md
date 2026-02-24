@@ -5635,6 +5635,31 @@ Play-tested the desert biome and fixed 11 issues covering collision detection, v
 
 ---
 
+## Session 45 - Collision & Physics Bug Fixes (2026-02-23)
+
+Fixed cabin sensor flickering, added collision to palm trees and scattered decorations, and fixed desert creature movement through terrain.
+
+### Bug Fixes
+
+- **Cabin enter/exit flickering**: Protection Area3D was sized to full cabin dimensions, so the player's collision body clipped through the boundary while walking along the outside walls. Shrunk the detection area inward by `wall_thick + 0.3` (0.55 units) on each side so only players actually inside trigger it. Fixed in both `save_load.gd` and `placement_system.gd`.
+- **Palm trees had no collision**: PalmTree extended Node3D with no physics body. Changed to extend StaticBody3D and added a CollisionShape3D (0.5 x tree_height x 0.5 box) centered on the trunk's sway midpoint. Not cuttable with axe (no group membership).
+- **Desert creatures walking through blocks**: Lizards and tortoises used base class `_move_animal()` which only checked terrain height and cave pits but did no physics raycast. Added a raycast obstacle check (collision_mask=1) to `_move_animal()` in `AmbientAnimalBase`, matching the approach used by rabbits in `_start_single_hop()`. Animals now reverse direction when hitting terrain blocks, trees, or structures.
+- **Tortoise too fast**: Halved movement speed from 1.0/2.0 to 0.5/1.0 (move/flee).
+- **Scattered decorations had no collision**: Rocks, bushes, stumps, and fallen logs were purely visual MeshInstance3D nodes. Added StaticBody3D + CollisionShape3D to all four types in `terrain_chunk.gd`, sized to match their visual bounds.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/core/save_load.gd` | Fixed | Cabin protection area shrunk inward |
+| `scripts/campsite/placement_system.gd` | Fixed | Cabin protection area shrunk inward |
+| `scripts/world/palm_tree.gd` | Fixed | Extends StaticBody3D, trunk collision box |
+| `scripts/creatures/ambient_animal_base.gd` | Fixed | Physics raycast in `_move_animal()` |
+| `scripts/creatures/ambient_tortoise.gd` | Fixed | Halved move/flee speed |
+| `scripts/world/terrain_chunk.gd` | Fixed | Collision on scattered rocks, bushes, stumps, fallen logs |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
