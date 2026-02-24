@@ -79,7 +79,7 @@ func _create_water_visual() -> void:
 	deep_mat.albedo_color = Color(0.08, 0.30, 0.45, 0.5)
 	deep_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	deep_mesh.material_override = deep_mat
-	deep_mesh.position = Vector3(0, -0.02, 0)
+	deep_mesh.position = Vector3(0, -0.15, 0)
 	add_child(deep_mesh)
 
 

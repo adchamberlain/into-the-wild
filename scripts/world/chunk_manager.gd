@@ -1926,6 +1926,10 @@ func _spawn_entire_river(river_idx: int, river: Dictionary) -> void:
 			var snapped_x: float = (float(cx) + 0.5) * cell_size
 			var snapped_z: float = (float(cz) + 0.5) * cell_size
 
+			# Skip river quads inside oasis areas to prevent Z-fighting
+			if is_near_oasis(snapped_x, snapped_z, 4.0):
+				continue
+
 			var river_info: Dictionary = _get_river_info_at(snapped_x, snapped_z, river)
 			if river_info["in_river"]:
 				var v0: Vector3 = Vector3(snapped_x - half_cell, water_y, snapped_z - half_cell)
