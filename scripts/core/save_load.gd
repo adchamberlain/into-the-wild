@@ -2139,12 +2139,13 @@ func _create_cabin() -> StaticBody3D:
 	kitchen.position = Vector3(-base_width / 2 + 1.5, 0, -depth / 2 + 1.2)
 	cabin.add_child(kitchen)
 
-	# Protection area
+	# Protection area - shrink inward from walls to prevent flickering at edges
 	var area: Area3D = Area3D.new()
 	area.name = "ProtectionArea"
 	var area_collision: CollisionShape3D = CollisionShape3D.new()
 	var box_area: BoxShape3D = BoxShape3D.new()
-	box_area.size = Vector3(base_width, peak_height, depth)
+	var area_margin: float = wall_thick + 0.3
+	box_area.size = Vector3(base_width - area_margin * 2, peak_height, depth - area_margin * 2)
 	area_collision.shape = box_area
 	area_collision.position.y = peak_height / 2
 	area.add_child(area_collision)

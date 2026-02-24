@@ -1726,6 +1726,17 @@ func _create_scatter_rock(pos: Vector3, rng: RandomNumberGenerator) -> void:
 		slab.rotation.x = rng.randf_range(-0.08, 0.08)
 		boulder.add_child(slab)
 
+	# Collision body for the boulder
+	var rock_body: StaticBody3D = StaticBody3D.new()
+	var rock_col: CollisionShape3D = CollisionShape3D.new()
+	var rock_box: BoxShape3D = BoxShape3D.new()
+	var rock_height: float = base_width * 0.12 * num_slabs + base_width * 0.2
+	rock_box.size = Vector3(base_width, rock_height, base_width * 0.8)
+	rock_col.shape = rock_box
+	rock_col.position.y = rock_height * 0.5
+	rock_body.add_child(rock_col)
+	boulder.add_child(rock_body)
+
 	boulder.position = pos
 	boulder.rotation.y = rng.randf() * TAU
 	decorations_container.add_child(boulder)
@@ -1774,6 +1785,16 @@ func _create_scatter_bush(pos: Vector3, rng: RandomNumberGenerator) -> void:
 	top_tuft.position = Vector3(rng.randf_range(-0.1, 0.1), base_size * 0.6, rng.randf_range(-0.1, 0.1))
 	top_tuft.rotation.y = rng.randf_range(-0.3, 0.3)
 	bush.add_child(top_tuft)
+
+	# Collision body for the bush
+	var bush_body: StaticBody3D = StaticBody3D.new()
+	var bush_col: CollisionShape3D = CollisionShape3D.new()
+	var bush_box: BoxShape3D = BoxShape3D.new()
+	bush_box.size = Vector3(base_size * 0.8, base_size * 0.7, base_size * 0.8)
+	bush_col.shape = bush_box
+	bush_col.position.y = base_size * 0.35
+	bush_body.add_child(bush_col)
+	bush.add_child(bush_body)
 
 	bush.position = pos
 	bush.rotation.y = rng.randf() * TAU
@@ -1852,6 +1873,16 @@ func _create_scatter_log(pos: Vector3, rng: RandomNumberGenerator) -> void:
 			)
 			tuft.rotation.y = rng.randf() * TAU
 			obj.add_child(tuft)
+
+		# Collision body for the stump
+		var stump_body: StaticBody3D = StaticBody3D.new()
+		var stump_col: CollisionShape3D = CollisionShape3D.new()
+		var stump_box: BoxShape3D = BoxShape3D.new()
+		stump_box.size = Vector3(diameter, stump_height, diameter)
+		stump_col.shape = stump_box
+		stump_col.position.y = stump_height * 0.5
+		stump_body.add_child(stump_col)
+		obj.add_child(stump_body)
 	else:
 		# Horizontal fallen log - thick trunk with taper
 		var log_length: float = rng.randf_range(3.0, 5.0)
@@ -1874,6 +1905,16 @@ func _create_scatter_log(pos: Vector3, rng: RandomNumberGenerator) -> void:
 			)
 			box.rotation.y = rng.randf_range(-0.05, 0.05)
 			obj.add_child(box)
+
+		# Collision body for the fallen log
+		var log_body: StaticBody3D = StaticBody3D.new()
+		var log_col: CollisionShape3D = CollisionShape3D.new()
+		var log_box: BoxShape3D = BoxShape3D.new()
+		log_box.size = Vector3(log_length, log_thickness, log_thickness)
+		log_col.shape = log_box
+		log_col.position.y = log_thickness * 0.5
+		log_body.add_child(log_col)
+		obj.add_child(log_body)
 
 	obj.position = pos
 	obj.rotation.y = rng.randf() * TAU

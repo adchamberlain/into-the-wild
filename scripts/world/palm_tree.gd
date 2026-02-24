@@ -1,4 +1,4 @@
-extends Node3D
+extends StaticBody3D
 class_name PalmTree
 ## A procedural palm tree built from BoxMesh primitives.
 
@@ -102,3 +102,11 @@ func build(rng: RandomNumberGenerator) -> void:
 		var c_angle: float = TAU * i / coconut_count
 		coconut.position = crown_pos + Vector3(cos(c_angle) * 0.2, -0.4, sin(c_angle) * 0.2)
 		add_child(coconut)
+
+	# Trunk collision - cylinder approximated by box, centered on sway midpoint
+	var col_shape: CollisionShape3D = CollisionShape3D.new()
+	var col_box: BoxShape3D = BoxShape3D.new()
+	col_box.size = Vector3(0.5, tree_height, 0.5)
+	col_shape.shape = col_box
+	col_shape.position = Vector3(sway_x * 0.5, tree_height * 0.5, sway_z * 0.5)
+	add_child(col_shape)

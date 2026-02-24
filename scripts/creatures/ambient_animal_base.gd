@@ -216,6 +216,19 @@ func _move_animal(delta: float, speed: float) -> void:
 			return
 		new_pos.y = terrain_height
 
+	# Check for obstacles (terrain blocks, trees, structures) via physics raycast
+	if is_inside_tree():
+		var space_state: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+		if space_state:
+			var ray_origin: Vector3 = global_position + Vector3(0, 0.2, 0)
+			var ray_end: Vector3 = new_pos + Vector3(0, 0.2, 0)
+			var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(ray_origin, ray_end)
+			query.collision_mask = 1  # Default collision layer (terrain, structures, trees)
+			var result: Dictionary = space_state.intersect_ray(query)
+			if not result.is_empty():
+				move_direction = -move_direction
+				return
+
 	global_position = new_pos
 
 	# Face movement direction (throttled for performance)

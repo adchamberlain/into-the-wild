@@ -17,8 +17,8 @@ func _ready() -> void:
 	# Tortoise-specific configuration - very slow
 	flee_distance = 4.0
 	awareness_distance = 8.0
-	move_speed = 1.0
-	flee_speed = 2.0
+	move_speed = 0.5
+	flee_speed = 1.0
 
 	super._ready()
 
