@@ -996,7 +996,7 @@ func _spawn_chunk_trees() -> void:
 				var density_value_desert: float = (chunk_manager.forest_noise.get_noise_2d(world_x, world_z) + 1.0) * 0.5
 				if density_value_desert > 0.35:
 					var base_chance: float = tree_density * (density_value_desert - 0.35) / 0.65 * 2.5
-					if rng.randf() < base_chance * 0.7 * cactus_chance:
+					if rng.randf() < base_chance * 0.35 * cactus_chance:
 						var jitter_x: float = rng.randf_range(-tree_grid_size * 0.4, tree_grid_size * 0.4)
 						var jitter_z: float = rng.randf_range(-tree_grid_size * 0.4, tree_grid_size * 0.4)
 						var cactus_x: float = world_x + jitter_x

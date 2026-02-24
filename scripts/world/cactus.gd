@@ -80,29 +80,29 @@ func build(rng: RandomNumberGenerator, fruit: bool) -> void:
 	col_shape.position = Vector3(0, height * 0.5, 0)
 	add_child(col_shape)
 
-	# --- Vertical ridges (4 darker stripes on each face) ---
-	var ridge_width: float = width * 0.08
-	var ridge_depth: float = 0.03
+	# --- Vertical ridges (4 darker stripes flush on each face) ---
+	var ridge_width: float = width * 0.12
+	var ridge_depth: float = 0.015
 	for i: int in range(4):
 		var ridge: MeshInstance3D = MeshInstance3D.new()
 		var ridge_box: BoxMesh = BoxMesh.new()
 		ridge_box.size = Vector3(ridge_width, height * 0.9, ridge_depth)
 		ridge_box.material = _mat_body_dark
 		ridge.mesh = ridge_box
-		# Position ridges on alternating faces (front/back/left/right)
+		# Position ridges flush on each face (front/back/left/right)
 		var offset_x: float = 0.0
 		var offset_z: float = 0.0
 		var rot_y: float = 0.0
 		match i:
 			0:  # Front
-				offset_z = -width * 0.5 - ridge_depth * 0.4
+				offset_z = -width * 0.5
 			1:  # Back
-				offset_z = width * 0.5 + ridge_depth * 0.4
+				offset_z = width * 0.5
 			2:  # Left
-				offset_x = -width * 0.5 - ridge_depth * 0.4
+				offset_x = -width * 0.5
 				rot_y = PI * 0.5
 			3:  # Right
-				offset_x = width * 0.5 + ridge_depth * 0.4
+				offset_x = width * 0.5
 				rot_y = PI * 0.5
 		ridge.position = Vector3(offset_x, height * 0.5, offset_z)
 		if rot_y != 0.0:
@@ -118,21 +118,21 @@ func build(rng: RandomNumberGenerator, fruit: bool) -> void:
 	for i: int in range(8):
 		var spine: MeshInstance3D = MeshInstance3D.new()
 		var spine_box: BoxMesh = BoxMesh.new()
-		spine_box.size = Vector3(0.03, 0.12, 0.03)
+		spine_box.size = Vector3(0.02, 0.08, 0.02)
 		spine_box.material = _mat_spine
 		spine.mesh = spine_box
 		# Distribute spines around the column at varying heights
 		var spine_angle: float = TAU * i / 8.0 + rng.randf_range(-0.2, 0.2)
 		var spine_y: float = rng.randf_range(height * 0.2, height * 0.85)
-		var spine_dist: float = width * 0.5 + 0.04
+		var spine_dist: float = width * 0.5 + 0.02
 		spine.position = Vector3(
 			cos(spine_angle) * spine_dist,
 			spine_y,
 			sin(spine_angle) * spine_dist
 		)
 		# Tilt spine outward
-		spine.rotation.z = cos(spine_angle) * deg_to_rad(35.0)
-		spine.rotation.x = -sin(spine_angle) * deg_to_rad(35.0)
+		spine.rotation.z = cos(spine_angle) * deg_to_rad(25.0)
+		spine.rotation.x = -sin(spine_angle) * deg_to_rad(25.0)
 		add_child(spine)
 
 	# --- Variant-specific setup ---

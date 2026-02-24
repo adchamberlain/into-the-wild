@@ -53,14 +53,17 @@ func build(rng: RandomNumberGenerator) -> void:
 		)
 		add_child(trunk_seg)
 
-	# Trunk ring details (darker bands)
+	# Trunk ring details (darker bands, sized to match trunk taper)
 	for i: int in range(3):
 		var ring: MeshInstance3D = MeshInstance3D.new()
 		var ring_box: BoxMesh = BoxMesh.new()
-		ring_box.size = Vector3(0.38, 0.06, 0.38)
+		var ring_y: float = tree_height * 0.3 + i * tree_height * 0.25
+		var ring_t: float = ring_y / tree_height
+		var ring_width: float = lerpf(0.35, 0.20, ring_t) + 0.02
+		ring_box.size = Vector3(ring_width, 0.06, ring_width)
 		ring_box.material = shared_ring_material
 		ring.mesh = ring_box
-		ring.position.y = tree_height * 0.3 + i * tree_height * 0.25
+		ring.position.y = ring_y
 		add_child(ring)
 
 	# Crown position (top of trunk with sway offset)
