@@ -5691,16 +5691,58 @@ Health was not regenerating when hunger was full due to a frame-order race condi
 
 ---
 
+## Session 47 - Equipment Artwork Pass (2026-02-24)
+
+Added distinct held visuals for all equippable items that were previously invisible when equipped.
+
+### Diamond Axe Artwork
+
+Created `_add_diamond_axe_head()` in `equipment.gd` — an 8-component design substantially different from other axes:
+- **Silver pommel** cap at handle bottom, **silver mount** with blue-tinted accent ring connecting handle to head
+- **Diamond head body**: deep blue `(0.35, 0.55, 0.9)` with subtle emission glow (1.2x)
+- **Left/right facet panels**: angled ±8 degrees to simulate cut diamond faces
+- **Inner core highlight**: bright cyan-white with 2.0x emission for sparkle effect
+- **Crystalline blade edge**: blue-white with 2.5x emission — brightest component
+- Dark refined hardwood handle (longer than other axes)
+- Fixed transparency bug: removed alpha transparency, kept emission-only glow
+
+### Enchanted Bow Artwork
+
+Modified `build_bow_model()` in `bow_system.gd` to accept `bow_type` parameter. When `"enchanted_bow"`:
+- **Dark purple-wood limbs** `(0.35, 0.22, 0.45)` with metallic sheen
+- **Opal inlay strips** on limb segments 1 and 3 — purple `(0.6, 0.45, 0.85)` with 1.8x emission
+- **Glowing opal gem** inset on grip — bright purple `(0.7, 0.5, 0.95)` with 2.5x emission
+- **Purple accent grip wraps** with subtle emission
+- **Opal-tinted nock tips** with 1.5x emission glow
+- **Purple-tinged bowstring** with faint 0.6x emission
+
+### Placeable Kit Held Models
+
+Added a generic kit bundle system for all 12 placeable items that previously showed nothing when equipped:
+- **Bundle shape**: burlap-wrapped parcel (3 BoxMesh components: base, horizontal accent band, vertical cross-strap)
+- **Color-coded accent straps** per item type:
+  - Campfire: orange-red | Shelter: tan | Storage: warm brown | Bench: dark wood
+  - Drying Rack: light wood | Garden: green | Tent: canvas off-white | Cabin: dark timber
+  - Snare Trap: rope tan | Smithing Station: steel grey | Smoker: smoky brown
+- **Lodestone**: unique model — dark iron-grey stone with two crossing magnetic-blue glowing veins (emission 1.2-1.5x)
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/player/equipment.gd` | Modified | Diamond axe head, kit bundle system (12 placeables + lodestone), diamond axe transparency fix, bow type passthrough |
+| `scripts/player/bow_system.gd` | Modified | Enchanted bow visuals with opal materials, accepts bow_type parameter |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
 1. Remove TEMP test spawn items (bow + 20 arrows + bark_map) once satisfied
 2. Continue play-testing desert biome balance
-3. Add distinct visual models for diamond axe and enchanted bow (currently use defaults)
-4. Bug fixing
+3. Bug fixing
 
 ### Known Issues
-- Diamond axe and enchanted bow have no distinct visual models (fall to stone axe/standard bow defaults)
 - Tortoise materials are per-instance (minor, could be shared static)
 
 ### Reference
