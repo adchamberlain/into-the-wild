@@ -441,6 +441,10 @@ func equip(item_type: String) -> bool:
 	elif item_type == "lantern":
 		_create_lantern_model()
 
+	# Show placeable kit models
+	if item_data.get("placeable", false):
+		_create_kit_model(item_type)
+
 	# Show tool models
 	var tool_type: String = item_data.get("tool_type", "")
 	if tool_type == "fishing":
@@ -453,7 +457,7 @@ func equip(item_type: String) -> bool:
 		_create_grappling_hook_model()
 		_ensure_grappling_hook_controller()
 	elif tool_type == "bow":
-		_create_bow_model()
+		_create_bow_model(item_type)
 	elif tool_type == "map":
 		_create_map_model()
 
@@ -479,6 +483,7 @@ func unequip() -> void:
 	_remove_fishing_rod()
 	_remove_grappling_hook()
 	_remove_bow_model()
+	_remove_kit_model()
 
 	equipped_item = ""
 	print("[Equipment] Unequipped %s" % old_item)
@@ -794,11 +799,14 @@ func _create_axe_model(axe_type: String) -> void:
 	var handle := MeshInstance3D.new()
 	handle.name = "Handle"
 	var handle_mesh := BoxMesh.new()
-	handle_mesh.size = Vector3(0.06, 0.5, 0.06)
+	handle_mesh.size = Vector3(0.06, 0.55, 0.06) if axe_type == "diamond_axe" else Vector3(0.06, 0.5, 0.06)
 	handle.mesh = handle_mesh
 
 	var handle_mat := StandardMaterial3D.new()
-	handle_mat.albedo_color = Color(0.45, 0.35, 0.2)  # Wood brown
+	if axe_type == "diamond_axe":
+		handle_mat.albedo_color = Color(0.3, 0.25, 0.18)  # Dark refined hardwood
+	else:
+		handle_mat.albedo_color = Color(0.45, 0.35, 0.2)  # Wood brown
 	handle.material_override = handle_mat
 	handle.position = Vector3(0, 0, 0)
 
@@ -812,6 +820,8 @@ func _create_axe_model(axe_type: String) -> void:
 			_add_stone_axe_head(stone_axe_model)
 		"metal_axe":
 			_add_metal_axe_head(stone_axe_model)
+		"diamond_axe":
+			_add_diamond_axe_head(stone_axe_model)
 		_:
 			_add_stone_axe_head(stone_axe_model)  # Default to stone
 
@@ -968,6 +978,130 @@ func _add_metal_axe_head(axe_model: Node3D) -> void:
 	collar.position = Vector3(0, 0.22, 0)
 
 	axe_model.add_child(collar)
+
+
+func _add_diamond_axe_head(axe_model: Node3D) -> void:
+	# Silver pommel cap at handle bottom
+	var pommel := MeshInstance3D.new()
+	pommel.name = "Pommel"
+	var pommel_mesh := BoxMesh.new()
+	pommel_mesh.size = Vector3(0.08, 0.04, 0.08)
+	pommel.mesh = pommel_mesh
+	var pommel_mat := StandardMaterial3D.new()
+	pommel_mat.albedo_color = Color(0.7, 0.72, 0.78)  # Silver-blue
+	pommel_mat.metallic = 0.8
+	pommel_mat.roughness = 0.2
+	pommel.material_override = pommel_mat
+	pommel.position = Vector3(0, -0.26, 0)
+	axe_model.add_child(pommel)
+
+	# Silver mount connecting handle to diamond head
+	var mount := MeshInstance3D.new()
+	mount.name = "Mount"
+	var mount_mesh := BoxMesh.new()
+	mount_mesh.size = Vector3(0.09, 0.06, 0.09)
+	mount.mesh = mount_mesh
+	var mount_mat := StandardMaterial3D.new()
+	mount_mat.albedo_color = Color(0.65, 0.68, 0.75)  # Polished silver
+	mount_mat.metallic = 0.85
+	mount_mat.roughness = 0.15
+	mount.material_override = mount_mat
+	mount.position = Vector3(0, 0.22, 0)
+	axe_model.add_child(mount)
+
+	# Accent ring on mount
+	var ring := MeshInstance3D.new()
+	ring.name = "AccentRing"
+	var ring_mesh := BoxMesh.new()
+	ring_mesh.size = Vector3(0.10, 0.02, 0.10)
+	ring.mesh = ring_mesh
+	var ring_mat := StandardMaterial3D.new()
+	ring_mat.albedo_color = Color(0.5, 0.6, 0.85)  # Blue-tinted silver
+	ring_mat.metallic = 0.9
+	ring_mat.roughness = 0.1
+	ring.material_override = ring_mat
+	ring.position = Vector3(0, 0.24, 0)
+	axe_model.add_child(ring)
+
+	# Main diamond head body - deep blue with subtle glow
+	var head := MeshInstance3D.new()
+	head.name = "Head"
+	var head_mesh := BoxMesh.new()
+	head_mesh.size = Vector3(0.07, 0.16, 0.22)
+	head.mesh = head_mesh
+	var head_mat := StandardMaterial3D.new()
+	head_mat.albedo_color = Color(0.35, 0.55, 0.9)  # Deep diamond blue
+	head_mat.metallic = 0.4
+	head_mat.roughness = 0.08
+	head_mat.emission_enabled = true
+	head_mat.emission = Color(0.25, 0.4, 0.8)
+	head_mat.emission_energy_multiplier = 1.2
+	head.material_override = head_mat
+	head.position = Vector3(0, 0.26, -0.08)
+	axe_model.add_child(head)
+
+	# Left facet panel - lighter blue, angled to simulate cut diamond face
+	var facet_left := MeshInstance3D.new()
+	facet_left.name = "FacetLeft"
+	var fl_mesh := BoxMesh.new()
+	fl_mesh.size = Vector3(0.02, 0.13, 0.18)
+	facet_left.mesh = fl_mesh
+	var facet_mat := StandardMaterial3D.new()
+	facet_mat.albedo_color = Color(0.45, 0.65, 0.95)  # Mid-blue facet
+	facet_mat.metallic = 0.5
+	facet_mat.roughness = 0.05
+	facet_mat.emission_enabled = true
+	facet_mat.emission = Color(0.3, 0.5, 0.85)
+	facet_mat.emission_energy_multiplier = 0.8
+	facet_left.material_override = facet_mat
+	facet_left.position = Vector3(-0.04, 0.26, -0.08)
+	facet_left.rotation_degrees = Vector3(0, 0, 8)
+	axe_model.add_child(facet_left)
+
+	# Right facet panel - mirror of left
+	var facet_right := MeshInstance3D.new()
+	facet_right.name = "FacetRight"
+	var fr_mesh := BoxMesh.new()
+	fr_mesh.size = Vector3(0.02, 0.13, 0.18)
+	facet_right.mesh = fr_mesh
+	facet_right.material_override = facet_mat  # Reuse same material
+	facet_right.position = Vector3(0.04, 0.26, -0.08)
+	facet_right.rotation_degrees = Vector3(0, 0, -8)
+	axe_model.add_child(facet_right)
+
+	# Inner core highlight - bright cyan sparkle inside the head
+	var core := MeshInstance3D.new()
+	core.name = "CoreHighlight"
+	var core_mesh := BoxMesh.new()
+	core_mesh.size = Vector3(0.03, 0.08, 0.10)
+	core.mesh = core_mesh
+	var core_mat := StandardMaterial3D.new()
+	core_mat.albedo_color = Color(0.6, 0.85, 1.0)  # Bright cyan-white
+	core_mat.metallic = 0.6
+	core_mat.roughness = 0.02
+	core_mat.emission_enabled = true
+	core_mat.emission = Color(0.5, 0.8, 1.0)
+	core_mat.emission_energy_multiplier = 2.0
+	core.material_override = core_mat
+	core.position = Vector3(0, 0.27, -0.08)
+	axe_model.add_child(core)
+
+	# Crystalline blade edge - bright blue-white, sharp and luminous
+	var blade := MeshInstance3D.new()
+	blade.name = "Blade"
+	var blade_mesh := BoxMesh.new()
+	blade_mesh.size = Vector3(0.04, 0.14, 0.02)
+	blade.mesh = blade_mesh
+	var blade_mat := StandardMaterial3D.new()
+	blade_mat.albedo_color = Color(0.55, 0.78, 1.0)  # Blue-white crystal edge
+	blade_mat.metallic = 0.7
+	blade_mat.roughness = 0.03
+	blade_mat.emission_enabled = true
+	blade_mat.emission = Color(0.5, 0.75, 1.0)
+	blade_mat.emission_energy_multiplier = 2.5
+	blade.material_override = blade_mat
+	blade.position = Vector3(0, 0.26, -0.20)
+	axe_model.add_child(blade)
 
 
 ## Add leather wrapping strips to axe handle to show durability upgrade.
@@ -1791,12 +1925,12 @@ const BOW_REST_POSITION: Vector3 = Vector3(0.25, -0.12, -0.45)
 const BOW_REST_ROTATION: Vector3 = Vector3(5, 10, -10)
 
 
-func _create_bow_model() -> void:
+func _create_bow_model(bow_type: String = "bow") -> void:
 	if bow_model:
 		return
 	var bow_system: Node = get_parent().get_node_or_null("BowSystem") if get_parent() else null
 	if bow_system and bow_system.has_method("build_bow_model"):
-		bow_model = bow_system.build_bow_model()
+		bow_model = bow_system.build_bow_model(bow_type)
 		if bow_model:
 			bow_model.position = BOW_REST_POSITION
 			bow_model.rotation_degrees = BOW_REST_ROTATION
@@ -1811,6 +1945,155 @@ func _remove_bow_model() -> void:
 	if bow_system and bow_system.has_method("clear_bow_model"):
 		bow_system.clear_bow_model()
 	bow_model = null
+
+
+# Held kit/placeable model
+var kit_model: Node3D = null
+const KIT_REST_POSITION: Vector3 = Vector3(0.3, -0.35, -0.55)
+const KIT_REST_ROTATION: Vector3 = Vector3(5, -10, -5)
+
+# Accent colors for each placeable kit
+const KIT_ACCENT_COLORS: Dictionary = {
+	"campfire_kit": Color(0.9, 0.45, 0.15),       # Orange-red (fire)
+	"shelter_kit": Color(0.55, 0.45, 0.3),         # Tan (wood/hide)
+	"storage_box": Color(0.6, 0.5, 0.3),           # Warm brown (crate)
+	"crafting_bench_kit": Color(0.5, 0.4, 0.25),   # Dark wood
+	"drying_rack_kit": Color(0.7, 0.6, 0.4),       # Light wood/rope
+	"garden_plot_kit": Color(0.35, 0.6, 0.3),      # Green (plants)
+	"canvas_tent_kit": Color(0.75, 0.7, 0.6),      # Canvas off-white
+	"cabin_kit": Color(0.45, 0.32, 0.18),          # Dark timber
+	"snare_trap_kit": Color(0.6, 0.55, 0.45),      # Rope/twine tan
+	"smithing_station_kit": Color(0.45, 0.45, 0.5), # Steel grey
+	"smoker_kit": Color(0.5, 0.42, 0.35),          # Smoky brown
+	"lodestone": Color(0.4, 0.6, 0.8),             # Magnetic blue
+}
+
+
+func _create_kit_model(item_type: String) -> void:
+	if kit_model:
+		return
+
+	var is_lodestone: bool = item_type == "lodestone"
+
+	if is_lodestone:
+		_build_lodestone_model()
+	else:
+		_build_kit_bundle_model(item_type)
+
+	if kit_model and player:
+		var camera: Camera3D = player.get_node_or_null("Camera3D")
+		if camera:
+			camera.add_child(kit_model)
+
+
+func _build_kit_bundle_model(item_type: String) -> void:
+	kit_model = Node3D.new()
+	kit_model.name = "KitModel"
+
+	var accent_color: Color = KIT_ACCENT_COLORS.get(item_type, Color(0.5, 0.5, 0.5))
+
+	# Base bundle - wrapped parcel shape
+	var bundle := MeshInstance3D.new()
+	bundle.name = "Bundle"
+	var bundle_mesh := BoxMesh.new()
+	bundle_mesh.size = Vector3(0.12, 0.10, 0.14)
+	bundle.mesh = bundle_mesh
+	var bundle_mat := StandardMaterial3D.new()
+	bundle_mat.albedo_color = Color(0.45, 0.38, 0.28)  # Burlap/canvas wrap
+	bundle.material_override = bundle_mat
+	bundle.position = Vector3(0, 0, 0)
+	kit_model.add_child(bundle)
+
+	# Accent band - colored strap around the bundle
+	var band := MeshInstance3D.new()
+	band.name = "AccentBand"
+	var band_mesh := BoxMesh.new()
+	band_mesh.size = Vector3(0.13, 0.025, 0.15)
+	band.mesh = band_mesh
+	var band_mat := StandardMaterial3D.new()
+	band_mat.albedo_color = accent_color
+	band.material_override = band_mat
+	band.position = Vector3(0, 0.02, 0)
+	kit_model.add_child(band)
+
+	# Vertical cross-strap for visual interest
+	var cross := MeshInstance3D.new()
+	cross.name = "CrossStrap"
+	var cross_mesh := BoxMesh.new()
+	cross_mesh.size = Vector3(0.025, 0.11, 0.15)
+	cross.mesh = cross_mesh
+	var cross_mat := StandardMaterial3D.new()
+	cross_mat.albedo_color = accent_color * 0.85  # Slightly darker variant
+	cross.material_override = cross_mat
+	cross.position = Vector3(0, 0, 0)
+	kit_model.add_child(cross)
+
+	kit_model.position = KIT_REST_POSITION
+	kit_model.rotation_degrees = KIT_REST_ROTATION
+
+
+func _build_lodestone_model() -> void:
+	kit_model = Node3D.new()
+	kit_model.name = "LodestoneModel"
+
+	# Main stone body - dark, slightly metallic rock
+	var stone := MeshInstance3D.new()
+	stone.name = "Stone"
+	var stone_mesh := BoxMesh.new()
+	stone_mesh.size = Vector3(0.09, 0.07, 0.09)
+	stone.mesh = stone_mesh
+	var stone_mat := StandardMaterial3D.new()
+	stone_mat.albedo_color = Color(0.25, 0.25, 0.3)  # Dark iron-grey
+	stone_mat.metallic = 0.5
+	stone_mat.roughness = 0.4
+	stone.material_override = stone_mat
+	stone.position = Vector3(0, 0, 0)
+	kit_model.add_child(stone)
+
+	# Glowing vein - magnetic blue streak across the stone
+	var vein := MeshInstance3D.new()
+	vein.name = "MagneticVein"
+	var vein_mesh := BoxMesh.new()
+	vein_mesh.size = Vector3(0.10, 0.025, 0.04)
+	vein.mesh = vein_mesh
+	var vein_mat := StandardMaterial3D.new()
+	vein_mat.albedo_color = Color(0.4, 0.6, 0.85)  # Magnetic blue
+	vein_mat.metallic = 0.6
+	vein_mat.roughness = 0.15
+	vein_mat.emission_enabled = true
+	vein_mat.emission = Color(0.3, 0.5, 0.75)
+	vein_mat.emission_energy_multiplier = 1.5
+	vein.material_override = vein_mat
+	vein.position = Vector3(0, 0.01, 0)
+	vein.rotation_degrees = Vector3(0, 15, 0)
+	kit_model.add_child(vein)
+
+	# Second smaller vein crossing at an angle
+	var vein2 := MeshInstance3D.new()
+	vein2.name = "MagneticVein2"
+	var vein2_mesh := BoxMesh.new()
+	vein2_mesh.size = Vector3(0.06, 0.02, 0.03)
+	vein2.mesh = vein2_mesh
+	var vein2_mat := StandardMaterial3D.new()
+	vein2_mat.albedo_color = Color(0.45, 0.65, 0.9)  # Slightly brighter blue
+	vein2_mat.metallic = 0.6
+	vein2_mat.roughness = 0.15
+	vein2_mat.emission_enabled = true
+	vein2_mat.emission = Color(0.35, 0.55, 0.8)
+	vein2_mat.emission_energy_multiplier = 1.2
+	vein2.material_override = vein2_mat
+	vein2.position = Vector3(0.01, -0.005, 0.01)
+	vein2.rotation_degrees = Vector3(0, -40, 0)
+	kit_model.add_child(vein2)
+
+	kit_model.position = KIT_REST_POSITION
+	kit_model.rotation_degrees = KIT_REST_ROTATION
+
+
+func _remove_kit_model() -> void:
+	if kit_model:
+		kit_model.queue_free()
+		kit_model = null
 
 
 func _place_item() -> bool:

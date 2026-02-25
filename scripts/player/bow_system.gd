@@ -222,19 +222,50 @@ func is_bow_active() -> bool:
 ## Build the procedural bow visual model (called by equipment system when bow is equipped).
 ## Returns the bow_model Node3D to be attached to the camera.
 ## Limbs curve TOWARD the player (+Z), string is on the player-facing side.
-func build_bow_model() -> Node3D:
+func build_bow_model(bow_type: String = "bow") -> Node3D:
 	bow_model = Node3D.new()
 	bow_model.name = "BowModel"
 
+	var is_enchanted: bool = bow_type == "enchanted_bow"
+
 	# Shared materials
 	var wood_mat: StandardMaterial3D = StandardMaterial3D.new()
-	wood_mat.albedo_color = Color(0.5, 0.35, 0.18)
+	if is_enchanted:
+		wood_mat.albedo_color = Color(0.35, 0.22, 0.45)  # Dark purple-wood
+		wood_mat.metallic = 0.15
+		wood_mat.roughness = 0.5
+	else:
+		wood_mat.albedo_color = Color(0.5, 0.35, 0.18)
 
 	var dark_wood_mat: StandardMaterial3D = StandardMaterial3D.new()
-	dark_wood_mat.albedo_color = Color(0.38, 0.24, 0.12)
+	if is_enchanted:
+		dark_wood_mat.albedo_color = Color(0.28, 0.16, 0.38)  # Deeper purple-wood
+		dark_wood_mat.metallic = 0.2
+		dark_wood_mat.roughness = 0.45
+	else:
+		dark_wood_mat.albedo_color = Color(0.38, 0.24, 0.12)
 
 	var tip_mat: StandardMaterial3D = StandardMaterial3D.new()
-	tip_mat.albedo_color = Color(0.42, 0.30, 0.15)
+	if is_enchanted:
+		tip_mat.albedo_color = Color(0.6, 0.5, 0.8)  # Opal-tinted tips
+		tip_mat.metallic = 0.4
+		tip_mat.roughness = 0.2
+		tip_mat.emission_enabled = true
+		tip_mat.emission = Color(0.5, 0.35, 0.7)
+		tip_mat.emission_energy_multiplier = 1.5
+	else:
+		tip_mat.albedo_color = Color(0.42, 0.30, 0.15)
+
+	# Opal inlay material (enchanted only)
+	var opal_mat: StandardMaterial3D = null
+	if is_enchanted:
+		opal_mat = StandardMaterial3D.new()
+		opal_mat.albedo_color = Color(0.6, 0.45, 0.85)  # Opal purple
+		opal_mat.metallic = 0.35
+		opal_mat.roughness = 0.1
+		opal_mat.emission_enabled = true
+		opal_mat.emission = Color(0.5, 0.35, 0.75)
+		opal_mat.emission_energy_multiplier = 1.8
 
 	# --- Curved limbs (4 segments each, curving toward player = +Z) ---
 	var seg_height: float = 0.05
@@ -256,6 +287,17 @@ func build_bow_model() -> Node3D:
 		seg.rotation_degrees.x = seg_x_tilts[i]
 		bow_model.add_child(seg)
 
+		# Add opal inlay strip on segments 1 and 3 (enchanted only)
+		if is_enchanted and (i == 1 or i == 3):
+			var inlay: MeshInstance3D = MeshInstance3D.new()
+			var inlay_mesh: BoxMesh = BoxMesh.new()
+			inlay_mesh.size = Vector3(seg_widths[i] + 0.004, 0.015, seg_depths[i] + 0.004)
+			inlay_mesh.material = opal_mat
+			inlay.mesh = inlay_mesh
+			inlay.position = seg.position
+			inlay.rotation_degrees.x = seg_x_tilts[i]
+			bow_model.add_child(inlay)
+
 	# Lower limb (mirror)
 	for i: int in range(4):
 		var seg: MeshInstance3D = MeshInstance3D.new()
@@ -266,6 +308,17 @@ func build_bow_model() -> Node3D:
 		seg.position = Vector3(0, -(limb_start + seg_height * (float(i) + 0.5)), seg_z_offsets[i])
 		seg.rotation_degrees.x = -seg_x_tilts[i]
 		bow_model.add_child(seg)
+
+		# Add opal inlay strip on segments 1 and 3 (enchanted only)
+		if is_enchanted and (i == 1 or i == 3):
+			var inlay: MeshInstance3D = MeshInstance3D.new()
+			var inlay_mesh: BoxMesh = BoxMesh.new()
+			inlay_mesh.size = Vector3(seg_widths[i] + 0.004, 0.015, seg_depths[i] + 0.004)
+			inlay_mesh.material = opal_mat
+			inlay.mesh = inlay_mesh
+			inlay.position = Vector3(0, -(limb_start + seg_height * (float(i) + 0.5)), seg_z_offsets[i])
+			inlay.rotation_degrees.x = -seg_x_tilts[i]
+			bow_model.add_child(inlay)
 
 	# --- Tip nocks ---
 	var nock_mesh: BoxMesh = BoxMesh.new()
@@ -298,7 +351,15 @@ func build_bow_model() -> Node3D:
 
 	# Grip accent strips
 	var wrap_mat: StandardMaterial3D = StandardMaterial3D.new()
-	wrap_mat.albedo_color = Color(0.3, 0.18, 0.08)
+	if is_enchanted:
+		wrap_mat.albedo_color = Color(0.5, 0.35, 0.7)  # Purple accent wraps
+		wrap_mat.metallic = 0.3
+		wrap_mat.roughness = 0.3
+		wrap_mat.emission_enabled = true
+		wrap_mat.emission = Color(0.4, 0.25, 0.6)
+		wrap_mat.emission_energy_multiplier = 1.0
+	else:
+		wrap_mat.albedo_color = Color(0.3, 0.18, 0.08)
 	for j: int in range(3):
 		var wrap: MeshInstance3D = MeshInstance3D.new()
 		var wrap_mesh: BoxMesh = BoxMesh.new()
@@ -308,9 +369,33 @@ func build_bow_model() -> Node3D:
 		wrap.position = Vector3(0, -0.02 + 0.02 * j, 0)
 		bow_model.add_child(wrap)
 
+	# Opal gem inset on grip (enchanted only)
+	if is_enchanted:
+		var gem: MeshInstance3D = MeshInstance3D.new()
+		gem.name = "OpalGem"
+		var gem_mesh: BoxMesh = BoxMesh.new()
+		gem_mesh.size = Vector3(0.012, 0.012, 0.032)
+		var gem_mat: StandardMaterial3D = StandardMaterial3D.new()
+		gem_mat.albedo_color = Color(0.7, 0.5, 0.95)  # Bright opal
+		gem_mat.metallic = 0.5
+		gem_mat.roughness = 0.05
+		gem_mat.emission_enabled = true
+		gem_mat.emission = Color(0.6, 0.4, 0.9)
+		gem_mat.emission_energy_multiplier = 2.5
+		gem_mesh.material = gem_mat
+		gem.mesh = gem_mesh
+		gem.position = Vector3(0, 0, 0)
+		bow_model.add_child(gem)
+
 	# --- V-String (two segments: upper nock→pull point, lower nock→pull point) ---
 	var string_mat: StandardMaterial3D = StandardMaterial3D.new()
-	string_mat.albedo_color = Color(0.82, 0.78, 0.70)
+	if is_enchanted:
+		string_mat.albedo_color = Color(0.75, 0.65, 0.9)  # Faint purple-tinged string
+		string_mat.emission_enabled = true
+		string_mat.emission = Color(0.5, 0.35, 0.7)
+		string_mat.emission_energy_multiplier = 0.6
+	else:
+		string_mat.albedo_color = Color(0.82, 0.78, 0.70)
 
 	# Upper string half (nock to center)
 	string_upper = MeshInstance3D.new()
