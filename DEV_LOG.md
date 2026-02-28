@@ -5787,6 +5787,30 @@ Fixed 11 bugs reported from play-testing session. Includes a new crouch mechanic
 
 ---
 
+## Session 48b - Arrow Type Switching for Bow (2026-02-28)
+
+Added the ability for the player to cycle between regular and diamond arrows when a bow is equipped.
+
+### Features
+
+- **Arrow type toggle**: Press T (keyboard) or D-pad Down (controller) to cycle between regular and diamond arrows while bow is equipped
+- **Preferred arrow tracking**: BowSystem tracks `preferred_arrow` state ("arrows" or "diamond_arrows")
+- **Smart fallback**: If preferred type runs out mid-combat, automatically falls back to the other type
+- **HUD display updated**: Now shows count and type of selected arrows (e.g., "5 diamond arrows" or "10 regular arrows") instead of combined total
+- **Switch hint in HUD**: Equipment display shows the cycle key: "[R-click aim, T switch, Q unequip]"
+- **Notifications**: Shows "Switched to Diamond arrows" / "Switched to Regular arrows" on toggle, or "No diamond arrows!" if type unavailable
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/player/bow_system.gd` | Modified | Added preferred_arrow state, cycle_ammo input, arrow_type_changed signal, fallback fire logic |
+| `scripts/ui/hud.gd` | Modified | Bow display shows arrow type/count from BowSystem, connects arrow_type_changed signal |
+| `scripts/systems/input_manager.gd` | Modified | Added cycle_ammo prompts (T / D-Dn) |
+| `project.godot` | Modified | Added cycle_ammo input action (T key + D-pad Down) |
+
+---
+
 ## Next Session
 
 ### Planned Tasks

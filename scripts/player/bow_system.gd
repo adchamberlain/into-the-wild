@@ -4,6 +4,7 @@ class_name BowSystem
 ## builds the procedural bow visual, and consumes arrows/durability.
 
 signal arrow_count_changed(count: int)
+signal arrow_type_changed(arrow_type: String)
 signal bow_drawn()
 signal bow_fired()
 
@@ -21,6 +22,7 @@ var inventory: Inventory = null
 var is_drawing: bool = false
 var draw_progress: float = 0.0
 var _using_diamond_arrow: bool = false
+var preferred_arrow: String = "arrows"  # "arrows" or "diamond_arrows"
 var bow_model: Node3D = null
 # String is two segments (upper + lower) meeting at a pull point
 var string_upper: MeshInstance3D = null
@@ -61,6 +63,11 @@ func _input(event: InputEvent) -> void:
 
 	# Guard: player resting
 	if player and "is_resting" in player and player.is_resting:
+		return
+
+	# Cycle ammo type
+	if event.is_action_pressed("cycle_ammo"):
+		_cycle_arrow_type()
 		return
 
 	# Right mouse button: hold to draw, release to fire
@@ -128,9 +135,15 @@ func _fire() -> void:
 		_cancel_draw()
 		return
 
-	# Consume 1 arrow (prefer diamond arrows)
+	# Consume 1 arrow (use preferred type, fallback to other if empty)
 	if inventory:
-		if inventory.has_item("diamond_arrows", 1):
+		if preferred_arrow == "diamond_arrows" and inventory.has_item("diamond_arrows", 1):
+			_using_diamond_arrow = true
+			inventory.remove_item("diamond_arrows", 1)
+		elif preferred_arrow == "arrows" and inventory.has_item("arrows", 1):
+			_using_diamond_arrow = false
+			inventory.remove_item("arrows", 1)
+		elif inventory.has_item("diamond_arrows", 1):
 			_using_diamond_arrow = true
 			inventory.remove_item("diamond_arrows", 1)
 		else:
@@ -211,6 +224,47 @@ func get_arrow_count() -> int:
 	if not inventory:
 		return 0
 	return inventory.get_item_count("arrows") + inventory.get_item_count("diamond_arrows")
+
+
+## Get count for the currently preferred arrow type.
+func get_preferred_arrow_count() -> int:
+	if not inventory:
+		return 0
+	return inventory.get_item_count(preferred_arrow)
+
+
+## Get display name for the preferred arrow type.
+func get_preferred_arrow_name() -> String:
+	if preferred_arrow == "diamond_arrows":
+		return "diamond"
+	return "regular"
+
+
+## Cycle between regular and diamond arrows.
+func _cycle_arrow_type() -> void:
+	if not inventory:
+		return
+	if preferred_arrow == "arrows":
+		if inventory.has_item("diamond_arrows", 1):
+			preferred_arrow = "diamond_arrows"
+		else:
+			var hud: Node = get_tree().get_first_node_in_group("hud")
+			if hud and hud.has_method("show_notification"):
+				hud.show_notification("No diamond arrows!", Color(1.0, 0.5, 0.5, 1))
+			return
+	else:
+		if inventory.has_item("arrows", 1):
+			preferred_arrow = "arrows"
+		else:
+			var hud: Node = get_tree().get_first_node_in_group("hud")
+			if hud and hud.has_method("show_notification"):
+				hud.show_notification("No regular arrows!", Color(1.0, 0.5, 0.5, 1))
+			return
+	arrow_type_changed.emit(preferred_arrow)
+	var hud: Node = get_tree().get_first_node_in_group("hud")
+	if hud and hud.has_method("show_notification"):
+		var name: String = "Diamond arrows" if preferred_arrow == "diamond_arrows" else "Regular arrows"
+		hud.show_notification("Switched to %s" % name, Color(0.6, 0.8, 1.0, 1))
 
 
 ## Returns true when the bow is equipped, so player_controller can skip

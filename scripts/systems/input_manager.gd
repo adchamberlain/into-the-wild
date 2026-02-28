@@ -22,6 +22,7 @@ const KEYBOARD_PROMPTS: Dictionary = {
 	"ui_cancel": "Esc",
 	"move_structure": "M",
 	"crouch": "C",
+	"cycle_ammo": "T",
 }
 
 # Button prompt mappings for PlayStation controller (DualSense)
@@ -42,6 +43,7 @@ const CONTROLLER_PROMPTS: Dictionary = {
 	"ui_cancel": "✕",
 	"move_structure": "D-Up",
 	"crouch": "✕",
+	"cycle_ammo": "D-Dn",
 }
 
 

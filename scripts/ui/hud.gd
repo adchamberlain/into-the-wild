@@ -353,8 +353,11 @@ func _connect_bow_system() -> void:
 	if not player:
 		return
 	var bow: Node = player.get_node_or_null("BowSystem")
-	if bow and bow.has_signal("arrow_count_changed"):
-		bow.arrow_count_changed.connect(func(_count: int) -> void: _update_equipped_display())
+	if bow:
+		if bow.has_signal("arrow_count_changed"):
+			bow.arrow_count_changed.connect(func(_count: int) -> void: _update_equipped_display())
+		if bow.has_signal("arrow_type_changed"):
+			bow.arrow_type_changed.connect(func(_type: String) -> void: _update_equipped_display())
 
 
 func _on_item_equipped(item_type: String) -> void:
@@ -388,14 +391,15 @@ func _update_equipped_display() -> void:
 			equipped_label.text += " [%s fish, %s unequip]" % [interact_key, unequip_key]
 		elif equipped_type == "bow" or equipped_type == "enchanted_bow":
 			var arrow_count: int = 0
+			var arrow_type_name: String = "regular"
+			var cycle_key: String = _get_button_prompt("cycle_ammo")
 			var player_node: Node = get_tree().get_first_node_in_group("player")
 			if player_node:
-				var inv: Node = player_node.get_node_or_null("Inventory")
-				if not inv and "inventory" in player_node:
-					inv = player_node.inventory
-				if inv and inv.has_method("get_item_count"):
-					arrow_count = inv.get_item_count("arrows") + inv.get_item_count("diamond_arrows")
-			equipped_label.text += " (%d arrows) [R-click aim, %s unequip]" % [arrow_count, unequip_key]
+				var bow: Node = player_node.get_node_or_null("BowSystem")
+				if bow:
+					arrow_count = bow.get_preferred_arrow_count()
+					arrow_type_name = bow.get_preferred_arrow_name()
+			equipped_label.text += " (%d %s arrows) [R-click aim, %s switch, %s unequip]" % [arrow_count, arrow_type_name, cycle_key, unequip_key]
 		elif equipped_type == "map":
 			equipped_label.text += " [%s open map, %s unequip]" % [use_key, unequip_key]
 		else:
