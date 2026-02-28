@@ -15,12 +15,13 @@ const KEYBOARD_PROMPTS: Dictionary = {
 	"eat": "F",
 	"use_equipped": "R",
 	"unequip": "Q",
-	"open_crafting": "C",
+	"open_crafting": "X",
 	"open_inventory": "I",
 	"pause": "Esc",
 	"ui_accept": "Enter",
 	"ui_cancel": "Esc",
 	"move_structure": "M",
+	"crouch": "C",
 }
 
 # Button prompt mappings for PlayStation controller (DualSense)
@@ -31,7 +32,7 @@ const CONTROLLER_PROMPTS: Dictionary = {
 	"sprint": "L3",
 	"eat": "△",
 	"use_equipped": "R2",
-	"unequip": "✕",
+	"unequip": "□",
 	"open_crafting": "Pad",
 	"open_inventory": "Share",
 	"pause": "Menu",
@@ -40,6 +41,7 @@ const CONTROLLER_PROMPTS: Dictionary = {
 	"ui_accept": "○",
 	"ui_cancel": "✕",
 	"move_structure": "D-Up",
+	"crouch": "✕",
 }
 
 

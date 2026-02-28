@@ -230,7 +230,7 @@ func _on_player_contact(body: Node) -> void:
 	# Show damage notification via HUD
 	var hud: Node = body.get_tree().get_first_node_in_group("hud")
 	if hud and hud.has_method("show_notification"):
-		hud.show_notification("Ouch! Cactus spines! -%.0f HP" % DAMAGE_AMOUNT, Color(1.0, 0.4, 0.4, 1))
+		hud.show_notification("Ouch! Cactus spines! -%.0f health" % DAMAGE_AMOUNT, Color(1.0, 0.4, 0.4, 1))
 
 	print("[Cactus] Player took %.0f contact damage" % DAMAGE_AMOUNT)
 

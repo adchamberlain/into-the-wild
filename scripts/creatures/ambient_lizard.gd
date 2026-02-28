@@ -23,8 +23,8 @@ func _ready() -> void:
 	# Lizard-specific configuration - fast and darting
 	flee_distance = 6.0
 	awareness_distance = 10.0
-	move_speed = 5.0
-	flee_speed = 9.0
+	move_speed = 3.75
+	flee_speed = 6.75
 
 	super._ready()
 

@@ -306,7 +306,7 @@ func _on_cook_pressed() -> void:
 
 	# Show notification
 	var output_name: String = output_item.capitalize().replace("_", " ")
-	_show_notification("Cooked %s!" % output_name, Color(1.0, 0.6, 0.2))
+	_show_notification("%s!" % output_name, Color(1.0, 0.6, 0.2))
 
 	action_selected.emit("cook")
 

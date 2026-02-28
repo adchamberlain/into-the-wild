@@ -5735,6 +5735,58 @@ Added a generic kit bundle system for all 12 placeable items that previously sho
 
 ---
 
+## Session 48 - Bug Fix Pass: 11 Play Session Bugs (2026-02-28)
+
+Fixed 11 bugs reported from play-testing session. Includes a new crouch mechanic with Minecraft-style edge prevention.
+
+### Bug Fixes
+
+1. **Heat panel popup on sign close** — `set_overlay_mode(false)` was unconditionally showing the heat panel. Now only hides it on overlay enter; visibility is driven by actual desert heat state.
+
+2. **"HP" and "FD" in notifications** — Changed all notification text from "HP" to "health" and "FD" to "hunger" across player_controller.gd and cactus.gd for clarity.
+
+3. **Tortoise too fast** — Reduced move_speed 0.5→0.25, flee_speed 1.0→0.5 (50% reduction).
+
+4. **Lizard too fast** — Reduced move_speed 5.0→3.75, flee_speed 9.0→6.75 (75% of original).
+
+5. **Torch casting shadows above** — Disabled shadow_enabled on hand-held torch light. Placed torches keep shadows.
+
+6. **Torch not lighting ground** — Lowered light position from Y=1.2 to Y=0.8 (hand height), added omni_attenuation=0.6 for reduced falloff.
+
+7. **Fall damage "-0 HP"** — Added guard to skip damage notification and sound effect when calculated damage < 1.0.
+
+8. **Controller remap + crouch mechanic**:
+   - Unequip moved from ✕ (button 0) to □ (button 2)
+   - Crafting key changed from C to X
+   - New crouch action: C key / ✕ button (toggle)
+   - Crouch lowers camera to Y=0.8, halves collision height to 0.9, speed limited to 2.5
+   - Minecraft-style edge prevention: raycasts ahead while crouched to prevent walking off ledges
+   - Ceiling check prevents standing up under low ceilings
+   - Jump uncrouches first (blocked if ceiling above)
+
+9. **"Cooked Cooked Berries"** — Removed redundant "Cooked" prefix from fire_menu notification since output_name already includes it.
+
+10. **Canvas tent exit position** — Changed exit Z offset from -2.5 to +2.5 so player exits at the door side (positive Z).
+
+11. **Diamond axe z-fighting** — Shrunk core highlight mesh (0.03→0.02 X, 0.08→0.06 Y, 0.10→0.08 Z), nudged Y from 0.27 to 0.28, added render_priority=1 on material.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/ui/hud.gd` | Modified | Heat panel no longer force-shown on overlay exit |
+| `scripts/player/player_controller.gd` | Modified | HP→health, FD→hunger notifications, fall damage guard, crouch mechanic with edge prevention |
+| `scripts/world/cactus.gd` | Modified | HP→health in damage notification |
+| `scripts/creatures/ambient_tortoise.gd` | Modified | Halved move/flee speeds |
+| `scripts/creatures/ambient_lizard.gd` | Modified | Reduced move/flee speeds to 75% |
+| `scripts/player/equipment.gd` | Modified | Torch shadow off + lower position, diamond axe core z-fighting fix |
+| `scripts/ui/fire_menu.gd` | Modified | Removed duplicate "Cooked" prefix |
+| `scripts/campsite/structure_shelter.gd` | Modified | Tent exit Z offset flipped to door side |
+| `scripts/systems/input_manager.gd` | Modified | Updated prompts: crafting C→X, unequip ✕→□, added crouch |
+| `project.godot` | Modified | Remapped unequip/crafting buttons, added crouch input action |
+
+---
+
 ## Next Session
 
 ### Planned Tasks

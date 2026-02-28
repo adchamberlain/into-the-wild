@@ -769,12 +769,11 @@ func _create_torch_light(item_data: Dictionary) -> void:
 	light.light_color = item_data.get("light_color", Color(1.0, 0.8, 0.4))
 	light.light_energy = item_data.get("light_energy", 2.0)
 	light.omni_range = item_data.get("light_range", 10.0)
-	light.shadow_enabled = true
-	light.shadow_bias = 1.0
-	light.shadow_normal_bias = 2.0
+	light.shadow_enabled = false
 
-	# Position slightly in front and to the side of player
-	light.position = Vector3(0.5, 1.2, -0.5)
+	# Position at hand/torch height for better ground illumination
+	light.position = Vector3(0.4, 0.8, -0.4)
+	light.omni_attenuation = 0.6
 
 	player.add_child(light)
 	torch_light = light
@@ -1073,7 +1072,7 @@ func _add_diamond_axe_head(axe_model: Node3D) -> void:
 	var core := MeshInstance3D.new()
 	core.name = "CoreHighlight"
 	var core_mesh := BoxMesh.new()
-	core_mesh.size = Vector3(0.03, 0.08, 0.10)
+	core_mesh.size = Vector3(0.02, 0.06, 0.08)
 	core.mesh = core_mesh
 	var core_mat := StandardMaterial3D.new()
 	core_mat.albedo_color = Color(0.6, 0.85, 1.0)  # Bright cyan-white
@@ -1082,8 +1081,9 @@ func _add_diamond_axe_head(axe_model: Node3D) -> void:
 	core_mat.emission_enabled = true
 	core_mat.emission = Color(0.5, 0.8, 1.0)
 	core_mat.emission_energy_multiplier = 2.0
+	core_mat.render_priority = 1
 	core.material_override = core_mat
-	core.position = Vector3(0, 0.27, -0.08)
+	core.position = Vector3(0, 0.28, -0.08)
 	axe_model.add_child(core)
 
 	# Crystalline blade edge - bright blue-white, sharp and luminous

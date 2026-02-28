@@ -1146,11 +1146,12 @@ func set_overlay_mode(enabled: bool) -> void:
 	var compass: Control = get_node_or_null("CompassPanel")
 	if compass:
 		panels.append(compass)
-	if heat_panel:
-		panels.append(heat_panel)
 	for panel: Control in panels:
 		if panel:
 			panel.visible = not enabled
+	# Heat panel visibility is driven by desert heat state, not overlay toggle
+	if heat_panel and enabled:
+		heat_panel.visible = false
 	# Hide dynamic panels when entering overlay, but don't force-show on exit
 	if enabled:
 		if interaction_prompt_panel:

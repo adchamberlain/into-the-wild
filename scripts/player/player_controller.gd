@@ -47,6 +47,14 @@ var is_in_water: bool = false
 var is_climbing: bool = false
 var climbing_structure: Node = null  # The ladder we're climbing
 var is_grappling: bool = false  # Whether player is being pulled by grappling hook
+var is_crouching: bool = false  # Whether player is crouching (toggle)
+
+# Crouch settings
+const CROUCH_SPEED: float = 2.5  # Half walk speed
+const CROUCH_HEIGHT: float = 0.9  # Half the normal collision box height
+const STAND_HEIGHT: float = 1.8
+const CROUCH_CAMERA_Y: float = 0.8  # Camera target when crouching
+const CROUCH_EDGE_CHECK_DEPTH: float = 2.0  # Ray length to check for ground below
 
 # Performance: throttle raycast checks
 const INTERACTION_CHECK_INTERVAL: float = 0.1  # Check 10x/sec instead of 60x/sec
@@ -271,6 +279,11 @@ func _input(event: InputEvent) -> void:
 		_try_use_equipped()
 		return
 
+	# Handle crouch toggle (C key or X button) - disabled while resting
+	if event.is_action_pressed("crouch") and not is_resting:
+		_toggle_crouch()
+		return
+
 	# Handle moving structures (M key or D-pad Up) - disabled while resting
 	if event.is_action_pressed("move_structure") and not is_resting:
 		_try_move_structure()
@@ -358,6 +371,10 @@ func _physics_process(delta: float) -> void:
 	if is_on_floor() and not actually_swimming:
 		_try_step_up(delta)
 
+	# Crouch edge prevention (Minecraft sneak): stop at ledges
+	if is_crouching and is_on_floor() and not actually_swimming:
+		_crouch_edge_prevent()
+
 	move_and_slide()
 
 	# Breath / drowning check
@@ -417,14 +434,26 @@ func _process_normal_movement(delta: float) -> void:
 	# Using is_action_pressed allows holding the button to jump repeatedly when landing
 	# Don't jump if a UI menu is open (X button used for ui_accept)
 	if Input.is_action_pressed("jump") and is_on_floor() and not _is_ui_blocking_input():
-		velocity.y = jump_velocity
-		# Record jump start for fall damage calculation
-		fall_start_y = global_position.y
-		is_falling = false  # Will be set when actually falling
+		# Stand up from crouch first; if can't stand, don't jump
+		var can_jump: bool = true
+		if is_crouching:
+			if _can_stand_up():
+				is_crouching = false
+				_update_crouch_collision()
+			else:
+				can_jump = false
+		if can_jump:
+			velocity.y = jump_velocity
+			# Record jump start for fall damage calculation
+			fall_start_y = global_position.y
+			is_falling = false  # Will be set when actually falling
 
 	# Handle sprint (works with both keyboard and controller via action)
-	is_sprinting = Input.is_action_pressed("sprint") and is_on_floor() and not _is_ui_blocking_input()
-	current_speed = sprint_speed if is_sprinting else walk_speed
+	is_sprinting = Input.is_action_pressed("sprint") and is_on_floor() and not _is_ui_blocking_input() and not is_crouching
+	if is_crouching:
+		current_speed = CROUCH_SPEED
+	else:
+		current_speed = sprint_speed if is_sprinting else walk_speed
 
 	# Apply sandstorm speed reduction (30% slower during sandstorms)
 	if _sandstorm and _sandstorm.is_active:
@@ -753,11 +782,11 @@ func _try_eat() -> void:
 				var healed: float = HEALING_ITEMS[heal_type]
 				stats.heal(healed)
 				var item_name: String = heal_type.capitalize().replace("_", " ")
-				var msg: String = "Used %s! +%.0f HP" % [item_name, healed]
+				var msg: String = "Used %s! +%.0f health" % [item_name, healed]
 				# If item is also food, restore hunger too
 				if FOOD_VALUES.has(heal_type) and stats.hunger < stats.max_hunger:
 					var fed: float = stats.eat(FOOD_VALUES[heal_type])
-					msg += ", +%.0f FD" % fed
+					msg += ", +%.0f hunger" % fed
 				if hud and hud.has_method("show_notification"):
 					hud.show_notification(msg, Color(0.6, 1.0, 0.6, 1))
 				return
@@ -783,7 +812,7 @@ func _try_eat() -> void:
 			var fed: float = stats.eat(best_value)
 			var item_name: String = best_food.capitalize().replace("_", " ")
 			if hud and hud.has_method("show_notification"):
-				hud.show_notification("Ate %s! +%.0f FD" % [item_name, fed], Color(0.6, 1.0, 0.6, 1))
+				hud.show_notification("Ate %s! +%.0f hunger" % [item_name, fed], Color(0.6, 1.0, 0.6, 1))
 	else:
 		if hud and hud.has_method("show_notification"):
 			hud.show_notification("No food in inventory!", Color(1.0, 0.5, 0.5, 1))
@@ -855,6 +884,8 @@ func _apply_fall_damage() -> void:
 
 	var damage: float = (fall_distance - FALL_DAMAGE_THRESHOLD) * FALL_DAMAGE_PER_UNIT
 	damage = minf(damage, FALL_DAMAGE_MAX)
+	if damage < 1.0:
+		return  # Too small to matter, skip sound and notification
 
 	if stats:
 		stats.take_damage(damage)
@@ -862,8 +893,8 @@ func _apply_fall_damage() -> void:
 		# Show damage notification via HUD
 		var hud: Node = get_tree().get_first_node_in_group("hud")
 		if hud and hud.has_method("show_notification"):
-			hud.show_notification("Ouch! -%.0f HP" % damage, Color(1.0, 0.4, 0.4, 1))
-		print("[Player] Fall damage: %.1f HP (fell %.1f units)" % [damage, fall_distance])
+			hud.show_notification("Ouch! -%.0f health" % damage, Color(1.0, 0.4, 0.4, 1))
+		print("[Player] Fall damage: %.1f health (fell %.1f units)" % [damage, fall_distance])
 
 
 ## Handle player death: auto-save and respawn at latest shelter.
@@ -1027,7 +1058,7 @@ func _update_camera_collision(delta: float) -> void:
 	if not space_state:
 		return
 
-	var target_y: float = CAMERA_DEFAULT_Y
+	var target_y: float = CROUCH_CAMERA_Y if is_crouching else CAMERA_DEFAULT_Y
 
 	# Cast ray from waist height upward past default camera position
 	# to detect ceilings, sloped roofs, and overhanging terrain
@@ -1146,3 +1177,68 @@ func show_notification(message: String, color: Color) -> void:
 	var hud: Node = get_tree().get_first_node_in_group("hud")
 	if hud and hud.has_method("show_notification"):
 		hud.show_notification(message, color)
+
+
+## Toggle crouch on/off. When uncrouching, check for ceiling clearance first.
+func _toggle_crouch() -> void:
+	if is_crouching:
+		# Try to stand up — check for ceiling clearance
+		if _can_stand_up():
+			is_crouching = false
+			_update_crouch_collision()
+		# else: stay crouched (ceiling above)
+	else:
+		is_crouching = true
+		_update_crouch_collision()
+
+
+## Update collision shape height and position for crouch state.
+func _update_crouch_collision() -> void:
+	var col_shape: CollisionShape3D = get_node_or_null("CollisionShape3D")
+	if not col_shape or not col_shape.shape is BoxShape3D:
+		return
+	var box: BoxShape3D = col_shape.shape as BoxShape3D
+	if is_crouching:
+		box.size.y = CROUCH_HEIGHT
+		col_shape.position.y = CROUCH_HEIGHT / 2.0
+	else:
+		box.size.y = STAND_HEIGHT
+		col_shape.position.y = STAND_HEIGHT / 2.0
+
+
+## Check if there's enough room above to stand up from crouch.
+func _can_stand_up() -> bool:
+	var space_state: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+	if not space_state:
+		return true
+	# Ray from current crouch top to standing top
+	var ray_start: Vector3 = global_position + Vector3(0, CROUCH_HEIGHT, 0)
+	var ray_end: Vector3 = global_position + Vector3(0, STAND_HEIGHT + 0.1, 0)
+	var query := PhysicsRayQueryParameters3D.create(ray_start, ray_end)
+	query.collision_mask = 1
+	query.exclude = [get_rid()]
+	var result: Dictionary = space_state.intersect_ray(query)
+	return result.size() == 0
+
+
+## Crouch edge prevention: cancel horizontal velocity if it would move the player off a ledge.
+func _crouch_edge_prevent() -> void:
+	if velocity.x == 0.0 and velocity.z == 0.0:
+		return
+	var space_state: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+	if not space_state:
+		return
+	# Project next position based on velocity
+	var step: Vector3 = Vector3(velocity.x, 0, velocity.z).normalized() * 0.4
+	var test_pos: Vector3 = global_position + step
+	# Cast ray downward from the test position
+	var ray_start: Vector3 = test_pos + Vector3(0, 0.5, 0)
+	var ray_end: Vector3 = test_pos + Vector3(0, -CROUCH_EDGE_CHECK_DEPTH, 0)
+	var query := PhysicsRayQueryParameters3D.create(ray_start, ray_end)
+	query.collision_mask = 1
+	query.exclude = [get_rid()]
+	var result: Dictionary = space_state.intersect_ray(query)
+	if result.size() == 0:
+		# No ground ahead — stop horizontal movement
+		velocity.x = 0.0
+		velocity.z = 0.0
