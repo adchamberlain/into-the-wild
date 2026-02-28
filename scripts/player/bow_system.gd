@@ -196,6 +196,10 @@ func _spawn_arrow() -> void:
 	else:
 		arrow = ArrowProjectile.new()
 
+	# Enchanted bow grants larger hit radius
+	if equipment and equipment.get_equipped() == "enchanted_bow":
+		arrow.enchanted = true
+
 	# Add to scene tree first, then set position and velocity
 	var scene_root: Node = get_tree().current_scene
 	if scene_root:

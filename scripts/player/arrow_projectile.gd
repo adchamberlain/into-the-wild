@@ -11,6 +11,7 @@ var flight_timer: float = 0.0
 var is_stuck: bool = false
 var stuck_timer: float = 0.0
 var has_hit: bool = false
+var enchanted: bool = false  # Fired from enchanted bow — larger hit radius
 
 
 func _ready() -> void:
@@ -40,7 +41,11 @@ func _ready() -> void:
 
 	var area_shape: CollisionShape3D = CollisionShape3D.new()
 	var area_box: BoxShape3D = BoxShape3D.new()
-	area_box.size = Vector3(0.15, 0.15, 0.6)
+	# Enchanted bow gives a much larger hit radius for easier targeting
+	if enchanted:
+		area_box.size = Vector3(1.2, 1.2, 1.0)
+	else:
+		area_box.size = Vector3(0.15, 0.15, 0.6)
 	area_shape.shape = area_box
 	hit_area.add_child(area_shape)
 
