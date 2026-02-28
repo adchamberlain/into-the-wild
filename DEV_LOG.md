@@ -5832,6 +5832,25 @@ Changed "Return to Camp" in pause menu to teleport the player to their shelter r
 
 ---
 
+## Session 48d - Rope Model v2, Enchanted Bow Hit Radius (2026-02-28)
+
+### Rope Model Redo
+Replaced the blocky rectangular rope model with a proper round coil — 12 small cube segments arranged in a torus ring, 3 loops stacked vertically, with alternating tan/dark materials for a woven rope texture. Trailing end hangs down from one side.
+
+### Enchanted Bow — Larger Hit Radius
+Arrows fired from the enchanted bow now have a significantly larger hit detection area (1.2×1.2×1.0 vs regular 0.15×0.15×0.6), making it much easier to hit animals. The `enchanted` flag is set on both ArrowProjectile and DiamondArrowProjectile before they enter the scene tree, so the enlarged hitbox is active from spawn. This gives the enchanted bow a meaningful gameplay advantage beyond just faster draw/arrow speed.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/player/equipment.gd` | Modified | Rope model redone as torus coil with ring of box segments |
+| `scripts/player/bow_system.gd` | Modified | Sets `enchanted = true` on arrows when fired from enchanted bow |
+| `scripts/player/arrow_projectile.gd` | Modified | Added `enchanted` var, 8x larger hit area when set |
+| `scripts/player/diamond_arrow_projectile.gd` | Modified | Added `enchanted` var, 8x larger hit area when set |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
