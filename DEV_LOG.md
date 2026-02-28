@@ -5811,6 +5811,27 @@ Added the ability for the player to cycle between regular and diamond arrows whe
 
 ---
 
+## Session 48c - Rope Model + Return to Camp Fix (2026-02-28)
+
+### Rope Equipment Artwork
+Added held visual for rope — the one equippable item that was missing hand artwork. The model is a coiled bundle of hemp rope with:
+- Main coil body (tan, 0.1 × 0.12 × 0.08)
+- Dark inner hole giving depth to the coil
+- Horizontal wrap band holding coil together
+- Trailing rope tail hanging down with frayed end
+
+### Return to Camp Fix
+Changed "Return to Camp" in pause menu to teleport the player to their shelter respawn point (cabin > canvas tent > basic shelter) instead of always going to the world origin. Falls back to origin if no shelter has been built.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/player/equipment.gd` | Modified | Added rope_model variable, ROPE_REST constants, _create_rope_model(), _remove_rope_model(), equip/unequip dispatch |
+| `scripts/ui/pause_menu.gd` | Modified | Return to Camp uses player.respawn_position when shelter exists |
+
+---
+
 ## Next Session
 
 ### Planned Tasks

@@ -258,34 +258,32 @@ func _on_settings_pressed() -> void:
 
 
 func _on_return_to_camp_pressed() -> void:
-	if not save_load:
-		_show_notification("Save system not found!", Color(1.0, 0.5, 0.5))
+	# Teleport the player back to camp (spawn point) instead of loading a save.
+	# This avoids crashes from loading a different world's save slot.
+	var player: Node3D = get_tree().get_first_node_in_group("player") as Node3D
+	if not player:
+		_show_notification("Player not found!", Color(1.0, 0.5, 0.5))
 		return
 
-	# Find the most recent save slot by checking timestamps
-	var best_slot: int = 0
-	var best_time: int = 0
-	for slot: int in range(1, 6):
-		if save_load.has_method("has_save_slot") and save_load.has_save_slot(slot):
-			var filepath: String = "user://saves/save_slot_%d.json" % slot
-			var modified: int = FileAccess.get_modified_time(filepath)
-			if modified > best_time:
-				best_time = modified
-				best_slot = slot
+	# Exit cave if the player is in one
+	var cave_transition: Node = get_node_or_null("/root/CaveTransition")
+	if cave_transition and cave_transition.is_in_cave:
+		cave_transition.player_exited_cave()
 
-	if best_slot == 0:
-		_show_notification("No saved game found!", Color(1.0, 0.5, 0.5))
-		return
-
-	# Load the most recent save
-	panel.visible = false
-	var success: bool = await save_load.load_game_slot(best_slot)
-	if success:
-		_show_notification("Returned to camp", Color(0.6, 1.0, 0.6))
-		resume_game()
+	# Teleport to shelter respawn point (highest-priority shelter), or origin if none
+	var camp_pos: Vector3 = Vector3.ZERO
+	if "respawn_position" in player and "has_respawn_shelter" in player and player.has_respawn_shelter:
+		camp_pos = player.respawn_position
 	else:
-		_show_notification("Load Failed!", Color(1.0, 0.5, 0.5))
-		panel.visible = true
+		var chunk_mgr: Node = get_tree().root.get_node_or_null("Main/World/Terrain")
+		if chunk_mgr and chunk_mgr.has_method("get_height_at"):
+			camp_pos.y = chunk_mgr.get_height_at(0.0, 0.0) + 1.0
+		else:
+			camp_pos.y = 1.0
+	player.global_position = camp_pos
+
+	_show_notification("Returned to camp", Color(0.6, 1.0, 0.6))
+	resume_game()
 
 
 func _on_quit_pressed() -> void:
@@ -322,6 +320,8 @@ func _show_notification(message: String, color: Color) -> void:
 
 
 func _find_hud() -> Node:
+	if not is_inside_tree():
+		return null
 	var root: Node = get_tree().root
 	if root.has_node("Main/HUD"):
 		return root.get_node("Main/HUD")

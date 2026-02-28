@@ -440,6 +440,8 @@ func equip(item_type: String) -> bool:
 		_create_torch_model()
 	elif item_type == "lantern":
 		_create_lantern_model()
+	elif item_type == "rope":
+		_create_rope_model()
 
 	# Show placeable kit models
 	if item_data.get("placeable", false):
@@ -477,6 +479,7 @@ func unequip() -> void:
 	_remove_torch_light()
 	_remove_torch_model()
 	_remove_lantern_model()
+	_remove_rope_model()
 	_remove_map_model()
 	_remove_stone_axe()
 	_remove_machete()
@@ -1918,6 +1921,95 @@ const LANTERN_REST_ROTATION: Vector3 = Vector3(0, 0, -10)
 var map_model: Node3D = null
 const MAP_REST_POSITION: Vector3 = Vector3(0.0, -0.4, -0.5)
 const MAP_REST_ROTATION: Vector3 = Vector3(-30, 0, 0)
+
+# Rope held model
+var rope_model: Node3D = null
+const ROPE_REST_POSITION: Vector3 = Vector3(0.3, -0.28, -0.55)
+const ROPE_REST_ROTATION: Vector3 = Vector3(10, 0, -15)
+
+func _create_rope_model() -> void:
+	if rope_model:
+		return
+
+	rope_model = Node3D.new()
+	rope_model.name = "RopeModel"
+
+	var rope_mat := StandardMaterial3D.new()
+	rope_mat.albedo_color = Color(0.6, 0.5, 0.35)  # Tan hemp rope
+	var rope_dark_mat := StandardMaterial3D.new()
+	rope_dark_mat.albedo_color = Color(0.5, 0.4, 0.28)  # Darker rope accent
+
+	# Main coil body — thick ring of bundled rope loops
+	var coil := MeshInstance3D.new()
+	coil.name = "CoilBody"
+	var coil_mesh := BoxMesh.new()
+	coil_mesh.size = Vector3(0.1, 0.12, 0.08)
+	coil.mesh = coil_mesh
+	coil.material_override = rope_mat
+	coil.position = Vector3(0, 0.05, 0)
+	rope_model.add_child(coil)
+
+	# Inner coil shadow — dark center hole of the coil
+	var inner := MeshInstance3D.new()
+	inner.name = "CoilInner"
+	var inner_mesh := BoxMesh.new()
+	inner_mesh.size = Vector3(0.04, 0.13, 0.04)
+	inner.mesh = inner_mesh
+	rope_dark_mat.albedo_color = Color(0.35, 0.28, 0.18)
+	inner.material_override = rope_dark_mat
+	inner.position = Vector3(0, 0.05, 0)
+	rope_model.add_child(inner)
+
+	# Top wrap — horizontal band holding coil together
+	var wrap := MeshInstance3D.new()
+	wrap.name = "TopWrap"
+	var wrap_mesh := BoxMesh.new()
+	wrap_mesh.size = Vector3(0.11, 0.02, 0.09)
+	wrap.mesh = wrap_mesh
+	var wrap_mat := StandardMaterial3D.new()
+	wrap_mat.albedo_color = Color(0.55, 0.45, 0.3)
+	wrap.material_override = wrap_mat
+	wrap.position = Vector3(0, 0.1, 0)
+	rope_model.add_child(wrap)
+
+	# Trailing end — short rope tail hanging down from the coil
+	var tail := MeshInstance3D.new()
+	tail.name = "RopeTail"
+	var tail_mesh := BoxMesh.new()
+	tail_mesh.size = Vector3(0.025, 0.14, 0.025)
+	tail.mesh = tail_mesh
+	tail.material_override = rope_mat
+	tail.position = Vector3(0.03, -0.07, 0.02)
+	tail.rotation_degrees = Vector3(8, 0, 12)
+	rope_model.add_child(tail)
+
+	# Tail frayed end — slightly wider at the bottom
+	var fray := MeshInstance3D.new()
+	fray.name = "TailFray"
+	var fray_mesh := BoxMesh.new()
+	fray_mesh.size = Vector3(0.035, 0.02, 0.03)
+	fray.mesh = fray_mesh
+	var fray_mat := StandardMaterial3D.new()
+	fray_mat.albedo_color = Color(0.65, 0.55, 0.38)  # Lighter frayed fibers
+	fray.material_override = fray_mat
+	fray.position = Vector3(0.04, -0.14, 0.025)
+	fray.rotation_degrees = Vector3(8, 0, 12)
+	rope_model.add_child(fray)
+
+	rope_model.position = ROPE_REST_POSITION
+	rope_model.rotation_degrees = ROPE_REST_ROTATION
+
+	if player:
+		var cam: Camera3D = player.get_node_or_null("Camera3D")
+		if cam:
+			cam.add_child(rope_model)
+
+
+func _remove_rope_model() -> void:
+	if rope_model:
+		rope_model.queue_free()
+		rope_model = null
+
 
 # Bow visual
 var bow_model: Node3D = null
