@@ -1340,6 +1340,13 @@ func get_region_at(x: float, z: float) -> RegionType:
 	if spawn_distance < 60.0:
 		return RegionType.FOREST
 
+	# Pocket desert biome (hidden area west of spawn containing sinkhole)
+	var pocket_dist: float = Vector2(x - pocket_desert_center.x, z - pocket_desert_center.y).length()
+	var pocket_angle: float = atan2(z - pocket_desert_center.y, x - pocket_desert_center.x)
+	var pocket_boundary: float = pocket_desert_radius + _desert_boundary_offset(pocket_angle)
+	if pocket_dist <= pocket_boundary:
+		return RegionType.DESERT
+
 	# Desert ring with organic noise-based boundaries
 	var desert_angle: float = atan2(z, x)
 	var inner_offset: float = _desert_boundary_offset(desert_angle)
@@ -1379,6 +1386,20 @@ func get_desert_boundaries(x: float, z: float) -> Vector2:
 	var inner: float = 170.0 + _desert_boundary_offset(angle)
 	var outer: float = 230.0 + _desert_boundary_offset(angle + 1.0)
 	return Vector2(inner, outer)
+
+
+## Returns a blend factor (0.0 to 1.0) for the pocket desert transition zone.
+## 0.0 = fully outside (no desert blend), 1.0 = fully inside pocket desert.
+## Used by terrain_chunk.gd for smooth color transitions.
+func get_pocket_desert_blend(x: float, z: float) -> float:
+	var pocket_dist: float = Vector2(x - pocket_desert_center.x, z - pocket_desert_center.y).length()
+	var pocket_angle: float = atan2(z - pocket_desert_center.y, x - pocket_desert_center.x)
+	var pocket_boundary: float = pocket_desert_radius + _desert_boundary_offset(pocket_angle)
+	if pocket_dist <= pocket_boundary:
+		return 1.0  # Fully inside pocket desert
+	elif pocket_dist <= pocket_boundary + pocket_desert_blend:
+		return 1.0 - (pocket_dist - pocket_boundary) / pocket_desert_blend
+	return 0.0  # Outside blend zone
 
 
 func get_region_colors(region: RegionType) -> Dictionary:
