@@ -27,8 +27,9 @@ const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 
 # Inventory
 @onready var inventory_panel: PanelContainer = $InventoryPanel
-@onready var item_list: VBoxContainer = $InventoryPanel/VBoxContainer/ItemList
-@onready var empty_label: Label = $InventoryPanel/VBoxContainer/ItemList/EmptyLabel
+@onready var inventory_scroll: ScrollContainer = $InventoryPanel/VBoxContainer/ScrollContainer
+@onready var item_list: VBoxContainer = $InventoryPanel/VBoxContainer/ScrollContainer/ItemList
+@onready var empty_label: Label = $InventoryPanel/VBoxContainer/ScrollContainer/ItemList/EmptyLabel
 
 # Equipment
 @onready var equipped_label: Label = $EquippedPanel/EquippedContainer/EquippedLabel
