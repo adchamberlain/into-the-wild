@@ -5935,13 +5935,35 @@ Added a hidden sinkhole in the desert biome containing an ancient explorer's jou
 
 ---
 
+## Session – 2026-02-28 (Explorer's Journal Equippable)
+
+### What Was Built
+Made the Explorer's Journal a proper equippable tool instead of an eat-intercepted item:
+
+1. **Equippable item**: Added `explorers_journal` to EQUIPPABLE_ITEMS (slot 31, tool_type "journal")
+2. **Held book model**: Dark reddish-brown leather cover, cream page block, darker spine strip, leather strap with brass clasp — attached to camera like other held tools
+3. **R2 use action**: Press R2 to open journal UI (with toggle guard like map), delegates to existing `_open_journal()` for rewards/signals
+4. **Book-style UI**: Replaced plain panel with two-page open book spread — leather cover frame, dark spine divider, parchment pages with dark brown ink text, viewport-relative font scaling
+5. **Removed eat fallback**: Journal no longer intercepts the eat action in `_try_eat()`
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/player/equipment.gd` | Modified | Added explorers_journal to EQUIPPABLE_ITEMS, held book model, journal use dispatch with toggle guard |
+| `scripts/ui/journal_ui.gd` | Modified | Restyled as two-page book: leather cover, spine, parchment pages, dark ink text, viewport-relative scaling |
+| `scripts/player/player_controller.gd` | Modified | Removed eat-based journal fallback from `_try_eat()` |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
 1. Play-test the sinkhole Easter egg end-to-end (find sinkhole, eat coca leaf, dive, grab journal, read, craft glider, fly)
-2. Remove TEMP test spawn items (bow + 20 arrows + bark_map) once satisfied
-3. Continue play-testing desert biome balance
-4. Bug fixing from play-testing
+2. Play-test journal equip/use cycle (equip, R2 open, ESC close, re-read, L1/R1 cycling)
+3. Remove TEMP test spawn items (bow + 20 arrows + bark_map) once satisfied
+4. Continue play-testing desert biome balance
+5. Bug fixing from play-testing
 
 ### Known Issues
 - Tortoise materials are per-instance (minor, could be shared static)
