@@ -988,11 +988,17 @@ func _generate_desert_sinkhole() -> void:
 
 
 func is_near_sinkhole(world_x: float, world_z: float, buffer: float = 12.0) -> bool:
-	## Check if a world position is near the desert sinkhole (for vegetation suppression)
+	## Check if a world position is near the desert sinkhole or rock spire (for vegetation suppression)
 	if desert_sinkhole.size() == 0:
 		return false
 	var dist: float = Vector2(world_x - desert_sinkhole["center"].x, world_z - desert_sinkhole["center"].y).length()
-	return dist < desert_sinkhole["radius"] + buffer
+	if dist < desert_sinkhole["radius"] + buffer:
+		return true
+	# Also suppress vegetation near rock spire
+	var spire_x: float = roundf((pocket_desert_center.x + pocket_desert_radius - 5.0) / cell_size) * cell_size
+	var spire_z: float = roundf(pocket_desert_center.y / cell_size) * cell_size
+	var spire_dist: float = Vector2(world_x - spire_x, world_z - spire_z).length()
+	return spire_dist < 6.0
 
 
 func _spawn_sinkhole_contents() -> void:
@@ -1092,6 +1098,77 @@ func _spawn_sinkhole_contents() -> void:
 
 	sinkhole_spawned = true
 	print("[ChunkManager] Spawned sinkhole contents at (%.0f, %.0f)" % [center.x, center.y])
+
+
+func _spawn_rock_spire() -> void:
+	## Spawn a tall rock spire at the eastern edge of the pocket desert as a landmark
+	if rock_spire_spawned:
+		return
+
+	# Place at eastern edge of pocket desert (facing main play area)
+	var spire_x: float = pocket_desert_center.x + pocket_desert_radius - 5.0
+	var spire_z: float = pocket_desert_center.y
+	# Snap to grid
+	spire_x = roundf(spire_x / cell_size) * cell_size
+	spire_z = roundf(spire_z / cell_size) * cell_size
+	var spire_y: float = get_height_at(spire_x, spire_z)
+
+	var spire_root: Node3D = Node3D.new()
+	spire_root.name = "RockSpire"
+	spire_root.position = Vector3(spire_x, spire_y, spire_z)
+
+	# Base block - wide and heavy
+	var base: MeshInstance3D = MeshInstance3D.new()
+	var base_mesh: BoxMesh = BoxMesh.new()
+	base_mesh.size = Vector3(3.0, 3.0, 3.0)
+	base.mesh = base_mesh
+	var base_mat: StandardMaterial3D = StandardMaterial3D.new()
+	base_mat.albedo_color = Color(0.55, 0.45, 0.32)  # Warm sandstone
+	base_mat.roughness = 0.9
+	base.material_override = base_mat
+	base.position = Vector3(0.0, 1.5, 0.0)
+	spire_root.add_child(base)
+
+	# Middle section - narrower, slightly offset
+	var mid: MeshInstance3D = MeshInstance3D.new()
+	var mid_mesh: BoxMesh = BoxMesh.new()
+	mid_mesh.size = Vector3(2.2, 3.5, 2.2)
+	mid.mesh = mid_mesh
+	var mid_mat: StandardMaterial3D = StandardMaterial3D.new()
+	mid_mat.albedo_color = Color(0.50, 0.40, 0.28)  # Slightly darker
+	mid_mat.roughness = 0.9
+	mid.material_override = mid_mat
+	mid.position = Vector3(0.3, 4.75, -0.2)
+	spire_root.add_child(mid)
+
+	# Upper section - narrower still
+	var upper: MeshInstance3D = MeshInstance3D.new()
+	var upper_mesh: BoxMesh = BoxMesh.new()
+	upper_mesh.size = Vector3(1.5, 2.5, 1.5)
+	upper.mesh = upper_mesh
+	var upper_mat: StandardMaterial3D = StandardMaterial3D.new()
+	upper_mat.albedo_color = Color(0.60, 0.48, 0.33)  # Lighter weathered top
+	upper_mat.roughness = 0.85
+	upper.material_override = upper_mat
+	upper.position = Vector3(-0.2, 7.75, 0.15)
+	spire_root.add_child(upper)
+
+	# Cap - small angled top piece
+	var cap: MeshInstance3D = MeshInstance3D.new()
+	var cap_mesh: BoxMesh = BoxMesh.new()
+	cap_mesh.size = Vector3(1.0, 1.2, 1.0)
+	cap.mesh = cap_mesh
+	var cap_mat: StandardMaterial3D = StandardMaterial3D.new()
+	cap_mat.albedo_color = Color(0.65, 0.52, 0.36)  # Lightest - sun-bleached
+	cap_mat.roughness = 0.8
+	cap.material_override = cap_mat
+	cap.position = Vector3(0.1, 9.6, -0.1)
+	cap.rotation_degrees = Vector3(5.0, 15.0, -8.0)  # Slight tilt for character
+	spire_root.add_child(cap)
+
+	add_child(spire_root)
+	rock_spire_spawned = true
+	print("[ChunkManager] Spawned rock spire landmark at (%.0f, %.0f)" % [spire_x, spire_z])
 
 
 func _on_sinkhole_water_entered(body: Node3D) -> void:
@@ -1858,6 +1935,14 @@ func _load_chunk(chunk_coord: Vector2i) -> void:
 		if sink_center.x >= chunk_min_x and sink_center.x < chunk_max_x and \
 		   sink_center.y >= chunk_min_z and sink_center.y < chunk_max_z:
 			_spawn_sinkhole_contents()
+
+	# Spawn rock spire landmark when its chunk loads
+	if not rock_spire_spawned:
+		var spire_x: float = roundf((pocket_desert_center.x + pocket_desert_radius - 5.0) / cell_size) * cell_size
+		var spire_z: float = roundf(pocket_desert_center.y / cell_size) * cell_size
+		if spire_x >= chunk_min_x and spire_x < chunk_max_x and \
+		   spire_z >= chunk_min_z and spire_z < chunk_max_z:
+			_spawn_rock_spire()
 
 	# Spawn wilderness sign near spawn
 	_spawn_wilderness_sign(chunk_min_x, chunk_max_x, chunk_min_z, chunk_max_z)
