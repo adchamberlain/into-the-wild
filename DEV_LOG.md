@@ -5956,12 +5956,38 @@ Made the Explorer's Journal a proper equippable tool instead of an eat-intercept
 
 ---
 
+## Session – 2026-02-28 (Glider Rework & Bug Fixes)
+
+### What Was Built
+Reworked hang glider flight mechanics and fixed several bugs:
+
+1. **Boost mechanic**: Replaced awkward "look up to climb" with a boost button (Space/Circle). Each press gives a 2-second burst of upward lift at 5 m/s. No cooldown — player can repeatedly boost to gain significant altitude
+2. **Slow descent**: Glider now descends at a constant 1.0 m/s instead of variable pitch-based descent
+3. **Camera roll fix**: Forced player body and camera roll to zero every frame during gliding, both before and after `move_and_slide()`. Replaced camera-basis direction math with clean yaw-based trig to prevent roll contamination
+4. **Redesigned glider model**: Proper delta-wing shape with A-frame control bar, keel spine, V-shaped leading edges, triangular fabric wing panels, support cables, and trailing edge
+5. **Equipment lock while gliding**: Blocked all equipment switching (number keys, L1/R1 cycling, unequip) during flight
+6. **Heat/compass overlap fix**: Moved heat panel below compass panel so they don't overlap when both visible
+7. **HUD updates**: Gliding indicator shows "BOOSTING" (gold) when ascending and "GLIDING" (green) otherwise. Equipment hint shows boost and retract keys
+8. **Journal UI fix**: Changed controller close hint from "Circle to close" to "X to close"
+9. **Max height raised**: Glide ceiling increased from 25 to 50 units above terrain
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/player/player_controller.gd` | Modified | Boost mechanic, camera roll fix, yaw-based movement, _stop_gliding() helper, temp spawn items |
+| `scripts/player/equipment.gd` | Modified | Block equipment switching while gliding, redesigned glider model |
+| `scripts/ui/hud.gd` | Modified | Boost/gliding indicator, heat panel repositioned, updated equipment hints |
+| `scripts/ui/journal_ui.gd` | Modified | Fixed controller close hint text |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
 1. Play-test the sinkhole Easter egg end-to-end (find sinkhole, eat coca leaf, dive, grab journal, read, craft glider, fly)
 2. Play-test journal equip/use cycle (equip, R2 open, ESC close, re-read, L1/R1 cycling)
-3. Remove TEMP test spawn items (bow + 20 arrows + bark_map) once satisfied
+3. Remove TEMP test spawn items (journal + hang_glider + bow + arrows + map) once satisfied
 4. Continue play-testing desert biome balance
 5. Bug fixing from play-testing
 
