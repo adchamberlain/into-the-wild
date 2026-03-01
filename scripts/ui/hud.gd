@@ -118,7 +118,7 @@ var placement_system: Node
 var is_player_resting: bool = false
 
 # Gliding state indicator
-var gliding_label: Label = null
+var gliding_panel: PanelContainer = null
 
 # Weather damage flash
 var weather_damage_flash_timer: float = 0.0
@@ -648,10 +648,10 @@ func _process(delta: float) -> void:
 	_update_grapple_reticle()
 
 	# Update gliding indicator
-	if gliding_label and player:
+	if gliding_panel and player:
 		var player_gliding: bool = "is_gliding" in player and player.is_gliding
-		if gliding_label.visible != player_gliding:
-			gliding_label.visible = player_gliding
+		if gliding_panel.visible != player_gliding:
+			gliding_panel.visible = player_gliding
 
 	# Blink remaining bubbles when low on air
 	if bubble_blink_active:
@@ -1332,18 +1332,18 @@ func _create_gliding_indicator() -> void:
 	style.content_margin_bottom = 6
 	panel.add_theme_stylebox_override("panel", style)
 
-	gliding_label = Label.new()
-	gliding_label.name = "GlidingLabel"
-	gliding_label.text = "GLIDING"
-	gliding_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	gliding_label.add_theme_font_override("font", HUD_FONT)
-	gliding_label.add_theme_font_size_override("font_size", 28)
-	gliding_label.add_theme_color_override("font_color", Color(0.6, 1.0, 0.6, 1))
-	panel.add_child(gliding_label)
+	var glide_lbl: Label = Label.new()
+	glide_lbl.name = "GlidingLabel"
+	glide_lbl.text = "GLIDING"
+	glide_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	glide_lbl.add_theme_font_override("font", HUD_FONT)
+	glide_lbl.add_theme_font_size_override("font_size", 28)
+	glide_lbl.add_theme_color_override("font_color", Color(0.6, 1.0, 0.6, 1))
+	panel.add_child(glide_lbl)
 
 	panel.visible = false
 	add_child(panel)
-	gliding_label = panel  # Store the panel for show/hide
+	gliding_panel = panel
 
 
 ## Show or hide the desert heat indicator.
