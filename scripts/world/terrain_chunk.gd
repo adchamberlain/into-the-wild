@@ -485,11 +485,17 @@ func _add_top_face_cached(st: SurfaceTool, x: float, z: float, size: float, heig
 		var desert_colors: Dictionary = chunk_manager.region_colors[ChunkManager.RegionType.DESERT]
 		grass_color = grass_color.lerp(desert_colors["grass"], blend)
 
+	# Pocket desert transition zone blending
+	var pocket_blend: float = chunk_manager.get_pocket_desert_blend(center_x, center_z)
+	if pocket_blend > 0.0 and region != ChunkManager.RegionType.DESERT:
+		var desert_colors: Dictionary = chunk_manager.region_colors[ChunkManager.RegionType.DESERT]
+		grass_color = grass_color.lerp(desert_colors["grass"], pocket_blend)
+
 	# Color variation based on world position for consistency across chunks
 	var world_cx: int = chunk_coord.x * chunk_manager.chunk_size_cells + cx
 	var world_cz: int = chunk_coord.y * chunk_manager.chunk_size_cells + cz
 	# Desert sand is uniform - reduce variation significantly
-	var is_desert: bool = region == ChunkManager.RegionType.DESERT or (spawn_dist >= d_inner and spawn_dist <= d_outer)
+	var is_desert: bool = region == ChunkManager.RegionType.DESERT or (spawn_dist >= d_inner and spawn_dist <= d_outer) or pocket_blend > 0.5
 	var var_scale: float = 0.02 if is_desert else 0.08
 	var clamp_range: float = 0.03 if is_desert else 0.08
 	var variation: float = sin(world_cx * 12.9898 + world_cz * 78.233) * var_scale
@@ -674,11 +680,18 @@ func _add_side_quad_ao(st: SurfaceTool, v0: Vector3, v1: Vector3, v2: Vector3, v
 		grass_color = grass_color.lerp(desert_colors["grass"], blend)
 		dirt_color = dirt_color.lerp(desert_colors["dirt"], blend)
 
+	# Pocket desert transition zone blending
+	var pocket_blend: float = chunk_manager.get_pocket_desert_blend(center_x, center_z)
+	if pocket_blend > 0.0 and region != ChunkManager.RegionType.DESERT:
+		var desert_colors: Dictionary = chunk_manager.region_colors[ChunkManager.RegionType.DESERT]
+		grass_color = grass_color.lerp(desert_colors["grass"], pocket_blend)
+		dirt_color = dirt_color.lerp(desert_colors["dirt"], pocket_blend)
+
 	var grass_thickness: float = 0.25
 	var total_height: float = v0.y - v2.y
 
 	# Color variation based on position — desert sand is uniform
-	var is_desert: bool = region == ChunkManager.RegionType.DESERT or (spawn_dist >= d_inner and spawn_dist <= d_outer)
+	var is_desert: bool = region == ChunkManager.RegionType.DESERT or (spawn_dist >= d_inner and spawn_dist <= d_outer) or pocket_blend > 0.5
 	var var_scale: float = 0.015 if is_desert else 0.06
 	var clamp_range: float = 0.03 if is_desert else 0.08
 	var variation: float = sin(v0.x * 12.9898 + v0.z * 78.233 + v0.y * 37.719) * var_scale
