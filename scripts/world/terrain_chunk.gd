@@ -1015,6 +1015,11 @@ func _spawn_chunk_trees() -> void:
 					z += tree_grid_size
 					continue
 
+				# Skip sinkhole area
+				if chunk_manager.is_near_sinkhole(world_x, world_z):
+					z += tree_grid_size
+					continue
+
 				var vegetation: Dictionary = chunk_manager.region_vegetation[ChunkManager.RegionType.DESERT]
 				var cactus_chance: float = vegetation.get("cactus", 0.0)
 				var palm_chance: float = vegetation.get("palm", 0.0)
@@ -1239,6 +1244,11 @@ func _spawn_chunk_resources() -> void:
 
 			# Skip if inside or near a cave entrance
 			if chunk_manager.is_near_cave_entrance(res_x, res_z):
+				z += resource_grid_size
+				continue
+
+			# Skip if near sinkhole
+			if chunk_manager.is_near_sinkhole(res_x, res_z):
 				z += resource_grid_size
 				continue
 

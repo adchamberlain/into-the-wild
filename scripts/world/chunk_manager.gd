@@ -65,6 +65,11 @@ var desert_inner_radius: float = 170.0
 var desert_outer_radius: float = 230.0
 var spawned_oasis_indices: Array[int] = []  # Track which oases have been spawned
 
+# Desert sinkhole (hidden easter egg at 180 degrees in desert ring)
+var desert_sinkhole: Dictionary = {}
+var sinkhole_spawned: bool = false
+var sinkhole_book_script: GDScript = null  # Loaded later when script exists
+
 # Region-specific pond sizes {radius_min, radius_max, depth}
 var region_pond_params: Dictionary = {
 	RegionType.MEADOW: {"radius_min": 10.0, "radius_max": 14.0, "depth": 2.5},
@@ -221,6 +226,7 @@ func _ready() -> void:
 	_generate_water_bodies()
 	_generate_cave_entrances()
 	_generate_desert_oases()
+	_generate_desert_sinkhole()
 	_setup_material()
 	_setup_world_floor()
 	_load_scenes()
@@ -941,6 +947,139 @@ func is_near_oasis(world_x: float, world_z: float, buffer: float = 2.0) -> bool:
 	return false
 
 
+func _generate_desert_sinkhole() -> void:
+	## Place a hidden sinkhole at 180 degrees (opposite oasis #1) in the desert ring
+	var sinkhole_distance: float = 200.0  # Same distance as oases
+	var angle_rad: float = deg_to_rad(180.0)
+	var raw_x: float = cos(angle_rad) * sinkhole_distance
+	var raw_z: float = sin(angle_rad) * sinkhole_distance
+
+	# Snap to cell_size grid (multiples of 3.0)
+	var snapped_x: float = roundf(raw_x / cell_size) * cell_size
+	var snapped_z: float = roundf(raw_z / cell_size) * cell_size
+
+	desert_sinkhole = {
+		"center": Vector2(snapped_x, snapped_z),
+		"radius": 5.0,
+		"depth": 30.0
+	}
+
+	# Register as a water body (type POND) for terrain carving
+	var sink_wb_idx: int = water_bodies.size()
+	water_bodies.append({
+		"type": WaterBodyType.POND,
+		"center": Vector2(snapped_x, snapped_z),
+		"radius": 5.0,
+		"depth": 30.0
+	})
+	# Prevent fishing spots from spawning on the sinkhole
+	spawned_pond_indices.append(sink_wb_idx)
+
+	# Update legacy pond_locations
+	_update_legacy_pond_locations()
+
+	print("[ChunkManager] Generated desert sinkhole at (%.0f, %.0f)" % [snapped_x, snapped_z])
+
+
+func is_near_sinkhole(world_x: float, world_z: float, buffer: float = 12.0) -> bool:
+	## Check if a world position is near the desert sinkhole (for vegetation suppression)
+	if desert_sinkhole.size() == 0:
+		return false
+	var dist: float = Vector2(world_x - desert_sinkhole["center"].x, world_z - desert_sinkhole["center"].y).length()
+	return dist < desert_sinkhole["radius"] + buffer
+
+
+func _spawn_sinkhole_contents() -> void:
+	## Spawn the glow light and water area at the bottom of the sinkhole
+	if sinkhole_spawned or desert_sinkhole.size() == 0:
+		return
+
+	var center: Vector2 = desert_sinkhole["center"]
+	var sinkhole_radius: float = desert_sinkhole["radius"]
+	var depth: float = desert_sinkhole["depth"]
+
+	# Bottom glow light (hint to the player)
+	var glow: OmniLight3D = OmniLight3D.new()
+	glow.name = "SinkholeGlow"
+	glow.light_color = Color(0.3, 0.7, 0.6)
+	glow.light_energy = 1.5
+	glow.omni_range = 8.0
+	glow.shadow_enabled = false
+	glow.position = Vector3(center.x, -depth + 2.0, center.y)
+	add_child(glow)
+
+	# Water surface visual at ground level (y=0)
+	var water_mesh: MeshInstance3D = MeshInstance3D.new()
+	water_mesh.name = "SinkholeWaterSurface"
+	var box_mesh: BoxMesh = BoxMesh.new()
+	# Cover the sinkhole opening plus the 3-unit ramp zone
+	box_mesh.size = Vector3((sinkhole_radius + 3.5) * 2.0, 0.15, (sinkhole_radius + 3.5) * 2.0)
+	water_mesh.mesh = box_mesh
+
+	var mat: StandardMaterial3D = StandardMaterial3D.new()
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.albedo_color = Color(0.1, 0.35, 0.5, 0.7)
+	mat.roughness = 0.05
+	mat.metallic = 0.1
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	water_mesh.material_override = mat
+	water_mesh.position = Vector3(center.x, 0.0, center.y)
+	add_child(water_mesh)
+
+	# Deeper water center (darker patch)
+	var deep_mesh: MeshInstance3D = MeshInstance3D.new()
+	deep_mesh.name = "SinkholeDeepWater"
+	var deep_box: BoxMesh = BoxMesh.new()
+	deep_box.size = Vector3(sinkhole_radius * 2.0, 0.12, sinkhole_radius * 2.0)
+	deep_mesh.mesh = deep_box
+
+	var deep_mat: StandardMaterial3D = StandardMaterial3D.new()
+	deep_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	deep_mat.albedo_color = Color(0.05, 0.2, 0.35, 0.5)
+	deep_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	deep_mesh.material_override = deep_mat
+	deep_mesh.position = Vector3(center.x, -0.15, center.y)
+	add_child(deep_mesh)
+
+	# Water Area3D for swimming detection - matches oasis pattern
+	var water_area: Area3D = Area3D.new()
+	water_area.name = "SinkholeWaterArea"
+	water_area.collision_layer = 0
+	water_area.collision_mask = 1  # Player is on layer 1
+
+	var area_shape: CollisionShape3D = CollisionShape3D.new()
+	var area_box: BoxShape3D = BoxShape3D.new()
+	# Match the water volume - extends from surface down to sinkhole floor
+	area_box.size = Vector3((sinkhole_radius + 3.5) * 2.0 + 1.0, depth + 1.0, (sinkhole_radius + 3.5) * 2.0 + 1.0)
+	area_shape.shape = area_box
+	# Position: surface at y=0, extends down to sinkhole floor
+	area_shape.position = Vector3(center.x, -depth / 2.0, center.y)
+	water_area.add_child(area_shape)
+
+	# Connect signals for swimming detection
+	water_area.body_entered.connect(_on_sinkhole_water_entered)
+	water_area.body_exited.connect(_on_sinkhole_water_exited)
+
+	add_child(water_area)
+
+	sinkhole_spawned = true
+	print("[ChunkManager] Spawned sinkhole contents at (%.0f, %.0f)" % [center.x, center.y])
+
+
+func _on_sinkhole_water_entered(body: Node3D) -> void:
+	if body.is_in_group("player"):
+		if body.has_method("set_in_water"):
+			body.set_in_water(true)
+		print("[ChunkManager] Player entered sinkhole water")
+
+
+func _on_sinkhole_water_exited(body: Node3D) -> void:
+	if body.is_in_group("player"):
+		if body.has_method("set_in_water"):
+			body.set_in_water(false)
+		print("[ChunkManager] Player exited sinkhole water")
+
+
 func _has_carved_neighbor(x: float, z: float, threshold: float) -> bool:
 	## Check if at least one cardinal neighbor would also be carved (path_noise > threshold)
 	## This prevents isolated pits that players could get stuck in
@@ -1253,6 +1392,15 @@ func get_height_at(x: float, z: float, skip_pit_check: bool = false) -> float:
 			# Ramp from pool edge to terrain
 			var blend_factor: float = (oasis_dist - oasis["radius"]) / 3.0
 			return lerpf(-oasis["depth"], height_step, blend_factor)
+
+	# Sinkhole depression - deep pit with gradual ramp at edge
+	if desert_sinkhole.size() > 0:
+		var sink_dist: float = Vector2(snapped_x - desert_sinkhole["center"].x, snapped_z - desert_sinkhole["center"].y).length()
+		if sink_dist < desert_sinkhole["radius"]:
+			return -desert_sinkhole["depth"]
+		elif sink_dist < desert_sinkhole["radius"] + 3.0:
+			var blend_factor: float = (sink_dist - desert_sinkhole["radius"]) / 3.0
+			return lerpf(-desert_sinkhole["depth"], height_step, blend_factor)
 
 	# Check all water bodies (ponds and lakes) for terrain depression
 	for body in water_bodies:
@@ -1643,6 +1791,13 @@ func _load_chunk(chunk_coord: Vector2i) -> void:
 
 	# Spawn desert oases in this chunk
 	_spawn_oases_in_chunk(chunk_min_x, chunk_max_x, chunk_min_z, chunk_max_z)
+
+	# Spawn sinkhole contents when its chunk loads
+	if not sinkhole_spawned and desert_sinkhole.size() > 0:
+		var sink_center: Vector2 = desert_sinkhole["center"]
+		if sink_center.x >= chunk_min_x and sink_center.x < chunk_max_x and \
+		   sink_center.y >= chunk_min_z and sink_center.y < chunk_max_z:
+			_spawn_sinkhole_contents()
 
 	# Spawn wilderness sign near spawn
 	_spawn_wilderness_sign(chunk_min_x, chunk_max_x, chunk_min_z, chunk_max_z)
