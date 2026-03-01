@@ -963,7 +963,7 @@ func _generate_desert_sinkhole() -> void:
 	desert_sinkhole = {
 		"center": Vector2(snapped_x, snapped_z),
 		"radius": 5.0,
-		"depth": 30.0
+		"depth": 45.0
 	}
 
 	# Register as a water body (type POND) for terrain carving
@@ -972,7 +972,7 @@ func _generate_desert_sinkhole() -> void:
 		"type": WaterBodyType.POND,
 		"center": Vector2(snapped_x, snapped_z),
 		"radius": 5.0,
-		"depth": 30.0
+		"depth": 45.0
 	})
 	# Prevent fishing spots from spawning on the sinkhole
 	spawned_pond_indices.append(sink_wb_idx)
