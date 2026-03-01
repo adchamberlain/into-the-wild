@@ -6048,6 +6048,35 @@ Iterative HUD improvements for the inventory panel after stack limits were added
 
 ---
 
+## Session 50 - Per-Frame Performance Fix (2026-03-01)
+
+### Problem
+Stuttering and stickiness near spawn when walking and panning the camera, persisting even after world generation completed.
+
+### Root Cause
+`add_theme_color_override()` was being called **every frame** in two HUD `_process()` code paths, even when the color hadn't changed. This is an expensive Godot operation that triggers internal theme invalidation/recalculation each call.
+
+1. **Grapple reticle** (`_update_grapple_reticle()`): Called every frame from `_process()`, unconditionally setting crosshair color via `add_theme_color_override()` — even when the grappling hook wasn't equipped and the color was already default.
+2. **Gliding indicator**: Updated label text and color every frame while gliding, even when the boost state hadn't changed.
+
+Additionally, `print()` debug statements in `inventory.add_item()` and the HUD signal handler were generating console I/O on every item pickup.
+
+### Fix
+- **Cached last color/state**: Added `_last_crosshair_color` and `_last_glide_boosting` vars. Theme overrides now only fire when the value actually changes.
+- **Removed debug prints**: Cleaned out `print()` calls from inventory and HUD signal handlers.
+
+### Lesson
+**Never call `add_theme_color_override()` unconditionally in `_process()`**. Always cache the last value and guard with a comparison. This applies to all `add_theme_*_override()` methods.
+
+### Files Changed
+
+| File | Changes |
+|------|---------|
+| `scripts/ui/hud.gd` | Cache crosshair color and glide state, only call theme override on change; removed debug print |
+| `scripts/player/inventory.gd` | Removed debug print statements from add_item() and clear() |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
