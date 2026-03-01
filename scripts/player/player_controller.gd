@@ -275,7 +275,8 @@ func _dev_populate_inventory() -> void:
 		"explorers_journal",
 	]
 	for item: String in all_items:
-		inventory.add_item(item, 1)
+		if inventory.can_add_item(item, 1):
+			inventory.add_item(item, 1)
 	# Give extra arrows since they're consumable
 	inventory.add_item("arrows", 19)  # 20 total
 	inventory.add_item("diamond_arrows", 9)  # 10 total
