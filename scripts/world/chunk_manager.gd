@@ -1077,6 +1077,14 @@ func _spawn_sinkhole_contents() -> void:
 		coca_node.position = Vector3(leaf_x, leaf_y, leaf_z)
 		add_child(coca_node)
 
+	# Spawn the Explorer's Journal on pedestal at sinkhole bottom
+	if sinkhole_book_script:
+		var book_node: StaticBody3D = StaticBody3D.new()
+		book_node.set_script(sinkhole_book_script)
+		book_node.name = "ExplorersJournal"
+		book_node.position = Vector3(center.x, -depth + 0.5, center.y)
+		add_child(book_node)
+
 	sinkhole_spawned = true
 	print("[ChunkManager] Spawned sinkhole contents at (%.0f, %.0f)" % [center.x, center.y])
 
@@ -1297,6 +1305,9 @@ func _load_scenes() -> void:
 
 	# Load wilderness sign script
 	wilderness_sign_script = load("res://scripts/world/wilderness_sign.gd")
+
+	# Load explorer's journal pickup script (sinkhole easter egg)
+	sinkhole_book_script = load("res://scripts/world/explorers_journal_pickup.gd")
 
 	if not tree_scene:
 		push_warning("[ChunkManager] Failed to load tree scene")
