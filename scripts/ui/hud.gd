@@ -33,6 +33,7 @@ const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 # How many items fit in one column before splitting to two columns
 const INVENTORY_COLUMN_THRESHOLD: int = 14
 var inventory_visible: bool = true
+var inventory_toggle_hint: Label = null
 
 # Equipment
 @onready var equipped_label: Label = $EquippedPanel/EquippedContainer/EquippedLabel
@@ -274,6 +275,9 @@ func _ready() -> void:
 	# Create gliding state indicator (hidden by default)
 	_create_gliding_indicator()
 
+	# Create inventory toggle hint at bottom of panel
+	_create_inventory_toggle_hint()
+
 	# Initialize displays
 	_update_inventory_display()
 	_update_equipped_display()
@@ -334,6 +338,7 @@ func _on_input_device_changed(_is_controller: bool) -> void:
 	# Update any visible prompts
 	_update_equipped_display()
 	_update_resting_prompt()
+	_update_inventory_toggle_hint()
 
 
 func _on_interaction_cleared() -> void:
@@ -1063,6 +1068,29 @@ func fade_to_black_and_back(fade_out_duration: float, hold_duration: float, fade
 
 	# Hide overlay when done
 	tween.tween_callback(func(): fade_overlay.visible = false)
+
+
+func _create_inventory_toggle_hint() -> void:
+	var vbox: VBoxContainer = inventory_panel.get_node_or_null("VBoxContainer") if inventory_panel else null
+	if not vbox:
+		return
+	inventory_toggle_hint = Label.new()
+	inventory_toggle_hint.name = "ToggleHint"
+	inventory_toggle_hint.add_theme_font_override("font", HUD_FONT)
+	inventory_toggle_hint.add_theme_font_size_override("font_size", 26)
+	inventory_toggle_hint.add_theme_color_override("font_color", Color(0.55, 0.55, 0.55, 1))
+	_update_inventory_toggle_hint()
+	vbox.add_child(inventory_toggle_hint)
+
+
+func _update_inventory_toggle_hint() -> void:
+	if not inventory_toggle_hint:
+		return
+	var using_ctrl: bool = input_manager and input_manager.is_using_controller()
+	if using_ctrl:
+		inventory_toggle_hint.text = "[D←] Hide inventory"
+	else:
+		inventory_toggle_hint.text = "[V] Hide inventory"
 
 
 func _create_compass_panel() -> void:
