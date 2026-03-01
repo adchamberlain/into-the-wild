@@ -30,7 +30,7 @@ albedo_color = Color(0.2, 0.45, 0.15, 1)
 script = ExtResource("1_resource")
 resource_type = "coca_leaf"
 resource_amount = 1
-interaction_text = "Pick Coca Leaf"
+interaction_text = "Pick"
 adjust_to_terrain = false
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
