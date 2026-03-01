@@ -117,6 +117,9 @@ var placement_system: Node
 # Resting state tracking
 var is_player_resting: bool = false
 
+# Gliding state indicator
+var gliding_label: Label = null
+
 # Weather damage flash
 var weather_damage_flash_timer: float = 0.0
 var last_player_health: float = 100.0
@@ -135,7 +138,7 @@ const TOOL_ITEMS: Array = [
 	"snare_trap_kit", "smithing_station_kit", "smoker_kit", "weather_vane_kit",
 	"machete", "lantern", "grappling_hook", "lodestone", "map",
 	"leather_axe_wrap", "leather_hook_wrap", "compass", "bow", "arrows",
-	"diamond_axe", "enchanted_bow", "diamond_arrows"
+	"diamond_axe", "enchanted_bow", "diamond_arrows", "hang_glider"
 ]
 
 # Items classified as food (edible + healing)
@@ -267,6 +270,9 @@ func _ready() -> void:
 
 	# Create sandstorm overlay (hidden by default)
 	_create_sandstorm_overlay()
+
+	# Create gliding state indicator (hidden by default)
+	_create_gliding_indicator()
 
 	# Initialize displays
 	_update_inventory_display()
@@ -409,6 +415,9 @@ func _update_equipped_display() -> void:
 			equipped_label.text += " (%d %s arrows) [R-click aim, %s switch, %s unequip]" % [arrow_count, arrow_type_name, cycle_key, unequip_key]
 		elif equipped_type == "map":
 			equipped_label.text += " [%s open map, %s unequip]" % [use_key, unequip_key]
+		elif equipped_type == "hang_glider":
+			var jump_key: String = _get_button_prompt("jump")
+			equipped_label.text += " [%s deploy, %s retract, %s unequip]" % [use_key, jump_key, unequip_key]
 		else:
 			equipped_label.text += " [%s unequip]" % unequip_key
 
@@ -637,6 +646,12 @@ func _process(delta: float) -> void:
 
 	# Update grapple reticle
 	_update_grapple_reticle()
+
+	# Update gliding indicator
+	if gliding_label and player:
+		var player_gliding: bool = "is_gliding" in player and player.is_gliding
+		if gliding_label.visible != player_gliding:
+			gliding_label.visible = player_gliding
 
 	# Blink remaining bubbles when low on air
 	if bubble_blink_active:
@@ -1288,6 +1303,47 @@ func _create_sandstorm_overlay() -> void:
 	sandstorm_overlay.color = Color(0.82, 0.72, 0.55, 0.0)
 	sandstorm_overlay.visible = false
 	add_child(sandstorm_overlay)
+
+
+## Create the gliding state indicator (centered below crosshair).
+func _create_gliding_indicator() -> void:
+	var panel: PanelContainer = PanelContainer.new()
+	panel.name = "GlidingPanel"
+	panel.anchors_preset = Control.PRESET_CENTER
+	panel.anchor_left = 0.5
+	panel.anchor_right = 0.5
+	panel.anchor_top = 0.5
+	panel.anchor_bottom = 0.5
+	panel.offset_left = -60
+	panel.offset_right = 60
+	panel.offset_top = 30  # Below crosshair
+	panel.offset_bottom = 70
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color(0.05, 0.05, 0.08, 0.75)
+	style.corner_radius_top_left = 8
+	style.corner_radius_top_right = 8
+	style.corner_radius_bottom_left = 8
+	style.corner_radius_bottom_right = 8
+	style.content_margin_left = 12
+	style.content_margin_right = 12
+	style.content_margin_top = 6
+	style.content_margin_bottom = 6
+	panel.add_theme_stylebox_override("panel", style)
+
+	gliding_label = Label.new()
+	gliding_label.name = "GlidingLabel"
+	gliding_label.text = "GLIDING"
+	gliding_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	gliding_label.add_theme_font_override("font", HUD_FONT)
+	gliding_label.add_theme_font_size_override("font_size", 28)
+	gliding_label.add_theme_color_override("font_color", Color(0.6, 1.0, 0.6, 1))
+	panel.add_child(gliding_label)
+
+	panel.visible = false
+	add_child(panel)
+	gliding_label = panel  # Store the panel for show/hide
 
 
 ## Show or hide the desert heat indicator.

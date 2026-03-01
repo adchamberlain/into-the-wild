@@ -48,6 +48,11 @@ var is_climbing: bool = false
 var climbing_structure: Node = null  # The ladder we're climbing
 var is_grappling: bool = false  # Whether player is being pulled by grappling hook
 var is_crouching: bool = false  # Whether player is crouching (toggle)
+var is_gliding: bool = false  # Whether player is gliding with hang glider
+var glide_speed: float = 8.0  # Horizontal speed while gliding (faster than sprint)
+var glide_climb_rate: float = 1.0  # Max vertical climb rate (looking up)
+var glide_descent_rate: float = 2.0  # Max vertical descent rate (looking down/neutral)
+var glide_max_height_above_terrain: float = 25.0  # Max height ceiling above terrain
 
 # Crouch settings
 const CROUCH_SPEED: float = 2.5  # Half walk speed
@@ -277,6 +282,12 @@ func _input(event: InputEvent) -> void:
 
 	# Handle using equipped item (R key or R2 trigger) - disabled while resting or placing
 	if event.is_action_pressed("use_equipped") and not is_resting:
+		# Check for hang glider deployment (must be airborne, not in another state)
+		if equipment and equipment.get_equipped() == "hang_glider" and not is_on_floor() and not is_in_water and not is_grappling and not is_gliding:
+			is_gliding = true
+			velocity = Vector3.ZERO  # Reset velocity on deploy
+			is_falling = false  # Cancel fall tracking (no fall damage from gliding)
+			return
 		# Let BowSystem handle input when bow is equipped
 		var bow: Node = get_node_or_null("BowSystem")
 		if bow and bow.has_method("is_bow_active") and bow.is_bow_active():
@@ -287,8 +298,8 @@ func _input(event: InputEvent) -> void:
 		_try_use_equipped()
 		return
 
-	# Handle crouch toggle (C key or X button) - disabled while resting
-	if event.is_action_pressed("crouch") and not is_resting:
+	# Handle crouch toggle (C key or X button) - disabled while resting or gliding
+	if event.is_action_pressed("crouch") and not is_resting and not is_gliding:
 		_toggle_crouch()
 		return
 
@@ -367,6 +378,11 @@ func _physics_process(delta: float) -> void:
 	# Handle right stick camera look (controller) - disabled when menus are open
 	if not ui_blocking:
 		_handle_controller_look(delta)
+
+	# Handle gliding (hang glider flight) - takes priority over swimming/normal movement
+	if is_gliding:
+		_process_gliding(delta)
+		return
 
 	# Handle swimming vs normal movement
 	var actually_swimming: bool = is_in_water and global_position.y < water_surface_y
@@ -587,6 +603,72 @@ func _process_swimming(delta: float) -> void:
 		# Decelerate smoothly (faster in water - more drag)
 		velocity.x = move_toward(velocity.x, 0, swim_move_speed * 2)
 		velocity.z = move_toward(velocity.z, 0, swim_move_speed * 2)
+
+
+## Process hang glider flight. Camera pitch controls climb/dive, WASD steers horizontally.
+func _process_gliding(delta: float) -> void:
+	if not camera:
+		is_gliding = false
+		return
+
+	# Check for retract (jump or crouch retracts the glider)
+	if Input.is_action_just_pressed("jump") or Input.is_action_just_pressed("crouch"):
+		is_gliding = false
+		return
+
+	# Get camera pitch for climb/dive control
+	var pitch: float = camera.rotation.x  # Negative = looking up, positive = looking down
+
+	# Vertical movement based on camera pitch
+	var vertical_speed: float = 0.0
+	if pitch < -0.1:  # Looking up — climb
+		var climb_factor: float = clampf(-pitch / 0.8, 0.0, 1.0)
+		vertical_speed = glide_climb_rate * climb_factor
+	else:  # Level or looking down — descend
+		var dive_factor: float = clampf(pitch / 0.8, 0.0, 1.0)
+		vertical_speed = -glide_descent_rate * (0.3 + 0.7 * dive_factor)
+
+	# Enforce max height above terrain
+	var terrain_height: float = 0.0
+	var chunk_mgr: Node = _find_chunk_manager()
+	if chunk_mgr and chunk_mgr.has_method("get_height_at"):
+		terrain_height = chunk_mgr.get_height_at(global_position.x, global_position.z)
+	var height_above_terrain: float = global_position.y - terrain_height
+	if height_above_terrain >= glide_max_height_above_terrain and vertical_speed > 0:
+		vertical_speed = 0.0
+
+	velocity.y = vertical_speed
+
+	# Horizontal movement: camera forward direction at glide_speed
+	var cam_basis: Basis = camera.global_transform.basis
+	var forward: Vector3 = -cam_basis.z
+	forward.y = 0.0
+	forward = forward.normalized()
+
+	# Allow steering with WASD / left stick
+	# Note: _get_movement_input() returns y positive = backward, negative = forward
+	var input_dir: Vector2 = _get_movement_input()
+	var move_dir: Vector3 = forward
+	if input_dir.length() > 0.1:
+		var right: Vector3 = cam_basis.x
+		right.y = 0.0
+		right = right.normalized()
+		move_dir = (forward * (-input_dir.y) + right * input_dir.x).normalized()
+		if move_dir.length() < 0.1:
+			move_dir = forward
+
+	velocity.x = move_dir.x * glide_speed
+	velocity.z = move_dir.z * glide_speed
+
+	move_and_slide()
+
+	# Auto-land if touching ground
+	if is_on_floor():
+		is_gliding = false
+
+	# Retract if entering water
+	if is_in_water:
+		is_gliding = false
 
 
 ## Track breath while camera is submerged. Lose 1 bubble every 4 seconds; die at 0.
@@ -990,9 +1072,10 @@ func _on_player_died() -> void:
 			resting_in_structure.is_player_sleeping = false
 			resting_in_structure.sleeping_player = null
 
-	# Reset movement state flags (player may die while resting, climbing, or grappling)
+	# Reset movement state flags (player may die while resting, climbing, gliding, or grappling)
 	is_resting = false
 	is_climbing = false
+	is_gliding = false
 	resting_in_structure = null
 	climbing_structure = null
 
