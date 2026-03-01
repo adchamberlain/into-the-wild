@@ -550,6 +550,8 @@ func _on_dev_mode_toggled(pressed: bool) -> void:
 		player.dev_mode = pressed
 		if pressed:
 			player._dev_populate_inventory()
+		else:
+			player._dev_clear_inventory()
 	print("[ConfigMenu] Dev mode (all items): %s" % ("ON" if pressed else "OFF"))
 
 

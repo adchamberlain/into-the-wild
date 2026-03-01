@@ -279,6 +279,42 @@ func _dev_populate_inventory() -> void:
 	print("[DEV] Populated inventory with all items")
 
 
+func _dev_clear_inventory() -> void:
+	## Removes all dev-populated items from inventory.
+	var all_items: Array[String] = [
+		# Raw resources
+		"wood", "branch", "river_rock", "iron_ore",
+		"crystal", "diamond", "opal", "rare_ore", "metal_ingot",
+		"feathers", "hide", "birch_bark", "raw_meat",
+		# Tools & kits
+		"torch", "primitive_axe", "stone_axe", "metal_axe", "diamond_axe",
+		"machete", "fishing_rod", "grappling_hook", "bow", "enchanted_bow",
+		"lantern", "compass", "lodestone", "map", "hang_glider",
+		"rope", "leather_axe_wrap", "leather_hook_wrap",
+		"arrows", "diamond_arrows",
+		"campfire_kit", "shelter_kit", "storage_box", "crafting_bench_kit",
+		"drying_rack_kit", "garden_plot_kit", "canvas_tent_kit", "cabin_kit",
+		"snare_trap_kit", "smithing_station_kit", "smoker_kit", "weather_vane_kit",
+		# Raw food
+		"berry", "mushroom", "herb", "fish", "osha_root", "cactus_fruit", "coca_leaf",
+		# Processed food
+		"berry_pouch", "waterskin",
+		"cooked_berries", "cooked_mushroom", "cooked_fish", "cooked_meat",
+		"dried_fish", "dried_berries", "dried_mushroom", "dried_herb",
+		"smoked_meat", "smoked_fish",
+		"hearty_stew", "preserved_meal", "herb_tea", "fish_dinner", "mushroom_soup",
+		# Healing & rest
+		"healing_salve", "hide_bedroll",
+		# Special
+		"explorers_journal",
+	]
+	for item: String in all_items:
+		var count: int = inventory.get_item_count(item)
+		if count > 0:
+			inventory.remove_item(item, count)
+	print("[DEV] Cleared all dev items from inventory")
+
+
 func _init_safe_position() -> void:
 	last_safe_position = global_position
 	_has_safe_position = true
