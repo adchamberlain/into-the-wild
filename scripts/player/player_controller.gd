@@ -991,7 +991,8 @@ func _update_fall_protection(delta: float) -> void:
 			_has_safe_position = true
 
 	# Emergency recovery if player falls extremely low (shouldn't happen with proper collision)
-	if global_position.y < fall_warning_y:
+	# Skip when swimming — deep water bodies (sinkhole) legitimately go far below terrain
+	if global_position.y < fall_warning_y and not is_in_water:
 		push_warning("[Player] Emergency fall recovery triggered (y=%.1f)." % global_position.y)
 		_recover_from_fall()
 
