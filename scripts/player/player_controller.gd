@@ -50,9 +50,12 @@ var is_grappling: bool = false  # Whether player is being pulled by grappling ho
 var is_crouching: bool = false  # Whether player is crouching (toggle)
 var is_gliding: bool = false  # Whether player is gliding with hang glider
 var glide_speed: float = 8.0  # Horizontal speed while gliding (faster than sprint)
-var glide_climb_rate: float = 3.5  # Max vertical climb rate (looking up)
-var glide_descent_rate: float = 2.0  # Max vertical descent rate (looking down/neutral)
-var glide_max_height_above_terrain: float = 25.0  # Max height ceiling above terrain
+var glide_descent_rate: float = 1.0  # Slow constant descent rate
+var glide_max_height_above_terrain: float = 50.0  # Max height ceiling above terrain
+var glide_boost_speed: float = 5.0  # Upward speed during boost
+var glide_boost_duration: float = 2.0  # How long each boost lasts (seconds)
+var _glide_boost_timer: float = 0.0  # Time remaining on current boost
+var _glide_boosting: bool = false  # Currently boosting
 
 # Crouch settings
 const CROUCH_SPEED: float = 2.5  # Half walk speed
@@ -288,8 +291,14 @@ func _input(event: InputEvent) -> void:
 		# Check for hang glider deployment (must be airborne, not in another state)
 		if equipment and equipment.get_equipped() == "hang_glider" and not is_on_floor() and not is_in_water and not is_grappling and not is_gliding:
 			is_gliding = true
+			_glide_boosting = false
+			_glide_boost_timer = 0.0
 			velocity = Vector3.ZERO  # Reset velocity on deploy
 			is_falling = false  # Cancel fall tracking (no fall damage from gliding)
+			# Reset any accumulated roll on deploy
+			rotation.x = 0.0
+			rotation.z = 0.0
+			camera.rotation.z = 0.0
 			return
 		# Let BowSystem handle input when bow is equipped
 		var bow: Node = get_node_or_null("BowSystem")
@@ -609,28 +618,40 @@ func _process_swimming(delta: float) -> void:
 		velocity.z = move_toward(velocity.z, 0, swim_move_speed * 2)
 
 
-## Process hang glider flight. Camera pitch controls climb/dive, WASD steers horizontally.
+## Process hang glider flight. Slow constant descent with boost (jump) to gain altitude.
 func _process_gliding(delta: float) -> void:
 	if not camera:
-		is_gliding = false
+		_stop_gliding()
 		return
 
-	# Check for retract (jump or crouch retracts the glider)
-	if Input.is_action_just_pressed("jump") or Input.is_action_just_pressed("crouch"):
-		is_gliding = false
+	# Prevent roll accumulation: force player body and camera to have zero roll every frame
+	rotation.x = 0.0
+	rotation.z = 0.0
+	camera.rotation.z = 0.0
+
+	# Check for retract (crouch retracts the glider)
+	if Input.is_action_just_pressed("crouch"):
+		_stop_gliding()
 		return
 
-	# Get camera pitch for climb/dive control
-	var pitch: float = camera.rotation.x  # Negative = looking up, positive = looking down
+	# Check for boost (jump = Circle on controller, Space on keyboard)
+	# Can be pressed repeatedly to keep climbing
+	if Input.is_action_just_pressed("jump"):
+		_glide_boosting = true
+		_glide_boost_timer = glide_boost_duration
 
-	# Vertical movement based on camera pitch
+	# Tick active boost
+	if _glide_boosting:
+		_glide_boost_timer -= delta
+		if _glide_boost_timer <= 0.0:
+			_glide_boosting = false
+
+	# Vertical movement: boost rises, otherwise slow constant descent
 	var vertical_speed: float = 0.0
-	if pitch < -0.1:  # Looking up — climb
-		var climb_factor: float = clampf(-pitch / 0.8, 0.0, 1.0)
-		vertical_speed = glide_climb_rate * climb_factor
-	else:  # Level or looking down — descend
-		var dive_factor: float = clampf(pitch / 0.8, 0.0, 1.0)
-		vertical_speed = -glide_descent_rate * (0.3 + 0.7 * dive_factor)
+	if _glide_boosting:
+		vertical_speed = glide_boost_speed
+	else:
+		vertical_speed = -glide_descent_rate
 
 	# Enforce max height above terrain
 	var terrain_height: float = 0.0
@@ -643,20 +664,15 @@ func _process_gliding(delta: float) -> void:
 
 	velocity.y = vertical_speed
 
-	# Horizontal movement: camera forward direction at glide_speed
-	var cam_basis: Basis = camera.global_transform.basis
-	var forward: Vector3 = -cam_basis.z
-	forward.y = 0.0
-	forward = forward.normalized()
+	# Horizontal movement: use player yaw to get a clean forward direction
+	var yaw: float = rotation.y
+	var forward: Vector3 = Vector3(-sin(yaw), 0.0, -cos(yaw))
 
 	# Allow steering with WASD / left stick
-	# Note: _get_movement_input() returns y positive = backward, negative = forward
 	var input_dir: Vector2 = _get_movement_input()
 	var move_dir: Vector3 = forward
 	if input_dir.length() > 0.1:
-		var right: Vector3 = cam_basis.x
-		right.y = 0.0
-		right = right.normalized()
+		var right: Vector3 = Vector3(cos(yaw), 0.0, -sin(yaw))
 		move_dir = (forward * (-input_dir.y) + right * input_dir.x).normalized()
 		if move_dir.length() < 0.1:
 			move_dir = forward
@@ -666,13 +682,24 @@ func _process_gliding(delta: float) -> void:
 
 	move_and_slide()
 
+	# Force roll zero again after move_and_slide (collisions can introduce rotation)
+	rotation.x = 0.0
+	rotation.z = 0.0
+	camera.rotation.z = 0.0
+
 	# Auto-land if touching ground
 	if is_on_floor():
-		is_gliding = false
+		_stop_gliding()
 
 	# Retract if entering water
 	if is_in_water:
-		is_gliding = false
+		_stop_gliding()
+
+
+func _stop_gliding() -> void:
+	is_gliding = false
+	_glide_boosting = false
+	_glide_boost_timer = 0.0
 
 
 ## Track breath while camera is submerged. Lose 1 bubble every 4 seconds; die at 0.
@@ -1076,7 +1103,7 @@ func _on_player_died() -> void:
 	# Reset movement state flags (player may die while resting, climbing, gliding, or grappling)
 	is_resting = false
 	is_climbing = false
-	is_gliding = false
+	_stop_gliding()
 	resting_in_structure = null
 	climbing_structure = null
 

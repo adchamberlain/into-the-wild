@@ -305,6 +305,10 @@ func _input(event: InputEvent) -> void:
 	if _is_ui_blocking_input():
 		return
 
+	# Block equipment switching while gliding (must land first)
+	if player and "is_gliding" in player and player.is_gliding:
+		return
+
 	# Handle controller slot cycling (L1/R1)
 	if event.is_action_pressed("next_slot"):
 		_cycle_slot(1)

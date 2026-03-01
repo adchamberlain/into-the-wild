@@ -417,7 +417,8 @@ func _update_equipped_display() -> void:
 			equipped_label.text += " [%s open map, %s unequip]" % [use_key, unequip_key]
 		elif equipped_type == "hang_glider":
 			var jump_key: String = _get_button_prompt("jump")
-			equipped_label.text += " [%s deploy, %s retract, %s unequip]" % [use_key, jump_key, unequip_key]
+			var crouch_key: String = _get_button_prompt("crouch")
+			equipped_label.text += " [%s deploy, %s boost, %s retract, %s unequip]" % [use_key, jump_key, crouch_key, unequip_key]
 		else:
 			equipped_label.text += " [%s unequip]" % unequip_key
 
@@ -647,11 +648,21 @@ func _process(delta: float) -> void:
 	# Update grapple reticle
 	_update_grapple_reticle()
 
-	# Update gliding indicator
+	# Update gliding indicator with boost status
 	if gliding_panel and player:
 		var player_gliding: bool = "is_gliding" in player and player.is_gliding
 		if gliding_panel.visible != player_gliding:
 			gliding_panel.visible = player_gliding
+		if player_gliding:
+			var glide_lbl: Label = gliding_panel.get_node_or_null("GlidingLabel")
+			if glide_lbl:
+				var boosting: bool = "_glide_boosting" in player and player._glide_boosting
+				if boosting:
+					glide_lbl.text = "BOOSTING"
+					glide_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3, 1))
+				else:
+					glide_lbl.text = "GLIDING"
+					glide_lbl.add_theme_color_override("font_color", Color(0.6, 1.0, 0.6, 1))
 
 	# Blink remaining bubbles when low on air
 	if bubble_blink_active:
@@ -1272,12 +1283,12 @@ func _create_heat_indicator() -> void:
 	style.content_margin_bottom = 8.0
 	heat_panel.add_theme_stylebox_override("panel", style)
 
-	# Position below the StatsPanel (avoids overlapping air bubbles)
+	# Position below compass panel (which is at top 190-240)
 	heat_panel.anchors_preset = Control.PRESET_TOP_LEFT
 	heat_panel.offset_left = 20.0
-	heat_panel.offset_top = 185.0
+	heat_panel.offset_top = 245.0
 	heat_panel.offset_right = 195.0
-	heat_panel.offset_bottom = 230.0
+	heat_panel.offset_bottom = 290.0
 
 	# Label for heat text
 	heat_label = Label.new()
