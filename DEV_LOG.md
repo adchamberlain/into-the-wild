@@ -5851,6 +5851,36 @@ Arrows fired from the enchanted bow now have a significantly larger hit detectio
 
 ---
 
+## Session 48e - Sinkhole Save/Load Integration (2026-02-28)
+
+### Save/Load for Sinkhole Easter Egg
+Added full save/load support for all desert sinkhole Easter egg state:
+
+**Player data saved/loaded:**
+- `has_read_journal` — whether player has read the Explorer's Journal
+- `map_markers_unlocked` — compass marker reward from journal
+- `coca_leaf_timer` — remaining coca leaf breath buff time (restores BREATH_BUBBLE_INTERVAL on load)
+- `max_health_bonus` — +25 max health from journal reward
+- `hunger_depletion_rate` — reduced hunger rate (0.04 vs 0.05 base) from journal reward
+
+**World data saved/loaded:**
+- `sinkhole_book_collected` — tracked on chunk_manager, gates journal respawn in sinkhole
+
+Stats bonuses are restored *before* health clamping so max health is correct when loading. All new fields use `.get()` with defaults for backward compatibility with old saves.
+
+### Bug Fix: Missing Hunger Rate Reward
+The `_apply_journal_rewards()` function granted +25 max health but was missing the -20% hunger depletion rate reduction. Added `stats.hunger_depletion_rate = 0.04` to complete the reward.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/core/save_load.gd` | Modified | Save/load max_health_bonus, hunger_depletion_rate, has_read_journal, map_markers_unlocked, coca_leaf_timer, sinkhole_book_collected |
+| `scripts/world/chunk_manager.gd` | Modified | Added sinkhole_book_collected var, gate journal spawn on flag |
+| `scripts/player/player_controller.gd` | Modified | Added hunger_depletion_rate = 0.04 to _apply_journal_rewards() |
+
+---
+
 ## Next Session
 
 ### Planned Tasks

@@ -377,6 +377,10 @@ func _collect_save_data() -> Dictionary:
 		data["world_seed"] = chunk_manager.get_world_seed()
 		print("[SaveLoad] Saved world seed: %d" % data["world_seed"])
 
+	# Sinkhole state
+	if chunk_manager and "sinkhole_book_collected" in chunk_manager:
+		data["sinkhole_book_collected"] = chunk_manager.sinkhole_book_collected
+
 	# Cave state (if player is in a cave)
 	var cave_transition: Node = get_node_or_null("/root/CaveTransition")
 	if cave_transition and cave_transition.has_method("get_save_data"):
@@ -404,6 +408,9 @@ func _collect_player_data() -> Dictionary:
 	if stats:
 		data["health"] = stats.health
 		data["hunger"] = stats.hunger
+		if "max_health_bonus" in stats:
+			data["max_health_bonus"] = stats.max_health_bonus
+		data["hunger_depletion_rate"] = stats.hunger_depletion_rate
 
 	# Inventory
 	var inventory: Node = player.get_node_or_null("Inventory")
@@ -421,6 +428,14 @@ func _collect_player_data() -> Dictionary:
 		# Save bark harvest tracker
 		if equipment.has_method("get_bark_harvest_data"):
 			data["bark_harvests"] = equipment.get_bark_harvest_data()
+
+	# Journal and sinkhole state
+	if "has_read_journal" in player:
+		data["has_read_journal"] = player.has_read_journal
+	if "map_markers_unlocked" in player:
+		data["map_markers_unlocked"] = player.map_markers_unlocked
+	if "coca_leaf_timer" in player:
+		data["coca_leaf_timer"] = player.coca_leaf_timer
 
 	return data
 
@@ -555,6 +570,10 @@ func _apply_save_data(data: Dictionary) -> void:
 		if cave_transition and cave_transition.has_method("load_save_data"):
 			cave_transition.load_save_data(data["cave"])
 
+	# Sinkhole state (before player, so terrain spawns correctly)
+	if chunk_manager and "sinkhole_book_collected" in chunk_manager:
+		chunk_manager.sinkhole_book_collected = data.get("sinkhole_book_collected", false)
+
 	# Player last (position, stats, inventory)
 	if data.has("player") and player:
 		_apply_player_data(data["player"])
@@ -642,9 +661,15 @@ func _apply_player_data(data: Dictionary) -> void:
 	# Stats
 	var stats: Node = player.get_node_or_null("PlayerStats")
 	if stats:
+		# Restore journal stat bonuses first (affects max health calculation)
+		if data.has("max_health_bonus"):
+			stats.max_health_bonus = int(data["max_health_bonus"])
+		if data.has("hunger_depletion_rate"):
+			stats.hunger_depletion_rate = float(data["hunger_depletion_rate"])
+		# Now clamp health to correct max (with bonus)
 		if data.has("health"):
-			stats.health = clampf(float(data["health"]), 0.0, stats.max_health)
-			stats.health_changed.emit(stats.health, stats.max_health)
+			stats.health = clampf(float(data["health"]), 0.0, stats.get_max_health())
+			stats.health_changed.emit(stats.health, stats.get_max_health())
 		if data.has("hunger"):
 			stats.hunger = clampf(float(data["hunger"]), 0.0, stats.max_hunger)
 			stats.hunger_changed.emit(stats.hunger, stats.max_hunger)
@@ -671,6 +696,17 @@ func _apply_player_data(data: Dictionary) -> void:
 			var item: String = data["equipped_item"]
 			if item != "" and equipment.has_method("equip"):
 				equipment.equip(item)
+
+	# Journal and sinkhole state
+	if "has_read_journal" in player:
+		player.has_read_journal = data.get("has_read_journal", false)
+	if "map_markers_unlocked" in player:
+		player.map_markers_unlocked = data.get("map_markers_unlocked", false)
+	if "coca_leaf_timer" in player:
+		player.coca_leaf_timer = float(data.get("coca_leaf_timer", 0.0))
+		# Restore breath interval if coca leaf buff is active
+		if player.coca_leaf_timer > 0.0 and "BREATH_BUBBLE_INTERVAL" in player:
+			player.BREATH_BUBBLE_INTERVAL = player._base_breath_interval * 2.0
 
 
 func _apply_time_data(data: Dictionary) -> void:

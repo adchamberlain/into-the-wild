@@ -68,6 +68,7 @@ var spawned_oasis_indices: Array[int] = []  # Track which oases have been spawne
 # Desert sinkhole (hidden easter egg at 180 degrees in desert ring)
 var desert_sinkhole: Dictionary = {}
 var sinkhole_spawned: bool = false
+var sinkhole_book_collected: bool = false
 var sinkhole_book_script: GDScript = null  # Loaded later when script exists
 
 # Region-specific pond sizes {radius_min, radius_max, depth}
@@ -1077,8 +1078,8 @@ func _spawn_sinkhole_contents() -> void:
 		coca_node.position = Vector3(leaf_x, leaf_y, leaf_z)
 		add_child(coca_node)
 
-	# Spawn the Explorer's Journal on pedestal at sinkhole bottom
-	if sinkhole_book_script:
+	# Spawn the Explorer's Journal on pedestal at sinkhole bottom (only if not already collected)
+	if sinkhole_book_script and not sinkhole_book_collected:
 		var book_node: StaticBody3D = StaticBody3D.new()
 		book_node.set_script(sinkhole_book_script)
 		book_node.name = "ExplorersJournal"
