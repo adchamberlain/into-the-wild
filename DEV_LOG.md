@@ -6028,6 +6028,26 @@ Added per-item stack limits to the player inventory, creating a resource managem
 
 ---
 
+## Session 49 - Inventory HUD Refinements (2026-03-01)
+
+Iterative HUD improvements for the inventory panel after stack limits were added.
+
+### Changes
+1. **Two-column layout**: Replaced ScrollContainer with HBoxContainer-based two columns when items exceed 14, with category continuation headers when splitting mid-category
+2. **Toggle visibility**: V key (keyboard) and D-pad Left (controller) toggle inventory panel on/off
+3. **Font size tuning**: Items 36px, category headers 29px, title 40px — balanced between readable and compact
+4. **Removed eat hint**: Removed the "[F] Eat" label from the bottom of the inventory panel
+5. **Controller hints**: Updated hint bar to show "D←-Inventory" for controller users
+
+### Files Changed
+
+| File | Changes |
+|------|---------|
+| `scripts/ui/hud.gd` | Two-column layout, V/D-pad toggle, font sizes, removed eat hint, controller hint update |
+| `scenes/ui/hud.tscn` | Updated InventoryPanel structure (VBoxContainer > HBoxContainer columns), font sizes |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
