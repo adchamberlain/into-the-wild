@@ -608,7 +608,7 @@ func _update_inventory_display() -> void:
 			var cont_header: Label = Label.new()
 			cont_header.text = "-- %s --" % split_category
 			cont_header.add_theme_font_override("font", HUD_FONT)
-			cont_header.add_theme_font_size_override("font_size", 32)
+			cont_header.add_theme_font_size_override("font_size", 26)
 			cont_header.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
 			target_col.add_child(cont_header)
 
@@ -616,7 +616,7 @@ func _update_inventory_display() -> void:
 			var header: Label = Label.new()
 			header.text = "-- %s --" % entry["category"]
 			header.add_theme_font_override("font", HUD_FONT)
-			header.add_theme_font_size_override("font_size", 32)
+			header.add_theme_font_size_override("font_size", 26)
 			header.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
 			target_col.add_child(header)
 			_section_labels[entry["category"]] = header
@@ -632,7 +632,7 @@ func _update_inventory_display() -> void:
 			else:
 				label.text = "%s: %d" % [display_name, count]
 			label.add_theme_font_override("font", HUD_FONT)
-			label.add_theme_font_size_override("font_size", 40)
+			label.add_theme_font_size_override("font_size", 32)
 			# Color items near/at limit in yellow/red
 			if inventory.enforce_limits and limit > 0 and count >= limit:
 				label.add_theme_color_override("font_color", Color(1.0, 0.5, 0.5, 1))

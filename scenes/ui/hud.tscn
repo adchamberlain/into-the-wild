@@ -298,7 +298,7 @@ layout_mode = 2
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 0.85, 1)
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 44
+theme_override_font_sizes/font_size = 36
 text = "Inventory"
 
 [node name="Separator" type="HSeparator" parent="InventoryPanel/VBoxContainer"]
@@ -312,7 +312,7 @@ theme_override_constants/separation = 16
 layout_mode = 2
 theme_override_colors/font_color = Color(0.65, 0.65, 0.65, 1)
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 40
+theme_override_font_sizes/font_size = 32
 text = "(empty)"
 
 [node name="EquippedPanel" type="PanelContainer" parent="."]
