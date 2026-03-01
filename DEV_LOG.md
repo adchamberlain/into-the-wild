@@ -6102,17 +6102,40 @@ Added a runtime-togglable "Dev Mode (all items)" setting to the config menu, rep
 
 ---
 
+## Session - Sinkhole Pocket Desert Relocation (2026-03-01)
+
+Relocated the sinkhole easter egg from the main desert ring (200 units at 180 degrees) to a hidden pocket desert biome 350 units due west of spawn. The pocket desert is a small, roughly circular desert area (~50-unit radius with organic noise boundaries) that sits outside the main desert ring, making the sinkhole much harder for players to stumble upon.
+
+### Features
+- **Pocket desert biome**: New isolated desert area centered at (-350, 0) with organic noise-based boundaries (reuses `_desert_boundary_offset()` for natural wobble). Returns `RegionType.DESERT` so cacti, palms, sand colors, and desert terrain all apply automatically.
+- **Gradual color blending**: 15-unit transition zone where terrain colors smoothly interpolate between surrounding biome and desert sand. Applied to both top-face and side-face rendering paths.
+- **Rock spire landmark**: Tall 4-piece BoxMesh sandstone formation at the eastern edge of the pocket desert (~(-305, 0)). Visible from ~80-100 units as a subtle hint to explorers heading west.
+- **Vegetation suppression**: Extended `is_near_sinkhole()` to also clear vegetation around the rock spire (6-unit radius).
+- **Sinkhole unchanged**: Same 45-unit deep pit, water, glow, coca leaf plant, Explorer's Journal, and all rewards. Only the position changed.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/world/chunk_manager.gd` | Modified | Pocket desert vars, moved sinkhole to pocket center, `get_region_at()` pocket check, `get_pocket_desert_blend()` helper, `_spawn_rock_spire()`, pre-computed `rock_spire_position`, extended vegetation suppression |
+| `scripts/world/terrain_chunk.gd` | Modified | Pocket desert color blending in both top-face and side-face render paths, `is_desert` flag updates |
+| `docs/plans/2026-03-01-sinkhole-pocket-desert-design.md` | New | Design document |
+| `docs/plans/2026-03-01-sinkhole-pocket-desert.md` | New | Implementation plan |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test inventory limits — verify HUD shows limits, crafting refuses at cap, gathering stops at cap
-2. Play-test storage box workflow — transfer to/from storage, verify unlimited storage capacity
-3. Play-test save/load with items near limits
-4. Continue play-testing desert biome balance
+1. Play-test pocket desert — walk west to verify terrain transition, rock spire visibility, sinkhole mechanics
+2. Play-test inventory limits — verify HUD shows limits, crafting refuses at cap, gathering stops at cap
+3. Play-test storage box workflow — transfer to/from storage, verify unlimited storage capacity
+4. Play-test save/load with items near limits
 5. Bug fixing from play-testing
 
 ### Known Issues
 - Tortoise materials are per-instance (minor, could be shared static)
+- Rock spire uses per-instance materials (minor, only one ever spawns)
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.
