@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://cocaleaf001"]
+[gd_scene load_steps=9 format=3 uid="uid://cocaleaf001"]
 
 [ext_resource type="Script" path="res://scripts/resources/resource_node.gd" id="1_resource"]
 
