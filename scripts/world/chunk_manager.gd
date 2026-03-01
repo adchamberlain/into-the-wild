@@ -65,7 +65,7 @@ var desert_inner_radius: float = 170.0
 var desert_outer_radius: float = 230.0
 var spawned_oasis_indices: Array[int] = []  # Track which oases have been spawned
 
-# Desert sinkhole (hidden easter egg at 180 degrees in desert ring)
+# Desert sinkhole (hidden easter egg in pocket desert west of spawn)
 var desert_sinkhole: Dictionary = {}
 var sinkhole_spawned: bool = false
 var sinkhole_book_collected: bool = false
@@ -76,6 +76,7 @@ var pocket_desert_center: Vector2 = Vector2(-350.0, 0.0)
 var pocket_desert_radius: float = 50.0
 var pocket_desert_blend: float = 15.0  # Transition zone width
 var rock_spire_spawned: bool = false
+var rock_spire_position: Vector2 = Vector2.ZERO  # Computed in _ready
 
 # Region-specific pond sizes {radius_min, radius_max, depth}
 var region_pond_params: Dictionary = {
@@ -984,6 +985,12 @@ func _generate_desert_sinkhole() -> void:
 	# Update legacy pond_locations
 	_update_legacy_pond_locations()
 
+	# Pre-compute rock spire position (used by multiple systems)
+	rock_spire_position = Vector2(
+		roundf((pocket_desert_center.x + pocket_desert_radius - 5.0) / cell_size) * cell_size,
+		roundf(pocket_desert_center.y / cell_size) * cell_size
+	)
+
 	print("[ChunkManager] Generated desert sinkhole at (%.0f, %.0f) in pocket desert" % [snapped_x, snapped_z])
 
 
@@ -995,9 +1002,7 @@ func is_near_sinkhole(world_x: float, world_z: float, buffer: float = 12.0) -> b
 	if dist < desert_sinkhole["radius"] + buffer:
 		return true
 	# Also suppress vegetation near rock spire
-	var spire_x: float = roundf((pocket_desert_center.x + pocket_desert_radius - 5.0) / cell_size) * cell_size
-	var spire_z: float = roundf(pocket_desert_center.y / cell_size) * cell_size
-	var spire_dist: float = Vector2(world_x - spire_x, world_z - spire_z).length()
+	var spire_dist: float = Vector2(world_x - rock_spire_position.x, world_z - rock_spire_position.y).length()
 	return spire_dist < 6.0
 
 
@@ -1105,12 +1110,9 @@ func _spawn_rock_spire() -> void:
 	if rock_spire_spawned:
 		return
 
-	# Place at eastern edge of pocket desert (facing main play area)
-	var spire_x: float = pocket_desert_center.x + pocket_desert_radius - 5.0
-	var spire_z: float = pocket_desert_center.y
-	# Snap to grid
-	spire_x = roundf(spire_x / cell_size) * cell_size
-	spire_z = roundf(spire_z / cell_size) * cell_size
+	# Use pre-computed position at eastern edge of pocket desert
+	var spire_x: float = rock_spire_position.x
+	var spire_z: float = rock_spire_position.y
 	var spire_y: float = get_height_at(spire_x, spire_z)
 
 	var spire_root: Node3D = Node3D.new()
@@ -1938,10 +1940,8 @@ func _load_chunk(chunk_coord: Vector2i) -> void:
 
 	# Spawn rock spire landmark when its chunk loads
 	if not rock_spire_spawned:
-		var spire_x: float = roundf((pocket_desert_center.x + pocket_desert_radius - 5.0) / cell_size) * cell_size
-		var spire_z: float = roundf(pocket_desert_center.y / cell_size) * cell_size
-		if spire_x >= chunk_min_x and spire_x < chunk_max_x and \
-		   spire_z >= chunk_min_z and spire_z < chunk_max_z:
+		if rock_spire_position.x >= chunk_min_x and rock_spire_position.x < chunk_max_x and \
+		   rock_spire_position.y >= chunk_min_z and rock_spire_position.y < chunk_max_z:
 			_spawn_rock_spire()
 
 	# Spawn wilderness sign near spawn
