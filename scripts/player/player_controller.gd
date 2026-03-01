@@ -223,6 +223,9 @@ func _ready() -> void:
 			inventory.add_item("bow", 1)
 			inventory.add_item("arrows", 10)
 			inventory.add_item("map", 1)
+		# TEMP: Spawn with journal and glider for testing
+		inventory.add_item("explorers_journal", 1)
+		inventory.add_item("hang_glider", 1)
 
 
 
@@ -320,6 +323,7 @@ func _handle_mouse_look(event: InputEventMouseMotion) -> void:
 		deg_to_rad(camera_pitch_min),
 		deg_to_rad(camera_pitch_max)
 	)
+	camera.rotation.z = 0.0  # Prevent roll drift from local rotation
 
 
 func _physics_process(delta: float) -> void:
@@ -443,6 +447,7 @@ func _handle_controller_look(delta: float) -> void:
 			deg_to_rad(camera_pitch_min),
 			deg_to_rad(camera_pitch_max)
 		)
+		camera.rotation.z = 0.0  # Prevent roll drift from local rotation
 
 
 func _process_normal_movement(delta: float) -> void:

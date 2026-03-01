@@ -2152,8 +2152,8 @@ func _remove_bow_model() -> void:
 
 # Hang glider visual
 var hang_glider_model: Node3D = null
-const GLIDER_REST_POSITION: Vector3 = Vector3(0.0, 0.15, -0.7)
-const GLIDER_REST_ROTATION: Vector3 = Vector3(5, 0, 0)
+const GLIDER_REST_POSITION: Vector3 = Vector3(0.0, 0.05, -0.3)
+const GLIDER_REST_ROTATION: Vector3 = Vector3(8, 0, 0)
 
 
 func _create_hang_glider_model() -> void:
@@ -2165,110 +2165,188 @@ func _create_hang_glider_model() -> void:
 
 	# --- Materials ---
 	var wood_mat := StandardMaterial3D.new()
-	wood_mat.albedo_color = Color(0.35, 0.28, 0.18)  # Dark wood for grip bar
+	wood_mat.albedo_color = Color(0.40, 0.30, 0.18)  # Wood for frame tubes
 
-	var strut_mat := StandardMaterial3D.new()
-	strut_mat.albedo_color = Color(0.45, 0.35, 0.22)  # Branch-colored struts
+	var wood_dark_mat := StandardMaterial3D.new()
+	wood_dark_mat.albedo_color = Color(0.30, 0.22, 0.12)  # Darker wood for keel
+
+	var wrap_mat := StandardMaterial3D.new()
+	wrap_mat.albedo_color = Color(0.55, 0.42, 0.28)  # Leather grip wrap
 
 	var fabric_mat := StandardMaterial3D.new()
-	fabric_mat.albedo_color = Color(0.75, 0.68, 0.55)  # Canvas tan
+	fabric_mat.albedo_color = Color(0.82, 0.75, 0.58)  # Canvas sail
+	fabric_mat.cull_mode = BaseMaterial3D.CULL_DISABLED  # Visible from below
 
 	var fabric_dark_mat := StandardMaterial3D.new()
-	fabric_dark_mat.albedo_color = Color(0.68, 0.60, 0.48)  # Slightly darker canvas for variation
+	fabric_dark_mat.albedo_color = Color(0.72, 0.65, 0.50)  # Darker canvas variation
+	fabric_dark_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 
-	# --- Central grip bar (horizontal, held in front) ---
-	var grip := MeshInstance3D.new()
-	grip.name = "GripBar"
-	var grip_mesh := BoxMesh.new()
-	grip_mesh.size = Vector3(0.4, 0.04, 0.04)
-	grip.mesh = grip_mesh
-	grip.material_override = wood_mat
-	grip.position = Vector3(0, 0, 0)
-	hang_glider_model.add_child(grip)
+	var rope_mat := StandardMaterial3D.new()
+	rope_mat.albedo_color = Color(0.50, 0.42, 0.30)  # Rope/cable color
 
-	# Grip wrapping detail (lighter wood accent)
-	var grip_wrap := MeshInstance3D.new()
-	grip_wrap.name = "GripWrap"
-	var wrap_mesh := BoxMesh.new()
-	wrap_mesh.size = Vector3(0.12, 0.045, 0.045)
-	grip_wrap.mesh = wrap_mesh
-	var wrap_mat := StandardMaterial3D.new()
-	wrap_mat.albedo_color = Color(0.55, 0.45, 0.3)  # Lighter leather wrap
-	grip_wrap.material_override = wrap_mat
-	grip_wrap.position = Vector3(0, 0, 0)
-	hang_glider_model.add_child(grip_wrap)
+	# ============================================
+	# A-FRAME CONTROL BAR (at hand level, below wing)
+	# ============================================
 
-	# --- Left wing strut (extends forward-left at ~30 degrees) ---
-	var strut_left := MeshInstance3D.new()
-	strut_left.name = "StrutLeft"
-	var strut_mesh := BoxMesh.new()
-	strut_mesh.size = Vector3(0.03, 0.03, 0.4)
-	strut_left.mesh = strut_mesh
-	strut_left.material_override = strut_mat
-	strut_left.position = Vector3(-0.17, 0.01, -0.17)
-	strut_left.rotation_degrees = Vector3(0, 30, 0)
-	hang_glider_model.add_child(strut_left)
+	# Horizontal control bar the pilot grips
+	var control_bar := MeshInstance3D.new()
+	control_bar.name = "ControlBar"
+	var cb_mesh := BoxMesh.new()
+	cb_mesh.size = Vector3(0.5, 0.025, 0.025)
+	control_bar.mesh = cb_mesh
+	control_bar.material_override = wood_mat
+	control_bar.position = Vector3(0, 0, 0)
+	hang_glider_model.add_child(control_bar)
 
-	# --- Right wing strut (extends forward-right at ~-30 degrees) ---
-	var strut_right := MeshInstance3D.new()
-	strut_right.name = "StrutRight"
-	strut_right.mesh = strut_mesh
-	strut_right.material_override = strut_mat
-	strut_right.position = Vector3(0.17, 0.01, -0.17)
-	strut_right.rotation_degrees = Vector3(0, -30, 0)
-	hang_glider_model.add_child(strut_right)
+	# Grip wraps (two spots where hands hold)
+	for hand_x: float in [-0.12, 0.12]:
+		var grip := MeshInstance3D.new()
+		grip.name = "Grip"
+		var g_mesh := BoxMesh.new()
+		g_mesh.size = Vector3(0.07, 0.03, 0.03)
+		grip.mesh = g_mesh
+		grip.material_override = wrap_mat
+		grip.position = Vector3(hand_x, 0, 0)
+		hang_glider_model.add_child(grip)
 
-	# --- Cross-strut connecting outer ends of wing struts ---
-	var cross_strut := MeshInstance3D.new()
-	cross_strut.name = "CrossStrut"
-	var cross_mesh := BoxMesh.new()
-	cross_mesh.size = Vector3(0.5, 0.025, 0.025)
-	cross_strut.mesh = cross_mesh
-	cross_strut.material_override = strut_mat
-	cross_strut.position = Vector3(0, 0.01, -0.35)
-	hang_glider_model.add_child(cross_strut)
+	# Left A-frame upright (control bar to wing)
+	var upright_left := MeshInstance3D.new()
+	upright_left.name = "UprightLeft"
+	var upright_mesh := BoxMesh.new()
+	upright_mesh.size = Vector3(0.02, 0.35, 0.02)
+	upright_left.mesh = upright_mesh
+	upright_left.material_override = wood_mat
+	upright_left.position = Vector3(-0.22, 0.17, -0.08)
+	upright_left.rotation_degrees = Vector3(5, 0, 12)
+	hang_glider_model.add_child(upright_left)
 
-	# --- Left fabric panel (fills triangle between grip, left strut, cross-strut) ---
-	var fabric_left := MeshInstance3D.new()
-	fabric_left.name = "FabricLeft"
-	var fabric_mesh := BoxMesh.new()
-	fabric_mesh.size = Vector3(0.28, 0.005, 0.25)
-	fabric_left.mesh = fabric_mesh
-	fabric_left.material_override = fabric_mat
-	fabric_left.position = Vector3(-0.1, 0.005, -0.18)
-	fabric_left.rotation_degrees = Vector3(0, 8, 0)
-	hang_glider_model.add_child(fabric_left)
+	# Right A-frame upright
+	var upright_right := MeshInstance3D.new()
+	upright_right.name = "UprightRight"
+	upright_right.mesh = upright_mesh
+	upright_right.material_override = wood_mat
+	upright_right.position = Vector3(0.22, 0.17, -0.08)
+	upright_right.rotation_degrees = Vector3(5, 0, -12)
+	hang_glider_model.add_child(upright_right)
 
-	# --- Right fabric panel ---
-	var fabric_right := MeshInstance3D.new()
-	fabric_right.name = "FabricRight"
-	fabric_right.mesh = fabric_mesh
-	fabric_right.material_override = fabric_dark_mat  # Slightly different shade for depth
-	fabric_right.position = Vector3(0.1, 0.005, -0.18)
-	fabric_right.rotation_degrees = Vector3(0, -8, 0)
-	hang_glider_model.add_child(fabric_right)
+	# ============================================
+	# KEEL (center spine running nose to tail)
+	# ============================================
+	var keel := MeshInstance3D.new()
+	keel.name = "Keel"
+	var keel_mesh := BoxMesh.new()
+	keel_mesh.size = Vector3(0.025, 0.02, 1.2)
+	keel.mesh = keel_mesh
+	keel.material_override = wood_dark_mat
+	keel.position = Vector3(0, 0.34, -0.35)
+	hang_glider_model.add_child(keel)
 
-	# --- Fabric stitching detail (thin strip along center seam) ---
-	var seam := MeshInstance3D.new()
-	seam.name = "CenterSeam"
-	var seam_mesh := BoxMesh.new()
-	seam_mesh.size = Vector3(0.015, 0.008, 0.22)
-	seam.mesh = seam_mesh
-	var seam_mat := StandardMaterial3D.new()
-	seam_mat.albedo_color = Color(0.6, 0.52, 0.38)  # Stitching color
-	seam.material_override = seam_mat
-	seam.position = Vector3(0, 0.008, -0.2)
-	hang_glider_model.add_child(seam)
+	# ============================================
+	# LEADING EDGES (V-shape from nose, forming delta wing)
+	# ============================================
 
-	# --- Leading edge reinforcement (darker strip along cross-strut) ---
-	var leading_edge := MeshInstance3D.new()
-	leading_edge.name = "LeadingEdge"
-	var edge_mesh := BoxMesh.new()
-	edge_mesh.size = Vector3(0.46, 0.01, 0.03)
-	leading_edge.mesh = edge_mesh
-	leading_edge.material_override = fabric_dark_mat
-	leading_edge.position = Vector3(0, 0.005, -0.33)
-	hang_glider_model.add_child(leading_edge)
+	# Left leading edge
+	var le_left := MeshInstance3D.new()
+	le_left.name = "LeadingEdgeLeft"
+	var le_mesh := BoxMesh.new()
+	le_mesh.size = Vector3(0.02, 0.015, 0.85)
+	le_left.mesh = le_mesh
+	le_left.material_override = wood_mat
+	le_left.position = Vector3(-0.32, 0.34, -0.15)
+	le_left.rotation_degrees = Vector3(0, 28, 0)
+	hang_glider_model.add_child(le_left)
+
+	# Right leading edge
+	var le_right := MeshInstance3D.new()
+	le_right.name = "LeadingEdgeRight"
+	le_right.mesh = le_mesh
+	le_right.material_override = wood_mat
+	le_right.position = Vector3(0.32, 0.34, -0.15)
+	le_right.rotation_degrees = Vector3(0, -28, 0)
+	hang_glider_model.add_child(le_right)
+
+	# ============================================
+	# TRAILING EDGE (back of wing, connecting wingtips)
+	# ============================================
+	var trailing := MeshInstance3D.new()
+	trailing.name = "TrailingEdge"
+	var trail_mesh := BoxMesh.new()
+	trail_mesh.size = Vector3(1.1, 0.01, 0.015)
+	trailing.mesh = trail_mesh
+	trailing.material_override = wood_mat
+	trailing.position = Vector3(0, 0.33, 0.18)
+	hang_glider_model.add_child(trailing)
+
+	# ============================================
+	# FABRIC WING PANELS (delta shape, seen from below)
+	# ============================================
+
+	# Left wing panel
+	var wing_left := MeshInstance3D.new()
+	wing_left.name = "WingLeft"
+	var wl_mesh := BoxMesh.new()
+	wl_mesh.size = Vector3(0.48, 0.005, 0.7)
+	wing_left.mesh = wl_mesh
+	wing_left.material_override = fabric_mat
+	wing_left.position = Vector3(-0.2, 0.335, -0.08)
+	wing_left.rotation_degrees = Vector3(0, 10, 0)
+	hang_glider_model.add_child(wing_left)
+
+	# Right wing panel
+	var wing_right := MeshInstance3D.new()
+	wing_right.name = "WingRight"
+	var wr_mesh := BoxMesh.new()
+	wr_mesh.size = Vector3(0.48, 0.005, 0.7)
+	wing_right.mesh = wr_mesh
+	wing_right.material_override = fabric_dark_mat
+	wing_right.position = Vector3(0.2, 0.335, -0.08)
+	wing_right.rotation_degrees = Vector3(0, -10, 0)
+	hang_glider_model.add_child(wing_right)
+
+	# Center fabric strip (covers keel area)
+	var wing_center := MeshInstance3D.new()
+	wing_center.name = "WingCenter"
+	var wc_mesh := BoxMesh.new()
+	wc_mesh.size = Vector3(0.15, 0.005, 0.8)
+	wing_center.mesh = wc_mesh
+	wing_center.material_override = fabric_mat
+	wing_center.position = Vector3(0, 0.336, -0.12)
+	hang_glider_model.add_child(wing_center)
+
+	# ============================================
+	# SUPPORT CABLES (A-frame to wing connection)
+	# ============================================
+
+	# Left cable (control bar corner to keel/wing junction)
+	var cable_left := MeshInstance3D.new()
+	cable_left.name = "CableLeft"
+	var cable_mesh := BoxMesh.new()
+	cable_mesh.size = Vector3(0.008, 0.38, 0.008)
+	cable_left.mesh = cable_mesh
+	cable_left.material_override = rope_mat
+	cable_left.position = Vector3(-0.15, 0.17, -0.04)
+	cable_left.rotation_degrees = Vector3(5, 0, 8)
+	hang_glider_model.add_child(cable_left)
+
+	# Right cable
+	var cable_right := MeshInstance3D.new()
+	cable_right.name = "CableRight"
+	cable_right.mesh = cable_mesh
+	cable_right.material_override = rope_mat
+	cable_right.position = Vector3(0.15, 0.17, -0.04)
+	cable_right.rotation_degrees = Vector3(5, 0, -8)
+	hang_glider_model.add_child(cable_right)
+
+	# Front cable (control bar center to nose)
+	var cable_front := MeshInstance3D.new()
+	cable_front.name = "CableFront"
+	var cf_mesh := BoxMesh.new()
+	cf_mesh.size = Vector3(0.008, 0.008, 0.55)
+	cable_front.mesh = cf_mesh
+	cable_front.material_override = rope_mat
+	cable_front.position = Vector3(0, 0.17, -0.38)
+	cable_front.rotation_degrees = Vector3(-18, 0, 0)
+	hang_glider_model.add_child(cable_front)
 
 	# Position: held above and slightly in front of camera
 	hang_glider_model.position = GLIDER_REST_POSITION

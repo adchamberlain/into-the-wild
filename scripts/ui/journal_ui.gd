@@ -226,7 +226,7 @@ func _build_ui() -> void:
 
 	var input_mgr: Node = get_node_or_null("/root/InputManager")
 	if input_mgr and input_mgr.has_method("is_using_controller") and input_mgr.is_using_controller():
-		hint_label.text = "Circle to close"
+		hint_label.text = "X to close"
 	else:
 		hint_label.text = "ESC or B to close"
 
@@ -242,7 +242,7 @@ func _input(event: InputEvent) -> void:
 	if not _is_open:
 		return
 
-	# Close on ESC, ui_cancel (Circle on controller), or B key
+	# Close on ESC, ui_cancel, or B key
 	var close: bool = false
 	if event.is_action_pressed("pause"):
 		close = true
