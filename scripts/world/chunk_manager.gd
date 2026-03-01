@@ -71,6 +71,12 @@ var sinkhole_spawned: bool = false
 var sinkhole_book_collected: bool = false
 var sinkhole_book_script: GDScript = null  # Loaded later when script exists
 
+# Pocket desert biome (hidden area containing sinkhole, west of spawn)
+var pocket_desert_center: Vector2 = Vector2(-350.0, 0.0)
+var pocket_desert_radius: float = 50.0
+var pocket_desert_blend: float = 15.0  # Transition zone width
+var rock_spire_spawned: bool = false
+
 # Region-specific pond sizes {radius_min, radius_max, depth}
 var region_pond_params: Dictionary = {
 	RegionType.MEADOW: {"radius_min": 10.0, "radius_max": 14.0, "depth": 2.5},
@@ -950,11 +956,9 @@ func is_near_oasis(world_x: float, world_z: float, buffer: float = 2.0) -> bool:
 
 
 func _generate_desert_sinkhole() -> void:
-	## Place a hidden sinkhole at 180 degrees (opposite oasis #1) in the desert ring
-	var sinkhole_distance: float = 200.0  # Same distance as oases
-	var angle_rad: float = deg_to_rad(180.0)
-	var raw_x: float = cos(angle_rad) * sinkhole_distance
-	var raw_z: float = sin(angle_rad) * sinkhole_distance
+	## Place the hidden sinkhole at the center of the pocket desert
+	var raw_x: float = pocket_desert_center.x
+	var raw_z: float = pocket_desert_center.y
 
 	# Snap to cell_size grid (multiples of 3.0)
 	var snapped_x: float = roundf(raw_x / cell_size) * cell_size
@@ -980,7 +984,7 @@ func _generate_desert_sinkhole() -> void:
 	# Update legacy pond_locations
 	_update_legacy_pond_locations()
 
-	print("[ChunkManager] Generated desert sinkhole at (%.0f, %.0f)" % [snapped_x, snapped_z])
+	print("[ChunkManager] Generated desert sinkhole at (%.0f, %.0f) in pocket desert" % [snapped_x, snapped_z])
 
 
 func is_near_sinkhole(world_x: float, world_z: float, buffer: float = 12.0) -> bool:
