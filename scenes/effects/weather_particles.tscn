@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3 uid="uid://weather_particles"]
+[gd_scene load_steps=2 format=3 uid="uid://ca6oqdumntf0x"]
 
-[ext_resource type="Script" path="res://scripts/world/weather_particles.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://7bej1y0w1i84" path="res://scripts/world/weather_particles.gd" id="1_script"]
 
 [node name="WeatherParticles" type="Node3D"]
 script = ExtResource("1_script")

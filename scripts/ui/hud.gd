@@ -40,7 +40,6 @@ var inventory_visible: bool = true
 @onready var equip_hint_label: Label = $EquippedPanel/EquippedContainer/EquipHintLabel
 
 # Eat action hint
-var eat_hint_label: Label
 
 # Air bubble display (drowning)
 var bubble_container: HBoxContainer
@@ -266,9 +265,6 @@ func _ready() -> void:
 	# Create compass panel programmatically
 	_create_compass_panel()
 
-	# Create eat hint label at the bottom of the inventory panel
-	_create_eat_hint_label()
-
 	# Create desert heat indicator (hidden by default)
 	_create_heat_indicator()
 
@@ -338,7 +334,6 @@ func _on_input_device_changed(_is_controller: bool) -> void:
 	# Update any visible prompts
 	_update_equipped_display()
 	_update_resting_prompt()
-	_update_eat_hint()
 
 
 func _on_interaction_cleared() -> void:
@@ -447,7 +442,7 @@ func _update_control_hints() -> void:
 
 	if using_controller:
 		# Controller prompts (Share=left button, Pad=touchpad, Menu=right button)
-		equip_hint_label.text = "Share-Equip  Pad-Craft  Menu-Pause"
+		equip_hint_label.text = "Share-Equip  Pad-Craft  D←-Inventory  Menu-Pause"
 	else:
 		# Keyboard prompts
 		equip_hint_label.text = "I-Equip C-Craft V-Inventory Tab-Config K-Save L-Load"
@@ -548,7 +543,6 @@ func _update_inventory_display() -> void:
 			child.queue_free()
 
 	if items.is_empty():
-		_update_eat_hint()
 		return
 
 	# Sort items into categories
@@ -608,7 +602,7 @@ func _update_inventory_display() -> void:
 			var cont_header: Label = Label.new()
 			cont_header.text = "-- %s --" % split_category
 			cont_header.add_theme_font_override("font", HUD_FONT)
-			cont_header.add_theme_font_size_override("font_size", 26)
+			cont_header.add_theme_font_size_override("font_size", 29)
 			cont_header.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
 			target_col.add_child(cont_header)
 
@@ -616,7 +610,7 @@ func _update_inventory_display() -> void:
 			var header: Label = Label.new()
 			header.text = "-- %s --" % entry["category"]
 			header.add_theme_font_override("font", HUD_FONT)
-			header.add_theme_font_size_override("font_size", 26)
+			header.add_theme_font_size_override("font_size", 29)
 			header.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
 			target_col.add_child(header)
 			_section_labels[entry["category"]] = header
@@ -632,7 +626,7 @@ func _update_inventory_display() -> void:
 			else:
 				label.text = "%s: %d" % [display_name, count]
 			label.add_theme_font_override("font", HUD_FONT)
-			label.add_theme_font_size_override("font_size", 32)
+			label.add_theme_font_size_override("font_size", 36)
 			# Color items near/at limit in yellow/red
 			if inventory.enforce_limits and limit > 0 and count >= limit:
 				label.add_theme_color_override("font_color", Color(1.0, 0.5, 0.5, 1))
@@ -646,9 +640,6 @@ func _update_inventory_display() -> void:
 	# Widen the panel when using two columns
 	if inventory_panel:
 		inventory_panel.offset_right = 780.0 if use_two_columns else 400.0
-
-	# Update eat hint visibility
-	_update_eat_hint()
 
 
 func _on_campsite_level_changed(new_level: int) -> void:
@@ -994,12 +985,17 @@ func _hide_celebration() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	# Toggle inventory visibility with V key
+	# Toggle inventory visibility with V key or open_inventory action (controller Share button)
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.physical_keycode == KEY_V:
 			_toggle_inventory()
 			get_viewport().set_input_as_handled()
 			return
+	# Controller D-pad Left toggles inventory
+	if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_DPAD_LEFT:
+		_toggle_inventory()
+		get_viewport().set_input_as_handled()
+		return
 
 	# Dismiss celebration on any key or button press
 	if is_celebrating:
@@ -1067,31 +1063,6 @@ func fade_to_black_and_back(fade_out_duration: float, hold_duration: float, fade
 
 	# Hide overlay when done
 	tween.tween_callback(func(): fade_overlay.visible = false)
-
-
-func _update_eat_hint() -> void:
-	if not eat_hint_label:
-		return
-
-	var has_food: bool = player and player.has_method("has_consumable") and player.has_consumable()
-	eat_hint_label.visible = has_food
-	if has_food:
-		var eat_key: String = _get_button_prompt("eat")
-		eat_hint_label.text = "[%s] Eat" % eat_key
-
-
-func _create_eat_hint_label() -> void:
-	var vbox: VBoxContainer = inventory_panel.get_node_or_null("VBoxContainer") if inventory_panel else null
-	if not vbox:
-		return
-
-	eat_hint_label = Label.new()
-	eat_hint_label.name = "EatHintLabel"
-	eat_hint_label.add_theme_font_override("font", HUD_FONT)
-	eat_hint_label.add_theme_font_size_override("font_size", 28)
-	eat_hint_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6, 1))
-	eat_hint_label.visible = false
-	vbox.add_child(eat_hint_label)
 
 
 func _create_compass_panel() -> void:
