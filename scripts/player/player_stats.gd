@@ -23,6 +23,9 @@ var health: float = 100.0
 var hunger: float = 100.0
 var is_dead: bool = false
 
+# Bonus stats (from Explorer's Journal)
+var max_health_bonus: int = 0
+
 # Config toggles (set by ConfigMenu)
 var hunger_depletion_enabled: bool = false
 var health_drain_enabled: bool = false
@@ -46,6 +49,11 @@ func _ready() -> void:
 	var parent: Node = get_parent()
 	if parent is CharacterBody3D:
 		player = parent
+
+
+## Get effective max health including bonuses.
+func get_max_health() -> float:
+	return max_health + max_health_bonus
 
 
 func _process(delta: float) -> void:
@@ -86,10 +94,10 @@ func _update_health(delta: float) -> void:
 		health = max(0.0, health - health_drain_rate * delta)
 	elif hunger >= max_hunger * 0.98:
 		# Nearly full: regenerate health (threshold avoids frame-order race with hunger drain)
-		health = min(max_health, health + health_regen_rate * delta)
+		health = min(get_max_health(), health + health_regen_rate * delta)
 
 	if health != old_health:
-		health_changed.emit(health, max_health)
+		health_changed.emit(health, get_max_health())
 
 		if health <= 0.0:
 			is_dead = true
@@ -120,7 +128,7 @@ func take_damage(amount: float) -> float:
 	var damage_taken: float = old_health - health
 
 	if damage_taken > 0:
-		health_changed.emit(health, max_health)
+		health_changed.emit(health, get_max_health())
 		print("[PlayerStats] Took %.1f damage (now %.1f)" % [damage_taken, health])
 
 		if health <= 0.0:
@@ -135,11 +143,11 @@ func heal(amount: float) -> float:
 	if is_dead:
 		return 0.0
 	var old_health: float = health
-	health = min(max_health, health + amount)
+	health = min(get_max_health(), health + amount)
 	var healed: float = health - old_health
 
 	if healed > 0:
-		health_changed.emit(health, max_health)
+		health_changed.emit(health, get_max_health())
 		print("[PlayerStats] Healed %.1f (now %.1f)" % [healed, health])
 
 	return healed
@@ -147,9 +155,10 @@ func heal(amount: float) -> float:
 
 ## Get health as a percentage (0.0 - 1.0)
 func get_health_percent() -> float:
-	if max_health <= 0.0:
+	var effective_max: float = get_max_health()
+	if effective_max <= 0.0:
 		return 0.0
-	return health / max_health
+	return health / effective_max
 
 
 ## Get hunger as a percentage (0.0 - 1.0)

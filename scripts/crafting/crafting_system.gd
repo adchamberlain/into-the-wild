@@ -309,6 +309,16 @@ func _load_recipes() -> void:
 			"description": "An opal-infused bow. Faster draw and longer range.",
 			"requires_bench": true,
 			"min_camp_level": 3
+		},
+		"hang_glider": {
+			"name": "Hang Glider",
+			"inputs": {"rope": 4, "branch": 6, "hide": 2},
+			"output_type": "hang_glider",
+			"output_amount": 1,
+			"description": "A fabric wing for soaring above the wilderness.",
+			"requires_bench": true,
+			"min_camp_level": 3,
+			"requires_journal": true
 		}
 	}
 
@@ -351,6 +361,10 @@ func can_craft(recipe_id: String, at_bench: bool = false, campsite_level: int = 
 	# Check camp level requirement
 	var min_level: int = recipe.get("min_camp_level", 1)
 	if campsite_level < min_level:
+		return false
+
+	# Check journal requirement
+	if recipe.get("requires_journal", false) and not _check_journal_read():
 		return false
 
 	var inputs: Dictionary = recipe.get("inputs", {})
@@ -429,12 +443,29 @@ func is_discovered(recipe_id: String) -> bool:
 func get_all_recipes_status(at_bench: bool = false, campsite_level: int = 1) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 
+	# Check if player has read the journal (for journal-gated recipes)
+	var journal_read: bool = _check_journal_read()
+
 	for recipe_id: String in discovered_recipes:
 		if not recipes.has(recipe_id):
 			continue
-		var recipe: Dictionary = recipes[recipe_id].duplicate()
-		recipe["id"] = recipe_id
-		recipe["can_craft"] = can_craft(recipe_id, at_bench, campsite_level)
-		result.append(recipe)
+		var recipe: Dictionary = recipes[recipe_id]
+		# Skip recipes requiring journal if player hasn't read it
+		if recipe.get("requires_journal", false) and not journal_read:
+			continue
+		var recipe_copy: Dictionary = recipe.duplicate()
+		recipe_copy["id"] = recipe_id
+		recipe_copy["can_craft"] = can_craft(recipe_id, at_bench, campsite_level)
+		result.append(recipe_copy)
 
 	return result
+
+
+## Check if the player has read the Explorer's Journal.
+func _check_journal_read() -> bool:
+	if not get_tree():
+		return false
+	var player_node: Node = get_tree().get_first_node_in_group("player")
+	if player_node and "has_read_journal" in player_node:
+		return player_node.has_read_journal
+	return false

@@ -71,6 +71,13 @@ var compass_panel: PanelContainer
 var compass_label: Label
 var camera: Camera3D
 
+# Map marker POI cycling (unlocked by Explorer's Journal)
+var _poi_entries: Array[Dictionary] = []  # [{label: String, position: Vector2}]
+var _poi_index: int = 0
+var _poi_cycle_timer: float = 0.0
+const POI_CYCLE_INTERVAL: float = 3.0
+var _poi_built: bool = false
+
 # Desert heat indicator
 var heat_panel: PanelContainer
 var heat_label: Label
@@ -184,7 +191,7 @@ func _ready() -> void:
 				stats.health_changed.connect(_on_health_changed)
 				stats.hunger_changed.connect(_on_hunger_changed)
 				# Initialize bars
-				_update_health_bar(stats.health, stats.max_health)
+				_update_health_bar(stats.health, stats.get_max_health() if stats.has_method("get_max_health") else stats.max_health)
 				_update_hunger_bar(stats.hunger, stats.max_hunger)
 
 		# Connect to player's equipment
@@ -603,6 +610,13 @@ func _process(delta: float) -> void:
 		_update_coordinates_display()
 		_update_protection_display()
 		_update_compass_display()
+
+	# POI cycle timer for map markers
+	if not _poi_entries.is_empty():
+		_poi_cycle_timer += delta
+		if _poi_cycle_timer >= POI_CYCLE_INTERVAL:
+			_poi_cycle_timer = 0.0
+			_poi_index = (_poi_index + 1) % _poi_entries.size()
 
 	# Handle weather damage flash
 	if weather_damage_flash_timer > 0:
@@ -1089,33 +1103,62 @@ func _update_compass_display() -> void:
 	var has_compass: bool = inventory and inventory.has_item("compass")
 	var lodestone_placed: bool = campsite_manager and campsite_manager.has_method("has_structure") and campsite_manager.has_structure("lodestone")
 
-	if not has_compass or not lodestone_placed:
+	# Check if map markers are unlocked (from Explorer's Journal)
+	var markers_unlocked: bool = player and "map_markers_unlocked" in player and player.map_markers_unlocked
+	if markers_unlocked and not _poi_built:
+		_build_poi_entries()
+
+	# Need either compass+lodestone or map markers to show the panel
+	if not has_compass and not markers_unlocked:
+		compass_panel.visible = false
+		return
+	if has_compass and not lodestone_placed and not markers_unlocked:
 		compass_panel.visible = false
 		return
 
-	# Get lodestone position
-	if not campsite_manager.has_method("get_structures_of_type"):
-		compass_panel.visible = false
-		return
-
-	var lodestones: Array = campsite_manager.get_structures_of_type("lodestone")
-	if lodestones.is_empty():
-		compass_panel.visible = false
-		return
-
-	var lodestone_pos: Vector3 = lodestones[0].global_position
 	if not player or not camera:
 		compass_panel.visible = false
 		return
 
-	# Calculate direction on XZ plane
-	var to_target: Vector3 = lodestone_pos - player.global_position
+	# Determine what to display this frame
+	var show_poi: bool = false
+	var lodestone_pos: Vector3 = Vector3.ZERO
+	var has_lodestone_pos: bool = false
+
+	if has_compass and lodestone_placed and campsite_manager.has_method("get_structures_of_type"):
+		var lodestones: Array = campsite_manager.get_structures_of_type("lodestone")
+		if not lodestones.is_empty():
+			lodestone_pos = lodestones[0].global_position
+			has_lodestone_pos = true
+
+	if markers_unlocked and not _poi_entries.is_empty():
+		if has_lodestone_pos:
+			# Alternate: show POI every 3rd cycle (lodestone gets priority)
+			show_poi = (_poi_index % 3 == 2)
+		else:
+			# No lodestone — always show POIs
+			show_poi = true
+
+	if show_poi and not _poi_entries.is_empty():
+		var safe_idx: int = _poi_index % _poi_entries.size()
+		var poi: Dictionary = _poi_entries[safe_idx]
+		var poi_label: String = poi["label"]
+		var poi_pos: Vector2 = poi["position"]
+		_show_compass_direction(poi_label, Vector3(poi_pos.x, 0, poi_pos.y))
+	elif has_lodestone_pos:
+		_show_compass_direction("Lodestone", lodestone_pos)
+	else:
+		compass_panel.visible = false
+
+
+## Show compass direction to a named target at a world position.
+func _show_compass_direction(target_name: String, target_pos: Vector3) -> void:
+	var to_target: Vector3 = target_pos - player.global_position
 	to_target.y = 0  # XZ plane only
 	var distance: float = to_target.length()
 
 	if distance < 0.5:
-		# Very close, just show distance
-		compass_label.text = "Lodestone  here"
+		compass_label.text = "%s  here" % target_name
 		compass_panel.visible = true
 		return
 
@@ -1134,8 +1177,38 @@ func _update_compass_display() -> void:
 	# Map angle to 8-direction arrow
 	var arrows: Array[String] = ["↑", "↗", "→", "↘", "↓", "↙", "←", "↖"]
 	var index: int = int(round(fmod(angle + TAU, TAU) / (TAU / 8.0))) % 8
-	compass_label.text = "Lodestone  %s  %dm" % [arrows[index], int(distance)]
+	compass_label.text = "%s  %s  %dm" % [target_name, arrows[index], int(distance)]
 	compass_panel.visible = true
+
+
+## Build the POI entries array from chunk_manager data.
+func _build_poi_entries() -> void:
+	_poi_entries.clear()
+	_poi_built = true
+
+	var chunk_manager: Node = null
+	if get_tree() and get_tree().root.has_node("Main/World/Terrain"):
+		chunk_manager = get_tree().root.get_node("Main/World/Terrain")
+	if not chunk_manager:
+		return
+
+	# Add oases
+	if "desert_oases" in chunk_manager:
+		for oasis: Dictionary in chunk_manager.desert_oases:
+			var gem_type: String = oasis.get("gem_type", "unknown")
+			var label: String = "%s Oasis" % gem_type.capitalize()
+			_poi_entries.append({"label": label, "position": oasis["center"]})
+
+	# Add cave entrances
+	if "cave_entrances" in chunk_manager:
+		var cave_num: int = 1
+		for cave: Dictionary in chunk_manager.cave_entrances:
+			_poi_entries.append({"label": "Cave %d" % cave_num, "position": cave["center"]})
+			cave_num += 1
+
+	# Add the sinkhole
+	if "desert_sinkhole" in chunk_manager and chunk_manager.desert_sinkhole.size() > 0:
+		_poi_entries.append({"label": "Ancient Sinkhole", "position": chunk_manager.desert_sinkhole["center"]})
 
 
 func set_overlay_mode(enabled: bool) -> void:

@@ -87,6 +87,10 @@ const FALL_DAMAGE_MAX: float = 80.0  # Maximum fall damage cap
 var respawn_position: Vector3 = Vector3(0, 5, 0)  # Default spawn, updated when shelter is built
 var has_respawn_shelter: bool = false  # Whether player has a shelter to respawn at
 
+# Explorer's Journal (desert sinkhole easter egg)
+var _journal_ui: Node = null
+var has_read_journal: bool = false
+var map_markers_unlocked: bool = false
 
 # Desert environment check
 var _desert_check_timer: float = 0.0
@@ -776,16 +780,21 @@ func _try_eat() -> void:
 	if not inventory or not stats:
 		return
 
+	# Special case: Explorer's Journal opens a reading UI instead of being consumed
+	if inventory.has_item("explorers_journal"):
+		_open_journal()
+		return
+
 	var hud: Node = get_tree().get_first_node_in_group("hud")
 
 	# Don't consume anything if both health and hunger are full
-	if stats.health >= stats.max_health and stats.hunger >= stats.max_hunger:
+	if stats.health >= stats.get_max_health() and stats.hunger >= stats.max_hunger:
 		if hud and hud.has_method("show_notification"):
 			hud.show_notification("Health and food are full!", Color(0.6, 1.0, 0.6, 1))
 		return
 
 	# First check for healing items if health is not full
-	if stats.health < stats.max_health:
+	if stats.health < stats.get_max_health():
 		for heal_type: String in HEALING_ITEMS:
 			if inventory.has_item(heal_type):
 				var removed: bool = inventory.remove_item(heal_type, 1)
@@ -834,6 +843,47 @@ func _try_eat() -> void:
 	else:
 		if hud and hud.has_method("show_notification"):
 			hud.show_notification("No food in inventory!", Color(1.0, 0.5, 0.5, 1))
+
+
+func _open_journal() -> void:
+	if _journal_ui and is_instance_valid(_journal_ui):
+		return  # Already open
+	var journal_script: GDScript = load("res://scripts/ui/journal_ui.gd")
+	_journal_ui = CanvasLayer.new()
+	_journal_ui.set_script(journal_script)
+	_journal_ui.layer = 80
+	add_child(_journal_ui)
+	_journal_ui.journal_closed.connect(_on_journal_closed)
+	_journal_ui.open_journal(not has_read_journal)
+
+
+func _on_journal_closed(was_first_read: bool) -> void:
+	if _journal_ui and is_instance_valid(_journal_ui):
+		_journal_ui.queue_free()
+		_journal_ui = null
+	if was_first_read and not has_read_journal:
+		has_read_journal = true
+		_apply_journal_rewards()
+
+
+func _apply_journal_rewards() -> void:
+	# Reward 1: Stat boost — +25 max health and 20% slower hunger
+	if stats:
+		stats.max_health_bonus = 25
+		stats.health = stats.get_max_health()  # Heal to new max
+	get_tree().call_group("hud", "show_notification", "Ancient survival wisdom flows through you...", Color(0.6, 1, 0.6, 1))
+
+	# Small delay between notifications
+	await get_tree().create_timer(2.0).timeout
+
+	# Reward 2: Recipe unlock (crafting system will check has_read_journal)
+	get_tree().call_group("hud", "show_notification", "You've learned to craft a Hang Glider", Color(0.6, 1, 0.6, 1))
+
+	await get_tree().create_timer(2.0).timeout
+
+	# Reward 3: Map markers on compass
+	map_markers_unlocked = true
+	get_tree().call_group("hud", "show_notification", "The journal reveals hidden locations...", Color(0.6, 1, 0.6, 1))
 
 
 func _notification(what: int) -> void:
@@ -925,8 +975,8 @@ func _on_player_died() -> void:
 	# Restore health and hunger to partial values
 	if stats:
 		stats.is_dead = false
-		stats.health = stats.max_health * 0.5
-		stats.health_changed.emit(stats.health, stats.max_health)
+		stats.health = stats.get_max_health() * 0.5
+		stats.health_changed.emit(stats.health, stats.get_max_health())
 		stats.hunger = stats.max_hunger * 0.5
 		stats.hunger_changed.emit(stats.hunger, stats.max_hunger)
 
