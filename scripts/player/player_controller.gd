@@ -50,7 +50,7 @@ var is_grappling: bool = false  # Whether player is being pulled by grappling ho
 var is_crouching: bool = false  # Whether player is crouching (toggle)
 var is_gliding: bool = false  # Whether player is gliding with hang glider
 var glide_speed: float = 8.0  # Horizontal speed while gliding (faster than sprint)
-var glide_climb_rate: float = 1.0  # Max vertical climb rate (looking up)
+var glide_climb_rate: float = 3.5  # Max vertical climb rate (looking up)
 var glide_descent_rate: float = 2.0  # Max vertical descent rate (looking down/neutral)
 var glide_max_height_above_terrain: float = 25.0  # Max height ceiling above terrain
 
