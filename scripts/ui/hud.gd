@@ -27,9 +27,12 @@ const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 
 # Inventory
 @onready var inventory_panel: PanelContainer = $InventoryPanel
-@onready var inventory_scroll: ScrollContainer = $InventoryPanel/VBoxContainer/ScrollContainer
-@onready var item_list: VBoxContainer = $InventoryPanel/VBoxContainer/ScrollContainer/ItemList
-@onready var empty_label: Label = $InventoryPanel/VBoxContainer/ScrollContainer/ItemList/EmptyLabel
+@onready var item_columns: HBoxContainer = $InventoryPanel/VBoxContainer/ItemColumns
+@onready var empty_label: Label = $InventoryPanel/VBoxContainer/ItemColumns/EmptyLabel
+
+# How many items fit in one column before splitting to two columns
+const INVENTORY_COLUMN_THRESHOLD: int = 14
+var inventory_visible: bool = true
 
 # Equipment
 @onready var equipped_label: Label = $EquippedPanel/EquippedContainer/EquippedLabel
@@ -447,7 +450,7 @@ func _update_control_hints() -> void:
 		equip_hint_label.text = "Share-Equip  Pad-Craft  Menu-Pause"
 	else:
 		# Keyboard prompts
-		equip_hint_label.text = "I-Equip C-Craft Tab-Config K-Save L-Load"
+		equip_hint_label.text = "I-Equip C-Craft V-Inventory Tab-Config K-Save L-Load"
 
 
 ## Get button prompt for an action based on current input device.
@@ -494,6 +497,15 @@ func _on_inventory_changed() -> void:
 	_update_inventory_display()
 
 
+## Toggle inventory panel visibility.
+func _toggle_inventory() -> void:
+	inventory_visible = not inventory_visible
+	if inventory_panel:
+		inventory_panel.visible = inventory_visible
+	if inventory_visible:
+		_update_inventory_display()
+
+
 func _get_display_name(item_type: String) -> String:
 	return item_type.capitalize().replace("_", " ").replace("River Rock", "Rock")
 
@@ -508,7 +520,7 @@ func _get_item_category(item_type: String) -> String:
 
 
 func _update_inventory_display() -> void:
-	if not inventory or not item_list:
+	if not inventory or not item_columns:
 		return
 
 	var items: Dictionary = inventory.get_all_items()
@@ -517,7 +529,7 @@ func _update_inventory_display() -> void:
 	if empty_label:
 		empty_label.visible = items.is_empty()
 
-	# Clear all existing labels and section headers
+	# Clear existing dynamic children (columns) but keep EmptyLabel
 	for resource_type: String in item_labels:
 		var label: Label = item_labels[resource_type]
 		if is_instance_valid(label):
@@ -529,6 +541,11 @@ func _update_inventory_display() -> void:
 		if is_instance_valid(label):
 			label.queue_free()
 	_section_labels.clear()
+
+	# Remove old column containers
+	for child: Node in item_columns.get_children():
+		if child != empty_label:
+			child.queue_free()
 
 	if items.is_empty():
 		_update_eat_hint()
@@ -546,24 +563,53 @@ func _update_inventory_display() -> void:
 			return _get_display_name(a) < _get_display_name(b)
 		)
 
-	# Build the display in order: Tools, Food, Resources
+	# Build a flat list of entries (header/item pairs) to distribute across columns
+	var entries: Array[Dictionary] = []
 	for category: String in ["Tools", "Food", "Resources"]:
 		var category_items: Array = categorized[category]
 		if category_items.is_empty():
 			continue
-
-		# Section header
-		var header: Label = Label.new()
-		header.text = "-- %s --" % category
-		header.add_theme_font_override("font", HUD_FONT)
-		header.add_theme_font_size_override("font_size", 32)
-		header.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
-		item_list.add_child(header)
-		_section_labels[category] = header
-
-		# Item labels
+		entries.append({"type": "header", "category": category})
 		for item_type: String in category_items:
-			var count: int = items[item_type]
+			entries.append({"type": "item", "item_type": item_type, "count": items[item_type]})
+
+	# Decide column count: two columns if entries exceed threshold
+	var use_two_columns: bool = entries.size() > INVENTORY_COLUMN_THRESHOLD
+	var col_count: int = 2 if use_two_columns else 1
+
+	# Create column VBoxContainers
+	var columns: Array[VBoxContainer] = []
+	for i: int in range(col_count):
+		var col: VBoxContainer = VBoxContainer.new()
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		item_columns.add_child(col)
+		columns.append(col)
+
+	# Split entries across columns evenly
+	var split_point: int = entries.size() if col_count == 1 else ceili(entries.size() / 2.0)
+	# Don't split in the middle of a category — push split to next header
+	if col_count > 1 and split_point < entries.size():
+		# Walk forward to find the next header to split at cleanly
+		while split_point < entries.size() and entries[split_point]["type"] != "header":
+			split_point += 1
+
+	# Add entries to columns
+	for i: int in range(entries.size()):
+		var col_idx: int = 0 if i < split_point else 1
+		var entry: Dictionary = entries[i]
+		var target_col: VBoxContainer = columns[col_idx]
+
+		if entry["type"] == "header":
+			var header: Label = Label.new()
+			header.text = "-- %s --" % entry["category"]
+			header.add_theme_font_override("font", HUD_FONT)
+			header.add_theme_font_size_override("font_size", 32)
+			header.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
+			target_col.add_child(header)
+			_section_labels[entry["category"]] = header
+		else:
+			var item_type: String = entry["item_type"]
+			var count: int = entry["count"]
 			var display_name: String = _get_display_name(item_type)
 			var limit: int = inventory.get_stack_limit(item_type) if inventory.has_method("get_stack_limit") else 0
 
@@ -581,8 +627,12 @@ func _update_inventory_display() -> void:
 				label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3, 1))
 			else:
 				label.add_theme_color_override("font_color", Color(1, 1, 1, 1))
-			item_list.add_child(label)
+			target_col.add_child(label)
 			item_labels[item_type] = label
+
+	# Widen the panel when using two columns
+	if inventory_panel:
+		inventory_panel.offset_right = 780.0 if use_two_columns else 400.0
 
 	# Update eat hint visibility
 	_update_eat_hint()
@@ -931,6 +981,13 @@ func _hide_celebration() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# Toggle inventory visibility with V key
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.physical_keycode == KEY_V:
+			_toggle_inventory()
+			get_viewport().set_input_as_handled()
+			return
+
 	# Dismiss celebration on any key or button press
 	if is_celebrating:
 		if (event is InputEventKey and event.pressed) or (event is InputEventJoypadButton and event.pressed):
@@ -1262,7 +1319,11 @@ func set_overlay_mode(enabled: bool) -> void:
 		panels.append(compass)
 	for panel: Control in panels:
 		if panel:
-			panel.visible = not enabled
+			# Respect inventory toggle when exiting overlay
+			if panel == inventory_panel:
+				panel.visible = inventory_visible if not enabled else false
+			else:
+				panel.visible = not enabled
 	# Heat panel visibility is driven by desert heat state, not overlay toggle
 	if heat_panel and enabled:
 		heat_panel.visible = false
