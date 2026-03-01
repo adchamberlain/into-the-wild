@@ -1532,14 +1532,22 @@ func get_height_at(x: float, z: float, skip_pit_check: bool = false) -> float:
 			var blend_factor: float = (oasis_dist - oasis["radius"]) / 3.0
 			return lerpf(-oasis["depth"], height_step, blend_factor)
 
-	# Sinkhole depression - deep pit with gradual ramp at edge
+	# Sinkhole depression - deep pit with climbable rim
+	# Zones: pit floor (0-5) -> ramp to surface (5-8) -> flat rim at y=0 (8-12) -> handled later as ramp to terrain
 	if desert_sinkhole.size() > 0:
-		var sink_dist: float = Vector2(snapped_x - desert_sinkhole["center"].x, snapped_z - desert_sinkhole["center"].y).length()
-		if sink_dist < desert_sinkhole["radius"]:
+		var sink_center: Vector2 = Vector2(desert_sinkhole["center"].x, desert_sinkhole["center"].y)
+		var sink_dist: float = Vector2(snapped_x - sink_center.x, snapped_z - sink_center.y).length()
+		var sink_radius: float = desert_sinkhole["radius"]
+		var sink_rim_end: float = sink_radius + 7.0  # Flat rim extends 4 units beyond ramp
+		if sink_dist < sink_radius:
 			return -desert_sinkhole["depth"]
-		elif sink_dist < desert_sinkhole["radius"] + 3.0:
-			var blend_factor: float = (sink_dist - desert_sinkhole["radius"]) / 3.0
-			return lerpf(-desert_sinkhole["depth"], height_step, blend_factor)
+		elif sink_dist < sink_radius + 3.0:
+			# Ramp from pit floor to water surface (y=0)
+			var blend_factor: float = (sink_dist - sink_radius) / 3.0
+			return lerpf(-desert_sinkhole["depth"], 0.0, blend_factor)
+		elif sink_dist < sink_rim_end:
+			# Flat rim at water level - player can stand here after exiting water
+			return 0.0
 
 	# Check all water bodies (ponds and lakes) for terrain depression
 	for body in water_bodies:
@@ -1704,6 +1712,22 @@ func get_height_at(x: float, z: float, skip_pit_check: bool = false) -> float:
 			var ramp_height: float = cave_platform_height + (height - cave_platform_height) * t
 			# Cap gradient to prevent unclimbable cliffs around cave platform
 			var max_height_at_dist: float = cave_platform_height + (dist_to_cave - cave_flat_inner) * cave_max_slope
+			height = min(ramp_height, max_height_at_dist)
+
+	# Gradual ramp from sinkhole rim (y=0) to natural terrain
+	if desert_sinkhole.size() > 0:
+		var sink_center: Vector2 = Vector2(desert_sinkhole["center"].x, desert_sinkhole["center"].y)
+		var sink_dist2: float = Vector2(snapped_x - sink_center.x, snapped_z - sink_center.y).length()
+		var sink_radius2: float = desert_sinkhole["radius"]
+		var sink_rim_end2: float = sink_radius2 + 7.0
+		var sink_ramp_outer: float = sink_rim_end2 + 12.0  # 12-unit ramp zone beyond rim
+		if sink_dist2 >= sink_rim_end2 and sink_dist2 < sink_ramp_outer:
+			var t: float = (sink_dist2 - sink_rim_end2) / (sink_ramp_outer - sink_rim_end2)
+			t = clamp(t, 0.0, 1.0)
+			t = t * t * (3.0 - 2.0 * t)  # Smooth-step for gradual start
+			var ramp_height: float = lerpf(0.0, height, t)
+			# Cap slope to 0.5 per unit (1.5 per cell) - gentler than cave slopes
+			var max_height_at_dist: float = (sink_dist2 - sink_rim_end2) * 0.5
 			height = min(ramp_height, max_height_at_dist)
 
 	# Pit prevention: ensure no cell is more than 1 block below ALL cardinal neighbors.
