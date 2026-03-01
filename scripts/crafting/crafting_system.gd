@@ -66,6 +66,14 @@ func _load_recipes() -> void:
 			"description": "Useful for building and crafting.",
 			"requires_bench": false
 		},
+		"branches": {
+			"name": "Split Branches",
+			"inputs": {"wood": 1},
+			"output_type": "branch",
+			"output_amount": 4,
+			"description": "Split a log into branches.",
+			"requires_bench": false
+		},
 		"crafting_bench_kit": {
 			"name": "Crafting Bench Kit",
 			"inputs": {"wood": 6, "branch": 4},
