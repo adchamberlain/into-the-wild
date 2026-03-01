@@ -107,8 +107,10 @@ var water_surface_y: float = 0.15  # Y position of water surface (matches pond_h
 var air_bubbles: int = 5  # Current bubbles remaining (5 = full breath)
 var breath_timer: float = 0.0  # Time since last bubble lost
 var is_camera_submerged: bool = false  # Camera below water surface
-const BREATH_BUBBLE_INTERVAL: float = 4.0  # Seconds per bubble lost
+var BREATH_BUBBLE_INTERVAL: float = 4.0  # Can be modified by coca leaf buff
 const MAX_AIR_BUBBLES: int = 5
+var coca_leaf_timer: float = 0.0
+var _base_breath_interval: float = 4.0
 
 # Food values (hunger restored per item)
 const FOOD_VALUES: Dictionary = {
@@ -141,6 +143,8 @@ const FOOD_VALUES: Dictionary = {
 	"herb_tea": 10.0,
 	"fish_dinner": 40.0,
 	"mushroom_soup": 50.0,
+	# Special
+	"coca_leaf": 5.0,
 }
 
 # Healing items (instant health restore)
@@ -379,6 +383,14 @@ func _physics_process(delta: float) -> void:
 
 	# Breath / drowning check
 	_update_breath(delta)
+
+	# Coca leaf buff timer
+	if coca_leaf_timer > 0.0:
+		coca_leaf_timer -= delta
+		if coca_leaf_timer <= 0.0:
+			coca_leaf_timer = 0.0
+			BREATH_BUBBLE_INTERVAL = _base_breath_interval
+			get_tree().call_group("hud", "show_notification", "The coca leaf effect fades", Color(1, 0.85, 0.3, 1))
 
 	# Play footstep/splash sounds based on actual movement (after collision resolution)
 	var horizontal_speed: float = Vector2(velocity.x, velocity.z).length()
@@ -813,6 +825,12 @@ func _try_eat() -> void:
 			var item_name: String = best_food.capitalize().replace("_", " ")
 			if hud and hud.has_method("show_notification"):
 				hud.show_notification("Ate %s! +%.0f hunger" % [item_name, fed], Color(0.6, 1.0, 0.6, 1))
+			# Coca leaf breath buff
+			if best_food == "coca_leaf":
+				coca_leaf_timer = 300.0  # 5 minutes
+				_base_breath_interval = 4.0
+				BREATH_BUBBLE_INTERVAL = _base_breath_interval * 2.0  # 4s -> 8s
+				get_tree().call_group("hud", "show_notification", "Your breathing slows... lungs feel stronger", Color(0.6, 1, 0.6, 1))
 	else:
 		if hud and hud.has_method("show_notification"):
 			hud.show_notification("No food in inventory!", Color(1.0, 0.5, 0.5, 1))

@@ -1,0 +1,63 @@
+[gd_scene load_steps=10 format=3 uid="uid://cocaleaf001"]
+
+[ext_resource type="Script" path="res://scripts/resources/resource_node.gd" id="1_resource"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_coca"]
+size = Vector3(0.6, 0.5, 0.6)
+
+[sub_resource type="BoxMesh" id="BoxMesh_stem"]
+size = Vector3(0.08, 0.3, 0.08)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_stem"]
+albedo_color = Color(0.25, 0.4, 0.15, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_leaf_broad"]
+size = Vector3(0.28, 0.06, 0.14)
+
+[sub_resource type="BoxMesh" id="BoxMesh_leaf_side"]
+size = Vector3(0.14, 0.06, 0.26)
+
+[sub_resource type="BoxMesh" id="BoxMesh_leaf_top"]
+size = Vector3(0.22, 0.05, 0.18)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_leaf_bright"]
+albedo_color = Color(0.3, 0.6, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_leaf_dark"]
+albedo_color = Color(0.2, 0.45, 0.15, 1)
+
+[node name="CocaLeaf" type="StaticBody3D"]
+script = ExtResource("1_resource")
+resource_type = "coca_leaf"
+resource_amount = 1
+interaction_text = "Pick Coca Leaf"
+adjust_to_terrain = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+shape = SubResource("BoxShape3D_coca")
+
+[node name="Stem" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 0)
+mesh = SubResource("BoxMesh_stem")
+material_override = SubResource("StandardMaterial3D_stem")
+
+[node name="Leaf1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 0.35, 0)
+mesh = SubResource("BoxMesh_leaf_broad")
+material_override = SubResource("StandardMaterial3D_leaf_bright")
+
+[node name="Leaf2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.1, 0.32, 0.05)
+mesh = SubResource("BoxMesh_leaf_side")
+material_override = SubResource("StandardMaterial3D_leaf_dark")
+
+[node name="Leaf3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.05, 0.42, -0.05)
+mesh = SubResource("BoxMesh_leaf_top")
+material_override = SubResource("StandardMaterial3D_leaf_bright")
+
+[node name="Leaf4" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.866, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866, -0.05, 0.28, -0.08)
+mesh = SubResource("BoxMesh_leaf_broad")
+material_override = SubResource("StandardMaterial3D_leaf_dark")

@@ -169,6 +169,7 @@ var mushroom_scene: PackedScene
 var herb_scene: PackedScene
 var ore_scene: PackedScene
 var osha_root_scene: PackedScene
+var coca_leaf_scene: PackedScene
 
 # Resource spawning settings
 @export var branch_density: float = 0.08  # Branches per grid cell chance
@@ -1062,6 +1063,20 @@ func _spawn_sinkhole_contents() -> void:
 
 	add_child(water_area)
 
+	# Coca leaf plant near sinkhole rim
+	if coca_leaf_scene:
+		var leaf_offset: Vector2 = Vector2(7.0, 0.0)  # East of sinkhole
+		var leaf_x: float = center.x + leaf_offset.x
+		var leaf_z: float = center.y + leaf_offset.y
+		# Snap to cell grid
+		leaf_x = roundf(leaf_x / cell_size) * cell_size + cell_size / 2.0
+		leaf_z = roundf(leaf_z / cell_size) * cell_size + cell_size / 2.0
+		var leaf_y: float = get_height_at(leaf_x, leaf_z)
+		var coca_node: Node3D = coca_leaf_scene.instantiate()
+		coca_node.name = "SinkholeCocaLeaf"
+		coca_node.position = Vector3(leaf_x, leaf_y, leaf_z)
+		add_child(coca_node)
+
 	sinkhole_spawned = true
 	print("[ChunkManager] Spawned sinkhole contents at (%.0f, %.0f)" % [center.x, center.y])
 
@@ -1275,6 +1290,7 @@ func _load_scenes() -> void:
 	herb_scene = load("res://scenes/resources/herb.tscn")
 	ore_scene = load("res://scenes/resources/ore_node.tscn")
 	osha_root_scene = load("res://scenes/resources/osha_root.tscn")
+	coca_leaf_scene = load("res://scenes/resources/coca_leaf.tscn")
 
 	# Load cave entrance script
 	cave_entrance_script = load("res://scripts/world/cave_entrance.gd")
