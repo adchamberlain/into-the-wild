@@ -108,10 +108,8 @@ func add_item(resource_type: String, amount: int = 1) -> int:
 	items[resource_type] += amount
 	var new_total: int = items[resource_type]
 
-	print("[Inventory] Added %d %s, new total: %d. Emitting signals..." % [amount, resource_type, new_total])
 	item_added.emit(resource_type, amount, new_total)
 	inventory_changed.emit()
-	print("[Inventory] Signals emitted")
 
 	return new_total
 
@@ -170,7 +168,6 @@ func get_total_item_count() -> int:
 func clear() -> void:
 	items.clear()
 	inventory_changed.emit()
-	print("[Inventory] Cleared")
 
 
 ## Debug: Print current inventory contents.

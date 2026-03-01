@@ -106,6 +106,8 @@ var _overlay_active: bool = false
 # Grapple reticle (uses existing Crosshair label)
 @onready var crosshair: Label = $Crosshair
 var default_crosshair_color: Color = Color(1, 1, 1, 0.8)
+var _last_crosshair_color: Color = Color(1, 1, 1, 0.8)
+var _last_glide_boosting: int = -1  # -1 = not set, 0 = gliding, 1 = boosting
 
 var time_manager: Node
 var player: Node
@@ -493,7 +495,6 @@ func _on_tool_broken(item_type: String) -> void:
 
 
 func _on_inventory_changed() -> void:
-	print("[HUD] Inventory changed signal received, updating display")
 	_update_inventory_display()
 
 
@@ -723,16 +724,20 @@ func _process(delta: float) -> void:
 		var player_gliding: bool = "is_gliding" in player and player.is_gliding
 		if gliding_panel.visible != player_gliding:
 			gliding_panel.visible = player_gliding
+			if not player_gliding:
+				_last_glide_boosting = -1
 		if player_gliding:
-			var glide_lbl: Label = gliding_panel.get_node_or_null("GlidingLabel")
-			if glide_lbl:
-				var boosting: bool = "_glide_boosting" in player and player._glide_boosting
-				if boosting:
-					glide_lbl.text = "BOOSTING"
-					glide_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3, 1))
-				else:
-					glide_lbl.text = "GLIDING"
-					glide_lbl.add_theme_color_override("font_color", Color(0.6, 1.0, 0.6, 1))
+			var boost_state: int = 1 if ("_glide_boosting" in player and player._glide_boosting) else 0
+			if boost_state != _last_glide_boosting:
+				_last_glide_boosting = boost_state
+				var glide_lbl: Label = gliding_panel.get_node_or_null("GlidingLabel")
+				if glide_lbl:
+					if boost_state == 1:
+						glide_lbl.text = "BOOSTING"
+						glide_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3, 1))
+					else:
+						glide_lbl.text = "GLIDING"
+						glide_lbl.add_theme_color_override("font_color", Color(0.6, 1.0, 0.6, 1))
 
 	# Blink remaining bubbles when low on air
 	if bubble_blink_active:
@@ -1015,30 +1020,22 @@ func _update_grapple_reticle() -> void:
 	if not crosshair or not equipment:
 		return
 
+	var color: Color = default_crosshair_color
+
 	# Only change color when grappling hook is equipped
 	if equipment.get_equipped() == "grappling_hook":
-		# Get grappling hook node to check target validity
 		var grappling_hook: Node = player.get_node_or_null("GrapplingHook") if player else null
 		if grappling_hook and "current_target_valid" in grappling_hook:
-			var color: Color
 			if grappling_hook.is_grappling:
-				# During grapple, show blue
 				color = Color(0.4, 0.7, 1.0, 1.0)
 			elif grappling_hook.current_target_valid:
-				# Valid target - green
 				color = Color(0.4, 1.0, 0.4, 1.0)
 			elif grappling_hook.current_target_reason != "" and grappling_hook.current_target_reason != "No target":
-				# Invalid target with reason - red
 				color = Color(1.0, 0.4, 0.4, 1.0)
-			else:
-				# No target - white
-				color = default_crosshair_color
-			crosshair.add_theme_color_override("font_color", color)
-		else:
-			crosshair.add_theme_color_override("font_color", default_crosshair_color)
-	else:
-		# Reset to default color when not using grappling hook
-		crosshair.add_theme_color_override("font_color", default_crosshair_color)
+
+	if color != _last_crosshair_color:
+		_last_crosshair_color = color
+		crosshair.add_theme_color_override("font_color", color)
 
 
 ## Fade the screen to black and back. Calls callback after fade out completes.
