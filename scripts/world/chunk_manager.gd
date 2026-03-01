@@ -1339,10 +1339,11 @@ func _setup_material() -> void:
 	terrain_material = StandardMaterial3D.new()
 	terrain_material.vertex_color_use_as_albedo = true
 	terrain_material.albedo_color = Color.WHITE
-	terrain_material.diffuse_mode = BaseMaterial3D.DIFFUSE_LAMBERT
+	terrain_material.diffuse_mode = BaseMaterial3D.DIFFUSE_BURLEY
 	terrain_material.roughness = 1.0
 	terrain_material.metallic = 0.0
 	terrain_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	terrain_material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
 
 	# Add pixelated texture atlas
 	var texture_atlas: ImageTexture = TerrainTextures.get_texture_atlas()
