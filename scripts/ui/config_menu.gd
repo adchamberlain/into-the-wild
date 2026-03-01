@@ -33,6 +33,7 @@ var tree_respawn_days: float = 7.0
 var day_length_minutes: float = 20.0
 var music_enabled: bool = true
 var music_volume: float = 90.0  # 0-100
+var dev_mode_enabled: bool = false
 
 # UI References
 @onready var panel: PanelContainer = $Panel
@@ -51,6 +52,7 @@ var music_volume: float = 90.0  # 0-100
 @onready var music_toggle: CheckButton = $Panel/VBoxContainer/MusicToggle
 @onready var music_volume_slider: HSlider = $Panel/VBoxContainer/MusicVolumeContainer/MusicVolumeSlider
 @onready var music_volume_label: Label = $Panel/VBoxContainer/MusicVolumeContainer/MusicVolumeValue
+@onready var dev_mode_toggle: CheckButton = $Panel/VBoxContainer/DevModeToggle
 
 var is_visible: bool = false
 var opened_from_pause_menu: bool = false
@@ -141,6 +143,10 @@ func _init_ui() -> void:
 	tree_respawn_slider.value = tree_respawn_days
 	tree_respawn_label.text = "%.0f day%s" % [tree_respawn_days, "s" if not is_equal_approx(tree_respawn_days, 1.0) else ""]
 
+	# Set dev mode toggle
+	if dev_mode_toggle:
+		dev_mode_toggle.button_pressed = dev_mode_enabled
+
 	# Set music controls
 	if music_toggle:
 		music_toggle.button_pressed = music_enabled
@@ -161,6 +167,10 @@ func _init_ui() -> void:
 		start_with_bow_map_toggle.toggled.connect(_on_start_with_bow_map_toggled)
 	day_length_slider.value_changed.connect(_on_day_length_changed)
 	tree_respawn_slider.value_changed.connect(_on_tree_respawn_changed)
+
+	# Connect dev mode signal
+	if dev_mode_toggle:
+		dev_mode_toggle.toggled.connect(_on_dev_mode_toggled)
 
 	# Connect music signals
 	if music_toggle:
@@ -534,6 +544,15 @@ func _on_start_with_bow_map_toggled(pressed: bool) -> void:
 	print("[ConfigMenu] Start with bow & map: %s" % ("ON" if pressed else "OFF"))
 
 
+func _on_dev_mode_toggled(pressed: bool) -> void:
+	dev_mode_enabled = pressed
+	if player:
+		player.dev_mode = pressed
+		if pressed:
+			player._dev_populate_inventory()
+	print("[ConfigMenu] Dev mode (all items): %s" % ("ON" if pressed else "OFF"))
+
+
 func _on_day_length_changed(value: float) -> void:
 	day_length_minutes = value
 	day_length_label.text = "%.0f min" % value
@@ -601,6 +620,10 @@ func _apply_config() -> void:
 	if hud and "show_coordinates" in hud:
 		hud.show_coordinates = show_coordinates_enabled
 
+	# Apply dev mode
+	if player:
+		player.dev_mode = dev_mode_enabled
+
 	# Apply music settings
 	if music_manager:
 		music_manager.set_music_enabled(music_enabled)
@@ -622,7 +645,8 @@ func get_config() -> Dictionary:
 		"tree_respawn_days": tree_respawn_days,
 		"day_length_minutes": day_length_minutes,
 		"music_enabled": music_enabled,
-		"music_volume": music_volume
+		"music_volume": music_volume,
+		"dev_mode_enabled": dev_mode_enabled
 	}
 
 
@@ -639,6 +663,7 @@ func apply_config(data: Dictionary) -> void:
 	day_length_minutes = data.get("day_length_minutes", 20.0)
 	music_enabled = data.get("music_enabled", true)
 	music_volume = data.get("music_volume", 90.0)
+	dev_mode_enabled = data.get("dev_mode_enabled", false)
 	# Update UI sliders/toggles
 	if hunger_toggle:
 		hunger_toggle.button_pressed = hunger_enabled
@@ -668,6 +693,8 @@ func apply_config(data: Dictionary) -> void:
 		music_volume_slider.value = music_volume
 	if music_volume_label:
 		music_volume_label.text = "%.0f%%" % music_volume
+	if dev_mode_toggle:
+		dev_mode_toggle.button_pressed = dev_mode_enabled
 	_apply_config()
 
 
@@ -807,6 +834,8 @@ func _build_focusable_controls() -> void:
 		focusable_controls.append(show_coordinates_toggle)
 	if start_with_bow_map_toggle:
 		focusable_controls.append(start_with_bow_map_toggle)
+	if dev_mode_toggle:
+		focusable_controls.append(dev_mode_toggle)
 	if tree_respawn_slider:
 		focusable_controls.append(tree_respawn_slider)
 	if day_length_slider:

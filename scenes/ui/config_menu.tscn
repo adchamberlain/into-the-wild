@@ -80,6 +80,12 @@ theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 32
 text = "Start with Bow & Map"
 
+[node name="DevModeToggle" type="CheckButton" parent="Panel/VBoxContainer"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 32
+text = "Dev Mode (all items)"
+
 [node name="TreeRespawnContainer" type="VBoxContainer" parent="Panel/VBoxContainer"]
 layout_mode = 2
 

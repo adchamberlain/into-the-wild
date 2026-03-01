@@ -5,7 +5,7 @@ signal interaction_target_changed(target: Node, interaction_text: String)
 signal interaction_cleared()
 
 # Developer mode: set to true to spawn with all items for testing
-const DEV_GIVE_ALL_ITEMS: bool = true
+var dev_mode: bool = false
 
 # Movement settings
 @export var walk_speed: float = 5.0
@@ -225,7 +225,7 @@ func _ready() -> void:
 		inventory.item_add_refused.connect(_on_item_add_refused)
 
 	# Dev mode: populate inventory with all items
-	if DEV_GIVE_ALL_ITEMS:
+	if dev_mode:
 		call_deferred("_dev_populate_inventory")
 
 	# Starting equipment based on config
