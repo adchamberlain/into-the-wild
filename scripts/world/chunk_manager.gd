@@ -1066,7 +1066,7 @@ func _spawn_sinkhole_contents() -> void:
 
 	# Coca leaf plant near sinkhole rim
 	if coca_leaf_scene:
-		var leaf_offset: Vector2 = Vector2(7.0, 0.0)  # East of sinkhole
+		var leaf_offset: Vector2 = Vector2(10.0, 0.0)  # East of sinkhole (beyond 8-unit carving zone)
 		var leaf_x: float = center.x + leaf_offset.x
 		var leaf_z: float = center.y + leaf_offset.y
 		# Snap to cell grid
@@ -1092,6 +1092,10 @@ func _spawn_sinkhole_contents() -> void:
 
 func _on_sinkhole_water_entered(body: Node3D) -> void:
 	if body.is_in_group("player"):
+		# Set water surface Y to the sinkhole's terrain-level surface
+		if "water_surface_y" in body and desert_sinkhole.size() > 0:
+			var sink_center: Vector2 = desert_sinkhole["center"]
+			body.water_surface_y = get_height_at(sink_center.x + desert_sinkhole["radius"] + 4.0, sink_center.y)
 		if body.has_method("set_in_water"):
 			body.set_in_water(true)
 		print("[ChunkManager] Player entered sinkhole water")
@@ -1099,6 +1103,9 @@ func _on_sinkhole_water_entered(body: Node3D) -> void:
 
 func _on_sinkhole_water_exited(body: Node3D) -> void:
 	if body.is_in_group("player"):
+		# Reset water surface Y to default pond level
+		if "water_surface_y" in body:
+			body.water_surface_y = 0.15
 		if body.has_method("set_in_water"):
 			body.set_in_water(false)
 		print("[ChunkManager] Player exited sinkhole water")
