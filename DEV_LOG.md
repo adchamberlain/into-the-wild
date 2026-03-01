@@ -6077,6 +6077,31 @@ Additionally, `print()` debug statements in `inventory.add_item()` and the HUD s
 
 ---
 
+## Session 51 - Dev Mode Toggle in Settings Menu (2026-03-01)
+
+Added a runtime-togglable "Dev Mode (all items)" setting to the config menu, replacing the hardcoded `DEV_GIVE_ALL_ITEMS` constant that required code edits and restarts.
+
+### Changes
+1. **Runtime toggle**: New CheckButton in config menu between "Start with Bow & Map" and the tree respawn slider
+2. **Inventory snapshot/restore**: Toggling ON snapshots current inventory then populates all items; toggling OFF restores the exact pre-dev-mode inventory state
+3. **Save/load persistence**: Dev mode setting saved in config data, persists across game saves
+4. **Default off**: Game now starts without dev items by default — no more editing code to disable
+
+### Implementation
+- `player_controller.gd`: `const DEV_GIVE_ALL_ITEMS` replaced with `var dev_mode: bool = false` and `_pre_dev_inventory` snapshot dictionary. `_dev_populate_inventory()` snapshots before filling; `_dev_clear_inventory()` restores from snapshot.
+- `config_menu.gd`: `dev_mode_enabled` state var, toggle UI ref, signal handler that calls populate/clear on player, included in `get_config()`/`apply_config()` for save/load.
+- `config_menu.tscn`: `DevModeToggle` CheckButton node added to VBoxContainer.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/player/player_controller.gd` | Modified | `var dev_mode`, `_pre_dev_inventory` snapshot, `_dev_clear_inventory()` restore method |
+| `scripts/ui/config_menu.gd` | Modified | `dev_mode_enabled` state, toggle wiring, save/load, controller nav support |
+| `scenes/ui/config_menu.tscn` | Modified | Added DevModeToggle CheckButton node |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
