@@ -5851,42 +5851,97 @@ Arrows fired from the enchanted bow now have a significantly larger hit detectio
 
 ---
 
-## Session 48e - Sinkhole Save/Load Integration (2026-02-28)
+## Session 48e - Desert Sinkhole Easter Egg + Split Branches Recipe (2026-02-28)
 
-### Save/Load for Sinkhole Easter Egg
-Added full save/load support for all desert sinkhole Easter egg state:
+### Split Branches Recipe
+Added "Split Branches" crafting recipe: 1 wood → 4 branches. Hand-craftable, no bench or camp level required. Addresses resource imbalance where players accumulate hundreds of wood but run low on branches.
 
-**Player data saved/loaded:**
-- `has_read_journal` — whether player has read the Explorer's Journal
-- `map_markers_unlocked` — compass marker reward from journal
-- `coca_leaf_timer` — remaining coca leaf breath buff time (restores BREATH_BUBBLE_INTERVAL on load)
-- `max_health_bonus` — +25 max health from journal reward
-- `hunger_depletion_rate` — reduced hunger rate (0.04 vs 0.05 base) from journal reward
+### Desert Sinkhole Easter Egg — Full Implementation
 
-**World data saved/loaded:**
-- `sinkhole_book_collected` — tracked on chunk_manager, gates journal respawn in sinkhole
+Added a hidden sinkhole in the desert biome containing an ancient explorer's journal — the ultimate item in the game. Reaching it requires a deep underwater dive aided by a coca leaf plant. The journal grants permanent stat boosts, reveals map markers, and unlocks a hang glider recipe for powered flight.
 
-Stats bonuses are restored *before* health clamping so max health is correct when loading. All new fields use `.get()` with defaults for backward compatibility with old saves.
+#### Sinkhole Generation
+- 30-unit deep water-filled sinkhole at 180° in the desert ring (~200 units from spawn)
+- 5-unit radius with 3-unit gradual slope at rim
+- Registered as water body for terrain carving in `get_height_at()`
+- Vegetation suppressed within 12-unit buffer zone
+- Faint blue-green glow from OmniLight3D at the bottom
+- Swimming Area3D for water detection
 
-### Bug Fix: Missing Hunger Rate Reward
-The `_apply_journal_rewards()` function granted +25 max health but was missing the -20% hunger depletion rate reduction. Added `stats.hunger_depletion_rate = 0.04` to complete the reward.
+#### Coca Leaf Plant
+- New resource node scene: bushy plant with 4 broad leaves in bright/dark green
+- Spawns 7 units east of sinkhole — the only green vegetation nearby
+- When eaten: doubles underwater breath duration (4s → 8s per bubble) for 5 minutes
+- Makes the 30-unit dive possible (normal air = 20s, with buff = 40s, dive takes ~20.5s)
+- Respawns after 72 hours game time via existing resource depletion system
+
+#### Explorer's Journal Pickup
+- Glowing book on a stone pedestal at the sinkhole bottom
+- Procedural visuals: 4-layer stone pedestal + emissive amber book + warm OmniLight3D
+- Shared static materials pattern for performance
+- Goes into inventory as `explorers_journal`, never respawns once collected
+
+#### Journal Reading UI
+- Full-screen CanvasLayer at layer 80 with dark semi-transparent background
+- 3-4 paragraphs of weathered explorer lore mentioning oases, caves, and the glider design
+- Closes on ESC/Circle, can be re-read anytime from inventory
+
+#### Three Rewards on First Read
+1. **Stat Boost**: +25 max health (100→125), -20% hunger depletion (0.05→0.04/sec)
+2. **Hang Glider Recipe**: Unlocked in crafting system (`requires_journal: true` gate)
+3. **Map Markers**: Compass HUD cycles through oases, caves, and sinkhole positions every 3 seconds
+
+#### Hang Glider Equipment
+- Equippable tool (slot 30, tool_type "glider")
+- Infinite durability (not in TOOL_MAX_DURABILITY)
+- First-person model: triangular fabric wing frame with grip bar, struts, and canvas panels
+- Recipe: 4 rope + 6 branch + 2 hide (bench, camp level 3, journal required)
+
+#### Hang Glider Flight Mechanics
+- **Deploy**: Press R/R2 while airborne with glider equipped
+- **Pitch control**: Camera look up = climb (1 u/s), look down = dive (2 u/s), level = gentle descent
+- **Horizontal speed**: 8 u/s (faster than sprinting at 6 u/s)
+- **Max height**: 25 units above terrain (above trees, below mountain peaks)
+- **Steering**: WASD / left stick for direction
+- **Retract**: Jump, crouch, land on ground, or enter water
+- HUD "GLIDING" indicator while in flight
+- State safety: crouch disabled while gliding, gliding reset on death
+
+#### Save/Load Integration
+- Player data: `has_read_journal`, `map_markers_unlocked`, `coca_leaf_timer`, `max_health_bonus`, `hunger_depletion_rate`
+- World data: `sinkhole_book_collected` gates journal respawn
+- Stat bonuses restored before health clamping for correct max health on load
+- Coca leaf breath buff restored if timer > 0
+- All new fields use `.get()` with defaults for backward compatibility
 
 ### Files Changed
 
 | File | Status | Changes |
 |------|--------|---------|
-| `scripts/core/save_load.gd` | Modified | Save/load max_health_bonus, hunger_depletion_rate, has_read_journal, map_markers_unlocked, coca_leaf_timer, sinkhole_book_collected |
-| `scripts/world/chunk_manager.gd` | Modified | Added sinkhole_book_collected var, gate journal spawn on flag |
-| `scripts/player/player_controller.gd` | Modified | Added hunger_depletion_rate = 0.04 to _apply_journal_rewards() |
+| `scripts/crafting/crafting_system.gd` | Modified | Added split branches recipe, hang glider recipe with `requires_journal` gate, `_check_journal_read()` helper |
+| `scripts/world/chunk_manager.gd` | Modified | Sinkhole generation, terrain carving, contents spawning, book collection gate, `sinkhole_book_collected` var |
+| `scripts/world/terrain_chunk.gd` | Modified | Vegetation suppression near sinkhole |
+| `scenes/resources/coca_leaf.tscn` | Created | Coca leaf resource node scene |
+| `scripts/world/explorers_journal_pickup.gd` | Created | Journal pickup with pedestal and emissive book visuals |
+| `scripts/ui/journal_ui.gd` | Created | Full-screen journal reading UI |
+| `scripts/player/player_controller.gd` | Modified | Coca leaf buff, journal reading, gliding state, `_process_gliding()`, rewards |
+| `scripts/player/player_stats.gd` | Modified | `max_health_bonus`, `get_max_health()` |
+| `scripts/player/equipment.gd` | Modified | Hang glider in EQUIPPABLE_ITEMS, first-person model |
+| `scripts/ui/hud.gd` | Modified | POI cycling on compass, GLIDING indicator |
+| `scripts/systems/input_manager.gd` | Modified | Glider equipment prompts |
+| `scripts/core/save_load.gd` | Modified | Save/load all new journal, sinkhole, and stat fields |
+| `docs/plans/2026-02-28-desert-sinkhole-easter-egg-design.md` | Created | Full design document |
+| `docs/plans/2026-02-28-desert-sinkhole-easter-egg.md` | Created | 8-task implementation plan |
 
 ---
 
 ## Next Session
 
 ### Planned Tasks
-1. Remove TEMP test spawn items (bow + 20 arrows + bark_map) once satisfied
-2. Continue play-testing desert biome balance
-3. Bug fixing
+1. Play-test the sinkhole Easter egg end-to-end (find sinkhole, eat coca leaf, dive, grab journal, read, craft glider, fly)
+2. Remove TEMP test spawn items (bow + 20 arrows + bark_map) once satisfied
+3. Continue play-testing desert biome balance
+4. Bug fixing from play-testing
 
 ### Known Issues
 - Tortoise materials are per-instance (minor, could be shared static)
