@@ -226,9 +226,7 @@ func _ready() -> void:
 			inventory.add_item("bow", 1)
 			inventory.add_item("arrows", 10)
 			inventory.add_item("map", 1)
-		# TEMP: Spawn with journal and glider for testing
-		inventory.add_item("explorers_journal", 1)
-		inventory.add_item("hang_glider", 1)
+
 
 
 
