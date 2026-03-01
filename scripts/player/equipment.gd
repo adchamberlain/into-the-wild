@@ -200,6 +200,12 @@ const EQUIPPABLE_ITEMS: Dictionary = {
 		"effectiveness": 1.0,
 		"placeable": false,
 		"upgrade_target": ""
+	},
+	"explorers_journal": {
+		"name": "Explorer's Journal",
+		"slot": 31,
+		"has_light": false,
+		"tool_type": "journal"
 	}
 }
 
@@ -268,6 +274,8 @@ func _process(delta: float) -> void:
 		placement_cooldown_timer -= delta
 	if _map_open_blocked and not Input.is_action_pressed("use_equipped"):
 		_map_open_blocked = false
+	if _journal_open_blocked and not Input.is_action_pressed("use_equipped"):
+		_journal_open_blocked = false
 
 
 func _setup_references() -> void:
@@ -471,6 +479,8 @@ func equip(item_type: String) -> bool:
 		_create_bow_model(item_type)
 	elif tool_type == "map":
 		_create_map_model()
+	elif tool_type == "journal":
+		_create_journal_model()
 	elif tool_type == "glider":
 		_create_hang_glider_model()
 
@@ -492,6 +502,7 @@ func unequip() -> void:
 	_remove_lantern_model()
 	_remove_rope_model()
 	_remove_map_model()
+	_remove_journal_model()
 	_remove_stone_axe()
 	_remove_machete()
 	_remove_fishing_rod()
@@ -524,6 +535,8 @@ func use_equipped() -> bool:
 			return _use_grappling_hook()
 		elif tool_type == "map":
 			return _use_map()
+		elif tool_type == "journal":
+			return _use_journal()
 		elif tool_type == "upgrade":
 			return _use_upgrade(equipped_item, item_data)
 		else:
@@ -1587,6 +1600,106 @@ func _remove_map_model() -> void:
 		map_model = null
 
 
+func _create_journal_model() -> void:
+	if journal_model:
+		return
+
+	journal_model = Node3D.new()
+	journal_model.name = "JournalModel"
+
+	# Leather cover (dark reddish-brown)
+	var cover := MeshInstance3D.new()
+	cover.name = "Cover"
+	var cover_mesh := BoxMesh.new()
+	cover_mesh.size = Vector3(0.22, 0.28, 0.045)
+	cover.mesh = cover_mesh
+	var cover_mat := StandardMaterial3D.new()
+	cover_mat.albedo_color = Color(0.38, 0.18, 0.08)
+	cover.material_override = cover_mat
+	journal_model.add_child(cover)
+
+	# Cream page block inset
+	var pages := MeshInstance3D.new()
+	pages.name = "Pages"
+	var pages_mesh := BoxMesh.new()
+	pages_mesh.size = Vector3(0.18, 0.24, 0.035)
+	pages.mesh = pages_mesh
+	var pages_mat := StandardMaterial3D.new()
+	pages_mat.albedo_color = Color(0.88, 0.82, 0.68)
+	pages.material_override = pages_mat
+	pages.position = Vector3(0.01, 0, 0.002)
+	journal_model.add_child(pages)
+
+	# Darker spine strip on left edge
+	var spine := MeshInstance3D.new()
+	spine.name = "Spine"
+	var spine_mesh := BoxMesh.new()
+	spine_mesh.size = Vector3(0.025, 0.28, 0.048)
+	spine.mesh = spine_mesh
+	var spine_mat := StandardMaterial3D.new()
+	spine_mat.albedo_color = Color(0.28, 0.12, 0.05)
+	spine.material_override = spine_mat
+	spine.position = Vector3(-0.1, 0, 0)
+	journal_model.add_child(spine)
+
+	# Leather strap across front
+	var strap := MeshInstance3D.new()
+	strap.name = "Strap"
+	var strap_mesh := BoxMesh.new()
+	strap_mesh.size = Vector3(0.22, 0.02, 0.05)
+	strap.mesh = strap_mesh
+	var strap_mat := StandardMaterial3D.new()
+	strap_mat.albedo_color = Color(0.32, 0.15, 0.06)
+	strap.material_override = strap_mat
+	strap.position = Vector3(0, -0.02, 0)
+	journal_model.add_child(strap)
+
+	# Brass clasp accent on strap
+	var clasp := MeshInstance3D.new()
+	clasp.name = "Clasp"
+	var clasp_mesh := BoxMesh.new()
+	clasp_mesh.size = Vector3(0.025, 0.025, 0.055)
+	clasp.mesh = clasp_mesh
+	var clasp_mat := StandardMaterial3D.new()
+	clasp_mat.albedo_color = Color(0.75, 0.6, 0.2)
+	clasp_mat.metallic = 0.7
+	clasp.material_override = clasp_mat
+	clasp.position = Vector3(0.09, -0.02, 0)
+	journal_model.add_child(clasp)
+
+	# Position held in hand
+	journal_model.position = JOURNAL_REST_POSITION
+	journal_model.rotation_degrees = JOURNAL_REST_ROTATION
+
+	# Attach to camera
+	if player:
+		var camera: Camera3D = player.get_node_or_null("Camera3D")
+		if camera:
+			camera.add_child(journal_model)
+
+
+func _remove_journal_model() -> void:
+	if journal_model:
+		journal_model.queue_free()
+		journal_model = null
+
+
+func _use_journal() -> bool:
+	if not player:
+		return false
+
+	# Block reopening until use_equipped is fully released
+	if _journal_open_blocked:
+		return true
+
+	_journal_open_blocked = true
+
+	# Delegate to player's existing _open_journal() method
+	if player.has_method("_open_journal"):
+		player._open_journal()
+	return true
+
+
 func _create_fishing_rod() -> void:
 	if fishing_rod_model:
 		return
@@ -1933,6 +2046,12 @@ const LANTERN_REST_ROTATION: Vector3 = Vector3(0, 0, -10)
 var map_model: Node3D = null
 const MAP_REST_POSITION: Vector3 = Vector3(0.0, -0.4, -0.5)
 const MAP_REST_ROTATION: Vector3 = Vector3(-30, 0, 0)
+
+# Journal held model
+var journal_model: Node3D = null
+const JOURNAL_REST_POSITION: Vector3 = Vector3(0.25, -0.35, -0.5)
+const JOURNAL_REST_ROTATION: Vector3 = Vector3(-20, -10, 5)
+var _journal_open_blocked: bool = false
 
 # Rope held model
 var rope_model: Node3D = null

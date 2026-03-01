@@ -861,11 +861,6 @@ func _try_eat() -> void:
 	if not inventory or not stats:
 		return
 
-	# Special case: Explorer's Journal opens a reading UI instead of being consumed
-	if inventory.has_item("explorers_journal"):
-		_open_journal()
-		return
-
 	var hud: Node = get_tree().get_first_node_in_group("hud")
 
 	# Don't consume anything if both health and hunger are full

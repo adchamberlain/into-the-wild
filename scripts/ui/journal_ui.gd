@@ -50,89 +50,188 @@ func _build_ui() -> void:
 	var vp_size: Vector2 = get_viewport().get_visible_rect().size
 	if vp_size == Vector2.ZERO:
 		vp_size = Vector2(1920, 1080)
+	var sf: float = vp_size.y / 1080.0
 
-	# Full-screen dark background
+	var ink_color: Color = Color(0.18, 0.12, 0.06)
+	var parchment_color: Color = Color(0.88, 0.82, 0.68)
+	var leather_color: Color = Color(0.38, 0.24, 0.10)
+	var spine_color: Color = Color(0.28, 0.16, 0.06)
+
+	# Full-screen dark overlay
 	background = ColorRect.new()
-	background.color = Color(0.0, 0.0, 0.0, 0.7)
+	background.color = Color(0.0, 0.0, 0.0, 0.75)
 	background.anchors_preset = Control.PRESET_FULL_RECT
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(background)
 
-	# Centered panel
+	# Drop shadow behind book
+	var shadow: PanelContainer = PanelContainer.new()
+	shadow.process_mode = Node.PROCESS_MODE_ALWAYS
+	var shadow_style: StyleBoxFlat = StyleBoxFlat.new()
+	shadow_style.bg_color = Color(0.0, 0.0, 0.0, 0.4)
+	shadow_style.corner_radius_top_left = int(14 * sf)
+	shadow_style.corner_radius_top_right = int(14 * sf)
+	shadow_style.corner_radius_bottom_left = int(14 * sf)
+	shadow_style.corner_radius_bottom_right = int(14 * sf)
+	shadow.add_theme_stylebox_override("panel", shadow_style)
+	shadow.anchor_left = 0.5
+	shadow.anchor_top = 0.5
+	shadow.anchor_right = 0.5
+	shadow.anchor_bottom = 0.5
+	var book_w: float = 860 * sf
+	var book_h: float = 560 * sf
+	shadow.offset_left = -book_w / 2.0 + 4 * sf
+	shadow.offset_top = -book_h / 2.0 + 4 * sf
+	shadow.offset_right = book_w / 2.0 + 4 * sf
+	shadow.offset_bottom = book_h / 2.0 + 4 * sf
+	add_child(shadow)
+
+	# Leather cover panel (the book itself)
 	panel = PanelContainer.new()
 	panel.process_mode = Node.PROCESS_MODE_ALWAYS
+	var cover_style: StyleBoxFlat = StyleBoxFlat.new()
+	cover_style.bg_color = leather_color
+	cover_style.corner_radius_top_left = int(12 * sf)
+	cover_style.corner_radius_top_right = int(12 * sf)
+	cover_style.corner_radius_bottom_left = int(12 * sf)
+	cover_style.corner_radius_bottom_right = int(12 * sf)
+	cover_style.content_margin_left = int(10 * sf)
+	cover_style.content_margin_right = int(10 * sf)
+	cover_style.content_margin_top = int(10 * sf)
+	cover_style.content_margin_bottom = int(10 * sf)
+	panel.add_theme_stylebox_override("panel", cover_style)
 
-	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = Color(0.1, 0.1, 0.12, 0.9)
-	style.corner_radius_top_left = 10
-	style.corner_radius_top_right = 10
-	style.corner_radius_bottom_left = 10
-	style.corner_radius_bottom_right = 10
-	style.content_margin_left = 30
-	style.content_margin_right = 30
-	style.content_margin_top = 25
-	style.content_margin_bottom = 25
-	panel.add_theme_stylebox_override("panel", style)
-
-	# Center the panel with max width ~800px
 	panel.anchor_left = 0.5
 	panel.anchor_top = 0.5
 	panel.anchor_right = 0.5
 	panel.anchor_bottom = 0.5
-	panel.offset_left = -400
-	panel.offset_top = -320
-	panel.offset_right = 400
-	panel.offset_bottom = 320
-	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	panel.offset_left = -book_w / 2.0
+	panel.offset_top = -book_h / 2.0
+	panel.offset_right = book_w / 2.0
+	panel.offset_bottom = book_h / 2.0
 
-	var vbox: VBoxContainer = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 20)
-	panel.add_child(vbox)
+	# HBox: left page | spine | right page
+	var hbox: HBoxContainer = HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 0)
+	hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	panel.add_child(hbox)
+
+	# --- Left page ---
+	var left_page: PanelContainer = PanelContainer.new()
+	var left_style: StyleBoxFlat = StyleBoxFlat.new()
+	left_style.bg_color = parchment_color
+	left_style.corner_radius_top_left = int(6 * sf)
+	left_style.corner_radius_bottom_left = int(6 * sf)
+	left_style.content_margin_left = int(30 * sf)
+	left_style.content_margin_right = int(24 * sf)
+	left_style.content_margin_top = int(30 * sf)
+	left_style.content_margin_bottom = int(24 * sf)
+	left_page.add_theme_stylebox_override("panel", left_style)
+	left_page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	var left_vbox: VBoxContainer = VBoxContainer.new()
+	left_vbox.add_theme_constant_override("separation", int(12 * sf))
+	left_page.add_child(left_vbox)
 
 	# Title
 	var title_label: Label = Label.new()
 	title_label.text = "Explorer's Journal"
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title_label.add_theme_font_override("font", font)
-	title_label.add_theme_font_size_override("font_size", 56)
-	title_label.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
-	vbox.add_child(title_label)
+	title_label.add_theme_font_size_override("font_size", int(40 * sf))
+	title_label.add_theme_color_override("font_color", Color(0.30, 0.18, 0.06))
+	left_vbox.add_child(title_label)
 
-	# Separator
-	var sep: HSeparator = HSeparator.new()
-	vbox.add_child(sep)
+	# Horizontal rule (drawn as a colored separator line)
+	var rule: ColorRect = ColorRect.new()
+	rule.color = Color(0.45, 0.32, 0.15, 0.6)
+	rule.custom_minimum_size = Vector2(0, 2 * sf)
+	left_vbox.add_child(rule)
 
-	# Journal body text
-	var body_label: Label = Label.new()
-	body_label.text = JOURNAL_TEXT
-	body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	body_label.add_theme_font_override("font", font)
-	body_label.add_theme_font_size_override("font_size", 28)
-	body_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9, 1))
-	body_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	vbox.add_child(body_label)
+	# Decorative element — small flourish text
+	var flourish: Label = Label.new()
+	flourish.text = "~ ~ ~"
+	flourish.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	flourish.add_theme_font_override("font", font)
+	flourish.add_theme_font_size_override("font_size", int(24 * sf))
+	flourish.add_theme_color_override("font_color", Color(0.45, 0.32, 0.15, 0.5))
+	left_vbox.add_child(flourish)
 
-	# Spacer
-	var spacer: Control = Control.new()
-	spacer.custom_minimum_size = Vector2(0, 10)
-	vbox.add_child(spacer)
+	# "Day 47" heading
+	var day_label: Label = Label.new()
+	day_label.text = "Day 47"
+	day_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	day_label.add_theme_font_override("font", font)
+	day_label.add_theme_font_size_override("font_size", int(32 * sf))
+	day_label.add_theme_color_override("font_color", ink_color)
+	left_vbox.add_child(day_label)
 
-	# Hint at bottom
+	# Left page body — first half of journal text
+	var left_body: Label = Label.new()
+	left_body.text = "I've mapped every oasis in this\nforsaken desert ring — three in\nall, each hiding gemstones\nbeneath the water. Diamonds in\ntwo of them, opals in the third.\nThe opal pool has a river that\nflows to it from the east.\n\nThe caves in the rocky highlands\nhold crystals and rare ore. I've\nmarked four entrances. Bring\nlight — the darkness will kill\nyou faster than any beast."
+	left_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	left_body.add_theme_font_override("font", font)
+	left_body.add_theme_font_size_override("font_size", int(22 * sf))
+	left_body.add_theme_color_override("font_color", ink_color)
+	left_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	left_vbox.add_child(left_body)
+
+	hbox.add_child(left_page)
+
+	# --- Spine ---
+	var spine_panel: PanelContainer = PanelContainer.new()
+	var spine_style: StyleBoxFlat = StyleBoxFlat.new()
+	spine_style.bg_color = spine_color
+	spine_panel.add_theme_stylebox_override("panel", spine_style)
+	spine_panel.custom_minimum_size = Vector2(20 * sf, 0)
+	# Empty content to hold the minimum width
+	var spine_spacer: Control = Control.new()
+	spine_panel.add_child(spine_spacer)
+	hbox.add_child(spine_panel)
+
+	# --- Right page ---
+	var right_page: PanelContainer = PanelContainer.new()
+	var right_style: StyleBoxFlat = StyleBoxFlat.new()
+	right_style.bg_color = parchment_color
+	right_style.corner_radius_top_right = int(6 * sf)
+	right_style.corner_radius_bottom_right = int(6 * sf)
+	right_style.content_margin_left = int(24 * sf)
+	right_style.content_margin_right = int(30 * sf)
+	right_style.content_margin_top = int(30 * sf)
+	right_style.content_margin_bottom = int(24 * sf)
+	right_page.add_theme_stylebox_override("panel", right_style)
+	right_page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	var right_vbox: VBoxContainer = VBoxContainer.new()
+	right_vbox.add_theme_constant_override("separation", int(12 * sf))
+	right_page.add_child(right_vbox)
+
+	# Right page body — second half
+	var right_body: Label = Label.new()
+	right_body.text = "I spent weeks perfecting a design\nfor a glider — fabric stretched\nacross a frame of branches and\nrope. From the mountain peaks,\nyou can see the whole world. The\nplans are sketched on the last\npage.\n\nIf you've found this, you've\nearned what I've left behind.\nThe wilderness gives its secrets\nto those willing to go deep."
+	right_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	right_body.add_theme_font_override("font", font)
+	right_body.add_theme_font_size_override("font_size", int(22 * sf))
+	right_body.add_theme_color_override("font_color", ink_color)
+	right_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	right_vbox.add_child(right_body)
+
+	# Close hint at bottom of right page
 	var hint_label: Label = Label.new()
-	hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	hint_label.add_theme_font_override("font", font)
-	hint_label.add_theme_font_size_override("font_size", 28)
-	hint_label.add_theme_color_override("font_color", Color(0.65, 0.65, 0.65, 1))
+	hint_label.add_theme_font_size_override("font_size", int(20 * sf))
+	hint_label.add_theme_color_override("font_color", Color(0.45, 0.32, 0.15, 0.5))
 
-	# Detect controller vs keyboard
 	var input_mgr: Node = get_node_or_null("/root/InputManager")
 	if input_mgr and input_mgr.has_method("is_using_controller") and input_mgr.is_using_controller():
-		hint_label.text = "[Circle to close]"
+		hint_label.text = "Circle to close"
 	else:
-		hint_label.text = "[ESC or B to close]"
+		hint_label.text = "ESC or B to close"
 
-	vbox.add_child(hint_label)
+	right_vbox.add_child(hint_label)
+	hbox.add_child(right_page)
 
 	add_child(panel)
 
