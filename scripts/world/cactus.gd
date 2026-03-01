@@ -254,6 +254,10 @@ func interact(player: Node) -> bool:
 	elif player.has_method("get_inventory"):
 		inventory = player.get_inventory()
 
+	# Check capacity before harvesting
+	if inventory and inventory.has_method("can_add_item") and not inventory.can_add_item("cactus_fruit", 1):
+		return false
+
 	if inventory and inventory.has_method("add_item"):
 		inventory.add_item("cactus_fruit", 1)
 

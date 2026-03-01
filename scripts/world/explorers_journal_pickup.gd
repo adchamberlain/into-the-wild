@@ -168,10 +168,16 @@ func get_interaction_text() -> String:
 func interact(player: Node) -> void:
 	if is_collected:
 		return
+
+	# Check capacity before collecting
+	var inventory: Inventory = _get_player_inventory(player)
+	if inventory and not inventory.can_add_item("explorers_journal", 1):
+		_show_notification("Can't carry the journal. Store items first.", Color(1.0, 0.5, 0.5))
+		return
+
 	is_collected = true
 
 	# Add to player inventory
-	var inventory: Inventory = _get_player_inventory(player)
 	if inventory:
 		inventory.add_item("explorers_journal", 1)
 

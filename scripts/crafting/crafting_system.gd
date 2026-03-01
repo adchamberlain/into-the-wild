@@ -374,6 +374,15 @@ func can_craft(recipe_id: String, at_bench: bool = false, campsite_level: int = 
 		if not inventory.has_item(resource_type, required):
 			return false
 
+	# Check output capacity (stack limits)
+	var output_type: String = recipe.get("output_type", "")
+	var output_amount: int = recipe.get("output_amount", 1)
+	if output_type != "" and not inventory.can_add_item(output_type, output_amount):
+		return false
+	# Compass also produces a lodestone
+	if output_type == "compass" and not inventory.can_add_item("lodestone", 1):
+		return false
+
 	return true
 
 

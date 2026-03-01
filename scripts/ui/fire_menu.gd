@@ -290,6 +290,14 @@ func _on_cook_pressed() -> void:
 		return
 
 	var recipe: Dictionary = COOKING_RECIPES[cookable_item]
+	var output_item: String = recipe["output"]
+
+	# Check if player can carry the cooked output
+	if not player_inventory.can_add_item(output_item, 1):
+		var current: int = player_inventory.get_item_count(output_item)
+		var limit: int = player_inventory.get_stack_limit(output_item)
+		_show_notification("Can't carry more %s (%d/%d)" % [output_item.capitalize().replace("_", " "), current, limit], Color(1.0, 0.5, 0.5))
+		return
 
 	# Remove raw ingredient - verify removal succeeded
 	var removed: bool = player_inventory.remove_item(cookable_item, 1)
@@ -297,7 +305,6 @@ func _on_cook_pressed() -> void:
 		return
 
 	# Add cooked item to inventory
-	var output_item: String = recipe["output"]
 	player_inventory.add_item(output_item, 1)
 
 	# Visual flare effect

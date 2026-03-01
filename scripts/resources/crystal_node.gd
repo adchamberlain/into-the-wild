@@ -197,6 +197,11 @@ func interact(player: Node) -> bool:
 	if is_depleted or is_animating:
 		return false
 
+	# Check capacity before gathering
+	var inventory: Inventory = _get_player_inventory(player)
+	if inventory and not inventory.can_add_item(resource_type, resource_amount):
+		return false
+
 	# Crystals are hand-gatherable - no tool check needed
 	_play_gather_animation()
 
@@ -207,7 +212,6 @@ func interact(player: Node) -> bool:
 	gathered.emit(resource_type, resource_amount)
 
 	# Add to player inventory
-	var inventory: Inventory = _get_player_inventory(player)
 	if inventory:
 		inventory.add_item(resource_type, resource_amount)
 		print("[Crystal] +%d crystal" % resource_amount)

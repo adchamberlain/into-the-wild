@@ -464,8 +464,8 @@ func equip(item_type: String) -> bool:
 	elif item_type == "rope":
 		_create_rope_model()
 
-	# Show placeable kit models
-	if item_data.get("placeable", false):
+	# Show placeable kit models (skip items with custom held models like lantern)
+	if item_data.get("placeable", false) and item_type != "lantern":
 		_create_kit_model(item_type)
 
 	# Show tool models
@@ -487,6 +487,8 @@ func equip(item_type: String) -> bool:
 		_create_journal_model()
 	elif tool_type == "glider":
 		_create_hang_glider_model()
+	elif tool_type == "upgrade":
+		_create_wrap_model(item_type)
 
 	print("[Equipment] Equipped %s" % item_data.get("name", item_type))
 	item_equipped.emit(item_type)
@@ -505,6 +507,7 @@ func unequip() -> void:
 	_remove_torch_model()
 	_remove_lantern_model()
 	_remove_rope_model()
+	_remove_wrap_model()
 	_remove_map_model()
 	_remove_journal_model()
 	_remove_stone_axe()
@@ -2057,10 +2060,118 @@ const JOURNAL_REST_POSITION: Vector3 = Vector3(0.25, -0.35, -0.5)
 const JOURNAL_REST_ROTATION: Vector3 = Vector3(-20, -10, 5)
 var _journal_open_blocked: bool = false
 
+# Leather wrap held model
+var wrap_model: Node3D = null
+const WRAP_REST_POSITION: Vector3 = Vector3(0.3, -0.3, -0.55)
+const WRAP_REST_ROTATION: Vector3 = Vector3(10, 5, -15)
+
 # Rope held model
 var rope_model: Node3D = null
 const ROPE_REST_POSITION: Vector3 = Vector3(0.3, -0.28, -0.55)
 const ROPE_REST_ROTATION: Vector3 = Vector3(10, 0, -15)
+
+func _create_wrap_model(wrap_type: String) -> void:
+	if wrap_model:
+		return
+
+	wrap_model = Node3D.new()
+	wrap_model.name = "WrapModel"
+
+	# Leather colors — warm brown tones
+	var leather_mat := StandardMaterial3D.new()
+	leather_mat.albedo_color = Color(0.55, 0.35, 0.18)  # Rich brown leather
+	leather_mat.roughness = 0.8
+
+	var leather_dark := StandardMaterial3D.new()
+	leather_dark.albedo_color = Color(0.4, 0.25, 0.12)  # Dark stitching/edges
+	leather_dark.roughness = 0.85
+
+	var leather_light := StandardMaterial3D.new()
+	leather_light.albedo_color = Color(0.65, 0.45, 0.25)  # Lighter inner side
+	leather_light.roughness = 0.75
+
+	# Main rolled leather strip — a flattened cylinder made of box segments
+	var seg_mesh := BoxMesh.new()
+	seg_mesh.size = Vector3(0.03, 0.08, 0.02)  # Tall, narrow strip segments
+	var roll_radius: float = 0.04
+	var segments: int = 10
+
+	for i: int in range(segments):
+		var angle: float = (float(i) / segments) * TAU
+		var seg := MeshInstance3D.new()
+		seg.mesh = seg_mesh
+		seg.material_override = leather_mat if i % 3 != 0 else leather_light
+		seg.position = Vector3(
+			cos(angle) * roll_radius,
+			0,
+			sin(angle) * roll_radius
+		)
+		seg.rotation.y = -angle
+		wrap_model.add_child(seg)
+
+	# Dark binding strap around the middle of the roll
+	var strap := MeshInstance3D.new()
+	strap.name = "Strap"
+	var strap_mesh := BoxMesh.new()
+	strap_mesh.size = Vector3(0.11, 0.02, 0.11)
+	strap.mesh = strap_mesh
+	strap.material_override = leather_dark
+	strap.position = Vector3(0, 0, 0)
+	wrap_model.add_child(strap)
+
+	# Accent to distinguish axe wrap vs hook wrap
+	if wrap_type == "leather_hook_wrap":
+		# Small metal buckle/clasp on top — hints at hook attachment
+		var buckle_mat := StandardMaterial3D.new()
+		buckle_mat.albedo_color = Color(0.5, 0.5, 0.52)
+		buckle_mat.metallic = 0.7
+		buckle_mat.roughness = 0.3
+
+		var buckle := MeshInstance3D.new()
+		buckle.name = "Buckle"
+		var buckle_mesh := BoxMesh.new()
+		buckle_mesh.size = Vector3(0.035, 0.015, 0.035)
+		buckle.mesh = buckle_mesh
+		buckle.material_override = buckle_mat
+		buckle.position = Vector3(0, 0.045, 0)
+		wrap_model.add_child(buckle)
+
+		# Small hook-shaped accent
+		var hook := MeshInstance3D.new()
+		hook.name = "HookAccent"
+		var hook_mesh := BoxMesh.new()
+		hook_mesh.size = Vector3(0.015, 0.03, 0.015)
+		hook.mesh = hook_mesh
+		hook.material_override = buckle_mat
+		hook.position = Vector3(0.015, 0.06, 0)
+		hook.rotation_degrees = Vector3(0, 0, 15)
+		wrap_model.add_child(hook)
+	else:
+		# Leather axe wrap — a small trailing tongue/flap hanging off the roll
+		var flap := MeshInstance3D.new()
+		flap.name = "Flap"
+		var flap_mesh := BoxMesh.new()
+		flap_mesh.size = Vector3(0.04, 0.05, 0.015)
+		flap.mesh = flap_mesh
+		flap.material_override = leather_light
+		flap.position = Vector3(roll_radius + 0.02, -0.03, 0)
+		flap.rotation_degrees = Vector3(0, 0, 20)
+		wrap_model.add_child(flap)
+
+	wrap_model.position = WRAP_REST_POSITION
+	wrap_model.rotation_degrees = WRAP_REST_ROTATION
+
+	if player:
+		var cam: Camera3D = player.get_node_or_null("Camera3D")
+		if cam:
+			cam.add_child(wrap_model)
+
+
+func _remove_wrap_model() -> void:
+	if wrap_model:
+		wrap_model.queue_free()
+		wrap_model = null
+
 
 func _create_rope_model() -> void:
 	if rope_model:
@@ -2776,6 +2887,10 @@ func _harvest_birch_bark(target: Node) -> bool:
 			# Cooldown expired - remove old strip visual (bark regrew)
 			_remove_bark_strip(target)
 			bark_harvest_tracker.erase(pos_key)
+
+	# Check capacity before harvesting
+	if not inventory.can_add_item("birch_bark", 1):
+		return false
 
 	# Harvest bark
 	_play_swing_animation()

@@ -564,12 +564,22 @@ func _update_inventory_display() -> void:
 		for item_type: String in category_items:
 			var count: int = items[item_type]
 			var display_name: String = _get_display_name(item_type)
+			var limit: int = inventory.get_stack_limit(item_type) if inventory.has_method("get_stack_limit") else 0
 
 			var label: Label = Label.new()
-			label.text = "%s: %d" % [display_name, count]
+			if limit > 0 and inventory.enforce_limits:
+				label.text = "%s: %d/%d" % [display_name, count, limit]
+			else:
+				label.text = "%s: %d" % [display_name, count]
 			label.add_theme_font_override("font", HUD_FONT)
 			label.add_theme_font_size_override("font_size", 40)
-			label.add_theme_color_override("font_color", Color(1, 1, 1, 1))
+			# Color items near/at limit in yellow/red
+			if inventory.enforce_limits and limit > 0 and count >= limit:
+				label.add_theme_color_override("font_color", Color(1.0, 0.5, 0.5, 1))
+			elif inventory.enforce_limits and limit > 0 and count >= limit * 0.8:
+				label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3, 1))
+			else:
+				label.add_theme_color_override("font_color", Color(1, 1, 1, 1))
 			item_list.add_child(label)
 			item_labels[item_type] = label
 

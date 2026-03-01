@@ -5982,12 +5982,58 @@ Reworked hang glider flight mechanics and fixed several bugs:
 
 ---
 
+## Session – 2026-03-01 (Inventory Stack Limits)
+
+### What Was Built
+Added per-item stack limits to the player inventory, creating a resource management mechanic and fixing HUD overflow when carrying many items. Storage boxes remain unlimited.
+
+1. **Core inventory limits**: Added `STACK_LIMITS` dictionary with per-item limits (50 for bulk, 20 for food/materials, 10 for cooked food/rare items, 5 for tools/kits, 3 for wraps, 1 for journal/lodestone). `enforce_limits` flag controls whether limits are active (true for player, false for storage). Added `get_stack_limit()`, `can_add_item()`, `get_remaining_capacity()` helpers and `item_add_refused` signal
+2. **Player controller integration**: Enables limits on player inventory, shows HUD notification "Can't carry more [Item] (X/X). Store items first." when refused
+3. **Save/load safety**: Temporarily disables limits during inventory restore to protect existing saves with items above new limits
+4. **HUD display**: Shows "Name: 5/20" format with color coding — red at limit, yellow at 80%+
+5. **Crafting system**: `can_craft()` now checks output capacity. Crafting UI shows red "Inventory full (X/X)" when player has ingredients but output is at limit
+6. **Fire menu & cabin kitchen**: Check output capacity before cooking, refuse with notification if full
+7. **Storage UI**: Storage→player transfers check capacity. "Transfer All" clamps to remaining capacity. Player item list shows limits (e.g. "Wood x5/50")
+8. **Resource gathering**: All resource nodes (trees, rocks, berries, crystals, cactus) check capacity before depleting. Trees reset chop progress if player can't carry wood
+9. **Structure pickups**: Torch, lantern, and lodestone check capacity before destroying the placed structure
+10. **Processing structures**: Smoker, drying rack, smithing station check capacity when collecting output. Garden does partial harvest (takes what fits, leaves the rest)
+11. **Birch bark & arrow recovery**: Machete bark harvest and diamond arrow pickup check capacity, leave resource/arrow in world if full
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/player/inventory.gd` | Modified | STACK_LIMITS dict, enforce_limits flag, item_add_refused signal, get_stack_limit(), can_add_item(), get_remaining_capacity(), modified add_item() |
+| `scripts/player/player_controller.gd` | Modified | Enable enforce_limits, connect item_add_refused for HUD notification |
+| `scripts/core/save_load.gd` | Modified | Temporarily disable limits during inventory restore |
+| `scripts/ui/hud.gd` | Modified | Show "Name: X/Y" format, color coding for near/at limit |
+| `scripts/crafting/crafting_system.gd` | Modified | Check output capacity in can_craft() |
+| `scripts/ui/crafting_ui.gd` | Modified | Show "Inventory full" label when output at limit |
+| `scripts/ui/fire_menu.gd` | Modified | Check output capacity before cooking |
+| `scripts/campsite/cabin_kitchen.gd` | Modified | Check output capacity before cooking |
+| `scripts/ui/storage_ui.gd` | Modified | Capacity checks on storage→player transfers, show limits in player list |
+| `scripts/resources/resource_node.gd` | Modified | Pre-check capacity in interact() and _complete_harvest() |
+| `scripts/resources/crystal_node.gd` | Modified | Pre-check capacity in interact() |
+| `scripts/world/cactus.gd` | Modified | Pre-check capacity before harvesting fruit |
+| `scripts/world/explorers_journal_pickup.gd` | Modified | Pre-check capacity before collecting journal |
+| `scripts/campsite/structure_placed_torch.gd` | Modified | Pre-check capacity before pickup/destroy |
+| `scripts/campsite/structure_placed_lantern.gd` | Modified | Pre-check capacity before pickup/destroy |
+| `scripts/campsite/structure_lodestone.gd` | Modified | Pre-check capacity before pickup/destroy |
+| `scripts/campsite/structure_smoker.gd` | Modified | Check capacity when collecting pending output |
+| `scripts/campsite/structure_drying_rack.gd` | Modified | Check capacity when collecting pending output |
+| `scripts/campsite/structure_smithing_station.gd` | Modified | Check capacity when collecting pending output |
+| `scripts/campsite/structure_garden.gd` | Modified | Partial harvest — take what fits, leave rest |
+| `scripts/player/equipment.gd` | Modified | Check capacity before birch bark harvest |
+| `scripts/player/diamond_arrow_projectile.gd` | Modified | Check capacity before arrow recovery |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test the sinkhole Easter egg end-to-end (find sinkhole, eat coca leaf, dive, grab journal, read, craft glider, fly)
-2. Play-test journal equip/use cycle (equip, R2 open, ESC close, re-read, L1/R1 cycling)
-3. Remove TEMP test spawn items (journal + hang_glider + bow + arrows + map) once satisfied
+1. Play-test inventory limits — verify HUD shows limits, crafting refuses at cap, gathering stops at cap
+2. Play-test storage box workflow — transfer to/from storage, verify unlimited storage capacity
+3. Play-test save/load with items near limits
 4. Continue play-testing desert biome balance
 5. Bug fixing from play-testing
 

@@ -45,6 +45,11 @@ func interact(player: Node) -> bool:
 	if player.has_method("get_inventory"):
 		inventory = player.get_inventory()
 
+	# Check capacity before picking up
+	if inventory and inventory.has_method("can_add_item") and not inventory.can_add_item("lantern", 1):
+		_show_notification("Can't carry more lanterns. Store items first.", Color(1.0, 0.5, 0.5))
+		return false
+
 	if inventory and inventory.has_method("add_item"):
 		inventory.add_item("lantern", 1)
 		SFXManager.play_sfx("pickup")

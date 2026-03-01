@@ -58,6 +58,11 @@ func interact(player: Node) -> bool:
 
 	# Deliver pending output first
 	if pending_output != "" and player_inventory:
+		if player_inventory.has_method("can_add_item") and not player_inventory.can_add_item(pending_output, 1):
+			var hud: Node = get_tree().get_first_node_in_group("hud")
+			if hud and hud.has_method("show_notification"):
+				hud.show_notification("Can't carry more %s. Store items first." % pending_output.capitalize().replace("_", " "), Color(1.0, 0.5, 0.5))
+			return true
 		player_inventory.add_item(pending_output, 1)
 		print("[DryingRack] Collected: +1 %s" % pending_output)
 		pending_output = ""

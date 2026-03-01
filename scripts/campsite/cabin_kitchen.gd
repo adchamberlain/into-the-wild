@@ -77,6 +77,14 @@ func interact(player: Node) -> bool:
 	var recipe: Dictionary = KITCHEN_RECIPES[best_recipe]
 	var inputs: Dictionary = recipe.get("inputs", {})
 
+	# Check if player can carry the cooked output
+	if player_inventory.has_method("can_add_item") and not player_inventory.can_add_item(best_recipe, 1):
+		var current: int = player_inventory.get_item_count(best_recipe)
+		var limit: int = player_inventory.get_stack_limit(best_recipe)
+		var recipe_name: String = recipe.get("name", best_recipe)
+		_show_notification("Can't carry more %s (%d/%d)" % [recipe_name, current, limit], Color(1.0, 0.5, 0.5))
+		return true
+
 	# Consume ingredients - verify each removal succeeds
 	var consumed: Array[Dictionary] = []
 	for item: String in inputs:

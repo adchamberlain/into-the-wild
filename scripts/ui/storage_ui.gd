@@ -226,9 +226,13 @@ func _create_item_button(parent: VBoxContainer, item_type: String, count: int, i
 
 	var display_name: String = item_type.capitalize().replace("_", " ").replace("River Rock", "Rock")
 
-	# Item label
+	# Item label - show limits for player items
 	var label: Label = Label.new()
-	label.text = "%s x%d" % [display_name, count]
+	if is_player_item and player_inventory and player_inventory.enforce_limits:
+		var limit: int = player_inventory.get_stack_limit(item_type)
+		label.text = "%s x%d/%d" % [display_name, count, limit]
+	else:
+		label.text = "%s x%d" % [display_name, count]
 	label.add_theme_font_override("font", HUD_FONT)
 	label.add_theme_font_size_override("font_size", 28)
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -276,8 +280,11 @@ func _on_transfer_pressed(item_type: String, from_player: bool) -> void:
 			if removed:
 				current_storage.add_item(item_type, 1)
 	else:
-		# Storage -> Player
+		# Storage -> Player: check capacity first
 		if current_storage and current_storage.has_item(item_type) and player_inventory:
+			if not player_inventory.can_add_item(item_type, 1):
+				_show_capacity_warning(item_type)
+				return
 			var removed: bool = current_storage.remove_item(item_type, 1)
 			if removed:
 				player_inventory.add_item(item_type, 1)
@@ -295,13 +302,18 @@ func _on_transfer_all_pressed(item_type: String, from_player: bool) -> void:
 				if removed:
 					current_storage.add_item(item_type, count)
 	else:
-		# Storage -> Player
+		# Storage -> Player: clamp to remaining capacity
 		if current_storage and player_inventory:
 			var count: int = current_storage.storage_inventory.get_item_count(item_type)
 			if count > 0:
-				var removed: bool = current_storage.remove_item(item_type, count)
+				var capacity: int = player_inventory.get_remaining_capacity(item_type)
+				if capacity <= 0:
+					_show_capacity_warning(item_type)
+					return
+				var transfer_count: int = mini(count, capacity)
+				var removed: bool = current_storage.remove_item(item_type, transfer_count)
 				if removed:
-					player_inventory.add_item(item_type, count)
+					player_inventory.add_item(item_type, transfer_count)
 
 
 ## Navigate items with D-pad up/down.
@@ -388,6 +400,16 @@ func _transfer_focused_item() -> void:
 		var row: Array = current_rows[focused_row_index]
 		if focused_col_index < row.size():
 			row[focused_col_index].pressed.emit()
+
+
+## Show a notification when player inventory is at capacity.
+func _show_capacity_warning(item_type: String) -> void:
+	var display_name: String = item_type.capitalize().replace("_", " ").replace("River Rock", "Rock")
+	var current: int = player_inventory.get_item_count(item_type)
+	var limit: int = player_inventory.get_stack_limit(item_type)
+	var hud: Node = get_tree().get_first_node_in_group("hud")
+	if hud and hud.has_method("show_notification"):
+		hud.show_notification("Can't carry more %s (%d/%d)" % [display_name, current, limit], Color(1.0, 0.5, 0.5))
 
 
 ## Unequip item if it is currently equipped (prevents phantom equipped items).

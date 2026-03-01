@@ -674,13 +674,16 @@ func _apply_player_data(data: Dictionary) -> void:
 			stats.hunger = clampf(float(data["hunger"]), 0.0, stats.max_hunger)
 			stats.hunger_changed.emit(stats.hunger, stats.max_hunger)
 
-	# Inventory
+	# Inventory (temporarily disable limits to preserve existing saves)
 	var inventory: Node = player.get_node_or_null("Inventory")
 	if inventory and data.has("inventory"):
+		var was_enforcing: bool = inventory.enforce_limits
+		inventory.enforce_limits = false
 		inventory.clear()
 		var items: Dictionary = data["inventory"]
 		for item_type: String in items:
 			inventory.add_item(item_type, int(items[item_type]))
+		inventory.enforce_limits = was_enforcing
 
 	# Equipment
 	var equipment: Node = player.get_node_or_null("Equipment")

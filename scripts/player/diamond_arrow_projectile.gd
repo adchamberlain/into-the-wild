@@ -151,6 +151,10 @@ func interact(player_node: Node) -> bool:
 	if not inv:
 		return false
 
+	# Check capacity - leave arrow in world if player can't carry it
+	if inv.has_method("can_add_item") and not inv.can_add_item("diamond_arrows", 1):
+		return false
+
 	inv.add_item("diamond_arrows", 1)
 
 	var hud: Node = get_tree().get_first_node_in_group("hud")

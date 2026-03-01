@@ -129,6 +129,11 @@ func interact(player: Node) -> bool:
 		print("[Resource] Use R to chop this resource")
 		return false
 
+	# Check if player can carry the resource before gathering
+	var inventory: Inventory = _get_player_inventory(player)
+	if inventory and not inventory.can_add_item(resource_type, resource_amount):
+		return false
+
 	# Play gather animation
 	_play_gather_animation()
 
@@ -142,7 +147,6 @@ func interact(player: Node) -> bool:
 	gathered.emit(resource_type, resource_amount)
 
 	# Add to player inventory if they have one
-	var inventory: Inventory = _get_player_inventory(player)
 	if inventory:
 		inventory.add_item(resource_type, resource_amount)
 
@@ -193,6 +197,14 @@ func _complete_harvest(player: Node) -> void:
 	if not is_instance_valid(player):
 		return
 
+	# Check if player can carry the primary resource before depleting
+	var inventory: Inventory = _get_player_inventory(player)
+	if inventory and not inventory.can_add_item(resource_type, resource_amount):
+		# Reset chop progress so player can try again after making space
+		chop_progress = 0
+		chop_progress_float = 0.0
+		return
+
 	# Play gather animation
 	_play_gather_animation()
 
@@ -206,10 +218,9 @@ func _complete_harvest(player: Node) -> void:
 	gathered.emit(resource_type, resource_amount)
 
 	# Add to player inventory if they have one
-	var inventory: Inventory = _get_player_inventory(player)
 	if inventory:
 		inventory.add_item(resource_type, resource_amount)
-		# Also add secondary resource if defined
+		# Also add secondary resource if defined (best-effort, won't block primary)
 		if secondary_resource_type != "" and secondary_resource_amount > 0:
 			inventory.add_item(secondary_resource_type, secondary_resource_amount)
 

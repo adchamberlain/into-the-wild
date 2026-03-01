@@ -240,6 +240,27 @@ func _refresh_recipe_list(preserve_focus: bool = false) -> void:
 		desc_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7, 1))
 		container.add_child(desc_label)
 
+		# Show "Inventory full" warning if player has ingredients but output is at limit
+		if not can_craft_recipe and player and player.has_method("get_inventory"):
+			var inv: Inventory = player.get_inventory()
+			if inv and inv.enforce_limits:
+				var output_type: String = recipe.get("output_type", "")
+				var output_amount: int = recipe.get("output_amount", 1)
+				var has_all_inputs: bool = true
+				for res: String in inputs:
+					if not inv.has_item(res, inputs[res]):
+						has_all_inputs = false
+						break
+				if has_all_inputs and output_type != "" and not inv.can_add_item(output_type, output_amount):
+					var current: int = inv.get_item_count(output_type)
+					var limit: int = inv.get_stack_limit(output_type)
+					var full_label: Label = Label.new()
+					full_label.text = "Inventory full (%d/%d)" % [current, limit]
+					full_label.add_theme_font_override("font", HUD_FONT)
+					full_label.add_theme_font_size_override("font_size", 28)
+					full_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.4, 1))
+					container.add_child(full_label)
+
 		item_panel.add_child(container)
 		recipe_list.add_child(item_panel)
 

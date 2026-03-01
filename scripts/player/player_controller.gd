@@ -4,6 +4,9 @@ extends CharacterBody3D
 signal interaction_target_changed(target: Node, interaction_text: String)
 signal interaction_cleared()
 
+# Developer mode: set to true to spawn with all items for testing
+const DEV_GIVE_ALL_ITEMS: bool = true
+
 # Movement settings
 @export var walk_speed: float = 5.0
 @export var sprint_speed: float = 8.0
@@ -216,6 +219,15 @@ func _ready() -> void:
 	if stats:
 		stats.player_died.connect(_on_player_died)
 
+	# Enable stack limits on player inventory
+	if inventory:
+		inventory.enforce_limits = true
+		inventory.item_add_refused.connect(_on_item_add_refused)
+
+	# Dev mode: populate inventory with all items
+	if DEV_GIVE_ALL_ITEMS:
+		call_deferred("_dev_populate_inventory")
+
 	# Starting equipment based on config
 	if inventory:
 		var config_node: Node = get_tree().get_first_node_in_group("config_menu")
@@ -228,6 +240,43 @@ func _ready() -> void:
 			inventory.add_item("map", 1)
 
 
+
+
+func _dev_populate_inventory() -> void:
+	## Gives one of every item in the game for dev testing.
+	var all_items: Array[String] = [
+		# Raw resources
+		"wood", "branch", "river_rock", "iron_ore",
+		"crystal", "diamond", "opal", "rare_ore", "metal_ingot",
+		"feathers", "hide", "birch_bark", "raw_meat",
+		# Tools & kits
+		"torch", "primitive_axe", "stone_axe", "metal_axe", "diamond_axe",
+		"machete", "fishing_rod", "grappling_hook", "bow", "enchanted_bow",
+		"lantern", "compass", "lodestone", "map", "hang_glider",
+		"rope", "leather_axe_wrap", "leather_hook_wrap",
+		"arrows", "diamond_arrows",
+		"campfire_kit", "shelter_kit", "storage_box", "crafting_bench_kit",
+		"drying_rack_kit", "garden_plot_kit", "canvas_tent_kit", "cabin_kit",
+		"snare_trap_kit", "smithing_station_kit", "smoker_kit", "weather_vane_kit",
+		# Raw food
+		"berry", "mushroom", "herb", "fish", "osha_root", "cactus_fruit", "coca_leaf",
+		# Processed food
+		"berry_pouch", "waterskin",
+		"cooked_berries", "cooked_mushroom", "cooked_fish", "cooked_meat",
+		"dried_fish", "dried_berries", "dried_mushroom", "dried_herb",
+		"smoked_meat", "smoked_fish",
+		"hearty_stew", "preserved_meal", "herb_tea", "fish_dinner", "mushroom_soup",
+		# Healing & rest
+		"healing_salve", "hide_bedroll",
+		# Special
+		"explorers_journal",
+	]
+	for item: String in all_items:
+		inventory.add_item(item, 1)
+	# Give extra arrows since they're consumable
+	inventory.add_item("arrows", 19)  # 20 total
+	inventory.add_item("diamond_arrows", 9)  # 10 total
+	print("[DEV] Populated inventory with all items")
 
 
 func _init_safe_position() -> void:
@@ -1074,6 +1123,14 @@ func _apply_fall_damage() -> void:
 
 
 ## Handle player death: auto-save and respawn at latest shelter.
+func _on_item_add_refused(resource_type: String, attempted: int, current: int, limit: int) -> void:
+	var display_name: String = resource_type.capitalize().replace("_", " ").replace("River Rock", "Rock")
+	var message: String = "Can't carry more %s (%d/%d). Store items first." % [display_name, current, limit]
+	var hud: Node = get_tree().get_first_node_in_group("hud")
+	if hud and hud.has_method("show_notification"):
+		hud.show_notification(message, Color(1.0, 0.5, 0.5))
+
+
 func _on_player_died() -> void:
 	print("[Player] Player died! Respawning...")
 

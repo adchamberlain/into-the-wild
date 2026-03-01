@@ -49,20 +49,31 @@ func interact(player: Node) -> bool:
 
 	var collected_count: int = 0
 
-	# Collect stored herbs
+	# Collect stored herbs (partial harvest - take what fits)
 	if stored_herbs > 0 and player_inventory:
-		collected_count = stored_herbs
-		player_inventory.add_item("herb", stored_herbs)
-		print("[Garden] Collected %d herbs" % stored_herbs)
-		stored_herbs = 0
+		var capacity: int = player_inventory.get_remaining_capacity("herb") if player_inventory.has_method("get_remaining_capacity") else stored_herbs
+		var to_collect: int = mini(stored_herbs, capacity)
+		if to_collect > 0:
+			player_inventory.add_item("herb", to_collect)
+			collected_count = to_collect
+			stored_herbs -= to_collect
+			print("[Garden] Collected %d herbs (%d left)" % [to_collect, stored_herbs])
+		elif capacity <= 0:
+			_show_notification("Can't carry more herbs. Store items first.", Color(1.0, 0.5, 0.5))
+			return true
 
 	# Tend the garden for bonus herbs
 	if can_tend and player_inventory:
-		player_inventory.add_item("herb", TEND_BONUS)
-		can_tend = false
-		tend_cooldown = TEND_COOLDOWN_TIME
-		collected_count += TEND_BONUS
-		print("[Garden] Tended garden! +%d bonus herb" % TEND_BONUS)
+		var capacity: int = player_inventory.get_remaining_capacity("herb") if player_inventory.has_method("get_remaining_capacity") else TEND_BONUS
+		if capacity >= TEND_BONUS:
+			player_inventory.add_item("herb", TEND_BONUS)
+			can_tend = false
+			tend_cooldown = TEND_COOLDOWN_TIME
+			collected_count += TEND_BONUS
+			print("[Garden] Tended garden! +%d bonus herb" % TEND_BONUS)
+		else:
+			# Can't fit tend bonus, skip tending this time
+			pass
 
 		if collected_count > 1:
 			_show_notification("Tended garden! +%d herbs" % collected_count, Color(0.4, 0.9, 0.4))
