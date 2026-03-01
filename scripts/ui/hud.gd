@@ -585,19 +585,32 @@ func _update_inventory_display() -> void:
 		item_columns.add_child(col)
 		columns.append(col)
 
-	# Split entries across columns evenly
+	# Split entries at the midpoint, adding a continuation header if splitting mid-category
 	var split_point: int = entries.size() if col_count == 1 else ceili(entries.size() / 2.0)
-	# Don't split in the middle of a category — push split to next header
-	if col_count > 1 and split_point < entries.size():
-		# Walk forward to find the next header to split at cleanly
-		while split_point < entries.size() and entries[split_point]["type"] != "header":
-			split_point += 1
+	var split_category: String = ""  # Category being split, needs header in col 2
+	if col_count > 1 and split_point > 0 and split_point < entries.size():
+		# If split lands mid-category, note which category to add a header for in column 2
+		if entries[split_point]["type"] != "header":
+			# Find which category we're splitting
+			for j: int in range(split_point - 1, -1, -1):
+				if entries[j]["type"] == "header":
+					split_category = entries[j]["category"]
+					break
 
 	# Add entries to columns
 	for i: int in range(entries.size()):
 		var col_idx: int = 0 if i < split_point else 1
 		var entry: Dictionary = entries[i]
 		var target_col: VBoxContainer = columns[col_idx]
+
+		# Add continuation header at start of column 2 if splitting mid-category
+		if col_idx == 1 and i == split_point and split_category != "":
+			var cont_header: Label = Label.new()
+			cont_header.text = "-- %s --" % split_category
+			cont_header.add_theme_font_override("font", HUD_FONT)
+			cont_header.add_theme_font_size_override("font_size", 32)
+			cont_header.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
+			target_col.add_child(cont_header)
 
 		if entry["type"] == "header":
 			var header: Label = Label.new()
