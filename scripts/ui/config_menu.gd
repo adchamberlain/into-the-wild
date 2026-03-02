@@ -34,7 +34,7 @@ var day_length_minutes: float = 20.0
 var music_enabled: bool = true
 var music_volume: float = 90.0  # 0-100
 var dev_mode_enabled: bool = false
-var screen_brightness: float = 1.0  # 0.5 to 2.0 (1.0 = default)
+var screen_brightness: float = 1.7  # 0.5 to 2.0 (1.7 = default)
 
 # UI References
 @onready var panel: PanelContainer = $Panel
@@ -756,7 +756,7 @@ func apply_config(data: Dictionary) -> void:
 	music_enabled = data.get("music_enabled", true)
 	music_volume = data.get("music_volume", 90.0)
 	dev_mode_enabled = data.get("dev_mode_enabled", false)
-	screen_brightness = data.get("screen_brightness", 1.0)
+	screen_brightness = data.get("screen_brightness", 1.7)
 	# Update UI sliders/toggles
 	if hunger_toggle:
 		hunger_toggle.button_pressed = hunger_enabled
