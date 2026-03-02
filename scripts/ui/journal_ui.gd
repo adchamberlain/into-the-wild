@@ -176,8 +176,8 @@ func _build_ui() -> void:
 	shadow.anchor_top = 0.5
 	shadow.anchor_right = 0.5
 	shadow.anchor_bottom = 0.5
-	var book_w: float = 860 * sf
-	var book_h: float = 560 * sf
+	var book_w: float = 900 * sf
+	var book_h: float = 680 * sf
 	shadow.offset_left = -book_w / 2.0 + 4 * sf
 	shadow.offset_top = -book_h / 2.0 + 4 * sf
 	shadow.offset_right = book_w / 2.0 + 4 * sf
@@ -458,21 +458,30 @@ func _input(event: InputEvent) -> void:
 	if not _is_open:
 		return
 
-	# Page turning — d-pad left/right or arrow keys
-	if event.is_action_pressed("ui_left"):
+	# Journal consumes ALL input while open — prevents other menus from responding
+	var vp: Viewport = get_viewport()
+
+	# Page turning — d-pad left/right, ui_left/ui_right, or keyboard arrow keys
+	var turn_left: bool = event.is_action_pressed("ui_left")
+	var turn_right: bool = event.is_action_pressed("ui_right")
+	if event is InputEventKey and event.is_pressed() and not event.is_echo():
+		if event.physical_keycode == KEY_LEFT:
+			turn_left = true
+		elif event.physical_keycode == KEY_RIGHT:
+			turn_right = true
+
+	if turn_left:
 		if _current_page > 0:
 			_current_page -= 1
 			_populate_page()
-		var vp: Viewport = get_viewport()
 		if vp:
 			vp.set_input_as_handled()
 		return
 
-	if event.is_action_pressed("ui_right"):
+	if turn_right:
 		if _current_page < _total_pages - 1:
 			_current_page += 1
 			_populate_page()
-		var vp: Viewport = get_viewport()
 		if vp:
 			vp.set_input_as_handled()
 		return
@@ -489,9 +498,13 @@ func _input(event: InputEvent) -> void:
 
 	if close:
 		_close_journal()
-		var vp: Viewport = get_viewport()
 		if vp:
 			vp.set_input_as_handled()
+		return
+
+	# Consume all other input events while journal is open
+	if vp:
+		vp.set_input_as_handled()
 
 
 func _close_journal() -> void:
