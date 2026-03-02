@@ -32,8 +32,8 @@ func _get_pages() -> Array[Dictionary]:
 	# Spread 2: Day 5
 	pages.append({
 		"left_title": "Day 5",
-		"left_text": "[CONTENT TODO]",
-		"right_text": "[CONTENT TODO]",
+		"left_text": "Getting the hang of things. River rocks and branches make surprisingly decent tools — a crude axe got me through my first tree. Twisted plant fibers into rope today and it's stronger than I expected. Splitting a log into branches is easy once you know the trick: one good whack along the grain.\n\nBuilt a workbench from logs and lashed branches. Having a proper work surface changes everything. Suddenly I can make things I couldn't before — a fishing rod, a berry pouch, even a drying rack for preserving food.",
+		"right_text": "The pond near camp is a gift. I catch fish most evenings and hang them on the drying rack overnight. Berries grow thick along the forest floor. Found some herbs too — three of them mashed together make a healing salve that works remarkably well on cuts and scrapes.\n\nI'm eating better out here than I did back home. Built a lean-to shelter that keeps the rain off. This isn't just surviving — it's starting to feel like home.",
 		"is_title_page": false,
 		"is_recipe_page": false,
 	})
@@ -41,8 +41,8 @@ func _get_pages() -> Array[Dictionary]:
 	# Spread 3: Day 12
 	pages.append({
 		"left_title": "Day 12",
-		"left_text": "[CONTENT TODO]",
-		"right_text": "[CONTENT TODO]",
+		"left_text": "Pushed north into the rocky highlands today. The forest gives way to stone and scrub grass, and the views open up wonderfully. Then I spotted it — a dark opening in the hillside, tucked between boulders. A cave entrance.\n\nLit a torch and stepped inside. I wasn't prepared for what I found. Crystals — pale blue, growing right out of the rock walls in beautiful clusters. Deeper in, veins of dark ore run through the stone. I chipped some free and it's heavy, good quality. This can be smelted into real metal.",
+		"right_text": "I've found four cave entrances across the highlands so far. Each one is worth exploring — the crystals and ore inside are invaluable for better tools and equipment. A word of advice: bring plenty of torches. The caves go deep and it's easy to lose your bearings in the dark.\n\nA lantern is even better if you can make one — a couple of metal ingots and a crystal, and you've got a light source that lasts far longer than any torch. Well worth the investment before any serious spelunking.",
 		"is_title_page": false,
 		"is_recipe_page": false,
 	})
@@ -50,8 +50,8 @@ func _get_pages() -> Array[Dictionary]:
 	# Spread 4: Day 20
 	pages.append({
 		"left_title": "Day 20",
-		"left_text": "[CONTENT TODO]",
-		"right_text": "[CONTENT TODO]",
+		"left_text": "Headed south and the world transformed. The trees fell away, the ground turned to warm sand, and suddenly I was in a desert. It rings the southern edge of the Carlston Wilderness — wide open, sun-baked, and absolutely gorgeous in its own way.\n\nThe real treasures are the oases. I've found three so far, each one a little paradise of palm trees and cool, clear water. Dove into the first pool on a whim and couldn't believe my eyes — diamonds, sitting right on the bottom, glinting in the sunlight filtering through the water.",
+		"right_text": "Second oasis had diamonds too. The third is special — opals, milky and iridescent, nestled in the silt. A river flows to it from the east. I think the current carries the stones downstream and deposits them in the pool. Nature's own jewelry box.\n\nThe desert wildlife is charming. Lizards bask on every warm rock. I watched a tortoise amble past my camp without giving me so much as a glance. Cactus grows thick among the dunes — prickly, but fascinating. Everything out here has adapted beautifully to the heat.",
 		"is_title_page": false,
 		"is_recipe_page": false,
 	})
@@ -59,8 +59,8 @@ func _get_pages() -> Array[Dictionary]:
 	# Spread 5: Day 31
 	pages.append({
 		"left_title": "Day 31",
-		"left_text": "[CONTENT TODO]",
-		"right_text": "[CONTENT TODO]",
+		"left_text": "I've been climbing the western mountains, and the views are worth every bit of effort. A grappling hook makes all the difference — rope and a couple of metal ingots, and you can reach ledges that seemed impossible from below.\n\nFrom the first peak, I could see the entire Carlston Wilderness spread out beneath me. The forest canopy rolling east. The desert glowing amber to the south. Rivers threading through the valleys. I sat up there for an hour just taking it in.",
+		"right_text": "That's where the idea hit me. Looking out at all that open air, I thought — what if I could glide across it? Took me weeks to get the design right. A frame of sturdy branches, hide stretched tight over it, rope securing every joint. Simple materials, but the engineering has to be precise.\n\nThe first flight was magnificent. The wind catches you and suddenly the whole wilderness is yours to see from above. I've sketched the full plans in the back of this journal. If you can gather the materials, I promise you — it's the most extraordinary thing you'll experience out here.",
 		"is_title_page": false,
 		"is_recipe_page": false,
 	})
@@ -68,8 +68,8 @@ func _get_pages() -> Array[Dictionary]:
 	# Spread 6: Day 47
 	pages.append({
 		"left_title": "Day 47",
-		"left_text": "[CONTENT TODO]",
-		"right_text": "[CONTENT TODO]",
+		"left_text": "Forty-seven days in the Carlston Wilderness. I've mapped every biome, explored every cave, climbed every peak, and befriended more rabbits than I can count. But the desert had one more surprise — a sinkhole, hidden in the sand, deeper than anything I'd found before.\n\nI climbed down carefully. At the bottom, water. Cool and still. I took a breath and dove in. What I found down there... well. Some discoveries are best made firsthand.",
+		"right_text": "I'm leaving this journal on a pedestal at the bottom, for whoever comes next. Everything I've learned is in these pages — every place worth visiting, every recipe for every tool and structure that made this wilderness feel like home.\n\nThe Carlston Wilderness is a generous place if you're willing to explore it. Every oasis, every cave, every mountain peak has something wonderful waiting. Take your time. Build well. Climb high.\n\nHappy trails.\n\n— E.W. Carlston",
 		"is_title_page": false,
 		"is_recipe_page": false,
 	})
@@ -77,8 +77,8 @@ func _get_pages() -> Array[Dictionary]:
 	# Spread 7: Hand Crafting recipes
 	pages.append({
 		"left_title": "Field Notes: Hand Crafting",
-		"left_text": "[CONTENT TODO]",
-		"right_text": "[CONTENT TODO]",
+		"left_text": "These are the basics. You can make all of these with your hands and whatever you find on the ground.\n\nPrimitive Axe — 1 river rock, 1 branch\nStone Axe — 2 river rocks, 1 branch\nTorch — 2 branches\nPlant Rope — 3 branches",
+		"right_text": "Split Branches — 1 wood log (yields 4)\nCampfire Kit — 4 branches, 3 river rocks\nCrafting Bench Kit — 6 wood, 4 branches\n\nThe crafting bench is the most important thing you'll build. Set it up at camp as early as you can — it unlocks everything that follows.",
 		"is_title_page": false,
 		"is_recipe_page": true,
 	})
@@ -86,8 +86,8 @@ func _get_pages() -> Array[Dictionary]:
 	# Spread 8: Getting Established recipes
 	pages.append({
 		"left_title": "Getting Established",
-		"left_text": "[CONTENT TODO]",
-		"right_text": "[CONTENT TODO]",
+		"left_text": "With a bench and a camp, you can start building a real life out here.\n\nShelter Kit — 6 branches, 2 rope\nStorage Box — 4 wood, 1 rope\nDrying Rack Kit — 6 branches, 2 rope\nFishing Rod — 3 branches, 1 rope",
+		"right_text": "Berry Pouch — 5 berries\nHealing Salve — 3 herbs\nMap — 3 birch bark, 2 berries\n\nThe map is worth making early. Birch bark peels easily from the white trees in the forest, and a couple of mashed berries make a surprisingly good ink.",
 		"is_title_page": false,
 		"is_recipe_page": true,
 	})
@@ -95,8 +95,8 @@ func _get_pages() -> Array[Dictionary]:
 	# Spread 9: Expanding Your Range recipes
 	pages.append({
 		"left_title": "Expanding Your Range",
-		"left_text": "[CONTENT TODO]",
-		"right_text": "[CONTENT TODO]",
+		"left_text": "Once your camp is established, these will take you further into the wilderness.\n\nGarden Plot Kit — 4 wood, 2 herbs\nCanvas Tent Kit — 8 branches, 4 rope, 4 wood\nSnare Trap Kit — 2 rope, 4 branches\nMachete — 2 metal ingots, 1 branch",
+		"right_text": "Grappling Hook — 3 rope, 2 metal ingots, 1 branch\nLeather Axe Wrap — 2 hide, 1 rope\nLeather Hook Wrap — 3 hide, 1 rope\nBow — 2 rope, 3 branches\nArrow Bundle (x20) — 2 feathers, 4 branches\n\nThe grappling hook opens up the highlands and the mountains. Don't leave camp without one once you've smelted enough metal.",
 		"is_title_page": false,
 		"is_recipe_page": true,
 	})
@@ -104,8 +104,8 @@ func _get_pages() -> Array[Dictionary]:
 	# Spread 10: Advanced Crafting recipes
 	pages.append({
 		"left_title": "Advanced Crafting",
-		"left_text": "[CONTENT TODO]",
-		"right_text": "[CONTENT TODO]",
+		"left_text": "These require a well-developed camp and access to rarer materials from the caves and desert.\n\nCabin Kit — 30 wood, 20 branches, 10 river rocks, 6 rope\nSmithing Station Kit — 15 river rocks, 8 wood, 2 rope\nSmoker Kit — 10 wood, 6 river rocks, 2 rope\nWeather Vane Kit — 6 branches, 1 metal ingot",
+		"right_text": "Metal Axe — 2 metal ingots, 2 branches\nLantern — 2 metal ingots, 1 crystal\nCompass and Lodestone — 2 rare ore, 1 metal ingot, 1 crystal\n\nThe compass is a marvel — it points true north, and the lodestone it comes with can be placed at camp as a beacon. You'll never lose your way home again.",
 		"is_title_page": false,
 		"is_recipe_page": true,
 	})
@@ -113,8 +113,8 @@ func _get_pages() -> Array[Dictionary]:
 	# Spread 11: Rare & Extraordinary recipes
 	pages.append({
 		"left_title": "Rare & Extraordinary",
-		"left_text": "[CONTENT TODO]",
-		"right_text": "[CONTENT TODO]",
+		"left_text": "The finest things I crafted out here. Each one requires materials from deep in the caves or the desert oases.\n\nDiamond Axe — 2 diamonds, 1 metal ingot, 1 rope\nDiamond Arrows (x10) — 1 diamond, 5 branches, 2 feathers\nEnchanted Bow — 2 opals, 1 bow, 1 rope",
+		"right_text": "Hang Glider — 4 rope, 6 branches, 2 hide\n\nThis is it — my greatest creation. The design took weeks to perfect but the materials are simple. Find a high peak, spread the wings, and run. The wind will do the rest.\n\nThe Carlston Wilderness looks different from up there. Better. Like it was made to be seen from the sky.\n\n~ ~ ~\n\nEnd of Journal",
 		"is_title_page": false,
 		"is_recipe_page": true,
 	})
