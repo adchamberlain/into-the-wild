@@ -6207,6 +6207,26 @@ Added the Carved Tree trail landmark for the trail-home endgame feature. An inte
 
 ---
 
+## Session - Trailhead Signpost Landmark (2026-03-02)
+
+Added the Trailhead Signpost, the FINAL landmark in the trail-home endgame. A weathered wooden signpost with two directional arms that shows a confirmation overlay when interacted. The player can choose to leave the wilderness, triggering a cinematic fade-to-black transition to the house scene.
+
+### Features
+- **Procedural 3D visuals**: Weathered vertical post (BoxMesh 0.15x2.5x0.15), two directional sign arms at slight downward angles, decorative dark text strips on each arm, packed earth base, warm OmniLight3D glow
+- **Shared static materials**: 4 materials (post, arm, text strip, base) using `static var` / `_ensure_shared_materials()` pattern
+- **Two-state overlay with selection**: CanvasLayer (layer 100) shows signpost directions ("Carlston Wilderness" and "Longridge Road, Oakland, California — 225 miles"), body text, and two selectable choices ("Yes, head home" / "Not yet") with up/down navigation and gold/grey highlight
+- **Full interaction pattern**: `add_to_group("interactable")`, `interact()` toggles overlay, `get_interaction_text()` returns context-aware text, freezes player via `set_resting(true)`, hides HUD via `set_overlay_mode(true)`
+- **Leave wilderness transition**: On "Yes" confirmation — emits `leave_wilderness_confirmed` signal, snapshots player inventory to GameState, fades music (2s), fades screen to black (3s), shows "225 miles later..." text (holds 3s), then changes scene to `res://scenes/house/house.tscn`
+- **Controller support**: Checks `/root/InputManager` for correct button prompt, `ui_up`/`ui_down` to navigate, `ui_accept` to confirm, `ui_cancel` to close
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/world/trail_signpost.gd` | New | Trailhead signpost landmark — extends StaticBody3D, shared materials, BoxMesh visuals, two-choice overlay UI, leave-wilderness transition sequence |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
