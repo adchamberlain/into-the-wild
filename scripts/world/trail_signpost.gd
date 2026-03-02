@@ -27,6 +27,7 @@ var _player_ref: Node = null
 var _selected_index: int = 0
 var _yes_label: Label
 var _no_label: Label
+var _hint_label: Label
 
 # Colors for selection highlighting (park-sign style)
 const COLOR_SELECTED: Color = Color(0.15, 0.10, 0.02)  # Dark brown, bold
@@ -322,21 +323,14 @@ func _build_overlay() -> void:
 	spacer_bottom.custom_minimum_size = Vector2(0, 8)
 	vbox.add_child(spacer_bottom)
 
-	# Navigation hint
-	var hint: Label = Label.new()
-	hint.add_theme_font_override("font", HUD_FONT)
-	hint.add_theme_font_size_override("font_size", 28)
-	hint.add_theme_color_override("font_color", hint_color)
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(hint)
-
-	# Update hint with current input device
-	var input_mgr: Node = get_node_or_null("/root/InputManager")
-	var up_key: String = "\u2191/\u2193"
-	var confirm_key: String = "Enter"
-	if input_mgr and input_mgr.has_method("get_prompt"):
-		confirm_key = input_mgr.get_prompt("ui_accept")
-	hint.text = "[%s] Select  [%s] Confirm" % [up_key, confirm_key]
+	# Navigation hint (updated dynamically for controller/keyboard)
+	_hint_label = Label.new()
+	_hint_label.add_theme_font_override("font", HUD_FONT)
+	_hint_label.add_theme_font_size_override("font_size", 28)
+	_hint_label.add_theme_color_override("font_color", hint_color)
+	_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(_hint_label)
+	_update_hint_text()
 
 
 func _update_selection_visuals() -> void:
@@ -350,6 +344,19 @@ func _update_selection_visuals() -> void:
 			else "   Not yet")
 		_no_label.add_theme_color_override("font_color",
 			COLOR_SELECTED if _selected_index == 1 else COLOR_UNSELECTED)
+
+
+func _update_hint_text() -> void:
+	if not _hint_label:
+		return
+	var input_mgr: Node = get_node_or_null("/root/InputManager")
+	var using_controller: bool = false
+	if input_mgr and "using_controller" in input_mgr:
+		using_controller = input_mgr.using_controller
+	if using_controller:
+		_hint_label.text = "[D-Pad] Select  [\u25cb] Confirm"
+	else:
+		_hint_label.text = "[\u2191/\u2193] Select  [Enter] Confirm"
 
 
 ## Get the text to show in interaction prompt.
@@ -375,6 +382,9 @@ func _exit_tree() -> void:
 func _input(event: InputEvent) -> void:
 	if not is_overlay_visible:
 		return
+
+	# Refresh hint if input device changed (keyboard vs controller)
+	_update_hint_text()
 
 	# Navigate selection: up/down
 	if event.is_action_pressed("ui_up"):
