@@ -32,10 +32,10 @@ const STACK_LIMITS: Dictionary = {
 	# Torch
 	"torch": 20,
 	# Durable tools
-	"primitive_axe": 5, "stone_axe": 5, "metal_axe": 5, "diamond_axe": 5,
-	"machete": 5, "fishing_rod": 5, "bow": 5, "enchanted_bow": 5,
+	"primitive_axe": 3, "stone_axe": 3, "metal_axe": 3, "diamond_axe": 3,
+	"machete": 5, "fishing_rod": 5, "bow": 3, "enchanted_bow": 3,
 	# Utility items
-	"grappling_hook": 5, "map": 5, "compass": 5, "lantern": 5, "hang_glider": 5,
+	"grappling_hook": 5, "map": 1, "compass": 5, "lantern": 5, "hang_glider": 5,
 	# Wraps
 	"leather_axe_wrap": 3, "leather_hook_wrap": 3,
 	# Placeable kits

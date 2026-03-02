@@ -640,13 +640,7 @@ func _update_inventory_display() -> void:
 				label.text = "%s: %d" % [display_name, count]
 			label.add_theme_font_override("font", HUD_FONT)
 			label.add_theme_font_size_override("font_size", 36)
-			# Color items near/at limit in yellow/red
-			if inventory.enforce_limits and limit > 0 and count >= limit:
-				label.add_theme_color_override("font_color", Color(1.0, 0.5, 0.5, 1))
-			elif inventory.enforce_limits and limit > 0 and count >= limit * 0.8:
-				label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3, 1))
-			else:
-				label.add_theme_color_override("font_color", Color(1, 1, 1, 1))
+			label.add_theme_color_override("font_color", Color(1, 1, 1, 1))
 			target_col.add_child(label)
 			item_labels[item_type] = label
 
