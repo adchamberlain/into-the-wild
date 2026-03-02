@@ -19,6 +19,11 @@ const LIVING_ROOM_DEPTH: float = 5.0   # South half depth
 const KITCHEN_DEPTH: float = 5.0       # North half of left side
 const DINING_ROOM_WIDTH: float = 6.0   # Right half width (full depth)
 
+# Window openings
+const WIN_WIDTH: float = 1.2
+const WIN_HEIGHT: float = 1.5
+const WIN_SILL_Y: float = 1.0
+
 # --- Shared static materials ---
 static var _mat_floor: StandardMaterial3D
 static var _mat_wall: StandardMaterial3D
@@ -116,10 +121,10 @@ static func _init_materials() -> void:
 	_mat_ceiling.albedo_color = Color(0.90, 0.88, 0.86)
 	_mat_ceiling.roughness = 0.9
 
-	# Crown molding
+	# Crown molding (bright cream/ivory — stands out from warm white walls)
 	_mat_molding = StandardMaterial3D.new()
-	_mat_molding.albedo_color = Color(0.88, 0.86, 0.84)
-	_mat_molding.roughness = 0.85
+	_mat_molding.albedo_color = Color(0.96, 0.94, 0.90)
+	_mat_molding.roughness = 0.8
 
 	# Furniture wood: medium brown
 	_mat_furniture_wood = StandardMaterial3D.new()
@@ -286,46 +291,113 @@ func _build_floor_and_ceiling() -> void:
 # =============================================================================
 
 func _build_exterior_walls() -> void:
-	# South wall (front, Z=0) — with gap for front door
-	var south_wall: StaticBody3D = StaticBody3D.new()
-	south_wall.name = "SouthWall"
-	add_child(south_wall)
-	# Left section (to the left of front door)
-	# Door is at X ~2.0 in the living room (south wall of living room)
+	# South wall (Z=0) — door at X=2.0, windows at X=4.5 and X=9.0
+	var south: StaticBody3D = StaticBody3D.new()
+	south.name = "SouthWall"
+	add_child(south)
 	var door_x: float = 2.0
-	var door_width: float = 1.0
-	# Left of door
-	var left_w: float = door_x - door_width / 2.0
-	if left_w > 0:
-		_box(south_wall, Vector3(left_w, CEILING_HEIGHT, WALL_THICKNESS),
-			Vector3(left_w / 2.0, CEILING_HEIGHT / 2.0, WALL_THICKNESS / 2.0), _mat_wall)
-		_add_wall_collision(south_wall, Vector3(left_w, CEILING_HEIGHT, WALL_THICKNESS),
-			Vector3(left_w / 2.0, CEILING_HEIGHT / 2.0, WALL_THICKNESS / 2.0))
-	# Above door
-	_box(south_wall, Vector3(door_width, CEILING_HEIGHT - 2.2, WALL_THICKNESS),
-		Vector3(door_x, 2.2 + (CEILING_HEIGHT - 2.2) / 2.0, WALL_THICKNESS / 2.0), _mat_wall)
-	# Right of door
-	var right_start: float = door_x + door_width / 2.0
-	var right_w: float = HOUSE_WIDTH - right_start
-	_box(south_wall, Vector3(right_w, CEILING_HEIGHT, WALL_THICKNESS),
-		Vector3(right_start + right_w / 2.0, CEILING_HEIGHT / 2.0, WALL_THICKNESS / 2.0), _mat_wall)
-	_add_wall_collision(south_wall, Vector3(right_w, CEILING_HEIGHT, WALL_THICKNESS),
-		Vector3(right_start + right_w / 2.0, CEILING_HEIGHT / 2.0, WALL_THICKNESS / 2.0))
-	# Door frame collision (above door only, sides are wall collision)
-	_add_wall_collision(south_wall, Vector3(door_width, CEILING_HEIGHT - 2.2, WALL_THICKNESS),
-		Vector3(door_x, 2.2 + (CEILING_HEIGHT - 2.2) / 2.0, WALL_THICKNESS / 2.0))
+	var dls: float = door_x - 0.5   # 1.5 — left edge of door
+	var drs: float = door_x + 0.5   # 2.5 — right edge of door
+	var w1l: float = 4.5 - WIN_WIDTH / 2.0   # 3.9
+	var w1r: float = 4.5 + WIN_WIDTH / 2.0   # 5.1
+	var w2l: float = 9.0 - WIN_WIDTH / 2.0   # 8.4
+	var w2r: float = 9.0 + WIN_WIDTH / 2.0   # 9.6
+	_south_wall_section(south, 0.0, dls, 0.0, CEILING_HEIGHT)
+	_south_wall_section(south, dls, drs, 2.2, CEILING_HEIGHT)  # Above door
+	_south_wall_section(south, drs, w1l, 0.0, CEILING_HEIGHT)
+	_south_wall_section(south, w1l, w1r, 0.0, WIN_SILL_Y)  # Below window 1
+	_south_wall_section(south, w1l, w1r, WIN_SILL_Y + WIN_HEIGHT, CEILING_HEIGHT)  # Above window 1
+	_south_wall_section(south, w1r, w2l, 0.0, CEILING_HEIGHT)
+	_south_wall_section(south, w2l, w2r, 0.0, WIN_SILL_Y)  # Below window 2
+	_south_wall_section(south, w2l, w2r, WIN_SILL_Y + WIN_HEIGHT, CEILING_HEIGHT)  # Above window 2
+	_south_wall_section(south, w2r, HOUSE_WIDTH, 0.0, CEILING_HEIGHT)
 
-	# North wall (Z = HOUSE_DEPTH)
-	_add_wall_with_collision("NorthWall", Vector3(HOUSE_WIDTH, CEILING_HEIGHT, WALL_THICKNESS),
-		Vector3(HOUSE_WIDTH / 2.0, CEILING_HEIGHT / 2.0, HOUSE_DEPTH - WALL_THICKNESS / 2.0))
+	# North wall (Z=HOUSE_DEPTH) — window at X=3.0
+	var north: StaticBody3D = StaticBody3D.new()
+	north.name = "NorthWall"
+	add_child(north)
+	var nwl: float = 3.0 - WIN_WIDTH / 2.0
+	var nwr: float = 3.0 + WIN_WIDTH / 2.0
+	_north_wall_section(north, 0.0, nwl, 0.0, CEILING_HEIGHT)
+	_north_wall_section(north, nwl, nwr, 0.0, WIN_SILL_Y)
+	_north_wall_section(north, nwl, nwr, WIN_SILL_Y + WIN_HEIGHT, CEILING_HEIGHT)
+	_north_wall_section(north, nwr, HOUSE_WIDTH, 0.0, CEILING_HEIGHT)
 
-	# West wall (X = 0)
-	_add_wall_with_collision("WestWall", Vector3(WALL_THICKNESS, CEILING_HEIGHT, HOUSE_DEPTH),
-		Vector3(WALL_THICKNESS / 2.0, CEILING_HEIGHT / 2.0, HOUSE_DEPTH / 2.0))
+	# West wall (X=0) — windows at Z=2.5, Z=7.5
+	var west: StaticBody3D = StaticBody3D.new()
+	west.name = "WestWall"
+	add_child(west)
+	var ww1l: float = 2.5 - WIN_WIDTH / 2.0
+	var ww1r: float = 2.5 + WIN_WIDTH / 2.0
+	var ww2l: float = 7.5 - WIN_WIDTH / 2.0
+	var ww2r: float = 7.5 + WIN_WIDTH / 2.0
+	_west_wall_section(west, 0.0, ww1l, 0.0, CEILING_HEIGHT)
+	_west_wall_section(west, ww1l, ww1r, 0.0, WIN_SILL_Y)
+	_west_wall_section(west, ww1l, ww1r, WIN_SILL_Y + WIN_HEIGHT, CEILING_HEIGHT)
+	_west_wall_section(west, ww1r, ww2l, 0.0, CEILING_HEIGHT)
+	_west_wall_section(west, ww2l, ww2r, 0.0, WIN_SILL_Y)
+	_west_wall_section(west, ww2l, ww2r, WIN_SILL_Y + WIN_HEIGHT, CEILING_HEIGHT)
+	_west_wall_section(west, ww2r, HOUSE_DEPTH, 0.0, CEILING_HEIGHT)
 
-	# East wall (X = HOUSE_WIDTH)
-	_add_wall_with_collision("EastWall", Vector3(WALL_THICKNESS, CEILING_HEIGHT, HOUSE_DEPTH),
-		Vector3(HOUSE_WIDTH - WALL_THICKNESS / 2.0, CEILING_HEIGHT / 2.0, HOUSE_DEPTH / 2.0))
+	# East wall (X=HOUSE_WIDTH) — windows at Z=3.0, Z=7.0
+	var east: StaticBody3D = StaticBody3D.new()
+	east.name = "EastWall"
+	add_child(east)
+	var ew1l: float = 3.0 - WIN_WIDTH / 2.0
+	var ew1r: float = 3.0 + WIN_WIDTH / 2.0
+	var ew2l: float = 7.0 - WIN_WIDTH / 2.0
+	var ew2r: float = 7.0 + WIN_WIDTH / 2.0
+	_east_wall_section(east, 0.0, ew1l, 0.0, CEILING_HEIGHT)
+	_east_wall_section(east, ew1l, ew1r, 0.0, WIN_SILL_Y)
+	_east_wall_section(east, ew1l, ew1r, WIN_SILL_Y + WIN_HEIGHT, CEILING_HEIGHT)
+	_east_wall_section(east, ew1r, ew2l, 0.0, CEILING_HEIGHT)
+	_east_wall_section(east, ew2l, ew2r, 0.0, WIN_SILL_Y)
+	_east_wall_section(east, ew2l, ew2r, WIN_SILL_Y + WIN_HEIGHT, CEILING_HEIGHT)
+	_east_wall_section(east, ew2r, HOUSE_DEPTH, 0.0, CEILING_HEIGHT)
+
+
+func _south_wall_section(body: StaticBody3D, x_start: float, x_end: float, y_min: float, y_max: float) -> void:
+	var w: float = x_end - x_start
+	var h: float = y_max - y_min
+	if w < 0.001 or h < 0.001:
+		return
+	var size: Vector3 = Vector3(w, h, WALL_THICKNESS)
+	var pos: Vector3 = Vector3(x_start + w / 2.0, y_min + h / 2.0, WALL_THICKNESS / 2.0)
+	_box(body, size, pos, _mat_wall)
+	_add_wall_collision(body, size, pos)
+
+
+func _north_wall_section(body: StaticBody3D, x_start: float, x_end: float, y_min: float, y_max: float) -> void:
+	var w: float = x_end - x_start
+	var h: float = y_max - y_min
+	if w < 0.001 or h < 0.001:
+		return
+	var size: Vector3 = Vector3(w, h, WALL_THICKNESS)
+	var pos: Vector3 = Vector3(x_start + w / 2.0, y_min + h / 2.0, HOUSE_DEPTH - WALL_THICKNESS / 2.0)
+	_box(body, size, pos, _mat_wall)
+	_add_wall_collision(body, size, pos)
+
+
+func _west_wall_section(body: StaticBody3D, z_start: float, z_end: float, y_min: float, y_max: float) -> void:
+	var d: float = z_end - z_start
+	var h: float = y_max - y_min
+	if d < 0.001 or h < 0.001:
+		return
+	var size: Vector3 = Vector3(WALL_THICKNESS, h, d)
+	var pos: Vector3 = Vector3(WALL_THICKNESS / 2.0, y_min + h / 2.0, z_start + d / 2.0)
+	_box(body, size, pos, _mat_wall)
+	_add_wall_collision(body, size, pos)
+
+
+func _east_wall_section(body: StaticBody3D, z_start: float, z_end: float, y_min: float, y_max: float) -> void:
+	var d: float = z_end - z_start
+	var h: float = y_max - y_min
+	if d < 0.001 or h < 0.001:
+		return
+	var size: Vector3 = Vector3(WALL_THICKNESS, h, d)
+	var pos: Vector3 = Vector3(HOUSE_WIDTH - WALL_THICKNESS / 2.0, y_min + h / 2.0, z_start + d / 2.0)
+	_box(body, size, pos, _mat_wall)
+	_add_wall_collision(body, size, pos)
 
 
 func _add_wall_with_collision(wall_name: String, size: Vector3, pos: Vector3) -> void:
@@ -387,48 +459,83 @@ func _build_interior_walls() -> void:
 # =============================================================================
 
 func _build_crown_molding() -> void:
-	var molding_height: float = 0.06
-	var molding_depth: float = 0.04
-	var y: float = CEILING_HEIGHT - molding_height / 2.0
+	# Stepped crown molding profile:
+	#   Upper piece (against ceiling): 0.10m tall, 0.06m deep
+	#   Lower piece (step, wider):     0.05m tall, 0.10m deep
+	var upper_h: float = 0.10
+	var upper_d: float = 0.06
+	var lower_h: float = 0.05
+	var lower_d: float = 0.10
+	var y_upper: float = CEILING_HEIGHT - upper_h / 2.0
+	var y_lower: float = CEILING_HEIGHT - upper_h - lower_h / 2.0
 
-	# Living room molding (X: 0 to LIVING_ROOM_WIDTH, Z: 0 to LIVING_ROOM_DEPTH)
-	# South wall
-	_box(self, Vector3(LIVING_ROOM_WIDTH, molding_height, molding_depth),
-		Vector3(LIVING_ROOM_WIDTH / 2.0, y, molding_depth / 2.0 + WALL_THICKNESS), _mat_molding)
-	# West wall
-	_box(self, Vector3(molding_depth, molding_height, LIVING_ROOM_DEPTH),
-		Vector3(WALL_THICKNESS + molding_depth / 2.0, y, LIVING_ROOM_DEPTH / 2.0), _mat_molding)
-	# North wall (kitchen divider)
-	_box(self, Vector3(LIVING_ROOM_WIDTH, molding_height, molding_depth),
-		Vector3(LIVING_ROOM_WIDTH / 2.0, y, LIVING_ROOM_DEPTH - molding_depth / 2.0), _mat_molding)
-	# East wall (center divider)
-	_box(self, Vector3(molding_depth, molding_height, LIVING_ROOM_DEPTH),
-		Vector3(LIVING_ROOM_WIDTH - molding_depth / 2.0, y, LIVING_ROOM_DEPTH / 2.0), _mat_molding)
+	# --- Living room (X: WALL to LIVING_ROOM_WIDTH, Z: WALL to LIVING_ROOM_DEPTH) ---
+	var lw: float = LIVING_ROOM_WIDTH - WALL_THICKNESS
+	var ld: float = LIVING_ROOM_DEPTH
+	var lx: float = WALL_THICKNESS + lw / 2.0
+	var lz: float = ld / 2.0
+	# South
+	_box(self, Vector3(lw, upper_h, upper_d), Vector3(lx, y_upper, WALL_THICKNESS + upper_d / 2.0), _mat_molding)
+	_box(self, Vector3(lw, lower_h, lower_d), Vector3(lx, y_lower, WALL_THICKNESS + lower_d / 2.0), _mat_molding)
+	# West
+	_box(self, Vector3(upper_d, upper_h, ld), Vector3(WALL_THICKNESS + upper_d / 2.0, y_upper, lz), _mat_molding)
+	_box(self, Vector3(lower_d, lower_h, ld), Vector3(WALL_THICKNESS + lower_d / 2.0, y_lower, lz), _mat_molding)
+	# North (kitchen divider)
+	_box(self, Vector3(lw, upper_h, upper_d), Vector3(lx, y_upper, ld - upper_d / 2.0), _mat_molding)
+	_box(self, Vector3(lw, lower_h, lower_d), Vector3(lx, y_lower, ld - lower_d / 2.0), _mat_molding)
+	# East (center divider)
+	_box(self, Vector3(upper_d, upper_h, ld), Vector3(LIVING_ROOM_WIDTH - upper_d / 2.0, y_upper, lz), _mat_molding)
+	_box(self, Vector3(lower_d, lower_h, ld), Vector3(LIVING_ROOM_WIDTH - lower_d / 2.0, y_lower, lz), _mat_molding)
 
-	# Kitchen molding (X: 0 to LIVING_ROOM_WIDTH, Z: LIVING_ROOM_DEPTH to HOUSE_DEPTH)
-	# West wall
-	_box(self, Vector3(molding_depth, molding_height, KITCHEN_DEPTH),
-		Vector3(WALL_THICKNESS + molding_depth / 2.0, y, LIVING_ROOM_DEPTH + KITCHEN_DEPTH / 2.0), _mat_molding)
-	# North wall
-	_box(self, Vector3(LIVING_ROOM_WIDTH, molding_height, molding_depth),
-		Vector3(LIVING_ROOM_WIDTH / 2.0, y, HOUSE_DEPTH - WALL_THICKNESS - molding_depth / 2.0), _mat_molding)
-	# East wall (center divider, kitchen side)
-	_box(self, Vector3(molding_depth, molding_height, KITCHEN_DEPTH),
-		Vector3(LIVING_ROOM_WIDTH - molding_depth / 2.0, y, LIVING_ROOM_DEPTH + KITCHEN_DEPTH / 2.0), _mat_molding)
+	# --- Kitchen (X: WALL to LIVING_ROOM_WIDTH, Z: LIVING_ROOM_DEPTH to HOUSE_DEPTH-WALL) ---
+	var kd: float = KITCHEN_DEPTH - WALL_THICKNESS
+	var kz: float = LIVING_ROOM_DEPTH + kd / 2.0
+	# West
+	_box(self, Vector3(upper_d, upper_h, kd), Vector3(WALL_THICKNESS + upper_d / 2.0, y_upper, kz), _mat_molding)
+	_box(self, Vector3(lower_d, lower_h, kd), Vector3(WALL_THICKNESS + lower_d / 2.0, y_lower, kz), _mat_molding)
+	# North
+	_box(self, Vector3(lw, upper_h, upper_d), Vector3(lx, y_upper, HOUSE_DEPTH - WALL_THICKNESS - upper_d / 2.0), _mat_molding)
+	_box(self, Vector3(lw, lower_h, lower_d), Vector3(lx, y_lower, HOUSE_DEPTH - WALL_THICKNESS - lower_d / 2.0), _mat_molding)
+	# East (center divider, kitchen side)
+	_box(self, Vector3(upper_d, upper_h, kd), Vector3(LIVING_ROOM_WIDTH - upper_d / 2.0, y_upper, kz), _mat_molding)
+	_box(self, Vector3(lower_d, lower_h, kd), Vector3(LIVING_ROOM_WIDTH - lower_d / 2.0, y_lower, kz), _mat_molding)
 
-	# Dining room molding (X: LIVING_ROOM_WIDTH to HOUSE_WIDTH, Z: 0 to HOUSE_DEPTH)
-	# South wall
-	_box(self, Vector3(DINING_ROOM_WIDTH, molding_height, molding_depth),
-		Vector3(LIVING_ROOM_WIDTH + DINING_ROOM_WIDTH / 2.0, y, molding_depth / 2.0 + WALL_THICKNESS), _mat_molding)
-	# East wall
-	_box(self, Vector3(molding_depth, molding_height, HOUSE_DEPTH),
-		Vector3(HOUSE_WIDTH - WALL_THICKNESS - molding_depth / 2.0, y, HOUSE_DEPTH / 2.0), _mat_molding)
-	# North wall
-	_box(self, Vector3(DINING_ROOM_WIDTH, molding_height, molding_depth),
-		Vector3(LIVING_ROOM_WIDTH + DINING_ROOM_WIDTH / 2.0, y, HOUSE_DEPTH - WALL_THICKNESS - molding_depth / 2.0), _mat_molding)
-	# West wall (center divider, dining side)
-	_box(self, Vector3(molding_depth, molding_height, HOUSE_DEPTH),
-		Vector3(LIVING_ROOM_WIDTH + molding_depth / 2.0, y, HOUSE_DEPTH / 2.0), _mat_molding)
+	# --- Dining room (X: LIVING_ROOM_WIDTH to HOUSE_WIDTH-WALL, Z: WALL to HOUSE_DEPTH-WALL) ---
+	var dw: float = DINING_ROOM_WIDTH - WALL_THICKNESS
+	var dd: float = HOUSE_DEPTH - 2.0 * WALL_THICKNESS
+	var dx: float = LIVING_ROOM_WIDTH + dw / 2.0
+	var dz: float = WALL_THICKNESS + dd / 2.0
+	# South
+	_box(self, Vector3(dw, upper_h, upper_d), Vector3(dx, y_upper, WALL_THICKNESS + upper_d / 2.0), _mat_molding)
+	_box(self, Vector3(dw, lower_h, lower_d), Vector3(dx, y_lower, WALL_THICKNESS + lower_d / 2.0), _mat_molding)
+	# East
+	_box(self, Vector3(upper_d, upper_h, dd), Vector3(HOUSE_WIDTH - WALL_THICKNESS - upper_d / 2.0, y_upper, dz), _mat_molding)
+	_box(self, Vector3(lower_d, lower_h, dd), Vector3(HOUSE_WIDTH - WALL_THICKNESS - lower_d / 2.0, y_lower, dz), _mat_molding)
+	# North
+	_box(self, Vector3(dw, upper_h, upper_d), Vector3(dx, y_upper, HOUSE_DEPTH - WALL_THICKNESS - upper_d / 2.0), _mat_molding)
+	_box(self, Vector3(dw, lower_h, lower_d), Vector3(dx, y_lower, HOUSE_DEPTH - WALL_THICKNESS - lower_d / 2.0), _mat_molding)
+	# West (center divider, dining side)
+	_box(self, Vector3(upper_d, upper_h, dd), Vector3(LIVING_ROOM_WIDTH + upper_d / 2.0, y_upper, dz), _mat_molding)
+	_box(self, Vector3(lower_d, lower_h, dd), Vector3(LIVING_ROOM_WIDTH + lower_d / 2.0, y_lower, dz), _mat_molding)
+
+	# --- Baseboards (all rooms, floor level) ---
+	var bb_h: float = 0.10
+	var bb_d: float = 0.03
+	var bb_y: float = bb_h / 2.0
+	# Living room
+	_box(self, Vector3(lw, bb_h, bb_d), Vector3(lx, bb_y, WALL_THICKNESS + bb_d / 2.0), _mat_molding)
+	_box(self, Vector3(bb_d, bb_h, ld), Vector3(WALL_THICKNESS + bb_d / 2.0, bb_y, lz), _mat_molding)
+	_box(self, Vector3(lw, bb_h, bb_d), Vector3(lx, bb_y, ld - bb_d / 2.0), _mat_molding)
+	_box(self, Vector3(bb_d, bb_h, ld), Vector3(LIVING_ROOM_WIDTH - bb_d / 2.0, bb_y, lz), _mat_molding)
+	# Kitchen
+	_box(self, Vector3(bb_d, bb_h, kd), Vector3(WALL_THICKNESS + bb_d / 2.0, bb_y, kz), _mat_molding)
+	_box(self, Vector3(lw, bb_h, bb_d), Vector3(lx, bb_y, HOUSE_DEPTH - WALL_THICKNESS - bb_d / 2.0), _mat_molding)
+	_box(self, Vector3(bb_d, bb_h, kd), Vector3(LIVING_ROOM_WIDTH - bb_d / 2.0, bb_y, kz), _mat_molding)
+	# Dining room
+	_box(self, Vector3(dw, bb_h, bb_d), Vector3(dx, bb_y, WALL_THICKNESS + bb_d / 2.0), _mat_molding)
+	_box(self, Vector3(bb_d, bb_h, dd), Vector3(HOUSE_WIDTH - WALL_THICKNESS - bb_d / 2.0, bb_y, dz), _mat_molding)
+	_box(self, Vector3(dw, bb_h, bb_d), Vector3(dx, bb_y, HOUSE_DEPTH - WALL_THICKNESS - bb_d / 2.0), _mat_molding)
+	_box(self, Vector3(bb_d, bb_h, dd), Vector3(LIVING_ROOM_WIDTH + bb_d / 2.0, bb_y, dz), _mat_molding)
 
 
 # =============================================================================
@@ -436,118 +543,132 @@ func _build_crown_molding() -> void:
 # =============================================================================
 
 func _build_windows() -> void:
-	# Living room: 1 window on south wall (right of door), 1 on west wall
-	_build_window_on_wall("south", Vector3(4.5, 1.2, 0.0))  # South wall, right of door
-	_build_window_on_wall("west", Vector3(0.0, 1.2, 2.0))   # West wall
+	# Each window sits in the wall opening created by _build_exterior_walls
+	# South wall windows (coord = X position)
+	_build_six_pane_window("south", 4.5)   # Living room
+	_build_six_pane_window("south", 9.0)   # Dining room
+	# West wall windows (coord = Z position)
+	_build_six_pane_window("west", 2.5)    # Living room
+	_build_six_pane_window("west", 7.5)    # Kitchen
+	# North wall window
+	_build_six_pane_window("north", 3.0)   # Kitchen
+	# East wall windows
+	_build_six_pane_window("east", 3.0)    # Dining room
+	_build_six_pane_window("east", 7.0)    # Dining room
 
-	# Kitchen: 1 window on north wall, 1 on west wall
-	_build_window_on_wall("north", Vector3(3.0, 1.2, HOUSE_DEPTH))   # North wall
-	_build_window_on_wall("west", Vector3(0.0, 1.2, 7.5))   # West wall
 
-	# Dining room: 2 windows on east wall, 1 on south wall
-	_build_window_on_wall("east", Vector3(HOUSE_WIDTH, 1.2, 2.5))  # East wall
-	_build_window_on_wall("east", Vector3(HOUSE_WIDTH, 1.2, 7.0))  # East wall
-	_build_window_on_wall("south", Vector3(9.0, 1.2, 0.0))         # South wall
+func _build_six_pane_window(wall: String, coord: float) -> void:
+	## Places a colonial six-pane window inside a wall opening.
+	## coord is the X-position for south/north walls, Z-position for east/west walls.
+	var wc: Node3D = Node3D.new()
+	wc.name = "Window"
+	add_child(wc)
 
-
-func _build_window_on_wall(wall: String, base_pos: Vector3) -> void:
-	var window_container: Node3D = Node3D.new()
-	window_container.name = "Window"
-	add_child(window_container)
-
-	var win_width: float = 1.0
-	var win_height: float = 1.4
-	var frame_thickness: float = 0.04
-	var mullion_width: float = 0.03
-
-	# Determine orientation and position
-	var frame_pos: Vector3 = base_pos
-	var frame_size: Vector3
-	var glass_size: Vector3
-	var backdrop_offset: Vector3
+	var cy: float = WIN_SILL_Y + WIN_HEIGHT / 2.0
 	var is_ns: bool = (wall == "south" or wall == "north")
 
+	# Base position = center of window in the wall
+	var base: Vector3
+	# Inward direction (points from wall into the room)
+	var inward: Vector3
+
+	match wall:
+		"south":
+			base = Vector3(coord, cy, WALL_THICKNESS / 2.0)
+			inward = Vector3(0, 0, 1)
+		"north":
+			base = Vector3(coord, cy, HOUSE_DEPTH - WALL_THICKNESS / 2.0)
+			inward = Vector3(0, 0, -1)
+		"west":
+			base = Vector3(WALL_THICKNESS / 2.0, cy, coord)
+			inward = Vector3(1, 0, 0)
+		"east":
+			base = Vector3(HOUSE_WIDTH - WALL_THICKNESS / 2.0, cy, coord)
+			inward = Vector3(-1, 0, 0)
+
+	# Layer depths along inward normal (from wall center):
+	#   backdrop: -0.05 (toward exterior)
+	#   glass:     0.04 (toward interior)
+	#   frame:     0.06 (at/past interior face)
+	var backdrop_pos: Vector3 = base + inward * (-0.05)
+	var glass_pos: Vector3 = base + inward * 0.04
+	var frame_pos: Vector3 = base + inward * 0.06
+	var sill_pos: Vector3 = base + inward * 0.10
+
+	var thin: float = 0.02  # Thickness of flat panels
+
 	if is_ns:
-		frame_size = Vector3(win_width, win_height, frame_thickness)
-		glass_size = Vector3(win_width - frame_thickness * 2, win_height - frame_thickness * 2, 0.01)
-		if wall == "south":
-			backdrop_offset = Vector3(0, 0, -0.02)
-		else:
-			backdrop_offset = Vector3(0, 0, 0.02)
+		# Window panes in XY plane, thin in Z
+		# Sky backdrop (upper 60%)
+		var sky_p: Vector3 = backdrop_pos
+		sky_p.y += WIN_HEIGHT * 0.2
+		_box(wc, Vector3(WIN_WIDTH - 0.06, WIN_HEIGHT * 0.55, thin), sky_p, _mat_window_sky)
+		# Hills backdrop (lower 40%)
+		var hill_p: Vector3 = backdrop_pos
+		hill_p.y -= WIN_HEIGHT * 0.25
+		_box(wc, Vector3(WIN_WIDTH - 0.06, WIN_HEIGHT * 0.4, thin), hill_p, _mat_window_hills)
+		# Distant houses on hills
+		for i: int in range(3):
+			var hp: Vector3 = hill_p
+			hp.y += 0.1
+			hp.x += (float(i) - 1.0) * 0.25
+			_box(wc, Vector3(0.1, 0.07, thin), hp, _mat_window_houses)
+		# Glass pane
+		_box(wc, Vector3(WIN_WIDTH - 0.06, WIN_HEIGHT - 0.06, thin), glass_pos, _mat_window_glass)
+		# Frame borders (4 edges)
+		_box(wc, Vector3(WIN_WIDTH + 0.04, 0.06, 0.04),
+			Vector3(frame_pos.x, WIN_SILL_Y, frame_pos.z), _mat_window_frame)
+		_box(wc, Vector3(WIN_WIDTH + 0.04, 0.06, 0.04),
+			Vector3(frame_pos.x, WIN_SILL_Y + WIN_HEIGHT, frame_pos.z), _mat_window_frame)
+		_box(wc, Vector3(0.06, WIN_HEIGHT + 0.04, 0.04),
+			Vector3(frame_pos.x - WIN_WIDTH / 2.0, cy, frame_pos.z), _mat_window_frame)
+		_box(wc, Vector3(0.06, WIN_HEIGHT + 0.04, 0.04),
+			Vector3(frame_pos.x + WIN_WIDTH / 2.0, cy, frame_pos.z), _mat_window_frame)
+		# Mullions (1 horizontal center, 2 vertical = 6 panes)
+		_box(wc, Vector3(WIN_WIDTH - 0.08, 0.03, 0.04), frame_pos, _mat_window_frame)
+		_box(wc, Vector3(0.03, WIN_HEIGHT - 0.08, 0.04),
+			Vector3(frame_pos.x - WIN_WIDTH / 6.0, cy, frame_pos.z), _mat_window_frame)
+		_box(wc, Vector3(0.03, WIN_HEIGHT - 0.08, 0.04),
+			Vector3(frame_pos.x + WIN_WIDTH / 6.0, cy, frame_pos.z), _mat_window_frame)
+		# Window sill (protruding ledge)
+		_box(wc, Vector3(WIN_WIDTH + 0.12, 0.05, 0.14),
+			Vector3(sill_pos.x, WIN_SILL_Y - 0.025, sill_pos.z), _mat_window_frame)
 	else:
-		frame_size = Vector3(frame_thickness, win_height, win_width)
-		glass_size = Vector3(0.01, win_height - frame_thickness * 2, win_width - frame_thickness * 2)
-		if wall == "west":
-			backdrop_offset = Vector3(-0.02, 0, 0)
-		else:
-			backdrop_offset = Vector3(0.02, 0, 0)
-
-	# Outer frame
-	_box(window_container, frame_size, frame_pos, _mat_window_frame)
-
-	# Backdrop: sky (upper half)
-	var sky_center: Vector3 = frame_pos + backdrop_offset
-	sky_center.y += win_height * 0.25
-	if is_ns:
-		_box(window_container, Vector3(win_width - 0.1, win_height * 0.5, 0.01), sky_center, _mat_window_sky)
-	else:
-		_box(window_container, Vector3(0.01, win_height * 0.5, win_width - 0.1), sky_center, _mat_window_sky)
-
-	# Backdrop: green hills (lower half)
-	var hills_center: Vector3 = frame_pos + backdrop_offset
-	hills_center.y -= win_height * 0.15
-	if is_ns:
-		_box(window_container, Vector3(win_width - 0.1, win_height * 0.35, 0.01), hills_center, _mat_window_hills)
-	else:
-		_box(window_container, Vector3(0.01, win_height * 0.35, win_width - 0.1), hills_center, _mat_window_hills)
-
-	# Distant houses (small brown boxes on hills)
-	for i: int in range(3):
-		var house_pos: Vector3 = hills_center + backdrop_offset * 0.5
-		house_pos.y += 0.08
-		if is_ns:
-			house_pos.x += (float(i) - 1.0) * 0.2
-			_box(window_container, Vector3(0.08, 0.06, 0.01), house_pos, _mat_window_houses)
-		else:
-			house_pos.z += (float(i) - 1.0) * 0.2
-			_box(window_container, Vector3(0.01, 0.06, 0.08), house_pos, _mat_window_houses)
-
-	# Glass pane (semi-transparent, in front of backdrop)
-	var glass_pos: Vector3 = frame_pos
-	if wall == "south":
-		glass_pos.z += 0.01
-	elif wall == "north":
-		glass_pos.z -= 0.01
-	elif wall == "west":
-		glass_pos.x += 0.01
-	else:
-		glass_pos.x -= 0.01
-	_box(window_container, glass_size, glass_pos, _mat_window_glass)
-
-	# Mullions (6-pane: 2 vertical + 1 horizontal)
-	var mullion_offset: Vector3 = glass_pos
-	if is_ns:
-		# Horizontal mullion (center)
-		_box(window_container, Vector3(win_width - 0.06, mullion_width, 0.02), mullion_offset, _mat_window_frame)
-		# Vertical mullion left
-		var v_left: Vector3 = mullion_offset
-		v_left.x -= win_width / 6.0
-		_box(window_container, Vector3(mullion_width, win_height - 0.06, 0.02), v_left, _mat_window_frame)
-		# Vertical mullion right
-		var v_right: Vector3 = mullion_offset
-		v_right.x += win_width / 6.0
-		_box(window_container, Vector3(mullion_width, win_height - 0.06, 0.02), v_right, _mat_window_frame)
-	else:
-		# Horizontal mullion (center)
-		_box(window_container, Vector3(0.02, mullion_width, win_width - 0.06), mullion_offset, _mat_window_frame)
-		# Vertical mullion top
-		var v_top: Vector3 = mullion_offset
-		v_top.z -= win_width / 6.0
-		_box(window_container, Vector3(0.02, win_height - 0.06, mullion_width), v_top, _mat_window_frame)
-		# Vertical mullion bottom
-		var v_bot: Vector3 = mullion_offset
-		v_bot.z += win_width / 6.0
-		_box(window_container, Vector3(0.02, win_height - 0.06, mullion_width), v_bot, _mat_window_frame)
+		# Window panes in YZ plane, thin in X
+		# Sky backdrop
+		var sky_p: Vector3 = backdrop_pos
+		sky_p.y += WIN_HEIGHT * 0.2
+		_box(wc, Vector3(thin, WIN_HEIGHT * 0.55, WIN_WIDTH - 0.06), sky_p, _mat_window_sky)
+		# Hills backdrop
+		var hill_p: Vector3 = backdrop_pos
+		hill_p.y -= WIN_HEIGHT * 0.25
+		_box(wc, Vector3(thin, WIN_HEIGHT * 0.4, WIN_WIDTH - 0.06), hill_p, _mat_window_hills)
+		# Distant houses
+		for i: int in range(3):
+			var hp: Vector3 = hill_p
+			hp.y += 0.1
+			hp.z += (float(i) - 1.0) * 0.25
+			_box(wc, Vector3(thin, 0.07, 0.1), hp, _mat_window_houses)
+		# Glass pane
+		_box(wc, Vector3(thin, WIN_HEIGHT - 0.06, WIN_WIDTH - 0.06), glass_pos, _mat_window_glass)
+		# Frame borders
+		_box(wc, Vector3(0.04, 0.06, WIN_WIDTH + 0.04),
+			Vector3(frame_pos.x, WIN_SILL_Y, frame_pos.z), _mat_window_frame)
+		_box(wc, Vector3(0.04, 0.06, WIN_WIDTH + 0.04),
+			Vector3(frame_pos.x, WIN_SILL_Y + WIN_HEIGHT, frame_pos.z), _mat_window_frame)
+		_box(wc, Vector3(0.04, WIN_HEIGHT + 0.04, 0.06),
+			Vector3(frame_pos.x, cy, frame_pos.z - WIN_WIDTH / 2.0), _mat_window_frame)
+		_box(wc, Vector3(0.04, WIN_HEIGHT + 0.04, 0.06),
+			Vector3(frame_pos.x, cy, frame_pos.z + WIN_WIDTH / 2.0), _mat_window_frame)
+		# Mullions
+		_box(wc, Vector3(0.04, 0.03, WIN_WIDTH - 0.08), frame_pos, _mat_window_frame)
+		_box(wc, Vector3(0.04, WIN_HEIGHT - 0.08, 0.03),
+			Vector3(frame_pos.x, cy, frame_pos.z - WIN_WIDTH / 6.0), _mat_window_frame)
+		_box(wc, Vector3(0.04, WIN_HEIGHT - 0.08, 0.03),
+			Vector3(frame_pos.x, cy, frame_pos.z + WIN_WIDTH / 6.0), _mat_window_frame)
+		# Window sill
+		_box(wc, Vector3(0.14, 0.05, WIN_WIDTH + 0.12),
+			Vector3(sill_pos.x, WIN_SILL_Y - 0.025, sill_pos.z), _mat_window_frame)
 
 
 # =============================================================================
@@ -629,8 +750,8 @@ func _build_living_room_furniture() -> void:
 			_box(table_container, Vector3(0.05, 0.35, 0.05),
 				Vector3(table_x + lx, 0.175, table_z + lz), _mat_furniture_wood)
 
-	# --- Bookshelves (against kitchen divider wall, north side of living room) ---
-	_build_bookshelf(Vector3(2.0, 0.0, LIVING_ROOM_DEPTH - 0.5))
+	# --- Bookshelves (against kitchen divider wall, left of doorway) ---
+	_build_bookshelf(Vector3(1.0, 0.0, LIVING_ROOM_DEPTH - 0.4))
 
 	# --- Wilderness Storage Box ---
 	_build_storage_box(Vector3(4.8, 0.0, 1.0))
@@ -733,31 +854,75 @@ func _build_kitchen_furniture() -> void:
 	# Kitchen bounds: X 0..6, Z 5..10
 	var kitchen_z_start: float = LIVING_ROOM_DEPTH
 
-	# --- Counter (against north wall) ---
-	var counter_x: float = 2.5
-	var counter_z: float = HOUSE_DEPTH - 0.6
-	# Counter top (wood)
+	# --- L-shaped Counter ---
+	# Main run along north wall (X 1.5 to 4.0)
+	var counter_x: float = 2.75
+	var counter_z: float = HOUSE_DEPTH - 0.5
+	# Counter top
 	_box(self, Vector3(2.5, 0.05, 0.6),
 		Vector3(counter_x, 0.9, counter_z), _mat_furniture_wood)
 	# Counter base
 	_box(self, Vector3(2.5, 0.85, 0.6),
 		Vector3(counter_x, 0.425, counter_z), _mat_cabinet_face)
-	# Cabinet face details (2 doors)
-	_box(self, Vector3(1.1, 0.7, 0.02),
-		Vector3(counter_x - 0.55, 0.4, counter_z + 0.31), _mat_cabinet_face)
-	_box(self, Vector3(1.1, 0.7, 0.02),
-		Vector3(counter_x + 0.55, 0.4, counter_z + 0.31), _mat_cabinet_face)
-	# Cabinet handles
-	_box(self, Vector3(0.12, 0.02, 0.03),
-		Vector3(counter_x - 0.15, 0.5, counter_z + 0.33), _mat_handle)
-	_box(self, Vector3(0.12, 0.02, 0.03),
-		Vector3(counter_x + 0.15, 0.5, counter_z + 0.33), _mat_handle)
+	# Cabinet doors (3 sections)
+	for cx: float in [-0.7, 0.0, 0.7]:
+		_box(self, Vector3(0.6, 0.65, 0.02),
+			Vector3(counter_x + cx, 0.4, counter_z + 0.31), _mat_cabinet_face)
+		_box(self, Vector3(0.1, 0.02, 0.03),
+			Vector3(counter_x + cx, 0.5, counter_z + 0.33), _mat_handle)
+
+	# L-return along center divider (Z 8.0 to 9.5)
+	var return_x: float = LIVING_ROOM_WIDTH - 0.5
+	var return_z: float = 8.75
+	_box(self, Vector3(0.6, 0.05, 1.5),
+		Vector3(return_x, 0.9, return_z), _mat_furniture_wood)
+	_box(self, Vector3(0.6, 0.85, 1.5),
+		Vector3(return_x, 0.425, return_z), _mat_cabinet_face)
+	# Cabinet doors on return
+	for cz: float in [-0.35, 0.35]:
+		_box(self, Vector3(0.02, 0.65, 0.6),
+			Vector3(return_x - 0.31, 0.4, return_z + cz), _mat_cabinet_face)
+		_box(self, Vector3(0.03, 0.02, 0.1),
+			Vector3(return_x - 0.33, 0.5, return_z + cz), _mat_handle)
+
+	# --- Sink (dark recess in counter, under kitchen window at X=3.0) ---
+	var mat_sink: StandardMaterial3D = StandardMaterial3D.new()
+	mat_sink.albedo_color = Color(0.3, 0.3, 0.32)
+	mat_sink.roughness = 0.3
+	mat_sink.metallic = 0.5
+	_box(self, Vector3(0.5, 0.04, 0.35),
+		Vector3(3.0, 0.89, counter_z + 0.05), mat_sink)
+	# Faucet
+	_box(self, Vector3(0.03, 0.2, 0.03),
+		Vector3(3.0, 1.02, counter_z - 0.15), _mat_kettle)
+	_box(self, Vector3(0.03, 0.03, 0.1),
+		Vector3(3.0, 1.12, counter_z - 0.10), _mat_kettle)
+
+	# --- Upper Cabinets (above counter, avoiding window at X=3.0) ---
+	# Left upper cabinet (X 1.5 to 2.3)
+	_box(self, Vector3(0.8, 0.6, 0.35),
+		Vector3(1.9, 1.85, counter_z), _mat_cabinet_face)
+	_box(self, Vector3(0.35, 0.5, 0.02),
+		Vector3(1.75, 1.85, counter_z + 0.18), _mat_cabinet_face)
+	_box(self, Vector3(0.35, 0.5, 0.02),
+		Vector3(2.05, 1.85, counter_z + 0.18), _mat_cabinet_face)
+	# Right upper cabinet (X 3.7 to 4.0, above stove area)
+	_box(self, Vector3(0.6, 0.6, 0.35),
+		Vector3(4.3, 1.85, counter_z), _mat_cabinet_face)
+	# Range hood above stove
+	_box(self, Vector3(0.65, 0.15, 0.45),
+		Vector3(4.3, 1.45, counter_z), _mat_stove)
 
 	# --- Stove (next to counter, against north wall) ---
 	var stove_x: float = 4.3
-	var stove_z: float = HOUSE_DEPTH - 0.6
+	var stove_z: float = HOUSE_DEPTH - 0.5
 	_box(self, Vector3(0.6, 0.9, 0.6),
 		Vector3(stove_x, 0.45, stove_z), _mat_stove)
+	# Oven door
+	_box(self, Vector3(0.5, 0.4, 0.02),
+		Vector3(stove_x, 0.35, stove_z + 0.31), _mat_stove)
+	_box(self, Vector3(0.2, 0.02, 0.03),
+		Vector3(stove_x, 0.58, stove_z + 0.33), _mat_handle)
 	# 4 burners on top
 	for bx: float in [-0.12, 0.12]:
 		for bz: float in [-0.12, 0.12]:
@@ -773,13 +938,10 @@ func _build_kitchen_furniture() -> void:
 	))
 	_box(kettle_body, Vector3(0.15, 0.2, 0.1),
 		Vector3(stove_x + 0.1, 1.02, stove_z - 0.1), _mat_kettle)
-	# Kettle handle (small arc = thin box on top)
 	_box(kettle_body, Vector3(0.08, 0.02, 0.06),
 		Vector3(stove_x + 0.1, 1.13, stove_z - 0.1), _mat_handle)
-	# Kettle spout
 	_box(kettle_body, Vector3(0.03, 0.04, 0.06),
 		Vector3(stove_x + 0.1 + 0.08, 1.08, stove_z - 0.1), _mat_kettle)
-	# Collision
 	var kettle_col: CollisionShape3D = CollisionShape3D.new()
 	var kettle_shape: BoxShape3D = BoxShape3D.new()
 	kettle_shape.size = Vector3(0.2, 0.25, 0.15)
@@ -796,6 +958,55 @@ func _build_kitchen_furniture() -> void:
 	# Fridge handle
 	_box(self, Vector3(0.02, 0.3, 0.04),
 		Vector3(fridge_x + 0.38, 1.2, fridge_z + 0.36), _mat_handle)
+	# Freezer line
+	_box(self, Vector3(0.78, 0.02, 0.68),
+		Vector3(fridge_x, 1.4, fridge_z), _mat_handle)
+	# Freezer handle
+	_box(self, Vector3(0.02, 0.15, 0.04),
+		Vector3(fridge_x + 0.38, 1.55, fridge_z + 0.36), _mat_handle)
+
+	# --- Small kitchen table (center of kitchen) ---
+	var table_x: float = 2.8
+	var table_z: float = 7.0
+	_box(self, Vector3(0.9, 0.05, 0.7),
+		Vector3(table_x, 0.75, table_z), _mat_furniture_wood)
+	for lx: float in [-0.35, 0.35]:
+		for lz: float in [-0.25, 0.25]:
+			_box(self, Vector3(0.05, 0.7, 0.05),
+				Vector3(table_x + lx, 0.35, table_z + lz), _mat_furniture_wood)
+
+	# 2 stools at kitchen table
+	for sx: float in [-0.55, 0.55]:
+		_box(self, Vector3(0.3, 0.04, 0.3),
+			Vector3(table_x + sx, 0.5, table_z), _mat_furniture_wood)
+		for slx: float in [-0.1, 0.1]:
+			for slz: float in [-0.1, 0.1]:
+				_box(self, Vector3(0.04, 0.48, 0.04),
+					Vector3(table_x + sx + slx, 0.24, table_z + slz), _mat_furniture_wood)
+
+	# --- Counter-top items ---
+	# Cutting board (on main counter)
+	_box(self, Vector3(0.25, 0.02, 0.18),
+		Vector3(2.0, 0.935, counter_z + 0.1), _mat_furniture_wood)
+	# Fruit bowl (on L-return)
+	var mat_bowl: StandardMaterial3D = StandardMaterial3D.new()
+	mat_bowl.albedo_color = Color(0.85, 0.82, 0.75)
+	mat_bowl.roughness = 0.5
+	_box(self, Vector3(0.2, 0.1, 0.2),
+		Vector3(return_x, 0.97, 8.3), mat_bowl)
+	# Fruit (small colored boxes in bowl)
+	var mat_apple: StandardMaterial3D = StandardMaterial3D.new()
+	mat_apple.albedo_color = Color(0.7, 0.15, 0.1)
+	mat_apple.roughness = 0.8
+	var mat_banana: StandardMaterial3D = StandardMaterial3D.new()
+	mat_banana.albedo_color = Color(0.9, 0.8, 0.2)
+	mat_banana.roughness = 0.8
+	_box(self, Vector3(0.06, 0.06, 0.06),
+		Vector3(return_x - 0.03, 1.05, 8.27), mat_apple)
+	_box(self, Vector3(0.06, 0.06, 0.06),
+		Vector3(return_x + 0.04, 1.05, 8.32), mat_apple)
+	_box(self, Vector3(0.04, 0.04, 0.12),
+		Vector3(return_x, 1.04, 8.3), mat_banana)
 
 
 # =============================================================================
@@ -924,11 +1135,11 @@ func _build_cat_portraits() -> void:
 	# On the west wall of the living room, at eye height
 	var wall_x: float = WALL_THICKNESS + 0.03  # Slightly off wall
 
-	# Portrait 1: All-black cat — position on west wall
-	_build_cat_portrait_black(Vector3(wall_x, 1.6, 1.2))
+	# Portrait 1: All-black cat — on west wall, between corner and window
+	_build_cat_portrait_black(Vector3(wall_x, 1.6, 0.8))
 
 	# Portrait 2: Tuxedo cat — next to first
-	_build_cat_portrait_tuxedo(Vector3(wall_x, 1.6, 2.0))
+	_build_cat_portrait_tuxedo(Vector3(wall_x, 1.6, 1.4))
 
 
 func _build_cat_portrait_black(pos: Vector3) -> void:

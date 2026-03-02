@@ -27,7 +27,7 @@ const DEFAULT_COOLDOWNS: Dictionary = {
 	"place_cancel": 0.2,
 	"menu_open": 0.1,
 	"menu_close": 0.1,
-	"select": 0.05,
+	"select": 0.0,  # No cooldown — deliberate user navigation
 	"cancel": 0.1,
 	# Trap sounds
 	"trap_snap": 0.5,  # Trap catching prey
