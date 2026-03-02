@@ -120,7 +120,7 @@ func _get_pages() -> Array[Dictionary]:
 	pages.append({
 		"left_title": "Rare & Extraordinary",
 		"left_text": "The finest things I crafted out here. Each one requires materials from deep in the caves or the desert oases.\n\nDiamond Axe — 2 diamonds, 1 metal ingot, 1 rope\nDiamond Arrows (x10) — 1 diamond, 5 branches, 2 feathers\nEnchanted Bow — 2 opals, 1 bow, 1 rope",
-		"right_text": "Hang Glider — 4 rope, 6 branches, 2 hide\n\nThis is it — my greatest creation. The design took weeks to perfect but the materials are simple. Find a high peak, spread the wings, and run. The wind will do the rest.\n\nThe Carlston Wilderness looks different from up there. Better. Like it was made to be seen from the sky.\n\n~ ~ ~\n\nEnd of Journal",
+		"right_text": "Hang Glider — 4 rope, 6 branches, 2 hide\n\nThis is it — my greatest creation. The design took weeks to perfect but the materials are simple. Find a high peak, spread the wings, and run. The wind will do the rest.\n\nThe Carlston Wilderness looks different from up there. Better. Like it was made to be seen from the sky.",
 		"is_title_page": false,
 		"is_recipe_page": true,
 	})
