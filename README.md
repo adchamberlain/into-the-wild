@@ -1,46 +1,55 @@
 # Into the Wild
 
-A solo camping adventure game built in Godot 4.5. Survive in the wilderness by gathering resources, crafting tools, building shelter, and managing your hunger and health through dynamic weather conditions.
+A solo camping adventure game built in Godot 4.5. Explore an infinite procedural wilderness, gather resources, craft tools, build your campsite, and uncover hidden secrets deep in the desert.
 
-**Visual Style:** Blocky, retro aesthetic reminiscent of early 3D games like Minecraft.
+**Visual Style:** Blocky, retro aesthetic reminiscent of early 3D games like Minecraft. All visuals are procedurally generated using layered BoxMesh primitives — no imported 3D models.
 
 ## Features
 
 ### Infinite Procedural World
 - **Chunk-based terrain** - Endless exploration with procedurally generated landscapes
-- **Six distinct regions** - Meadow (gentle rolling hills), Forest (dense trees), Hills (dramatic terrain with climbing paths), Rocky (jagged cliffs with caves), Mountain (alpine peaks with ponderosa pines), Desert (sandy ring with oases)
-- **Desert biome ring** - Organic-shaped desert region at 150-250 units from spawn with cacti, palm trees, oases with underwater gem deposits, sandstorms, and 1.5x hunger drain
-- **Biome variety** - Mixed forests with oak, big oak, birch, and ponderosa pine trees; desert with cacti and palm trees
-- **Natural features** - Ponds, lakes, alpine lakes, rivers, and desert oases for swimming and fishing
-- **Blocky terrain** - Cell-based terrain with per-cell BoxShape3D collision for pixel-perfect physics
-- **Ambient wildlife** - Rabbits and birds that flee when approached, huntable with bow and arrow; desert lizards and tortoises (non-huntable)
+- **Five distinct biomes** - Forest (dense trees, player spawn), Meadow (gentle rolling hills), Hills (dramatic terrain with climbing paths), Rocky (jagged cliffs with caves), Mountain (alpine peaks with ponderosa pines)
+- **Desert biome** - Organic-shaped desert region with cacti, palm trees, sandstorms, and 1.5x hunger drain
 - **Desert oases** - 3 palm oases with swimmable pools containing underwater diamond and opal gem deposits
-- **Cave entrances** - Explorable underground areas in rocky regions (requires torch)
+- **Desert sinkhole** - A hidden deep pit containing a submerged Explorer's Journal that unlocks late-game content
+- **Natural water features** - Ponds, lakes, alpine lakes, rivers, and desert oases for swimming and fishing
+- **Cave system** - Underground caves in rocky regions with crystal nodes, rare ore, stalactites, and darkness mechanics (torch required)
+- **Ambient wildlife** - Rabbits and birds (huntable with bow or snare traps), desert lizards and tortoises
 - **Auto step-up** - Minecraft-style automatic climbing over 1-block terrain steps
 - **Loading screen** - Cycling camping artwork while the world generates
 
 ### Survival Systems
-- **Health & Hunger** - Manage your vital stats to stay alive
+- **Health & Hunger** - Manage vital stats; hunger depletion accelerates when sprinting
 - **Fall Damage** - Falls beyond 4 units deal escalating damage (8 HP per unit, max 80 HP)
-- **Death & Respawn** - When HP reaches zero, respawn at your latest shelter with 50% health/hunger, all inventory and structures intact
+- **Death & Respawn** - Respawn at your latest shelter with 50% health/hunger, inventory intact
 - **Weather System** - Dynamic weather including rain, storms, fog, heat waves, cold snaps, and desert sandstorms with GPU-accelerated particle effects
-- **Cactus Hazards** - Prickly cacti deal contact damage; fruit-bearing cacti can be harvested for food
-- **Day/Night Cycle** - 20-minute real-time days with dynamic sky, stars, and moon
-- **Swimming** - Explore underwater with breath mechanics
+- **Day/Night Cycle** - Configurable day length with dynamic sky, stars, and moon
+- **Swimming & Diving** - Explore underwater with breath mechanics and air bubble display
+- **Cave Darkness** - Caves are pitch dark; staying too long without a torch deals damage
+- **Cactus Hazards** - Prickly cacti deal contact damage; fruit-bearing cacti can be harvested
 - **Save System** - 3 save slots with camp level and timestamp display
-- **Traps** - Place snare traps to catch rabbits and birds for food
-- **Bow & Arrow** - Craft a bow and arrows to hunt wildlife at range; physics-based arrow projectiles with gravity arc
-- **Compass Navigation** - Craft a compass and lodestone from rare ore; place the lodestone as a beacon and the HUD shows a directional arrow with distance back to it
-- **Birch Bark Map** - Harvest birch bark with a machete, craft a wilderness map showing terrain regions, water bodies, caves, and your position
-- **Tool Upgrades** - Craft leather wraps from hide to multiply axe and grappling hook durability (with visible wrap on the tool model)
+
+### Exploration & Discovery
+- **Bow & Arrow** - Craft bows and arrows to hunt wildlife; physics-based arrow projectiles with gravity arc
+- **Enchanted Bow** - Upgraded bow crafted with opals, with larger hit radius and visual opal inlay
+- **Diamond Arrows** - Premium ammunition crafted from diamonds
+- **Grappling Hook** - Fire at cliff faces to ascend vertical terrain with parabolic arc traversal
+- **Hang Glider** - Soar above the wilderness after unlocking via the Explorer's Journal
+- **Compass & Lodestone** - Craft from rare ore; place the lodestone anywhere and the HUD compass points back to it with distance
+- **Birch Bark Map** - Fullscreen wilderness map showing terrain regions, water bodies, caves, campsite, and player position
+- **Explorer's Journal** - A hidden ancient book in the desert sinkhole that grants stat boosts, reveals hidden locations on the compass, and unlocks the hang glider recipe
+- **Coca Leaf** - Rare consumable found near the sinkhole that doubles breath capacity for 5 minutes, with HUD countdown timer
+- **Tool Upgrades** - Craft leather wraps from hide to multiply axe, grappling hook, and bow durability (with visible wrap on the tool model)
 
 ### Gathering & Crafting
-- **Resource Gathering** - Collect branches, rocks, berries, mushrooms, herbs, wood, and cactus fruit
-- **Tree Chopping** - Use the stone axe to chop trees (with first-person swing animation)
+- **Resource Gathering** - Collect branches, rocks, berries, mushrooms, herbs, wood, cactus fruit, and osha root
+- **Tree Chopping** - Use axes to chop trees with first-person swing animation; tool tier affects chop speed
 - **Birch Bark Harvesting** - Use the machete on birch trees to harvest bark (3-day regrowth cooldown)
-- **Fishing** - Multi-step fishing mechanic at pond fishing spots
+- **Fishing** - Multi-step fishing mechanic at pond, lake, and river fishing spots
 - **Gem Mining** - Dive underwater in desert oases to mine diamond and opal deposits
-- **Tiered Crafting** - Basic recipes by hand, advanced recipes at crafting bench
+- **Cave Mining** - Harvest crystal nodes and rare ore from underground caves
+- **Ore Smelting** - Smelt iron ore into metal ingots at the smithing station
+- **Tiered Crafting** - Basic recipes by hand, advanced recipes at crafting bench, gourmet meals at the cabin kitchen
 
 ### Campsite Progression
 
@@ -50,44 +59,46 @@ Build up your camp through three levels:
 |-------|------|--------------|
 | 1 | Survival Camp | Starting level |
 | 2 | Functional Camp | Fire pit + Shelter + Crafting bench + Drying rack + Fishing rod |
-| 3 | Wilderness Basecamp | Canvas tent + Storage + Herb garden + 6 structures + 3 days at Level 2 |
+| 3 | Wilderness Basecamp | 6 structures + 3 days at Level 2 + Explorer's Journal |
 
 ### Structures
 
 | Structure | Description |
 |-----------|-------------|
-| Fire Pit | Warmth, light, cooking. Add wood for fuel. |
-| Shelter | Weather protection, rest to restore health |
+| Fire Pit | Warmth, light, cooking raw food. Add wood for fuel. |
+| Shelter | Weather protection, rest to restore health and sleep to dawn |
 | Storage Box | 20-slot container for extra items |
 | Crafting Bench | Access advanced crafting recipes |
-| Drying Rack | Food preservation |
-| Herb Garden | Passive herb production |
-| Canvas Tent | Better weather protection |
-| Log Cabin | Walkable interior with bed (full restore) and kitchen (5 advanced recipes) |
-| Snare Trap | Baited trap that catches rabbits and birds |
-| Smithing Station | Forge for smelting ore into metal ingots |
-| Smoker | Smoke meat and fish for preservation |
-| Weather Vane | Shows current weather and 5-day forecast |
-| Lodestone | Navigation beacon — place anywhere, compass points back to it |
+| Drying Rack | Dry fish, berries, mushrooms, and herbs for preservation |
+| Herb Garden | Passive herb production with 8 herb varieties |
+| Canvas Tent | Better weather protection with larger radius |
+| Snare Trap | Bait with food to catch rabbits (70%) and birds (30%) |
+| Smithing Station | Smelt iron ore into metal ingots |
+| Smoker | Smoke meat and fish for premium food preservation |
+| Weather Vane | Shows current weather and forecast |
+| Log Cabin | Walkable interior with bed (full restore) and kitchen (5 gourmet recipes) |
+| Placed Torch | Instant light source, placeable and retrievable |
+| Lodestone | Navigation beacon — compass points back to it from anywhere |
 
 ### Tools & Equipment
 
-| Slot | Item | Description |
-|------|------|-------------|
-| 1 | Torch | Portable light source (required to enter caves) |
-| 2 | Stone Axe | Chop trees (150 durability) |
-| 3 | Campfire Kit | Place a fire pit |
-| 4 | Rope | Crafting material |
-| 5 | Shelter Kit | Place a lean-to shelter |
-| 6 | Storage Box | Place storage container |
-| 7 | Fishing Rod | Catch fish (50 durability) |
-| 8 | Crafting Bench Kit | Place a workbench |
-| 20 | Machete | Clear vegetation (200 durability) |
-| 21 | Lantern | Bright light source, 2x torch range |
-| 13 | Grappling Hook | Ascend cliff faces with arc-based traversal (100 durability) |
-| 23 | Lodestone | Placeable navigation beacon (pick up with E) |
-| 24 | Birch Bark Map | Fullscreen wilderness map showing terrain, water, caves, and player position |
-| 27 | Bow | Hunt wildlife with arrows (80 durability, hold right-click to draw) |
+| Item | Description |
+|------|-------------|
+| Primitive Axe | Basic tree chopping (50 durability) |
+| Stone Axe | Standard tree chopping (150 durability) |
+| Metal Axe | Fast tree chopping (300 durability) |
+| Diamond Axe | Instant tree chopping (infinite durability) |
+| Machete | Harvest birch bark (200 durability) |
+| Fishing Rod | Catch fish at fishing spots (50 durability) |
+| Grappling Hook | Ascend cliff faces (100 durability) |
+| Bow | Hunt wildlife with arrows (200 durability, hold right-click to draw) |
+| Enchanted Bow | Upgraded bow with opal inlay and larger hit radius (200 durability) |
+| Torch | Portable light source (required for caves) |
+| Lantern | Bright light source, 2x torch range |
+| Compass | Shows direction and distance to lodestone on HUD |
+| Lodestone | Placeable navigation beacon |
+| Birch Bark Map | Fullscreen wilderness map |
+| Hang Glider | Soar through the air (unlocked via Explorer's Journal) |
 
 ## Controls
 
@@ -102,11 +113,12 @@ Build up your camp through three levels:
 
 #### Interaction
 - **E** - Interact with objects
-- **F** - Eat food / Use healing items
+- **T** - Eat food / Use healing items
 - **R** - Use equipped tool / Place structure
 - **Right-click (hold)** - Draw bow (when equipped), release to fire
 - **Q** - Unequip current item
-- **1-8** - Equip item in slot
+- **M** - Move placed structure
+- **1-9** - Equip item in slot
 
 #### Menus
 - **C** - Crafting menu
@@ -122,15 +134,16 @@ Full controller support with PlayStation button prompts.
 #### Movement
 - **Left Stick** - Move
 - **Right Stick** - Look around
-- **Cross (×)** - Jump / Swim up
+- **Cross** - Jump / Swim up
 - **L3 (Left Stick Click)** - Sprint
 
 #### Interaction
-- **Square (□)** - Interact with objects
-- **Triangle (△)** - Eat food / Use healing items
+- **Square** - Interact with objects
+- **Triangle** - Eat food / Use healing items
 - **R2** - Use equipped tool / Place structure
-- **Circle (○)** - Unequip current item
+- **Circle** - Unequip current item
 - **L1/R1** - Cycle through equipment slots
+- **D-Pad Up** - Move placed structure
 
 #### Menus
 - **Touchpad** - Crafting menu
@@ -143,41 +156,98 @@ Full controller support with PlayStation button prompts.
 
 | Recipe | Ingredients |
 |--------|-------------|
+| Primitive Axe | 1 River Rock + 1 Branch |
 | Stone Axe | 2 River Rock + 1 Branch |
 | Torch | 2 Branch |
 | Rope | 3 Branch |
+| Split Branches | 1 Wood (yields 4 Branch) |
 | Campfire Kit | 4 Branch + 3 River Rock |
 | Crafting Bench Kit | 6 Wood + 4 Branch |
 
-### Advanced Recipes (Requires Crafting Bench)
+### Workbench Recipes
 
-| Recipe | Ingredients |
-|--------|-------------|
-| Shelter Kit | 6 Branch + 2 Rope |
-| Storage Box | 4 Wood + 1 Rope |
-| Fishing Rod | 3 Branch + 1 Rope |
-| Healing Salve | 3 Herb |
-| Berry Pouch | 5 Berry |
-| Drying Rack Kit | 6 Branch + 2 Rope |
-| Garden Plot Kit | 4 Wood + 2 Herb |
-| Machete | 2 Metal Ingot + 1 Branch (Camp Lvl 2) |
-| Grappling Hook | 3 Rope + 2 Metal Ingot + 1 Branch (Camp Lvl 2) |
-| Lantern | 2 Metal Ingot + 1 Crystal (Camp Lvl 3) |
-| Birch Bark Map | 3 Birch Bark + 2 Berry (Camp Lvl 2) |
-| Bow | 2 Rope + 3 Branch (Camp Lvl 2) |
-| Arrow Bundle (x20) | 2 Feathers + 4 Branch (Camp Lvl 2) |
-| Compass & Lodestone | 2 Rare Ore + 1 Metal Ingot + 1 Crystal (Camp Lvl 3) |
+| Recipe | Ingredients | Camp Level |
+|--------|-------------|------------|
+| Shelter Kit | 6 Branch + 2 Rope | 1 |
+| Storage Box | 4 Wood + 1 Rope | 1 |
+| Fishing Rod | 3 Branch + 1 Rope | 1 |
+| Healing Salve | 3 Herb | 1 |
+| Berry Pouch | 5 Berry | 1 |
+| Drying Rack Kit | 6 Branch + 2 Rope | 1 |
+| Garden Plot Kit | 4 Wood + 2 Herb | 2 |
+| Canvas Tent Kit | 8 Branch + 4 Rope + 4 Wood | 2 |
+| Snare Trap Kit | 2 Rope + 4 Branch | 2 |
+| Machete | 2 Metal Ingot + 1 Branch | 2 |
+| Grappling Hook | 3 Rope + 2 Metal Ingot + 1 Branch | 2 |
+| Bow | 2 Rope + 3 Branch | 2 |
+| Arrow Bundle (x20) | 2 Feathers + 4 Branch | 2 |
+| Leather Axe Wrap | 2 Hide + 1 Rope | 2 |
+| Leather Hook Wrap | 3 Hide + 1 Rope | 2 |
+| Leather Bow Wrap | 2 Hide + 1 Rope | 2 |
+| Map | 3 Birch Bark + 2 Berry | 2 |
+| Smithing Station Kit | 15 River Rock + 8 Wood + 2 Rope | 3 |
+| Smoker Kit | 10 Wood + 6 River Rock + 2 Rope | 3 |
+| Weather Vane Kit | 6 Branch + 1 Metal Ingot | 3 |
+| Metal Axe | 2 Metal Ingot + 2 Branch | 3 |
+| Diamond Axe | 2 Diamond + 1 Metal Ingot + 1 Rope | 3 |
+| Cabin Kit | 30 Wood + 20 Branch + 10 River Rock + 6 Rope | 3 |
+| Lantern | 2 Metal Ingot + 1 Crystal | 3 |
+| Compass & Lodestone | 2 Rare Ore + 1 Metal Ingot + 1 Crystal | 3 |
+| Enchanted Bow | 2 Opal + 1 Bow + 1 Rope | 3 |
+| Diamond Arrows (x10) | 1 Diamond + 5 Branch + 2 Feathers | 3 |
+| Hang Glider | 4 Rope + 6 Branch + 2 Hide | 3 (requires Journal) |
 
-## Cooking
+## Food & Cooking
 
-Cook raw food at a fire pit for better hunger restoration:
+### Raw Food
 
-| Raw Food | Cooked | Hunger Restored |
-|----------|--------|-----------------|
-| Berry | Cooked Berries | +25 (vs +15 raw) |
-| Mushroom | Cooked Mushroom | +20 (vs +10 raw) |
-| Fish | Cooked Fish | +40 (vs +25 raw) |
-| Cactus Fruit | Cooked Cactus Fruit | +30 (vs +20 raw) |
+| Food | Hunger | Notes |
+|------|--------|-------|
+| Berry | +15 | Foraged from bushes |
+| Cactus Fruit | +15 | Harvested from fruit cacti |
+| Mushroom | +10 | Foraged |
+| Herb | +5 | Foraged or grown in garden |
+| Fish | +25 | Caught with fishing rod |
+| Raw Meat | +20 | From snare traps or hunting |
+| Osha Root | +20, +25 HP | Alpine medicinal plant |
+| Coca Leaf | +5 | Doubles breath time for 5 minutes |
+| Berry Pouch | +40 | Crafted from 5 berries |
+| Healing Salve | +30 HP | Crafted from 3 herbs |
+
+### Fire Pit Cooking
+
+| Raw | Cooked | Hunger |
+|-----|--------|--------|
+| Berry | Cooked Berries | +25 |
+| Mushroom | Cooked Mushroom | +20 |
+| Fish | Cooked Fish | +40 |
+| Raw Meat | Cooked Meat | +35 |
+
+### Drying Rack
+
+| Raw | Dried | Hunger |
+|-----|-------|--------|
+| Fish | Dried Fish | +30 |
+| Berry | Dried Berries | +20 |
+| Mushroom | Dried Mushroom | +15 |
+| Herb | Dried Herb | +8 |
+
+### Smoker
+
+| Raw | Smoked | Hunger |
+|-----|--------|--------|
+| Raw Meat | Smoked Meat | +45 |
+| Fish | Smoked Fish | +50 |
+
+### Kitchen (Log Cabin)
+
+| Meal | Ingredients | Hunger | Health |
+|------|-------------|--------|--------|
+| Hearty Stew | 2 Fish + 1 Herb + 1 Mushroom | +100 | +20 |
+| Preserved Meal | 2 Dried Fish + 1 Dried Berries | +80 | — |
+| Mushroom Soup | 2 Mushroom + 1 Herb | +50 | +10 |
+| Cooked Fish | 1 Fish | +40 | — |
+| Herb Tea | 2 Herb | +10 | +30 |
 
 ## Weather Effects
 
@@ -192,9 +262,28 @@ Cook raw food at a fire pit for better hunger restoration:
 
 ## Audio
 
-- 12 ambient music tracks with shuffle and crossfade
-- Configurable music volume in settings
-- Sound effects for tools, gathering, crafting, weather, and wildlife
+- 12 ambient music tracks with shuffle playback and crossfade transitions
+- "Sunlight Through Leaves" always plays first on game start
+- Configurable music volume and toggle in settings
+- Sound effects for tools, gathering, crafting, weather, wildlife, and UI navigation
+- Procedural sound effect for coca leaf consumption
+
+## Settings
+
+Accessible via the config menu (Tab key or through Pause menu):
+
+| Setting | Description |
+|---------|-------------|
+| Day Length | Adjust game day speed (configurable range) |
+| Tree Respawn Time | How long before chopped trees regrow |
+| Hunger Damage | Toggle hunger depletion |
+| Health Damage | Toggle health drain when starving |
+| Weather Damage | Toggle weather damage effects |
+| HUD Coordinates | Show/hide position coordinates |
+| Music | Toggle background music with fade |
+| Music Volume | Adjust music volume |
+| SFX Volume | Adjust sound effects volume |
+| Brightness | Screen brightness (50%-200%) |
 
 ## Requirements
 
@@ -241,7 +330,7 @@ git clone https://github.com/adchamberlain/into-the-wild.git
 1. Open Godot Engine
 2. Click **Import** and navigate to the game folder
 3. Select the `project.godot` file and click **Open**
-4. Once the project loads, press **F5** or click the **Play** button (▶) in the top-right
+4. Once the project loads, press **F5** or click the **Play** button in the top-right
 
 ## Controller Setup
 
