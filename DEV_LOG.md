@@ -6146,14 +6146,35 @@ Swapped all triangle winding from CW to CCW (counter-clockwise = front-facing):
 
 ---
 
+## Session - Explorer's Journal Content Expansion (2026-03-01)
+
+Expanded the Explorer's Journal from a single two-page spread into an 11-spread multi-page book with page-turning navigation. The journal now tells the full story of E.W. Carlston's exploration of the Carlston Wilderness through dated diary entries, followed by a complete crafting recipe reference.
+
+### Features
+- **Multi-page navigation**: D-pad left/right (controller) or arrow keys (keyboard) to turn pages. Page indicator shows "Page N of 11" with contextual Prev/Next labels.
+- **6 adventure diary entries** (Spreads 1-6): Chronological story from Day 1 (arrival in the forest) through Day 47 (the sinkhole farewell). Covers forest, crafting basics, caves and ores, the desert and oases, mountain peaks, the hang glider, and the final discovery.
+- **5 recipe reference pages** (Spreads 7-11): All 34 crafting recipes organized by tier — Hand Crafting, Getting Established (Bench Lvl 1), Expanding Your Range (Bench Lvl 2), Advanced Crafting (Bench Lvl 3), and Rare & Extraordinary. Each recipe shows exact ingredients with flavor text.
+- **Quality fixes**: Memory leak prevention (UI nodes freed on close), synchronous child cleanup (no flicker on page turn), preloaded font, cached page data, null guards.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/ui/journal_ui.gd` | Modified | Complete rewrite: page data array, `_populate_page()` method, page-turning input, 11 spreads of content, memory management |
+| `docs/plans/2026-03-01-explorer-journal-content-design.md` | New | Design document |
+| `docs/plans/2026-03-01-explorer-journal-content.md` | New | Implementation plan |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test pocket desert — walk west to verify terrain transition, rock spire visibility, sinkhole mechanics
-2. Play-test inventory limits — verify HUD shows limits, crafting refuses at cap, gathering stops at cap
-3. Play-test storage box workflow — transfer to/from storage, verify unlimited storage capacity
-4. Play-test save/load with items near limits
-5. Bug fixing from play-testing
+1. Play-test journal — open journal, navigate all 11 pages, verify text fits, test controller and keyboard navigation
+2. Play-test pocket desert — walk west to verify terrain transition, rock spire visibility, sinkhole mechanics
+3. Play-test inventory limits — verify HUD shows limits, crafting refuses at cap, gathering stops at cap
+4. Play-test storage box workflow — transfer to/from storage, verify unlimited storage capacity
+5. Play-test save/load with items near limits
+6. Bug fixing from play-testing
 
 ### Known Issues
 - Tortoise materials are per-instance (minor, could be shared static)
