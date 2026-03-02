@@ -155,7 +155,7 @@ const FOOD_ITEMS: Array = [
 	"dried_fish", "dried_berries", "dried_mushroom", "dried_herb",
 	"smoked_meat", "smoked_fish",
 	"hearty_stew", "preserved_meal", "herb_tea", "fish_dinner", "mushroom_soup",
-	"healing_salve", "hide_bedroll"
+	"healing_salve"
 ]
 
 # Performance: throttle expensive updates

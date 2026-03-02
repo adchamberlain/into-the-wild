@@ -166,7 +166,6 @@ const FOOD_VALUES: Dictionary = {
 const HEALING_ITEMS: Dictionary = {
 	"healing_salve": 30.0,
 	"osha_root": 25.0,  # Alpine medicinal plant - potent healer
-	"hide_bedroll": 40.0,  # Portable bedroll for resting
 	# Kitchen (cabin) - items that also restore health
 	"hearty_stew": 20.0,
 	"herb_tea": 30.0,
@@ -269,7 +268,7 @@ func _dev_populate_inventory() -> void:
 		"smoked_meat", "smoked_fish",
 		"hearty_stew", "preserved_meal", "herb_tea", "fish_dinner", "mushroom_soup",
 		# Healing & rest
-		"healing_salve", "hide_bedroll",
+		"healing_salve",
 		# Special
 		"explorers_journal",
 	]

@@ -46,7 +46,7 @@ const STACK_LIMITS: Dictionary = {
 	# Arrows
 	"arrows": 50, "diamond_arrows": 20,
 	# Healing
-	"healing_salve": 10, "hide_bedroll": 3,
+	"healing_salve": 10,
 	# Pouches
 	"berry_pouch": 5,
 	# Special
