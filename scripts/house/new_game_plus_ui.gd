@@ -211,7 +211,7 @@ func _build_ui() -> void:
 
 	# Subtitle
 	var subtitle_label: Label = Label.new()
-	subtitle_label.text = "Choose 5 items to bring with you"
+	subtitle_label.text = "Choose 5 items to bring with you (1 of each)"
 	subtitle_label.add_theme_font_override("font", HUD_FONT)
 	subtitle_label.add_theme_font_size_override("font_size", 32)
 	subtitle_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9, 1))

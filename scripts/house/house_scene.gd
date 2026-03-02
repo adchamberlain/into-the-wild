@@ -1165,6 +1165,36 @@ func _start_fade_in() -> void:
 
 
 # =============================================================================
+# JOURNEY INVENTORY & NEW GAME+ UI
+# =============================================================================
+
+var _journey_inventory_ui: Node = null
+var _new_game_plus_ui: Node = null
+
+
+func open_journey_inventory(player: Node) -> void:
+	## Opens the read-only wilderness inventory viewer.
+	if _journey_inventory_ui and is_instance_valid(_journey_inventory_ui):
+		return  # Already open
+	var script: GDScript = load("res://scripts/house/journey_inventory_ui.gd")
+	_journey_inventory_ui = CanvasLayer.new()
+	_journey_inventory_ui.set_script(script)
+	add_child(_journey_inventory_ui)
+	_journey_inventory_ui.open(player)
+
+
+func open_new_game_plus(player: Node) -> void:
+	## Opens the New Game+ item selection UI.
+	if _new_game_plus_ui and is_instance_valid(_new_game_plus_ui):
+		return  # Already open
+	var script: GDScript = load("res://scripts/house/new_game_plus_ui.gd")
+	_new_game_plus_ui = CanvasLayer.new()
+	_new_game_plus_ui.set_script(script)
+	add_child(_new_game_plus_ui)
+	_new_game_plus_ui.open(player)
+
+
+# =============================================================================
 # INTERACTABLE SCRIPT FACTORY
 # =============================================================================
 
@@ -1185,22 +1215,27 @@ func get_interaction_text() -> String:
 
 func interact(player: Node) -> bool:
 	var house: Node = get_tree().current_scene
-	if not house or not house.has_method("show_text_overlay"):
+	if not house:
 		return false
 	match _object_type:
 		"kettle":
-			house.show_text_overlay("Warm. Familiar.", 2.0)
+			if house.has_method("show_text_overlay"):
+				house.show_text_overlay("Warm. Familiar.", 2.0)
 			var sfx: Node = player.get_node_or_null("/root/SFXManager")
 			if sfx and sfx.has_method("play_sfx"):
 				sfx.play_sfx("pickup")
 		"sandwich":
-			house.show_text_overlay("A good sandwich.", 2.0)
+			if house.has_method("show_text_overlay"):
+				house.show_text_overlay("A good sandwich.", 2.0)
 		"bookshelves":
-			house.show_text_overlay("Your old field guides. You smile.", 2.0)
+			if house.has_method("show_text_overlay"):
+				house.show_text_overlay("Your old field guides. You smile.", 2.0)
 		"storage_box":
-			house.show_text_overlay("View wilderness inventory", 2.0)
+			if house.has_method("open_journey_inventory"):
+				house.open_journey_inventory(player)
 		"front_door":
-			house.show_text_overlay("Open front door", 2.0)
+			if house.has_method("open_new_game_plus"):
+				house.open_new_game_plus(player)
 	return true
 """ % [interaction_label, object_type]
 
