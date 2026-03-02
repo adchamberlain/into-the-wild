@@ -11,18 +11,18 @@ signal item_add_refused(resource_type: String, attempted: int, current: int, lim
 const DEFAULT_STACK_LIMIT: int = 20
 const STACK_LIMITS: Dictionary = {
 	# Bulk resources
-	"wood": 50, "branch": 50, "river_rock": 50,
+	"wood": 100, "branch": 100, "river_rock": 50,
 	# Rope
 	"rope": 20,
 	# Gathering materials
-	"hide": 20, "feathers": 20, "birch_bark": 20, "raw_meat": 20,
+	"hide": 20, "feathers": 20, "birch_bark": 10, "raw_meat": 20,
 	# Refined materials
-	"metal_ingot": 15, "iron_ore": 15,
+	"metal_ingot": 20, "iron_ore": 15,
 	# Rare materials
 	"diamond": 10, "opal": 10, "crystal": 10, "rare_ore": 10,
 	# Raw food
 	"berry": 20, "mushroom": 20, "fish": 20, "herb": 20,
-	"cactus_fruit": 20, "osha_root": 20, "coca_leaf": 20,
+	"cactus_fruit": 20, "osha_root": 10, "coca_leaf": 3,
 	# Cooked/processed food
 	"cooked_berries": 10, "cooked_mushroom": 10, "cooked_fish": 10, "cooked_meat": 10,
 	"dried_fish": 10, "dried_berries": 10, "dried_mushroom": 10, "dried_herb": 10,
@@ -30,23 +30,23 @@ const STACK_LIMITS: Dictionary = {
 	"hearty_stew": 10, "preserved_meal": 10, "herb_tea": 10,
 	"fish_dinner": 10, "mushroom_soup": 10,
 	# Torch
-	"torch": 20,
+	"torch": 50,
 	# Durable tools
 	"primitive_axe": 3, "stone_axe": 3, "metal_axe": 3, "diamond_axe": 3,
-	"machete": 5, "fishing_rod": 5, "bow": 3, "enchanted_bow": 3,
+	"machete": 3, "fishing_rod": 3, "bow": 3, "enchanted_bow": 3,
 	# Utility items
-	"grappling_hook": 5, "map": 1, "compass": 5, "lantern": 5, "hang_glider": 5,
+	"grappling_hook": 3, "map": 1, "compass": 1, "lantern": 3, "hang_glider": 1,
 	# Wraps
 	"leather_axe_wrap": 3, "leather_hook_wrap": 3,
 	# Placeable kits
-	"campfire_kit": 5, "shelter_kit": 5, "storage_box": 5,
-	"crafting_bench_kit": 5, "drying_rack_kit": 5, "garden_plot_kit": 5,
-	"canvas_tent_kit": 5, "cabin_kit": 5, "snare_trap_kit": 5,
-	"smithing_station_kit": 5, "smoker_kit": 5, "weather_vane_kit": 5,
+	"campfire_kit": 5, "shelter_kit": 2, "storage_box": 5,
+	"crafting_bench_kit": 5, "drying_rack_kit": 5, "garden_plot_kit": 3,
+	"canvas_tent_kit": 2, "cabin_kit": 1, "snare_trap_kit": 6,
+	"smithing_station_kit": 2, "smoker_kit": 2, "weather_vane_kit": 1,
 	# Arrows
 	"arrows": 50, "diamond_arrows": 20,
 	# Healing
-	"healing_salve": 10, "hide_bedroll": 10,
+	"healing_salve": 10, "hide_bedroll": 3,
 	# Pouches
 	"berry_pouch": 5, "waterskin": 5,
 	# Special
