@@ -6124,6 +6124,28 @@ Relocated the sinkhole easter egg from the main desert ring (200 units at 180 de
 
 ---
 
+## Session - Torch/Lantern Terrain Lighting Fix (2026-03-01)
+
+Fixed a long-standing bug where torches and lanterns illuminated objects (trees, rocks, signs) but NOT the terrain ground surface.
+
+### Root Cause
+
+All terrain SurfaceTool triangles (top faces and side faces) had **clockwise winding order**, making them back-facing. With `CULL_DISABLED`, Godot renders both sides but negates normals for back-facing fragments (`NORMAL = -NORMAL`). This turned `Vector3.UP` into `Vector3.DOWN` for top faces, causing `dot(normal, light_direction) < 0` = zero light contribution from point lights above.
+
+### Fix
+
+Swapped all triangle winding from CW to CCW (counter-clockwise = front-facing):
+- **Top faces**: `(v0,v2,v1)/(v0,v3,v2)` → `(v0,v1,v2)/(v0,v2,v3)`
+- **Side faces**: Same swap pattern applied to grass strip, dirt section, and short-side triangles
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/world/terrain_chunk.gd` | Modified | Fixed winding order in `_add_top_face_cached()` and `_add_side_quad_ao()` |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
