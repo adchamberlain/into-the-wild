@@ -6186,6 +6186,27 @@ Replaced the auto-eat system (F/Triangle consumed highest-value food automatical
 
 ---
 
+## Session - Carved Tree Landmark (2026-03-02)
+
+Added the Carved Tree trail landmark for the trail-home endgame feature. An interactable tree with carved initials ("M.W.C.") and an arrow pointing east, with a readable overlay displaying a clue about following the ridge to a stone cairn.
+
+### Features
+- **Procedural 3D visuals**: Dark brown trunk (BoxMesh 0.8x3.0x0.8), lighter carved face inset on front, arrow carving made of thin dark strips, multi-block green canopy on top
+- **Shared static materials**: 5 materials (trunk, carved face, arrow, canopy, canopy dark) using `static var` / `_ensure_shared_materials()` pattern to avoid per-instance shader compilation
+- **Readable overlay**: CanvasLayer (layer 100) with centered panel, gold title "The Carved Tree" (48px), white body text (32px) with M.W. Carlston's trail marker clue, grey close hint (28px)
+- **Full interaction pattern**: `add_to_group("interactable")`, `interact()` toggles overlay, `get_interaction_text()` returns context-aware text, freezes player via `set_resting(true)`, hides HUD via `set_overlay_mode(true)`
+- **Controller support**: Checks `/root/InputManager` for correct button prompt, `ui_cancel` to close
+- **OmniLight3D**: Faint warm glow (energy 0.5, range 4) to help player spot the landmark
+- **State tracking**: `has_been_read` flag set on first interaction for future save/load integration
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/world/trail_carved_tree.gd` | New | Carved tree landmark — extends StaticBody3D, shared materials, BoxMesh visuals, overlay UI, interaction system |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
@@ -6196,6 +6217,7 @@ Replaced the auto-eat system (F/Triangle consumed highest-value food automatical
 5. Play-test storage box workflow — transfer to/from storage, verify unlimited storage capacity
 6. Play-test save/load with items near limits
 7. Bug fixing from play-testing
+8. Wire up carved tree spawning in chunk manager and play-test interaction/overlay
 
 ### Known Issues
 - Tortoise materials are per-instance (minor, could be shared static)
