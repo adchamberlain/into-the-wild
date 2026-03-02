@@ -9,6 +9,13 @@ var has_pending_seed: bool = false
 # Save slot to load after scene reload (0 = none)
 var pending_load_slot: int = 0
 
+# Journey completion data (persists across scene changes)
+var journey_completed: bool = false
+var journey_inventory: Dictionary = {}  # item_type -> count snapshot
+var new_game_plus_items: Array[String] = []  # 5 chosen items for NG+
+var is_new_game_plus: bool = false
+var pending_house_transition: bool = false
+
 # UI scale factor (persisted to user://display_config.cfg)
 var ui_scale: float = 1.0
 
@@ -90,3 +97,37 @@ func consume_pending_load_slot() -> int:
 	var slot: int = pending_load_slot
 	pending_load_slot = 0
 	return slot
+
+
+## Save the player's wilderness inventory when they complete the journey.
+func save_journey_inventory(inventory_data: Dictionary) -> void:
+	journey_inventory = inventory_data.duplicate()
+	journey_completed = true
+	print("[GameState] Journey inventory saved: %d item types" % journey_inventory.size())
+
+
+## Set the 5 items chosen for New Game+.
+func set_new_game_plus_items(items: Array[String]) -> void:
+	new_game_plus_items = items.duplicate()
+	is_new_game_plus = true
+	print("[GameState] New Game+ items set: %s" % str(new_game_plus_items))
+
+
+## Get and clear the New Game+ items (returns empty if not NG+).
+func consume_new_game_plus_items() -> Array[String]:
+	if is_new_game_plus:
+		var items: Array[String] = new_game_plus_items.duplicate()
+		new_game_plus_items.clear()
+		is_new_game_plus = false
+		print("[GameState] New Game+ items consumed: %s" % str(items))
+		return items
+	return []
+
+
+## Reset journey state (for starting completely fresh).
+func reset_journey() -> void:
+	journey_completed = false
+	journey_inventory.clear()
+	new_game_plus_items.clear()
+	is_new_game_plus = false
+	pending_house_transition = false
