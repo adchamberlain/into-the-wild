@@ -323,8 +323,134 @@ func _populate_page() -> void:
 		left_body.add_theme_font_override("font", font)
 		left_body.add_theme_font_size_override("font_size", int(body_font_size * sf))
 		left_body.add_theme_color_override("font_color", Color(0.45, 0.32, 0.15, 0.7))
-		left_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		_left_vbox.add_child(left_body)
+
+		# --- DEMO: 3 sketch style comparisons ---
+		var sketch_ink: Color = Color(0.35, 0.25, 0.12, 0.7)
+
+		# Style 1: ASCII Art
+		var ascii_label_hdr: Label = Label.new()
+		ascii_label_hdr.text = "Style 1: ASCII Art"
+		ascii_label_hdr.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		ascii_label_hdr.add_theme_font_override("font", font)
+		ascii_label_hdr.add_theme_font_size_override("font_size", int(14 * sf))
+		ascii_label_hdr.add_theme_color_override("font_color", sketch_ink)
+		_left_vbox.add_child(ascii_label_hdr)
+
+		var ascii_art: Label = Label.new()
+		ascii_art.text = "        /\\          \n       /  \\    /\\   \n      /    \\  /  \\  \n     /      \\/    \\ \n    /  ~~  /\\     \\\n___/______/  \\____\\\n  ^^^  ^^   ^^^  ^"
+		ascii_art.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		ascii_art.add_theme_font_override("font", font)
+		ascii_art.add_theme_font_size_override("font_size", int(12 * sf))
+		ascii_art.add_theme_color_override("font_color", sketch_ink)
+		_left_vbox.add_child(ascii_art)
+
+		# Style 2: Line2D Drawing
+		var line_label_hdr: Label = Label.new()
+		line_label_hdr.text = "Style 2: Line Drawing"
+		line_label_hdr.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		line_label_hdr.add_theme_font_override("font", font)
+		line_label_hdr.add_theme_font_size_override("font_size", int(14 * sf))
+		line_label_hdr.add_theme_color_override("font_color", sketch_ink)
+		_left_vbox.add_child(line_label_hdr)
+
+		var line_container: Control = Control.new()
+		line_container.custom_minimum_size = Vector2(0, 80 * sf)
+		# Mountain outline
+		var mountain_line: Line2D = Line2D.new()
+		mountain_line.width = 2.0 * sf
+		mountain_line.default_color = sketch_ink
+		var cx: float = line_container.custom_minimum_size.x * 0.5
+		var h: float = 80 * sf
+		mountain_line.add_point(Vector2(20 * sf, h))
+		mountain_line.add_point(Vector2(80 * sf, 15 * sf))
+		mountain_line.add_point(Vector2(110 * sf, 35 * sf))
+		mountain_line.add_point(Vector2(140 * sf, 10 * sf))
+		mountain_line.add_point(Vector2(200 * sf, h))
+		line_container.add_child(mountain_line)
+		# Sun circle
+		var sun_line: Line2D = Line2D.new()
+		sun_line.width = 2.0 * sf
+		sun_line.default_color = sketch_ink
+		var sun_cx: float = 240 * sf
+		var sun_cy: float = 25 * sf
+		var sun_r: float = 12 * sf
+		for i: int in range(17):
+			var angle: float = i * TAU / 16.0
+			sun_line.add_point(Vector2(sun_cx + cos(angle) * sun_r, sun_cy + sin(angle) * sun_r))
+		line_container.add_child(sun_line)
+		# Trees
+		var tree_line: Line2D = Line2D.new()
+		tree_line.width = 2.0 * sf
+		tree_line.default_color = sketch_ink
+		# Tree 1
+		tree_line.add_point(Vector2(45 * sf, h))
+		tree_line.add_point(Vector2(45 * sf, h - 20 * sf))
+		tree_line.add_point(Vector2(35 * sf, h - 15 * sf))
+		tree_line.add_point(Vector2(45 * sf, h - 30 * sf))
+		tree_line.add_point(Vector2(55 * sf, h - 15 * sf))
+		tree_line.add_point(Vector2(45 * sf, h - 20 * sf))
+		line_container.add_child(tree_line)
+		# Ground line
+		var ground_line: Line2D = Line2D.new()
+		ground_line.width = 1.5 * sf
+		ground_line.default_color = sketch_ink
+		ground_line.add_point(Vector2(10 * sf, h))
+		ground_line.add_point(Vector2(270 * sf, h))
+		line_container.add_child(ground_line)
+		_left_vbox.add_child(line_container)
+
+		# Style 3: Pixel Mosaic
+		var pixel_label_hdr: Label = Label.new()
+		pixel_label_hdr.text = "Style 3: Pixel Mosaic"
+		pixel_label_hdr.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		pixel_label_hdr.add_theme_font_override("font", font)
+		pixel_label_hdr.add_theme_font_size_override("font_size", int(14 * sf))
+		pixel_label_hdr.add_theme_color_override("font_color", sketch_ink)
+		_left_vbox.add_child(pixel_label_hdr)
+
+		var pixel_container: Control = Control.new()
+		pixel_container.custom_minimum_size = Vector2(0, 80 * sf)
+		var px: float = 6 * sf  # pixel size
+		# Mountain colors
+		var rock_color: Color = Color(0.40, 0.30, 0.18, 0.8)
+		var peak_color: Color = Color(0.55, 0.45, 0.30, 0.8)
+		var snow_color: Color = Color(0.75, 0.70, 0.55, 0.6)
+		var tree_color: Color = Color(0.25, 0.35, 0.15, 0.8)
+		var sky_sun_color: Color = Color(0.65, 0.55, 0.25, 0.5)
+		# Mountain shape (each row from top)
+		var mountain_pixels: Array = [
+			# row, col, color  (row 0 = top)
+			[0, 8, snow_color],
+			[1, 7, peak_color], [1, 8, snow_color], [1, 9, peak_color],
+			[2, 6, peak_color], [2, 7, peak_color], [2, 8, peak_color], [2, 9, peak_color], [2, 10, peak_color],
+			[2, 16, snow_color],
+			[3, 5, rock_color], [3, 6, rock_color], [3, 7, peak_color], [3, 8, peak_color], [3, 9, peak_color], [3, 10, rock_color], [3, 11, rock_color],
+			[3, 15, peak_color], [3, 16, snow_color], [3, 17, peak_color],
+			[4, 4, rock_color], [4, 5, rock_color], [4, 6, rock_color], [4, 7, rock_color], [4, 8, rock_color], [4, 9, rock_color], [4, 10, rock_color], [4, 11, rock_color], [4, 12, rock_color],
+			[4, 14, rock_color], [4, 15, peak_color], [4, 16, peak_color], [4, 17, peak_color], [4, 18, rock_color],
+			[5, 3, rock_color], [5, 4, rock_color], [5, 5, rock_color], [5, 6, rock_color], [5, 7, rock_color], [5, 8, rock_color], [5, 9, rock_color], [5, 10, rock_color], [5, 11, rock_color], [5, 12, rock_color], [5, 13, rock_color], [5, 14, rock_color], [5, 15, rock_color], [5, 16, rock_color], [5, 17, rock_color], [5, 18, rock_color], [5, 19, rock_color],
+			# Trees at base
+			[6, 2, tree_color], [6, 4, tree_color], [6, 5, tree_color], [6, 19, tree_color], [6, 21, tree_color],
+			[7, 1, tree_color], [7, 2, tree_color], [7, 3, tree_color], [7, 4, tree_color], [7, 5, tree_color], [7, 6, tree_color], [7, 19, tree_color], [7, 20, tree_color], [7, 21, tree_color], [7, 22, tree_color],
+			# Sun
+			[0, 22, sky_sun_color], [0, 23, sky_sun_color],
+			[1, 22, sky_sun_color], [1, 23, sky_sun_color],
+		]
+		var offset_x: float = 40 * sf
+		var offset_y: float = 5 * sf
+		for pixel_data: Array in mountain_pixels:
+			var rect: ColorRect = ColorRect.new()
+			rect.color = pixel_data[2]
+			rect.position = Vector2(offset_x + pixel_data[1] * px, offset_y + pixel_data[0] * px)
+			rect.size = Vector2(px, px)
+			pixel_container.add_child(rect)
+		_left_vbox.add_child(pixel_container)
+
+		# Spacer to push demos down
+		var spacer: Control = Control.new()
+		spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_left_vbox.add_child(spacer)
 
 	elif page.is_recipe_page:
 		# Header label
