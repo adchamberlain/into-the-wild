@@ -172,16 +172,14 @@ func _build_ui() -> void:
 	shadow_style.corner_radius_bottom_left = int(14 * sf)
 	shadow_style.corner_radius_bottom_right = int(14 * sf)
 	shadow.add_theme_stylebox_override("panel", shadow_style)
-	shadow.anchor_left = 0.5
-	shadow.anchor_top = 0.5
-	shadow.anchor_right = 0.5
-	shadow.anchor_bottom = 0.5
-	var book_w: float = 900 * sf
-	var book_h: float = 680 * sf
-	shadow.offset_left = -book_w / 2.0 + 4 * sf
-	shadow.offset_top = -book_h / 2.0 + 4 * sf
-	shadow.offset_right = book_w / 2.0 + 4 * sf
-	shadow.offset_bottom = book_h / 2.0 + 4 * sf
+	shadow.anchor_left = 0.06
+	shadow.anchor_top = 0.06
+	shadow.anchor_right = 0.94
+	shadow.anchor_bottom = 0.94
+	shadow.offset_left = 4 * sf
+	shadow.offset_top = 4 * sf
+	shadow.offset_right = 4 * sf
+	shadow.offset_bottom = 4 * sf
 	add_child(shadow)
 
 	# Leather cover panel (the book itself)
@@ -198,14 +196,14 @@ func _build_ui() -> void:
 	cover_style.content_margin_bottom = int(10 * sf)
 	panel.add_theme_stylebox_override("panel", cover_style)
 
-	panel.anchor_left = 0.5
-	panel.anchor_top = 0.5
-	panel.anchor_right = 0.5
-	panel.anchor_bottom = 0.5
-	panel.offset_left = -book_w / 2.0
-	panel.offset_top = -book_h / 2.0
-	panel.offset_right = book_w / 2.0
-	panel.offset_bottom = book_h / 2.0
+	panel.anchor_left = 0.06
+	panel.anchor_top = 0.06
+	panel.anchor_right = 0.94
+	panel.anchor_bottom = 0.94
+	panel.offset_left = 0
+	panel.offset_top = 0
+	panel.offset_right = 0
+	panel.offset_bottom = 0
 
 	# HBox: left page | spine | right page
 	var hbox: HBoxContainer = HBoxContainer.new()
@@ -220,15 +218,16 @@ func _build_ui() -> void:
 	left_style.bg_color = parchment_color
 	left_style.corner_radius_top_left = int(6 * sf)
 	left_style.corner_radius_bottom_left = int(6 * sf)
-	left_style.content_margin_left = int(30 * sf)
-	left_style.content_margin_right = int(24 * sf)
-	left_style.content_margin_top = int(30 * sf)
-	left_style.content_margin_bottom = int(24 * sf)
+	left_style.content_margin_left = int(24 * sf)
+	left_style.content_margin_right = int(20 * sf)
+	left_style.content_margin_top = int(20 * sf)
+	left_style.content_margin_bottom = int(16 * sf)
 	left_page.add_theme_stylebox_override("panel", left_style)
 	left_page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left_page.clip_contents = true
 
 	var left_vbox: VBoxContainer = VBoxContainer.new()
-	left_vbox.add_theme_constant_override("separation", int(12 * sf))
+	left_vbox.add_theme_constant_override("separation", int(8 * sf))
 	left_page.add_child(left_vbox)
 	_left_vbox = left_vbox
 
@@ -251,15 +250,16 @@ func _build_ui() -> void:
 	right_style.bg_color = parchment_color
 	right_style.corner_radius_top_right = int(6 * sf)
 	right_style.corner_radius_bottom_right = int(6 * sf)
-	right_style.content_margin_left = int(24 * sf)
-	right_style.content_margin_right = int(30 * sf)
-	right_style.content_margin_top = int(30 * sf)
-	right_style.content_margin_bottom = int(24 * sf)
+	right_style.content_margin_left = int(20 * sf)
+	right_style.content_margin_right = int(24 * sf)
+	right_style.content_margin_top = int(20 * sf)
+	right_style.content_margin_bottom = int(16 * sf)
 	right_page.add_theme_stylebox_override("panel", right_style)
 	right_page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right_page.clip_contents = true
 
 	var right_vbox: VBoxContainer = VBoxContainer.new()
-	right_vbox.add_theme_constant_override("separation", int(12 * sf))
+	right_vbox.add_theme_constant_override("separation", int(8 * sf))
 	right_page.add_child(right_vbox)
 	_right_vbox = right_vbox
 
@@ -292,11 +292,11 @@ func _populate_page() -> void:
 	var hint_color: Color = Color(0.45, 0.32, 0.15, 0.5)
 
 	# Determine font size based on page type
-	var body_font_size: int = 22
+	var body_font_size: int = 18
 	if page.is_recipe_page:
-		body_font_size = 20
+		body_font_size = 16
 	elif page.is_title_page:
-		body_font_size = 24
+		body_font_size = 20
 
 	# --- Left page content ---
 	if page.is_title_page:
@@ -305,7 +305,7 @@ func _populate_page() -> void:
 		title_label.text = page.left_title
 		title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		title_label.add_theme_font_override("font", font)
-		title_label.add_theme_font_size_override("font_size", int(40 * sf))
+		title_label.add_theme_font_size_override("font_size", int(32 * sf))
 		title_label.add_theme_color_override("font_color", Color(0.30, 0.18, 0.06))
 		_left_vbox.add_child(title_label)
 
@@ -332,7 +332,7 @@ func _populate_page() -> void:
 		header_label.text = page.left_title
 		header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		header_label.add_theme_font_override("font", font)
-		header_label.add_theme_font_size_override("font_size", int(32 * sf))
+		header_label.add_theme_font_size_override("font_size", int(24 * sf))
 		header_label.add_theme_color_override("font_color", Color(0.30, 0.18, 0.06))
 		_left_vbox.add_child(header_label)
 
@@ -358,7 +358,7 @@ func _populate_page() -> void:
 		header_label.text = page.left_title
 		header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		header_label.add_theme_font_override("font", font)
-		header_label.add_theme_font_size_override("font_size", int(32 * sf))
+		header_label.add_theme_font_size_override("font_size", int(24 * sf))
 		header_label.add_theme_color_override("font_color", ink_color)
 		_left_vbox.add_child(header_label)
 
