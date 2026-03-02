@@ -5,29 +5,121 @@ signal journal_closed(was_first_read: bool)
 
 var _is_first_read: bool = false
 var _is_open: bool = false
+var _current_page: int = 0
+var _total_pages: int = 0
+
+# Page content containers (rebuilt on page turn)
+var _left_vbox: VBoxContainer
+var _right_vbox: VBoxContainer
 
 # UI nodes (created programmatically)
 var background: ColorRect
 var panel: PanelContainer
 
-const JOURNAL_TEXT: String = """Day 47. I've mapped every oasis in this forsaken desert
-ring — three in all, each hiding gemstones beneath the
-water. Diamonds in two of them, opals in the third. The
-opal pool has a river that flows to it from the east.
 
-The caves in the rocky highlands hold crystals and rare
-ore. I've marked four entrances. Bring light — the
-darkness in those tunnels will kill you faster than any
-beast.
+func _get_pages() -> Array[Dictionary]:
+	var pages: Array[Dictionary] = []
 
-I spent weeks perfecting a design for a glider — fabric
-stretched across a frame of branches and rope. From the
-mountain peaks, you can see the whole world. The plans
-are sketched on the last page.
+	# Spread 1: Title page
+	pages.append({
+		"left_title": "Explorer's Journal",
+		"left_text": "A Record of the Carlston Wilderness\n\n~ ~ ~\n\nProperty of E.W. Carlston",
+		"right_text": "Day 1\n\nI arrived at the edge of the Carlston Wilderness this morning with little more than my boots and a good feeling. The forest here is beautiful — birch and pine standing so close together they form a kind of cathedral. Found a clear pond not far from where I set up camp. Fish rising at dusk. If I can rig a fishing rod, dinner is sorted.\n\nRabbits everywhere. Birds calling from every direction. The air smells like pine needles after rain. I've decided to map this whole place, every last corner of it. Something tells me it's worth the effort.",
+		"is_title_page": true,
+		"is_recipe_page": false,
+	})
 
-If you've found this, you've earned what I've left
-behind. The wilderness gives its secrets to those willing
-to go deep."""
+	# Spread 2: Day 5
+	pages.append({
+		"left_title": "Day 5",
+		"left_text": "[CONTENT TODO]",
+		"right_text": "[CONTENT TODO]",
+		"is_title_page": false,
+		"is_recipe_page": false,
+	})
+
+	# Spread 3: Day 12
+	pages.append({
+		"left_title": "Day 12",
+		"left_text": "[CONTENT TODO]",
+		"right_text": "[CONTENT TODO]",
+		"is_title_page": false,
+		"is_recipe_page": false,
+	})
+
+	# Spread 4: Day 20
+	pages.append({
+		"left_title": "Day 20",
+		"left_text": "[CONTENT TODO]",
+		"right_text": "[CONTENT TODO]",
+		"is_title_page": false,
+		"is_recipe_page": false,
+	})
+
+	# Spread 5: Day 31
+	pages.append({
+		"left_title": "Day 31",
+		"left_text": "[CONTENT TODO]",
+		"right_text": "[CONTENT TODO]",
+		"is_title_page": false,
+		"is_recipe_page": false,
+	})
+
+	# Spread 6: Day 47
+	pages.append({
+		"left_title": "Day 47",
+		"left_text": "[CONTENT TODO]",
+		"right_text": "[CONTENT TODO]",
+		"is_title_page": false,
+		"is_recipe_page": false,
+	})
+
+	# Spread 7: Hand Crafting recipes
+	pages.append({
+		"left_title": "Field Notes: Hand Crafting",
+		"left_text": "[CONTENT TODO]",
+		"right_text": "[CONTENT TODO]",
+		"is_title_page": false,
+		"is_recipe_page": true,
+	})
+
+	# Spread 8: Getting Established recipes
+	pages.append({
+		"left_title": "Getting Established",
+		"left_text": "[CONTENT TODO]",
+		"right_text": "[CONTENT TODO]",
+		"is_title_page": false,
+		"is_recipe_page": true,
+	})
+
+	# Spread 9: Expanding Your Range recipes
+	pages.append({
+		"left_title": "Expanding Your Range",
+		"left_text": "[CONTENT TODO]",
+		"right_text": "[CONTENT TODO]",
+		"is_title_page": false,
+		"is_recipe_page": true,
+	})
+
+	# Spread 10: Advanced Crafting recipes
+	pages.append({
+		"left_title": "Advanced Crafting",
+		"left_text": "[CONTENT TODO]",
+		"right_text": "[CONTENT TODO]",
+		"is_title_page": false,
+		"is_recipe_page": true,
+	})
+
+	# Spread 11: Rare & Extraordinary recipes
+	pages.append({
+		"left_title": "Rare & Extraordinary",
+		"left_text": "[CONTENT TODO]",
+		"right_text": "[CONTENT TODO]",
+		"is_title_page": false,
+		"is_recipe_page": true,
+	})
+
+	return pages
 
 
 func _ready() -> void:
@@ -39,6 +131,8 @@ func _ready() -> void:
 func open_journal(is_first_read: bool) -> void:
 	_is_first_read = is_first_read
 	_is_open = true
+	_current_page = 0
+	_total_pages = _get_pages().size()
 	_build_ui()
 
 	# Pause the game tree
