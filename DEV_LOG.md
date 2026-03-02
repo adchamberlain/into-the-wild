@@ -6166,15 +6166,36 @@ Expanded the Explorer's Journal from a single two-page spread into an 11-spread 
 
 ---
 
+## Session - Food Selection Menu (2026-03-02)
+
+Replaced the auto-eat system (F/Triangle consumed highest-value food automatically) with a food selection menu that shows all consumable items, their quantities, and what they restore (hunger, health, or both). Player now chooses what to eat.
+
+### Features
+- **Food selection UI**: Centered panel with "C O N S U M E" title, hunger/health stats (color-coded green/yellow/red), scrollable item list, and button prompts
+- **Item details**: Each row shows item name, quantity (x3), and restore values (+40 hunger, +20 HP). Coca leaf shows special "+5, 5min breath" text. Dual items (hearty stew) show both hunger and HP
+- **Full input support**: F/Triangle toggles menu, Arrow/D-pad navigates, Enter/Circle consumes, Esc/Cross closes. Dynamic button prompts update for controller vs keyboard
+- **Smart behavior**: Auto-closes when last item consumed, shows "No food or healing items!" when empty, blocks player movement/jump while open, integrates with close-all-menus on death
+- **Lazy creation**: Menu CanvasLayer created on first use (journal_ui pattern), no scene file needed
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/ui/food_menu.gd` | New | Full food selection menu — CanvasLayer with programmatic UI, item list, navigation, consume logic |
+| `scripts/player/player_controller.gd` | Modified | Added `_food_menu` var, `_toggle_food_menu()`, `consume_item()`, added food_menu to `_is_ui_blocking_input()` and `_close_all_menus()` |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test journal — open journal, navigate all 11 pages, verify text fits, test controller and keyboard navigation
-2. Play-test pocket desert — walk west to verify terrain transition, rock spire visibility, sinkhole mechanics
-3. Play-test inventory limits — verify HUD shows limits, crafting refuses at cap, gathering stops at cap
-4. Play-test storage box workflow — transfer to/from storage, verify unlimited storage capacity
-5. Play-test save/load with items near limits
-6. Bug fixing from play-testing
+1. Play-test food menu — open with F, navigate items, consume, verify stats update, test toggle close
+2. Play-test journal — open journal, navigate all 11 pages, verify text fits, test controller and keyboard navigation
+3. Play-test pocket desert — walk west to verify terrain transition, rock spire visibility, sinkhole mechanics
+4. Play-test inventory limits — verify HUD shows limits, crafting refuses at cap, gathering stops at cap
+5. Play-test storage box workflow — transfer to/from storage, verify unlimited storage capacity
+6. Play-test save/load with items near limits
+7. Bug fixing from play-testing
 
 ### Known Issues
 - Tortoise materials are per-instance (minor, could be shared static)

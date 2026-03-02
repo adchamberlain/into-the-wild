@@ -99,6 +99,9 @@ const FALL_DAMAGE_MAX: float = 80.0  # Maximum fall damage cap
 var respawn_position: Vector3 = Vector3(0, 5, 0)  # Default spawn, updated when shelter is built
 var has_respawn_shelter: bool = false  # Whether player has a shelter to respawn at
 
+# Food selection menu
+var _food_menu: Node = null
+
 # Explorer's Journal (desert sinkhole easter egg)
 var _journal_ui: Node = null
 var has_read_journal: bool = false
@@ -341,7 +344,7 @@ func _input(event: InputEvent) -> void:
 
 	# Handle eating (F key or Triangle button) - disabled while resting
 	if event.is_action_pressed("eat") and not is_resting:
-		_try_eat()
+		_toggle_food_menu()
 		return
 
 	# Handle using equipped item (R key or R2 trigger) - disabled while resting or placing
@@ -1015,6 +1018,74 @@ func _try_eat() -> void:
 			hud.show_notification("No food in inventory!", Color(1.0, 0.5, 0.5, 1))
 
 
+func _toggle_food_menu() -> void:
+	# If food menu is already open, close it (toggle off)
+	if _food_menu and is_instance_valid(_food_menu) and _food_menu.is_open:
+		_food_menu.close_menu()
+		return
+
+	# Check if player has any consumables
+	if not has_consumable():
+		var hud: Node = get_tree().get_first_node_in_group("hud")
+		if hud and hud.has_method("show_notification"):
+			hud.show_notification("No food or healing items!", Color(1.0, 0.5, 0.5, 1))
+		return
+
+	# Lazily create food menu on first use
+	if not _food_menu or not is_instance_valid(_food_menu):
+		var food_script: GDScript = load("res://scripts/ui/food_menu.gd")
+		_food_menu = CanvasLayer.new()
+		_food_menu.set_script(food_script)
+		_food_menu.player = self
+		_food_menu.inventory = inventory
+		_food_menu.stats = stats
+		add_child(_food_menu)
+
+	_food_menu.open_menu()
+
+
+## Consume a specific item from inventory (called by food menu).
+func consume_item(item_type: String) -> void:
+	if not inventory or not stats:
+		return
+
+	var hud: Node = get_tree().get_first_node_in_group("hud")
+
+	# Remove 1 from inventory
+	var removed: bool = inventory.remove_item(item_type, 1)
+	if not removed:
+		return
+
+	var item_name: String = item_type.capitalize().replace("_", " ")
+	var msg_parts: Array[String] = []
+
+	# Apply healing if it's a healing item
+	if HEALING_ITEMS.has(item_type):
+		var healed: float = HEALING_ITEMS[item_type]
+		stats.heal(healed)
+		msg_parts.append("+%.0f health" % healed)
+
+	# Apply hunger restore if it's a food item
+	if FOOD_VALUES.has(item_type):
+		if item_type == "coca_leaf":
+			stats.eat(FOOD_VALUES[item_type])
+			# Coca leaf breath buff
+			coca_leaf_timer = 300.0  # 5 minutes
+			_base_breath_interval = 4.0
+			BREATH_BUBBLE_INTERVAL = _base_breath_interval * 2.0
+			SFXManager.play_sfx("coca_leaf")
+			get_tree().call_group("hud", "show_notification", "Your breathing slows... lungs feel stronger", Color(0.6, 1, 0.6, 1))
+			return
+		else:
+			var fed: float = stats.eat(FOOD_VALUES[item_type])
+			msg_parts.append("+%.0f hunger" % fed)
+
+	# Show notification
+	if hud and hud.has_method("show_notification") and msg_parts.size() > 0:
+		var msg: String = "%s! %s" % [item_name, ", ".join(msg_parts)]
+		hud.show_notification(msg, Color(0.6, 1.0, 0.6, 1))
+
+
 func _open_journal() -> void:
 	if _journal_ui and is_instance_valid(_journal_ui):
 		return  # Already open
@@ -1357,6 +1428,10 @@ func _is_ui_blocking_input() -> bool:
 		if "is_open" in node and node.is_open:
 			return true
 
+	for node in get_tree().get_nodes_in_group("food_menu"):
+		if "is_open" in node and node.is_open:
+			return true
+
 	return false
 
 
@@ -1375,6 +1450,9 @@ func _close_all_menus() -> void:
 		if "is_open" in node and node.is_open and node.has_method("close_storage"):
 			node.close_storage()
 	for node in get_tree().get_nodes_in_group("fire_menu"):
+		if "is_open" in node and node.is_open and node.has_method("close_menu"):
+			node.close_menu()
+	for node in get_tree().get_nodes_in_group("food_menu"):
 		if "is_open" in node and node.is_open and node.has_method("close_menu"):
 			node.close_menu()
 	for node in get_tree().get_nodes_in_group("map_ui"):
