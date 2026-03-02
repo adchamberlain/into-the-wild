@@ -498,6 +498,13 @@ func _on_inventory_changed() -> void:
 	_update_inventory_display()
 
 
+func _is_journal_open() -> bool:
+	for node in get_tree().get_nodes_in_group("journal_ui"):
+		if "_is_open" in node and node._is_open:
+			return true
+	return false
+
+
 ## Toggle inventory panel visibility.
 func _toggle_inventory() -> void:
 	inventory_visible = not inventory_visible
@@ -1001,11 +1008,12 @@ func _input(event: InputEvent) -> void:
 			_toggle_inventory()
 			get_viewport().set_input_as_handled()
 			return
-	# Controller D-pad Left toggles inventory
+	# Controller D-pad Left toggles inventory (skip if journal is open)
 	if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_DPAD_LEFT:
-		_toggle_inventory()
-		get_viewport().set_input_as_handled()
-		return
+		if not _is_journal_open():
+			_toggle_inventory()
+			get_viewport().set_input_as_handled()
+			return
 
 	# Dismiss celebration on any key or button press
 	if is_celebrating:

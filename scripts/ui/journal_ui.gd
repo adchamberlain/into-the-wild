@@ -132,6 +132,7 @@ func _ready() -> void:
 	# Process even when tree is paused (we pause the tree while journal is open)
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	layer = 80
+	add_to_group("journal_ui")
 
 
 func open_journal(is_first_read: bool) -> void:

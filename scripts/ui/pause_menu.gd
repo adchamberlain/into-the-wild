@@ -100,7 +100,10 @@ func _input(event: InputEvent) -> void:
 		return
 
 	# Handle pause action (Escape key or Options button) - can pause/unpause anytime
+	# Skip if the journal is open — let it handle its own close
 	if event.is_action_pressed("pause"):
+		if not is_paused and _is_journal_open():
+			return
 		if showing_credits:
 			_on_back_pressed()
 		else:
@@ -177,6 +180,13 @@ func _handle_input() -> void:
 	var vp: Viewport = get_viewport()
 	if vp:
 		vp.set_input_as_handled()
+
+
+func _is_journal_open() -> bool:
+	for node in get_tree().get_nodes_in_group("journal_ui"):
+		if "_is_open" in node and node._is_open:
+			return true
+	return false
 
 
 func toggle_pause() -> void:
