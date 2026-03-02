@@ -29,7 +29,7 @@ func _get_pages() -> Array[Dictionary]:
 	# Spread 1: Title page
 	pages.append({
 		"left_title": "Explorer's Journal",
-		"left_text": "A Record of the Carlston Wilderness\n\n~ ~ ~\n\nProperty of E.W. Carlston",
+		"left_text": "A Record of the Carlston Wilderness\n\n~ ~ ~\n\nProperty of M.W. Carlston",
 		"right_text": "Day 1\n\nI arrived at the edge of the Carlston Wilderness this morning with little more than my boots and a good feeling. The forest here is beautiful — birch and pine standing so close together they form a kind of cathedral. Found a clear pond not far from where I set up camp. Fish rising at dusk. If I can rig a fishing rod, dinner is sorted.\n\nRabbits everywhere. Birds calling from every direction. The air smells like pine needles after rain. I've decided to map this whole place, every last corner of it. Something tells me it's worth the effort.",
 		"is_title_page": true,
 		"is_recipe_page": false,
@@ -75,7 +75,7 @@ func _get_pages() -> Array[Dictionary]:
 	pages.append({
 		"left_title": "Day 47",
 		"left_text": "Forty-seven days in the Carlston Wilderness. I've mapped every biome, explored every cave, climbed every peak, and befriended more rabbits than I can count. But the desert had one more surprise — a sinkhole, hidden in the sand, deeper than anything I'd found before.\n\nI climbed down carefully. At the bottom, water. Cool and still. I took a breath and dove in. What I found down there... well. Some discoveries are best made firsthand.",
-		"right_text": "I'm leaving this journal on a pedestal at the bottom, for whoever comes next. Everything I've learned is in these pages — every place worth visiting, every recipe for every tool and structure that made this wilderness feel like home.\n\nThe Carlston Wilderness is a generous place if you're willing to explore it. Every oasis, every cave, every mountain peak has something wonderful waiting. Take your time. Build well. Climb high.\n\nHappy trails.\n\n— E.W. Carlston",
+		"right_text": "I'm leaving this journal on a pedestal at the bottom, for whoever comes next. Everything I've learned is in these pages — every place worth visiting, every recipe for every tool and structure that made this wilderness feel like home.\n\nThe Carlston Wilderness is a generous place if you're willing to explore it. Every oasis, every cave, every mountain peak has something wonderful waiting. Take your time. Build well. Climb high.\n\nHappy trails.\n\n— M.W. Carlston",
 		"is_title_page": false,
 		"is_recipe_page": false,
 	})
