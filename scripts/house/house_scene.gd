@@ -52,6 +52,8 @@ static var _mat_cat_eyes: StandardMaterial3D
 static var _mat_chandelier: StandardMaterial3D
 static var _mat_handle: StandardMaterial3D
 static var _mat_storage_box: StandardMaterial3D
+static var _mat_granite: StandardMaterial3D
+static var _mat_map_frame: StandardMaterial3D
 static var _materials_initialized: bool = false
 
 # Text overlay for interactables
@@ -74,6 +76,7 @@ func _ready() -> void:
 	_build_kitchen_furniture()
 	_build_dining_room_furniture()
 	_build_cat_portraits()
+	_build_wall_maps()
 	_setup_lighting()
 	_setup_environment()
 	_create_player()
@@ -244,6 +247,16 @@ static func _init_materials() -> void:
 	_mat_storage_box = StandardMaterial3D.new()
 	_mat_storage_box.albedo_color = Color(0.45, 0.3, 0.15)
 	_mat_storage_box.roughness = 0.8
+
+	# Granite countertop: light grey base
+	_mat_granite = StandardMaterial3D.new()
+	_mat_granite.albedo_color = Color(0.78, 0.76, 0.74)
+	_mat_granite.roughness = 0.4
+
+	# Map frame: dark walnut
+	_mat_map_frame = StandardMaterial3D.new()
+	_mat_map_frame.albedo_color = Color(0.28, 0.18, 0.10)
+	_mat_map_frame.roughness = 0.75
 
 
 # =============================================================================
@@ -712,20 +725,20 @@ func _build_living_room_furniture() -> void:
 	var room_cx: float = LIVING_ROOM_WIDTH / 2.0  # 3.0
 	var room_cz: float = LIVING_ROOM_DEPTH / 2.0  # 2.5
 
-	# --- Rug ---
-	_box(self, Vector3(2.5, 0.02, 1.8),
+	# --- Rug (larger, under seating arrangement) ---
+	_box(self, Vector3(3.0, 0.02, 2.2),
 		Vector3(room_cx, 0.01, room_cz), _mat_rug)
 
-	# --- Couch (against west wall, facing east) ---
+	# --- Couch (rotated 90°, runs along Z, near south wall, facing north/+Z) ---
 	var couch_container: Node3D = Node3D.new()
 	couch_container.name = "Couch"
 	add_child(couch_container)
-	var couch_x: float = 1.5
-	var couch_z: float = room_cz
-	# Seat
+	var couch_x: float = room_cx
+	var couch_z: float = 1.2
+	# Seat (0.8 in X for depth, 2.0 in Z for length)
 	_box(couch_container, Vector3(2.0, 0.4, 0.8),
 		Vector3(couch_x, 0.4, couch_z), _mat_upholstery)
-	# Back
+	# Back (against south wall, -Z side)
 	_box(couch_container, Vector3(2.0, 0.5, 0.15),
 		Vector3(couch_x, 0.65, couch_z - 0.4 + 0.075), _mat_upholstery)
 	# Left arm
@@ -735,29 +748,52 @@ func _build_living_room_furniture() -> void:
 	_box(couch_container, Vector3(0.15, 0.5, 0.8),
 		Vector3(couch_x + 1.0 - 0.075, 0.55, couch_z), _mat_upholstery)
 
-	# --- Coffee Table (in front of couch) ---
+	# --- Coffee Table (between couch and chair) ---
 	var table_container: Node3D = Node3D.new()
 	table_container.name = "CoffeeTable"
 	add_child(table_container)
-	var table_x: float = room_cx + 0.5
+	var table_x: float = room_cx
 	var table_z: float = room_cz
-	# Table top
-	_box(table_container, Vector3(1.2, 0.05, 0.6),
+	_box(table_container, Vector3(1.0, 0.05, 0.6),
 		Vector3(table_x, 0.4, table_z), _mat_furniture_wood)
-	# 4 legs
-	for lx: float in [-0.5, 0.5]:
+	for lx: float in [-0.4, 0.4]:
 		for lz: float in [-0.22, 0.22]:
 			_box(table_container, Vector3(0.05, 0.35, 0.05),
 				Vector3(table_x + lx, 0.175, table_z + lz), _mat_furniture_wood)
 
-	# --- Bookshelves (against kitchen divider wall, left of doorway) ---
-	_build_bookshelf(Vector3(1.0, 0.0, LIVING_ROOM_DEPTH - 0.4))
+	# --- Armchair (facing couch, on north side) ---
+	var chair: Node3D = Node3D.new()
+	chair.name = "Armchair"
+	add_child(chair)
+	var chair_x: float = room_cx
+	var chair_z: float = 3.8
+	# Seat
+	_box(chair, Vector3(0.7, 0.35, 0.7),
+		Vector3(chair_x, 0.38, chair_z), _mat_upholstery)
+	# Back (on +Z side, facing -Z toward couch)
+	_box(chair, Vector3(0.7, 0.5, 0.12),
+		Vector3(chair_x, 0.6, chair_z + 0.35 - 0.06), _mat_upholstery)
+	# Left arm
+	_box(chair, Vector3(0.12, 0.4, 0.7),
+		Vector3(chair_x - 0.35 + 0.06, 0.48, chair_z), _mat_upholstery)
+	# Right arm
+	_box(chair, Vector3(0.12, 0.4, 0.7),
+		Vector3(chair_x + 0.35 - 0.06, 0.48, chair_z), _mat_upholstery)
+	# 4 legs
+	for lx: float in [-0.25, 0.25]:
+		for lz: float in [-0.25, 0.25]:
+			_box(chair, Vector3(0.05, 0.18, 0.05),
+				Vector3(chair_x + lx, 0.09, chair_z + lz), _mat_furniture_wood)
+
+	# --- Bookshelves (against kitchen divider wall, left of doorway, facing into room) ---
+	_build_bookshelf(Vector3(1.0, 0.0, LIVING_ROOM_DEPTH - 0.1))
 
 	# --- Wilderness Storage Box ---
 	_build_storage_box(Vector3(4.8, 0.0, 1.0))
 
 
 func _build_bookshelf(pos: Vector3) -> void:
+	## pos.z is the back panel (against the wall). Shelves/books extend in -Z (into room).
 	var shelf_body: StaticBody3D = StaticBody3D.new()
 	shelf_body.name = "Bookshelves"
 	shelf_body.set_script(_create_interactable_script(
@@ -765,15 +801,21 @@ func _build_bookshelf(pos: Vector3) -> void:
 		"bookshelves"
 	))
 
-	# Back panel
+	# Back panel (against wall)
 	_box(shelf_body, Vector3(1.5, 2.0, 0.05),
 		Vector3(pos.x, 1.0, pos.z), _mat_furniture_wood)
 
-	# 4 shelf boards
+	# Side panels
+	_box(shelf_body, Vector3(0.04, 2.0, 0.3),
+		Vector3(pos.x - 0.73, 1.0, pos.z - 0.15), _mat_furniture_wood)
+	_box(shelf_body, Vector3(0.04, 2.0, 0.3),
+		Vector3(pos.x + 0.73, 1.0, pos.z - 0.15), _mat_furniture_wood)
+
+	# 4 shelf boards (extending into room = -Z)
 	for i: int in range(4):
 		var shelf_y: float = 0.05 + float(i) * 0.5
 		_box(shelf_body, Vector3(1.5, 0.04, 0.3),
-			Vector3(pos.x, shelf_y, pos.z + 0.15), _mat_furniture_wood)
+			Vector3(pos.x, shelf_y, pos.z - 0.15), _mat_furniture_wood)
 
 	# Colored book spines on each shelf
 	var book_colors: Array[Color] = [
@@ -800,10 +842,10 @@ func _build_bookshelf(pos: Vector3) -> void:
 				bmat.albedo_color = book_color
 				bmat.roughness = 0.9
 				book_mat_cache[color_key] = bmat
-			var book_height: float = 0.35 + randf() * 0.1  # Slight height variation
+			var book_height: float = 0.35 + randf() * 0.1
 			var book_width: float = 0.06 + randf() * 0.04
 			_box(shelf_body, Vector3(book_width, book_height, 0.2),
-				Vector3(book_x, shelf_y + book_height / 2.0, pos.z + 0.15), book_mat_cache[color_key])
+				Vector3(book_x, shelf_y + book_height / 2.0, pos.z - 0.15), book_mat_cache[color_key])
 			book_x += book_width + 0.02
 
 	# Collision for interaction
@@ -811,7 +853,7 @@ func _build_bookshelf(pos: Vector3) -> void:
 	var shape: BoxShape3D = BoxShape3D.new()
 	shape.size = Vector3(1.5, 2.0, 0.4)
 	col.shape = shape
-	col.position = Vector3(pos.x, 1.0, pos.z + 0.1)
+	col.position = Vector3(pos.x, 1.0, pos.z - 0.1)
 	shelf_body.add_child(col)
 
 	add_child(shelf_body)
@@ -858,9 +900,11 @@ func _build_kitchen_furniture() -> void:
 	# Main run along north wall (X 1.5 to 4.0)
 	var counter_x: float = 2.75
 	var counter_z: float = HOUSE_DEPTH - 0.5
-	# Counter top
+	# Counter top (granite)
 	_box(self, Vector3(2.5, 0.05, 0.6),
-		Vector3(counter_x, 0.9, counter_z), _mat_furniture_wood)
+		Vector3(counter_x, 0.9, counter_z), _mat_granite)
+	# Granite speckle on main counter
+	_add_granite_speckle(Vector3(counter_x, 0.926, counter_z), Vector3(2.4, 0.0, 0.55))
 	# Counter base
 	_box(self, Vector3(2.5, 0.85, 0.6),
 		Vector3(counter_x, 0.425, counter_z), _mat_cabinet_face)
@@ -874,8 +918,10 @@ func _build_kitchen_furniture() -> void:
 	# L-return along center divider (Z 8.0 to 9.5)
 	var return_x: float = LIVING_ROOM_WIDTH - 0.5
 	var return_z: float = 8.75
+	# Counter top (granite)
 	_box(self, Vector3(0.6, 0.05, 1.5),
-		Vector3(return_x, 0.9, return_z), _mat_furniture_wood)
+		Vector3(return_x, 0.9, return_z), _mat_granite)
+	_add_granite_speckle(Vector3(return_x, 0.926, return_z), Vector3(0.55, 0.0, 1.4))
 	_box(self, Vector3(0.6, 0.85, 1.5),
 		Vector3(return_x, 0.425, return_z), _mat_cabinet_face)
 	# Cabinet doors on return
@@ -885,18 +931,31 @@ func _build_kitchen_furniture() -> void:
 		_box(self, Vector3(0.03, 0.02, 0.1),
 			Vector3(return_x - 0.33, 0.5, return_z + cz), _mat_handle)
 
-	# --- Sink (dark recess in counter, under kitchen window at X=3.0) ---
+	# --- Kitchen Sink (under window at X=3.0) ---
 	var mat_sink: StandardMaterial3D = StandardMaterial3D.new()
-	mat_sink.albedo_color = Color(0.3, 0.3, 0.32)
-	mat_sink.roughness = 0.3
-	mat_sink.metallic = 0.5
-	_box(self, Vector3(0.5, 0.04, 0.35),
-		Vector3(3.0, 0.89, counter_z + 0.05), mat_sink)
-	# Faucet
-	_box(self, Vector3(0.03, 0.2, 0.03),
-		Vector3(3.0, 1.02, counter_z - 0.15), _mat_kettle)
-	_box(self, Vector3(0.03, 0.03, 0.1),
-		Vector3(3.0, 1.12, counter_z - 0.10), _mat_kettle)
+	mat_sink.albedo_color = Color(0.6, 0.6, 0.62)
+	mat_sink.roughness = 0.25
+	mat_sink.metallic = 0.6
+	# Sink basin (recessed into counter)
+	_box(self, Vector3(0.55, 0.02, 0.38),
+		Vector3(3.0, 0.88, counter_z + 0.03), mat_sink)  # Basin bottom
+	# Basin walls (4 thin sides)
+	_box(self, Vector3(0.55, 0.08, 0.02),
+		Vector3(3.0, 0.91, counter_z - 0.17), mat_sink)  # Back
+	_box(self, Vector3(0.55, 0.08, 0.02),
+		Vector3(3.0, 0.91, counter_z + 0.23), mat_sink)  # Front
+	_box(self, Vector3(0.02, 0.08, 0.38),
+		Vector3(2.73, 0.91, counter_z + 0.03), mat_sink)  # Left
+	_box(self, Vector3(0.02, 0.08, 0.38),
+		Vector3(3.27, 0.91, counter_z + 0.03), mat_sink)  # Right
+	# Faucet (taller, arched)
+	_box(self, Vector3(0.04, 0.28, 0.04),
+		Vector3(3.0, 1.07, counter_z - 0.2), _mat_kettle)
+	_box(self, Vector3(0.04, 0.04, 0.14),
+		Vector3(3.0, 1.21, counter_z - 0.14), _mat_kettle)
+	# Faucet spout (hanging down)
+	_box(self, Vector3(0.03, 0.08, 0.03),
+		Vector3(3.0, 1.15, counter_z - 0.08), _mat_kettle)
 
 	# --- Upper Cabinets (above counter, avoiding window at X=3.0) ---
 	# Left upper cabinet (X 1.5 to 2.3)
@@ -1007,6 +1066,161 @@ func _build_kitchen_furniture() -> void:
 		Vector3(return_x + 0.04, 1.05, 8.32), mat_apple)
 	_box(self, Vector3(0.04, 0.04, 0.12),
 		Vector3(return_x, 1.04, 8.3), mat_banana)
+
+
+func _add_granite_speckle(center: Vector3, area: Vector3) -> void:
+	## Adds pixelated granite speckle boxes on a counter surface.
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = int(center.x * 1000 + center.z * 100)  # Deterministic per counter
+	var speckle_colors: Array[Color] = [
+		Color(0.92, 0.90, 0.88),  # White
+		Color(0.85, 0.83, 0.80),  # Light grey
+		Color(0.55, 0.53, 0.51),  # Dark grey
+		Color(0.65, 0.63, 0.60),  # Medium grey
+		Color(0.95, 0.93, 0.91),  # Near-white
+		Color(0.45, 0.43, 0.42),  # Charcoal
+	]
+	var speckle_mats: Array[StandardMaterial3D] = []
+	for c: Color in speckle_colors:
+		var m: StandardMaterial3D = StandardMaterial3D.new()
+		m.albedo_color = c
+		m.roughness = 0.4
+		speckle_mats.append(m)
+
+	for i: int in range(25):
+		var sx: float = center.x + rng.randf_range(-area.x / 2.0, area.x / 2.0)
+		var sz: float = center.z + rng.randf_range(-area.z / 2.0, area.z / 2.0)
+		var size: float = rng.randf_range(0.03, 0.07)
+		var mat_idx: int = rng.randi_range(0, speckle_mats.size() - 1)
+		_box(self, Vector3(size, 0.006, size),
+			Vector3(sx, center.y, sz), speckle_mats[mat_idx])
+
+
+# =============================================================================
+# WALL MAPS (terrain captures from the wilderness)
+# =============================================================================
+
+func _build_wall_maps() -> void:
+	## Hang procedural "terrain maps" on large open walls in the dining room.
+	## Each map is a framed grid of colored boxes representing game biomes.
+
+	# Large map on north section of east wall (dining room, between windows)
+	# East wall interior face: X = HOUSE_WIDTH - WALL_THICKNESS - 0.03
+	var wall_x: float = HOUSE_WIDTH - WALL_THICKNESS - 0.03
+	_build_terrain_map(Vector3(wall_x, 1.6, 5.0), "east", 1.2, 0.9, 42)
+
+	# Smaller map on south section of east wall
+	_build_terrain_map(Vector3(wall_x, 1.6, 1.5), "east", 0.7, 0.5, 17)
+
+	# Map on north wall of dining room (right of window)
+	var north_z: float = HOUSE_DEPTH - WALL_THICKNESS - 0.03
+	_build_terrain_map(Vector3(8.5, 1.6, north_z), "north", 0.8, 0.6, 89)
+
+
+func _build_terrain_map(pos: Vector3, wall: String, map_w: float, map_h: float, seed_val: int) -> void:
+	## Builds a framed terrain map on a wall. Uses colored grid to mimic game terrain.
+	var map_node: Node3D = Node3D.new()
+	map_node.name = "TerrainMap"
+	add_child(map_node)
+
+	var is_ew: bool = (wall == "east" or wall == "west")
+	var frame_t: float = 0.04  # Frame border thickness
+
+	# Frame (4 border pieces)
+	if is_ew:
+		# Map hangs on YZ plane, thin in X
+		_box(map_node, Vector3(0.02, map_h + frame_t * 2, frame_t),
+			Vector3(pos.x, pos.y, pos.z - map_w / 2.0 - frame_t / 2.0), _mat_map_frame)
+		_box(map_node, Vector3(0.02, map_h + frame_t * 2, frame_t),
+			Vector3(pos.x, pos.y, pos.z + map_w / 2.0 + frame_t / 2.0), _mat_map_frame)
+		_box(map_node, Vector3(0.02, frame_t, map_w + frame_t * 2),
+			Vector3(pos.x, pos.y + map_h / 2.0 + frame_t / 2.0, pos.z), _mat_map_frame)
+		_box(map_node, Vector3(0.02, frame_t, map_w + frame_t * 2),
+			Vector3(pos.x, pos.y - map_h / 2.0 - frame_t / 2.0, pos.z), _mat_map_frame)
+	else:
+		# Map hangs on XY plane, thin in Z
+		_box(map_node, Vector3(frame_t, map_h + frame_t * 2, 0.02),
+			Vector3(pos.x - map_w / 2.0 - frame_t / 2.0, pos.y, pos.z), _mat_map_frame)
+		_box(map_node, Vector3(frame_t, map_h + frame_t * 2, 0.02),
+			Vector3(pos.x + map_w / 2.0 + frame_t / 2.0, pos.y, pos.z), _mat_map_frame)
+		_box(map_node, Vector3(map_w + frame_t * 2, frame_t, 0.02),
+			Vector3(pos.x, pos.y + map_h / 2.0 + frame_t / 2.0, pos.z), _mat_map_frame)
+		_box(map_node, Vector3(map_w + frame_t * 2, frame_t, 0.02),
+			Vector3(pos.x, pos.y - map_h / 2.0 - frame_t / 2.0, pos.z), _mat_map_frame)
+
+	# Background (parchment/paper)
+	var mat_paper: StandardMaterial3D = StandardMaterial3D.new()
+	mat_paper.albedo_color = Color(0.85, 0.80, 0.70)
+	mat_paper.roughness = 0.9
+	if is_ew:
+		_box(map_node, Vector3(0.015, map_h, map_w), Vector3(pos.x, pos.y, pos.z), mat_paper)
+	else:
+		_box(map_node, Vector3(map_w, map_h, 0.015), Vector3(pos.x, pos.y, pos.z), mat_paper)
+
+	# Terrain grid — colored cells representing game biomes
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = seed_val
+	var cols: int = int(map_w / 0.08)
+	var rows: int = int(map_h / 0.08)
+	var cell_w: float = map_w / float(cols)
+	var cell_h: float = map_h / float(rows)
+
+	# Biome colors matching the game
+	var biome_colors: Array[Color] = [
+		Color(0.25, 0.45, 0.20),  # Forest (dark green)
+		Color(0.35, 0.55, 0.25),  # Forest (lighter)
+		Color(0.30, 0.50, 0.22),  # Forest (mid)
+		Color(0.55, 0.50, 0.35),  # Rocky/mountain
+		Color(0.45, 0.42, 0.30),  # Rocky darker
+		Color(0.60, 0.55, 0.40),  # Plains/meadow
+		Color(0.50, 0.47, 0.33),  # Dirt/trail
+	]
+	var water_color: Color = Color(0.25, 0.40, 0.55)
+	var campsite_color: Color = Color(0.75, 0.45, 0.15)
+
+	var biome_mats: Array[StandardMaterial3D] = []
+	for c: Color in biome_colors:
+		var m: StandardMaterial3D = StandardMaterial3D.new()
+		m.albedo_color = c
+		m.roughness = 0.9
+		biome_mats.append(m)
+	var mat_water: StandardMaterial3D = StandardMaterial3D.new()
+	mat_water.albedo_color = water_color
+	mat_water.roughness = 0.5
+	var mat_camp: StandardMaterial3D = StandardMaterial3D.new()
+	mat_camp.albedo_color = campsite_color
+	mat_camp.roughness = 0.8
+
+	for row: int in range(rows):
+		for col: int in range(cols):
+			var cx: float = -map_w / 2.0 + (float(col) + 0.5) * cell_w
+			var cy: float = -map_h / 2.0 + (float(row) + 0.5) * cell_h
+
+			# Choose biome based on position + noise
+			var mat: StandardMaterial3D
+			var dist_from_center: float = sqrt(cx * cx + cy * cy)
+			var r: float = rng.randf()
+			if row == rows / 2 and col > cols / 3 and col < cols * 2 / 3:
+				mat = mat_water  # River through middle
+			elif row == rows / 2 + 1 and col > cols / 3 + 1 and col < cols * 2 / 3 - 1:
+				mat = mat_water  # River width
+			elif row == rows / 2 and col == cols / 2:
+				mat = mat_camp  # Campsite marker
+			elif dist_from_center < map_w * 0.2 and r < 0.7:
+				mat = biome_mats[rng.randi_range(0, 2)]  # Dense forest center
+			elif r < 0.15:
+				mat = biome_mats[rng.randi_range(3, 4)]  # Rocky patches
+			elif r < 0.25:
+				mat = biome_mats[rng.randi_range(5, 6)]  # Plains
+			else:
+				mat = biome_mats[rng.randi_range(0, 2)]  # Forest (dominant)
+
+			if is_ew:
+				_box(map_node, Vector3(0.012, cell_h * 0.9, cell_w * 0.9),
+					Vector3(pos.x, pos.y + cy, pos.z + cx), mat)
+			else:
+				_box(map_node, Vector3(cell_w * 0.9, cell_h * 0.9, 0.012),
+					Vector3(pos.x + cx, pos.y + cy, pos.z), mat)
 
 
 # =============================================================================
