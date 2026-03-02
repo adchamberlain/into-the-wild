@@ -96,7 +96,6 @@ func test_old_hide_recipes_removed() -> void:
 	var cs: CraftingSystem = CraftingSystem.new()
 	cs._load_recipes()
 
-	assert_false(cs.recipes.has("waterskin"), "waterskin recipe removed")
 	assert_false(cs.recipes.has("hide_bedroll"), "hide_bedroll recipe removed")
 	assert_false(cs.recipes.has("leather_strips"), "leather_strips recipe removed")
 

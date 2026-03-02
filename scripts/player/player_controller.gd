@@ -139,7 +139,6 @@ const FOOD_VALUES: Dictionary = {
 	"osha_root": 20.0,  # Alpine medicinal plant - also restores hunger
 	# Processed
 	"berry_pouch": 40.0,
-	"waterskin": 35.0,  # Carries water, restores hunger/thirst
 	# Cooked (fire pit)
 	"cooked_berries": 25.0,
 	"cooked_mushroom": 20.0,
@@ -264,7 +263,7 @@ func _dev_populate_inventory() -> void:
 		# Raw food
 		"berry", "mushroom", "herb", "fish", "osha_root", "cactus_fruit", "coca_leaf",
 		# Processed food
-		"berry_pouch", "waterskin",
+		"berry_pouch",
 		"cooked_berries", "cooked_mushroom", "cooked_fish", "cooked_meat",
 		"dried_fish", "dried_berries", "dried_mushroom", "dried_herb",
 		"smoked_meat", "smoked_fish",
