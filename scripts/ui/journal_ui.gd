@@ -449,6 +449,25 @@ func _input(event: InputEvent) -> void:
 	if not _is_open:
 		return
 
+	# Page turning — d-pad left/right or arrow keys
+	if event.is_action_pressed("ui_left"):
+		if _current_page > 0:
+			_current_page -= 1
+			_populate_page()
+		var vp: Viewport = get_viewport()
+		if vp:
+			vp.set_input_as_handled()
+		return
+
+	if event.is_action_pressed("ui_right"):
+		if _current_page < _total_pages - 1:
+			_current_page += 1
+			_populate_page()
+		var vp: Viewport = get_viewport()
+		if vp:
+			vp.set_input_as_handled()
+		return
+
 	# Close on ESC, ui_cancel, or B key
 	var close: bool = false
 	if event.is_action_pressed("pause"):
