@@ -6249,15 +6249,46 @@ Added a read-only Journey Inventory UI for the house scene. When the player inte
 
 ---
 
+## Session - Oakland Hills House Scene (2026-03-02)
+
+Created the Oakland Hills house — a complete separate Godot scene the player arrives at after completing the wilderness journey. The house is built entirely programmatically using BoxMesh primitives in the same art style as the rest of the game. Colonial style interior with dark hardwood floors, white walls, crown molding, and six-pane windows.
+
+### Features
+- **House layout**: 12x10 unit interior with 3 rooms — living room (6x5), kitchen (6x5), dining room (6x10), connected by doorways with proper wall collision
+- **Colonial interior style**: Dark hardwood floors, classic white walls, off-white ceiling, crown molding along all ceiling-wall junctions, six-pane colonial windows with outdoor vista backdrops (sky, green hills, distant houses)
+- **Living room**: Couch (upholstered blue-grey with arms/back), coffee table on 4 legs, bookshelf with 4 shelves of colored book spines (8 colors with height variation), muted red-brown rug, wilderness storage box with lid and handle
+- **Kitchen**: Counter with white cabinet faces and handles, stove with 4 burners, kettle with handle and spout on stove, fridge with handle
+- **Dining room**: Table with 4 legs, 4 chairs (seat + back + 4 legs each), sandwich on plate (with lettuce detail), chandelier with cross arms and 4 emissive light holders
+- **Two cat portraits**: All-black cat with yellow eyes (body, head, ears, tail) and tuxedo cat with white chest/chin overlay, mounted on west wall in dark wood frames with cream backgrounds
+- **Front door**: Solid dark wood with handle on south wall
+- **5 interactable objects**: Kettle ("Warm. Familiar."), sandwich ("A good sandwich."), bookshelves ("Your old field guides. You smile."), storage box (placeholder for journey inventory viewer), front door (placeholder for NG+ selection)
+- **Interaction system**: Dynamic GDScript factory creates interactable scripts at runtime, each with `interact()` and `get_interaction_text()` methods, added to "interactable" group via `_ready()`
+- **Text overlay system**: Reusable centered PanelContainer on CanvasLayer (layer 100) that shows text for 2 seconds or until key press, freezes player via `set_resting()`
+- **Lighting**: 5 warm OmniLight3D (no DirectionalLight), WorldEnvironment with warm ambient light, dark solid background, no fog
+- **Simplified player controller**: WASD walk only (no sprint/jump), mouse/controller look, interaction raycast (same E-key pattern), bottom-center prompt panel, `set_resting()` compatibility, no HUD/health/hunger
+- **Fade-in**: CanvasLayer (layer 200) with black ColorRect that tweens alpha 1->0 over 2 seconds on load
+- **30 shared static materials**: All materials use `static var` pattern for zero per-instance allocation
+- **Minimal .tscn file**: Just root Node3D with house_scene.gd script, everything built in `_ready()`
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/house/house_scene.gd` | New | Main house controller — builds all geometry, materials, lighting, environment, interactables, and fade-in in `_ready()` |
+| `scripts/house/house_player.gd` | New | Simplified first-person player controller for indoor movement — walk only, mouse/controller look, interaction raycast, prompt UI |
+| `scenes/house/house.tscn` | New | Minimal scene file — Node3D root with house_scene.gd script |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test food menu — open with F, navigate items, consume, verify stats update, test toggle close
-2. Play-test journal — open journal, navigate all 11 pages, verify text fits, test controller and keyboard navigation
-3. Play-test pocket desert — walk west to verify terrain transition, rock spire visibility, sinkhole mechanics
-4. Play-test inventory limits — verify HUD shows limits, crafting refuses at cap, gathering stops at cap
-5. Play-test storage box workflow — transfer to/from storage, verify unlimited storage capacity
-6. Play-test save/load with items near limits
+1. Play-test the house scene — verify room layout, furniture placement, cat portraits, window views, lighting warmth
+2. Play-test interactables — test kettle, sandwich, bookshelves, storage box, front door interactions
+3. Play-test the full transition — walk to trailhead signpost, confirm, verify fade-to-black and house scene loads
+4. Wire up storage box to journey_inventory_ui.gd
+5. Wire up front door to new_game_plus_ui.gd
+6. Play-test food menu, journal, pocket desert, inventory limits from wilderness
 7. Bug fixing from play-testing
 8. Wire up carved tree spawning in chunk manager and play-test interaction/overlay
 
