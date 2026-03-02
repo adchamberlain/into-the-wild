@@ -226,6 +226,15 @@ func _ready() -> void:
 		inventory.enforce_limits = true
 		inventory.item_add_refused.connect(_on_item_add_refused)
 
+	# Check for New Game+ starting items
+	var game_state: Node = get_node_or_null("/root/GameState")
+	if game_state and game_state.has_method("consume_new_game_plus_items"):
+		var ng_plus_items: Array[String] = game_state.consume_new_game_plus_items()
+		if ng_plus_items.size() > 0:
+			for item_type: String in ng_plus_items:
+				inventory.add_item(item_type, 1)
+			print("[Player] New Game+ started with %d items: %s" % [ng_plus_items.size(), str(ng_plus_items)])
+
 	# Dev mode: populate inventory with all items
 	if dev_mode:
 		call_deferred("_dev_populate_inventory")
