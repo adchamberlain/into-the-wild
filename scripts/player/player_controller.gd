@@ -254,7 +254,7 @@ func _dev_populate_inventory() -> void:
 		"torch", "primitive_axe", "stone_axe", "metal_axe", "diamond_axe",
 		"machete", "fishing_rod", "grappling_hook", "bow", "enchanted_bow",
 		"lantern", "compass", "lodestone", "map", "hang_glider",
-		"rope", "leather_axe_wrap", "leather_hook_wrap",
+		"rope", "leather_axe_wrap", "leather_hook_wrap", "leather_bow_wrap",
 		"arrows", "diamond_arrows",
 		"campfire_kit", "shelter_kit", "storage_box", "crafting_bench_kit",
 		"drying_rack_kit", "garden_plot_kit", "canvas_tent_kit", "cabin_kit",

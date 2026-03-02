@@ -265,6 +265,15 @@ func _load_recipes() -> void:
 			"requires_bench": true,
 			"min_camp_level": 2
 		},
+		"leather_bow_wrap": {
+			"name": "Leather Bow Wrap",
+			"inputs": {"hide": 2, "rope": 1},
+			"output_type": "leather_bow_wrap",
+			"output_amount": 1,
+			"description": "Wraps bow limbs in leather. Doubles bow durability.",
+			"requires_bench": true,
+			"min_camp_level": 2
+		},
 		"bow": {
 			"name": "Bow",
 			"inputs": {"rope": 2, "branch": 3},

@@ -37,7 +37,7 @@ const STACK_LIMITS: Dictionary = {
 	# Utility items
 	"grappling_hook": 3, "map": 1, "compass": 1, "lantern": 3, "hang_glider": 1,
 	# Wraps
-	"leather_axe_wrap": 3, "leather_hook_wrap": 3,
+	"leather_axe_wrap": 3, "leather_hook_wrap": 3, "leather_bow_wrap": 3,
 	# Placeable kits
 	"campfire_kit": 5, "shelter_kit": 2, "storage_box": 5,
 	"crafting_bench_kit": 5, "drying_rack_kit": 5, "garden_plot_kit": 3,

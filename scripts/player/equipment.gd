@@ -173,6 +173,14 @@ const EQUIPPABLE_ITEMS: Dictionary = {
 		"upgrade_target": "grappling_hook",
 		"durability_multiplier": 3
 	},
+	"leather_bow_wrap": {
+		"name": "Leather Bow Wrap",
+		"slot": 32,
+		"has_light": false,
+		"tool_type": "upgrade",
+		"upgrade_target": "bow",
+		"durability_multiplier": 2
+	},
 	"bow": {
 		"name": "Bow",
 		"slot": 27,
@@ -1195,6 +1203,34 @@ func _add_leather_wrap_to_hook(hook_model: Node3D) -> void:
 	hook_model.add_child(pad)
 
 
+## Add leather wrapping strips to bow grip to show durability upgrade.
+func _add_leather_wrap_to_bow(bow_node: Node3D) -> void:
+	var leather_mat: StandardMaterial3D = StandardMaterial3D.new()
+	leather_mat.albedo_color = Color(0.55, 0.30, 0.15)  # Rich leather brown
+	leather_mat.roughness = 0.8
+
+	# Leather grip wraps around the bow's center handle
+	for i: int in range(3):
+		var wrap: MeshInstance3D = MeshInstance3D.new()
+		wrap.name = "LeatherWrap%d" % i
+		var wrap_mesh: BoxMesh = BoxMesh.new()
+		wrap_mesh.size = Vector3(0.045, 0.03, 0.045)
+		wrap.mesh = wrap_mesh
+		wrap.position = Vector3(0, -0.03 + i * 0.03, 0)
+		wrap.material_override = leather_mat
+		bow_node.add_child(wrap)
+
+	# Leather limb reinforcement near upper limb
+	var tip: MeshInstance3D = MeshInstance3D.new()
+	tip.name = "LeatherTip"
+	var tip_mesh: BoxMesh = BoxMesh.new()
+	tip_mesh.size = Vector3(0.035, 0.025, 0.035)
+	tip.mesh = tip_mesh
+	tip.position = Vector3(0, 0.12, 0)
+	tip.material_override = leather_mat
+	bow_node.add_child(tip)
+
+
 func _remove_stone_axe() -> void:
 	if axe_swing_tween and axe_swing_tween.is_valid():
 		axe_swing_tween.kill()
@@ -2119,7 +2155,7 @@ func _create_wrap_model(wrap_type: String) -> void:
 	strap.position = Vector3(0, 0, 0)
 	wrap_model.add_child(strap)
 
-	# Accent to distinguish axe wrap vs hook wrap
+	# Accent to distinguish wrap types
 	if wrap_type == "leather_hook_wrap":
 		# Small metal buckle/clasp on top — hints at hook attachment
 		var buckle_mat := StandardMaterial3D.new()
@@ -2146,6 +2182,27 @@ func _create_wrap_model(wrap_type: String) -> void:
 		hook.position = Vector3(0.015, 0.06, 0)
 		hook.rotation_degrees = Vector3(0, 0, 15)
 		wrap_model.add_child(hook)
+	elif wrap_type == "leather_bow_wrap":
+		# Curved accent on top — hints at bow limb shape
+		var limb := MeshInstance3D.new()
+		limb.name = "BowAccent"
+		var limb_mesh := BoxMesh.new()
+		limb_mesh.size = Vector3(0.06, 0.012, 0.015)
+		limb.mesh = limb_mesh
+		limb.material_override = leather_dark
+		limb.position = Vector3(0, 0.048, 0)
+		limb.rotation_degrees = Vector3(0, 0, 8)
+		wrap_model.add_child(limb)
+
+		# String accent — thin vertical line
+		var string_accent := MeshInstance3D.new()
+		string_accent.name = "StringAccent"
+		var string_mesh := BoxMesh.new()
+		string_mesh.size = Vector3(0.005, 0.06, 0.005)
+		string_accent.mesh = string_mesh
+		string_accent.material_override = leather_dark
+		string_accent.position = Vector3(0.025, 0.045, 0)
+		wrap_model.add_child(string_accent)
 	else:
 		# Leather axe wrap — a small trailing tongue/flap hanging off the roll
 		var flap := MeshInstance3D.new()
@@ -2250,6 +2307,11 @@ func _create_bow_model(bow_type: String = "bow") -> void:
 	if bow_system and bow_system.has_method("build_bow_model"):
 		bow_model = bow_system.build_bow_model(bow_type)
 		if bow_model:
+			# Add leather wrap visuals if upgraded
+			if has_meta("durability_upgrades"):
+				var upgrades: Dictionary = get_meta("durability_upgrades")
+				if upgrades.has(bow_type):
+					_add_leather_wrap_to_bow(bow_model)
 			bow_model.position = BOW_REST_POSITION
 			bow_model.rotation_degrees = BOW_REST_ROTATION
 			if player:
@@ -2996,12 +3058,19 @@ func _use_upgrade(upgrade_item: String, upgrade_data: Dictionary) -> bool:
 	elif target_type == "grappling_hook":
 		if inventory.has_item("grappling_hook"):
 			target_tool = "grappling_hook"
+	elif target_type == "bow":
+		# Prefer enchanted bow over regular bow
+		for bow_type: String in ["enchanted_bow", "bow"]:
+			if inventory.has_item(bow_type):
+				target_tool = bow_type
+				break
 
 	if target_tool == "":
 		# No matching tool found - notify player
 		var hud: Node = player.get_tree().root.get_node_or_null("Main/HUD")
 		if hud and hud.has_method("show_notification"):
-			var tool_name: String = "an axe" if target_type == "axe" else "a grappling hook"
+			var tool_names: Dictionary = {"axe": "an axe", "grappling_hook": "a grappling hook", "bow": "a bow"}
+			var tool_name: String = tool_names.get(target_type, "the right tool")
 			hud.show_notification("Need %s in inventory to apply!" % tool_name, Color(1.0, 0.4, 0.4))
 		return false
 

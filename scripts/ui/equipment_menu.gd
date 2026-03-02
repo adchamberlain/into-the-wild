@@ -44,6 +44,7 @@ const EQUIPMENT_SLOTS: Array = [
 	{"key": "", "type": "lodestone", "name": "Lodestone"},
 	{"key": "", "type": "leather_axe_wrap", "name": "Leather Axe Wrap"},
 	{"key": "", "type": "leather_hook_wrap", "name": "Leather Hook Wrap"},
+	{"key": "", "type": "leather_bow_wrap", "name": "Leather Bow Wrap"},
 ]
 
 # Cached labels for each slot

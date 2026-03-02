@@ -143,7 +143,7 @@ const TOOL_ITEMS: Array = [
 	"drying_rack_kit", "garden_plot_kit", "canvas_tent_kit", "cabin_kit",
 	"snare_trap_kit", "smithing_station_kit", "smoker_kit", "weather_vane_kit",
 	"machete", "lantern", "grappling_hook", "lodestone", "map",
-	"leather_axe_wrap", "leather_hook_wrap", "compass", "bow", "arrows",
+	"leather_axe_wrap", "leather_hook_wrap", "leather_bow_wrap", "compass", "bow", "arrows",
 	"diamond_axe", "enchanted_bow", "diamond_arrows", "hang_glider"
 ]
 
