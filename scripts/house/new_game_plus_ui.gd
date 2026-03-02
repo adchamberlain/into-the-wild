@@ -54,8 +54,8 @@ func _process(delta: float) -> void:
 		if _flash_timer <= 0 and is_instance_valid(_flash_label):
 			_flash_label.visible = false
 
-	# Pulse animation on confirm button when 5 selected
-	if _selected_items.size() == MAX_SELECTIONS and is_instance_valid(_confirm_label):
+	# Pulse animation on confirm button when focused
+	if _on_confirm and is_instance_valid(_confirm_label):
 		_pulse_time += delta * 3.0
 		var pulse_alpha: float = 0.7 + 0.3 * sin(_pulse_time)
 		_confirm_label.add_theme_color_override("font_color", Color(1, 0.85, 0.3, pulse_alpha))
@@ -211,7 +211,8 @@ func _build_ui() -> void:
 
 	# Subtitle
 	var subtitle_label: Label = Label.new()
-	subtitle_label.text = "Choose 5 items to bring with you (1 of each)"
+	var max_picks: int = mini(MAX_SELECTIONS, _available_items.size())
+	subtitle_label.text = "Choose up to %d items to bring with you (1 of each)" % max_picks
 	subtitle_label.add_theme_font_override("font", HUD_FONT)
 	subtitle_label.add_theme_font_size_override("font_size", 32)
 	subtitle_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9, 1))
@@ -251,7 +252,8 @@ func _build_ui() -> void:
 
 	# Flash label (hidden by default)
 	_flash_label = Label.new()
-	_flash_label.text = "Already have 5 items selected"
+	var flash_max: int = mini(MAX_SELECTIONS, _available_items.size())
+	_flash_label.text = "Already have %d items selected" % flash_max
 	_flash_label.add_theme_font_override("font", HUD_FONT)
 	_flash_label.add_theme_font_size_override("font_size", 28)
 	_flash_label.add_theme_color_override("font_color", Color(1, 0.5, 0.5, 1))
@@ -406,7 +408,7 @@ func _toggle_selection() -> void:
 		# Deselect
 		_selected_items.erase(item_type)
 		SFXManager.play_sfx("select")
-	elif _selected_items.size() < MAX_SELECTIONS:
+	elif _selected_items.size() < mini(MAX_SELECTIONS, _available_items.size()):
 		# Select
 		_selected_items.append(item_type)
 		SFXManager.play_sfx("select")
@@ -431,30 +433,28 @@ func _update_counter() -> void:
 		return
 
 	var count: int = _selected_items.size()
-	_counter_label.text = "Selected: %d / %d" % [count, MAX_SELECTIONS]
+	var max_picks: int = mini(MAX_SELECTIONS, _available_items.size())
+	_counter_label.text = "Selected: %d / %d" % [count, max_picks]
 
-	if count == MAX_SELECTIONS:
+	if count == max_picks:
 		_counter_label.add_theme_color_override("font_color", Color(0.6, 1.0, 0.6, 1))
-	else:
+	elif count > 0:
 		_counter_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9, 1))
+	else:
+		_counter_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7, 1))
 
 
-## Update the confirm button style based on selection count and focus.
+## Update the confirm button style based on focus.
 func _update_confirm_style() -> void:
 	if not is_instance_valid(_confirm_label):
 		return
 
-	if _selected_items.size() == MAX_SELECTIONS:
-		if _on_confirm:
-			# Active and focused — bright gold
-			_confirm_label.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
-		else:
-			# Active but not focused — dimmer gold (pulse will animate this)
-			_confirm_label.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 0.8))
+	if _on_confirm:
+		# Focused — bright gold
+		_confirm_label.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
 	else:
-		# Inactive — grey
-		_confirm_label.add_theme_color_override("font_color", Color(0.4, 0.4, 0.4, 1))
-		_pulse_time = 0.0
+		# Not focused — dimmer gold
+		_confirm_label.add_theme_color_override("font_color", Color(0.8, 0.68, 0.25, 0.8))
 
 
 ## Ensure the focused item row is scrolled into view.
@@ -468,10 +468,8 @@ func _ensure_focused_visible() -> void:
 		_scroll_container.ensure_control_visible(panel)
 
 
-## Confirm departure with selected items.
+## Confirm departure with selected items (any count including zero is fine).
 func _confirm_departure() -> void:
-	if _selected_items.size() != MAX_SELECTIONS:
-		return
 
 	# Save to GameState
 	var game_state: Node = get_node_or_null("/root/GameState")
@@ -529,7 +527,7 @@ func _update_hint_label() -> void:
 	var accept_prompt: String = "Enter"
 	var cancel_prompt: String = "Esc"
 
-	if _input_manager and _input_manager.has_method("is_using_controller") and _input_manager.is_using_controller():
+	if _input_manager and "using_controller" in _input_manager and _input_manager.using_controller:
 		if _input_manager.has_method("get_prompt"):
 			up_prompt = "D-pad"
 			accept_prompt = _input_manager.get_prompt("ui_accept")
