@@ -12,9 +12,15 @@ var _total_pages: int = 0
 var _left_vbox: VBoxContainer
 var _right_vbox: VBoxContainer
 
+# Cached page data
+var _pages: Array[Dictionary] = []
+
 # UI nodes (created programmatically)
 var background: ColorRect
+var shadow: PanelContainer
 var panel: PanelContainer
+
+const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 
 
 func _get_pages() -> Array[Dictionary]:
@@ -132,7 +138,8 @@ func open_journal(is_first_read: bool) -> void:
 	_is_first_read = is_first_read
 	_is_open = true
 	_current_page = 0
-	_total_pages = _get_pages().size()
+	_pages = _get_pages()
+	_total_pages = _pages.size()
 	_build_ui()
 
 	# Pause the game tree
@@ -157,8 +164,7 @@ func _build_ui() -> void:
 	add_child(background)
 
 	# Drop shadow behind book
-	var shadow: PanelContainer = PanelContainer.new()
-	shadow.process_mode = Node.PROCESS_MODE_ALWAYS
+	shadow = PanelContainer.new()
 	var shadow_style: StyleBoxFlat = StyleBoxFlat.new()
 	shadow_style.bg_color = Color(0.0, 0.0, 0.0, 0.4)
 	shadow_style.corner_radius_top_left = int(14 * sf)
@@ -180,7 +186,6 @@ func _build_ui() -> void:
 
 	# Leather cover panel (the book itself)
 	panel = PanelContainer.new()
-	panel.process_mode = Node.PROCESS_MODE_ALWAYS
 	var cover_style: StyleBoxFlat = StyleBoxFlat.new()
 	cover_style.bg_color = leather_color
 	cover_style.corner_radius_top_left = int(12 * sf)
@@ -267,14 +272,17 @@ func _build_ui() -> void:
 
 
 func _populate_page() -> void:
-	# Clear existing content from both pages
-	for child: Node in _left_vbox.get_children():
-		child.queue_free()
-	for child: Node in _right_vbox.get_children():
-		child.queue_free()
+	if not is_instance_valid(_left_vbox) or not is_instance_valid(_right_vbox):
+		return
 
-	var page: Dictionary = _get_pages()[_current_page]
-	var font: Font = load("res://resources/hud_font.tres")
+	# Clear existing content from both pages (free() for synchronous removal)
+	for child: Node in _left_vbox.get_children():
+		child.free()
+	for child: Node in _right_vbox.get_children():
+		child.free()
+
+	var page: Dictionary = _pages[_current_page]
+	var font: Font = HUD_FONT
 	var vp_size: Vector2 = get_viewport().get_visible_rect().size
 	if vp_size == Vector2.ZERO:
 		vp_size = Vector2(1920, 1080)
@@ -311,6 +319,7 @@ func _populate_page() -> void:
 		var left_body: Label = Label.new()
 		left_body.text = page.left_text
 		left_body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		left_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		left_body.add_theme_font_override("font", font)
 		left_body.add_theme_font_size_override("font_size", int(body_font_size * sf))
 		left_body.add_theme_color_override("font_color", Color(0.45, 0.32, 0.15, 0.7))
@@ -389,7 +398,7 @@ func _populate_page() -> void:
 		prev_label.text = "< Prev"
 		prev_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		prev_label.add_theme_font_override("font", font)
-		prev_label.add_theme_font_size_override("font_size", int(18 * sf))
+		prev_label.add_theme_font_size_override("font_size", int(20 * sf))
 		prev_label.add_theme_color_override("font_color", hint_color)
 		prev_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		nav_hbox.add_child(prev_label)
@@ -404,7 +413,7 @@ func _populate_page() -> void:
 	page_label.text = "Page %d of %d" % [_current_page + 1, _total_pages]
 	page_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	page_label.add_theme_font_override("font", font)
-	page_label.add_theme_font_size_override("font_size", int(18 * sf))
+	page_label.add_theme_font_size_override("font_size", int(20 * sf))
 	page_label.add_theme_color_override("font_color", hint_color)
 	page_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	nav_hbox.add_child(page_label)
@@ -415,7 +424,7 @@ func _populate_page() -> void:
 		next_label.text = "Next >"
 		next_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		next_label.add_theme_font_override("font", font)
-		next_label.add_theme_font_size_override("font_size", int(18 * sf))
+		next_label.add_theme_font_size_override("font_size", int(20 * sf))
 		next_label.add_theme_color_override("font_color", hint_color)
 		next_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		nav_hbox.add_child(next_label)
@@ -431,7 +440,7 @@ func _populate_page() -> void:
 	var hint_label: Label = Label.new()
 	hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	hint_label.add_theme_font_override("font", font)
-	hint_label.add_theme_font_size_override("font_size", int(18 * sf))
+	hint_label.add_theme_font_size_override("font_size", int(20 * sf))
 	hint_label.add_theme_color_override("font_color", hint_color)
 
 	var input_mgr: Node = get_node_or_null("/root/InputManager")
@@ -489,6 +498,19 @@ func _close_journal() -> void:
 	if not _is_open:
 		return
 	_is_open = false
+
+	# Free the built UI nodes so re-opening doesn't stack duplicates
+	if is_instance_valid(background):
+		background.free()
+		background = null
+	if is_instance_valid(shadow):
+		shadow.free()
+		shadow = null
+	if is_instance_valid(panel):
+		panel.free()
+		panel = null
+	_left_vbox = null
+	_right_vbox = null
 
 	# Unpause the game tree
 	get_tree().paused = false
