@@ -6280,21 +6280,38 @@ Created the Oakland Hills house — a complete separate Godot scene the player a
 
 ---
 
+## Session - Endgame Homecoming: Integration Fixes (2026-03-02)
+
+Fixed two critical integration issues from the endgame implementation: the storage box and front door in the house scene were showing placeholder text overlays instead of opening their actual UIs.
+
+### Fixes
+- **Storage box**: Now instantiates and opens `journey_inventory_ui.gd` via new `open_journey_inventory(player)` method on house_scene.gd
+- **Front door**: Now instantiates and opens `new_game_plus_ui.gd` via new `open_new_game_plus(player)` method on house_scene.gd
+- **NG+ subtitle**: Clarified to "Choose 5 items to bring with you (1 of each)" so players understand they get quantity 1
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/house/house_scene.gd` | Modified | Added `open_journey_inventory()`, `open_new_game_plus()` methods; updated interactable factory to call them for storage_box and front_door |
+| `scripts/house/new_game_plus_ui.gd` | Modified | Updated subtitle text to clarify quantity |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test the house scene — verify room layout, furniture placement, cat portraits, window views, lighting warmth
-2. Play-test interactables — test kettle, sandwich, bookshelves, storage box, front door interactions
-3. Play-test the full transition — walk to trailhead signpost, confirm, verify fade-to-black and house scene loads
-4. Wire up storage box to journey_inventory_ui.gd
-5. Wire up front door to new_game_plus_ui.gd
-6. Play-test food menu, journal, pocket desert, inventory limits from wilderness
-7. Bug fixing from play-testing
-8. Wire up carved tree spawning in chunk manager and play-test interaction/overlay
+1. Play-test full endgame loop: journal clue → carved tree → stone cairn → signpost → transition → house → NG+
+2. Play-test house scene — room layout, furniture, cat portraits, window views, lighting
+3. Play-test interactables — kettle, sandwich, bookshelves, storage box (inventory viewer), front door (NG+ UI)
+4. Play-test NG+ — select 5 items, confirm, verify new wilderness loads with those items
+5. Play-test food menu, journal, pocket desert from previous sessions
+6. Bug fixing from play-testing
 
 ### Known Issues
 - Tortoise materials are per-instance (minor, could be shared static)
 - Rock spire uses per-instance materials (minor, only one ever spawns)
+- Interactable script factory uses string formatting — fragile if labels contain special characters (current labels are all safe)
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.
