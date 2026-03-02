@@ -292,11 +292,11 @@ func _populate_page() -> void:
 	var hint_color: Color = Color(0.45, 0.32, 0.15, 0.5)
 
 	# Determine font size based on page type
-	var body_font_size: int = 18
+	var body_font_size: int = 26
 	if page.is_recipe_page:
-		body_font_size = 16
+		body_font_size = 22
 	elif page.is_title_page:
-		body_font_size = 20
+		body_font_size = 28
 
 	# --- Left page content ---
 	if page.is_title_page:
@@ -305,7 +305,7 @@ func _populate_page() -> void:
 		title_label.text = page.left_title
 		title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		title_label.add_theme_font_override("font", font)
-		title_label.add_theme_font_size_override("font_size", int(32 * sf))
+		title_label.add_theme_font_size_override("font_size", int(42 * sf))
 		title_label.add_theme_color_override("font_color", Color(0.30, 0.18, 0.06))
 		_left_vbox.add_child(title_label)
 
@@ -332,7 +332,7 @@ func _populate_page() -> void:
 		header_label.text = page.left_title
 		header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		header_label.add_theme_font_override("font", font)
-		header_label.add_theme_font_size_override("font_size", int(24 * sf))
+		header_label.add_theme_font_size_override("font_size", int(32 * sf))
 		header_label.add_theme_color_override("font_color", Color(0.30, 0.18, 0.06))
 		_left_vbox.add_child(header_label)
 
@@ -358,7 +358,7 @@ func _populate_page() -> void:
 		header_label.text = page.left_title
 		header_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		header_label.add_theme_font_override("font", font)
-		header_label.add_theme_font_size_override("font_size", int(24 * sf))
+		header_label.add_theme_font_size_override("font_size", int(32 * sf))
 		header_label.add_theme_color_override("font_color", ink_color)
 		_left_vbox.add_child(header_label)
 
