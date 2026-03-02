@@ -237,11 +237,13 @@ func toggle_menu() -> void:
 	panel.visible = is_visible
 
 	if is_visible:
+		SFXManager.play_sfx("menu_open")
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 		focused_slot_index = 0
 		_update_display()
 		_update_focus_highlight()
 	else:
+		SFXManager.play_sfx("menu_close")
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
@@ -270,6 +272,7 @@ func _navigate_slots(direction: int) -> void:
 		focused_slot_index = slot_panels.size() - 1
 
 	_update_focus_highlight()
+	SFXManager.play_sfx("select")
 
 
 ## Update visual highlight on focused slot.
@@ -296,4 +299,5 @@ func _equip_focused_slot() -> void:
 	if inventory and inventory.get_item_count(slot_type) > 0:
 		if equipment and equipment.has_method("equip"):
 			equipment.equip(slot_type)
+			SFXManager.play_sfx("select")
 			_update_display()

@@ -146,11 +146,13 @@ func open_storage(storage: Node) -> void:
 	_refresh_lists()
 	_update_focus_highlight()
 	_update_hint_label()
+	SFXManager.play_sfx("menu_open")
 	print("[StorageUI] Opened storage")
 
 
 ## Close the storage UI.
 func close_storage() -> void:
+	SFXManager.play_sfx("menu_close")
 	is_open = false
 	panel.visible = false
 
@@ -327,6 +329,7 @@ func _navigate_items(direction: int) -> void:
 		focused_row_index = current_rows.size() - 1
 
 	_update_focus_highlight()
+	SFXManager.play_sfx("select")
 
 
 ## Navigate horizontally within a row, or switch panels at edges.
@@ -359,6 +362,7 @@ func _navigate_horizontal(direction: int) -> void:
 		focused_col_index = new_col
 
 	_update_focus_highlight()
+	SFXManager.play_sfx("select")
 
 
 ## Update visual focus on the current button.
@@ -399,6 +403,7 @@ func _transfer_focused_item() -> void:
 	if focused_row_index >= 0 and focused_row_index < current_rows.size():
 		var row: Array = current_rows[focused_row_index]
 		if focused_col_index < row.size():
+			SFXManager.play_sfx("select")
 			row[focused_col_index].pressed.emit()
 
 

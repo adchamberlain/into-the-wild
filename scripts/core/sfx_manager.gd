@@ -44,6 +44,7 @@ const DEFAULT_COOLDOWNS: Dictionary = {
 	"bow_draw": 0.3,
 	"bow_fire": 0.2,
 	"arrow_hit": 0.15,
+	"coca_leaf": 0.5,
 }
 
 # Anti-repetition tracking for footsteps
@@ -161,6 +162,7 @@ func _preload_sounds() -> void:
 	loaded_sfx["bow_draw"] = _generate_bow_draw_sound()
 	loaded_sfx["bow_fire"] = _generate_bow_fire_sound()
 	loaded_sfx["arrow_hit"] = _generate_arrow_hit_sound()
+	loaded_sfx["coca_leaf"] = _generate_coca_leaf_sound()
 
 	# Preload footsteps
 	for surface in FOOTSTEP_PATHS.keys():
@@ -392,6 +394,56 @@ func _generate_arrow_hit_sound() -> AudioStreamWAV:
 		wave += sin(t * 60.0 * TAU) * 0.3
 		var impact: float = exp(-t * 50.0)
 		wave += (randf() * 2.0 - 1.0) * 0.4 * impact
+
+		var sample: float = wave * envelope * 0.6
+		var sample_int: int = clampi(int(sample * 32767.0), -32768, 32767)
+		data[i * 2] = sample_int & 0xFF
+		data[i * 2 + 1] = (sample_int >> 8) & 0xFF
+
+	var stream: AudioStreamWAV = AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = sample_rate
+	stream.stereo = false
+	stream.data = data
+	return stream
+
+
+## Generate a procedural magical ascending sound for coca leaf consumption.
+## Shimmering rising tones with harmonics to evoke an ethereal breath-enhancing effect.
+func _generate_coca_leaf_sound() -> AudioStreamWAV:
+	var sample_rate: int = 22050
+	var duration: float = 1.2
+	var num_samples: int = int(sample_rate * duration)
+	var data: PackedByteArray = PackedByteArray()
+	data.resize(num_samples * 2)
+
+	for i: int in range(num_samples):
+		var t: float = float(i) / sample_rate
+		# Fade in then out envelope (gentle swell)
+		var fade_in: float = minf(t * 4.0, 1.0)
+		var fade_out: float = exp(-(t - 0.3) * 2.5) if t > 0.3 else 1.0
+		var envelope: float = fade_in * fade_out
+
+		# Ascending base tone: sweeps from ~400 Hz to ~900 Hz
+		var freq_base: float = 400.0 + t * 420.0
+		var wave: float = sin(t * freq_base * TAU) * 0.3
+
+		# Shimmering harmonic: octave above, also ascending
+		var freq_high: float = freq_base * 2.0
+		wave += sin(t * freq_high * TAU) * 0.2
+
+		# Sparkle overtone: fifth above, with tremolo
+		var freq_fifth: float = freq_base * 1.5
+		var tremolo: float = 0.5 + 0.5 * sin(t * 12.0 * TAU)
+		wave += sin(t * freq_fifth * TAU) * 0.15 * tremolo
+
+		# Gentle chime pings at intervals for magical sparkle
+		for ping_t: float in [0.0, 0.15, 0.35, 0.6]:
+			var dt: float = t - ping_t
+			if dt >= 0.0 and dt < 0.3:
+				var ping_env: float = exp(-dt * 15.0)
+				var ping_freq: float = 1200.0 + ping_t * 800.0
+				wave += sin(dt * ping_freq * TAU) * 0.12 * ping_env
 
 		var sample: float = wave * envelope * 0.6
 		var sample_int: int = clampi(int(sample * 32767.0), -32768, 32767)

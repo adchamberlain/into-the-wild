@@ -42,6 +42,10 @@ var inventory_toggle_hint: Label = null
 
 # Eat action hint
 
+# Coca leaf buff timer
+var coca_leaf_panel: PanelContainer
+var coca_leaf_label: Label
+
 # Air bubble display (drowning)
 var bubble_container: HBoxContainer
 var bubble_labels: Array[Label] = []
@@ -1130,6 +1134,60 @@ func _create_compass_panel() -> void:
 	compass_panel.visible = false
 
 
+## Update coca leaf buff timer display. Called via group by player_controller.
+func update_coca_leaf_timer(remaining: float) -> void:
+	if remaining <= 0.0:
+		if coca_leaf_panel:
+			coca_leaf_panel.visible = false
+		return
+
+	if not coca_leaf_panel:
+		_create_coca_leaf_panel()
+
+	# Stack below the lowest visible left-side indicator to avoid overlap
+	var y_pos: float = 185.0  # Default: just below StatsPanel
+	if compass_panel and compass_panel.visible:
+		y_pos = maxf(y_pos, compass_panel.offset_top + compass_panel.size.y + 5.0)
+	if heat_panel and heat_panel.visible:
+		y_pos = maxf(y_pos, heat_panel.offset_top + heat_panel.size.y + 5.0)
+	coca_leaf_panel.offset_top = y_pos
+
+	coca_leaf_panel.visible = true
+	var minutes: int = int(remaining) / 60
+	var seconds: int = int(remaining) % 60
+	coca_leaf_label.text = "Coca Leaf  %d:%02d" % [minutes, seconds]
+
+
+func _create_coca_leaf_panel() -> void:
+	coca_leaf_panel = PanelContainer.new()
+	coca_leaf_panel.name = "CocaLeafPanel"
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color(0.05, 0.08, 0.05, 0.75)
+	style.corner_radius_top_left = 6
+	style.corner_radius_top_right = 6
+	style.corner_radius_bottom_left = 6
+	style.corner_radius_bottom_right = 6
+	style.content_margin_left = 10
+	style.content_margin_right = 10
+	style.content_margin_top = 4
+	style.content_margin_bottom = 4
+	coca_leaf_panel.add_theme_stylebox_override("panel", style)
+
+	coca_leaf_label = Label.new()
+	coca_leaf_label.add_theme_font_override("font", HUD_FONT)
+	coca_leaf_label.add_theme_font_size_override("font_size", 28)
+	coca_leaf_label.add_theme_color_override("font_color", Color(0.6, 1.0, 0.6, 1))
+	coca_leaf_panel.add_child(coca_leaf_label)
+
+	# Position just below the StatsPanel (top-left corner)
+	coca_leaf_panel.anchors_preset = Control.PRESET_TOP_LEFT
+	coca_leaf_panel.offset_left = 20
+	coca_leaf_panel.offset_top = 185
+	add_child(coca_leaf_panel)
+
+	coca_leaf_panel.visible = false
+
+
 ## Show/hide air bubbles when player is submerged. Called via group by player_controller.
 func update_air_bubbles(count: int, submerged: bool) -> void:
 	# Lazily create the bubble container on first call
@@ -1444,6 +1502,13 @@ func _create_gliding_indicator() -> void:
 func set_desert_heat_active(active: bool) -> void:
 	if heat_panel:
 		heat_panel.visible = active and not _overlay_active
+		if heat_panel.visible:
+			# Position below compass panel if it's visible to avoid overlap
+			if compass_panel and compass_panel.visible:
+				heat_panel.offset_top = compass_panel.offset_top + compass_panel.size.y + 5.0
+			else:
+				heat_panel.offset_top = 190.0
+			heat_panel.offset_bottom = heat_panel.offset_top + 45.0
 
 
 ## Fade in the sandstorm overlay.

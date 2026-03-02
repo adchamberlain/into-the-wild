@@ -142,6 +142,7 @@ func open_journal(is_first_read: bool) -> void:
 	_pages = _get_pages()
 	_total_pages = _pages.size()
 	_build_ui()
+	SFXManager.play_sfx("menu_open")
 
 	# Pause the game tree
 	get_tree().paused = true
@@ -813,6 +814,7 @@ func _input(event: InputEvent) -> void:
 		if _current_page > 0:
 			_current_page -= 1
 			_populate_page()
+			SFXManager.play_sfx("select")
 		if vp:
 			vp.set_input_as_handled()
 		return
@@ -821,6 +823,7 @@ func _input(event: InputEvent) -> void:
 		if _current_page < _total_pages - 1:
 			_current_page += 1
 			_populate_page()
+			SFXManager.play_sfx("select")
 		if vp:
 			vp.set_input_as_handled()
 		return
@@ -849,6 +852,7 @@ func _input(event: InputEvent) -> void:
 func _close_journal() -> void:
 	if not _is_open:
 		return
+	SFXManager.play_sfx("menu_close")
 	_is_open = false
 
 	# Free the built UI nodes so re-opening doesn't stack duplicates

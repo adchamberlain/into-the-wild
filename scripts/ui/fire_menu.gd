@@ -175,6 +175,7 @@ func open_menu(fire: Node) -> void:
 
 	_refresh_menu()
 	_update_button_prompts()
+	SFXManager.play_sfx("menu_open")
 
 	# Focus first button for controller navigation
 	call_deferred("_focus_first_button")
@@ -184,6 +185,7 @@ func open_menu(fire: Node) -> void:
 ## Keeps is_open true until jump/ui_accept actions are released,
 ## preventing player from jumping when X is used for menu selection.
 func close_menu() -> void:
+	SFXManager.play_sfx("menu_close")
 	panel.visible = false
 	current_fire = null
 
@@ -381,6 +383,7 @@ func _navigate_buttons(direction: int) -> void:
 
 	var button: Button = button_list[focused_button_index]
 	button.grab_focus()
+	SFXManager.play_sfx("select")
 
 
 ## Activate the currently focused button.
@@ -391,6 +394,7 @@ func _activate_focused_button() -> void:
 	if focused_button_index >= 0 and focused_button_index < button_list.size():
 		var button: Button = button_list[focused_button_index]
 		if not button.disabled:
+			SFXManager.play_sfx("select")
 			button.pressed.emit()
 
 

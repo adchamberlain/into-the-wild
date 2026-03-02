@@ -134,6 +134,7 @@ func toggle_crafting_menu(from_bench: bool = false) -> void:
 	panel.visible = is_open
 
 	if is_open:
+		SFXManager.play_sfx("menu_open")
 		at_bench = from_bench
 		# Update title based on context
 		if at_bench:
@@ -148,6 +149,7 @@ func toggle_crafting_menu(from_bench: bool = false) -> void:
 		# Focus first recipe button for controller navigation
 		_focus_first_recipe()
 	else:
+		SFXManager.play_sfx("menu_close")
 		at_bench = false
 		# Re-capture mouse for gameplay
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
@@ -344,6 +346,7 @@ func _navigate_recipes(direction: int) -> void:
 	# Focus the button and scroll it into view
 	var button: Button = recipe_button_list[focused_recipe_index]
 	button.grab_focus()
+	SFXManager.play_sfx("select")
 	# Manually scroll to the button's parent panel since button is nested
 	var item_panel: Control = button.get_parent().get_parent()
 	scroll_container.ensure_control_visible(item_panel)
@@ -357,6 +360,7 @@ func _craft_focused_recipe() -> void:
 	if focused_recipe_index >= 0 and focused_recipe_index < recipe_button_list.size():
 		var button: Button = recipe_button_list[focused_recipe_index]
 		if not button.disabled:
+			SFXManager.play_sfx("select")
 			# Emit the pressed signal to trigger crafting
 			button.pressed.emit()
 

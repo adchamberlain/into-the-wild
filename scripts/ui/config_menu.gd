@@ -34,7 +34,7 @@ var day_length_minutes: float = 20.0
 var music_enabled: bool = true
 var music_volume: float = 90.0  # 0-100
 var dev_mode_enabled: bool = false
-var screen_brightness: float = 1.0  # 0.5 to 1.5 (1.0 = default)
+var screen_brightness: float = 1.0  # 0.5 to 2.0 (1.0 = default)
 
 # UI References
 @onready var panel: PanelContainer = $Panel
@@ -139,15 +139,17 @@ func _init_ui() -> void:
 	if start_with_bow_map_toggle:
 		start_with_bow_map_toggle.button_pressed = start_with_bow_map
 
-	# Set day length slider
+	# Set day length slider (step = 1 for whole-minute increments on controller)
 	if time_manager and "day_length_minutes" in time_manager:
 		day_length_minutes = time_manager.day_length_minutes
+	day_length_slider.step = 1.0
 	day_length_slider.value = day_length_minutes
 	day_length_label.text = "%.0f min" % day_length_minutes
 
-	# Set tree respawn slider
+	# Set tree respawn slider (step = 1 for whole-day increments on controller)
 	if resource_manager and "tree_respawn_time_hours" in resource_manager:
 		tree_respawn_days = resource_manager.tree_respawn_time_hours / 24.0
+	tree_respawn_slider.step = 1.0
 	tree_respawn_slider.value = tree_respawn_days
 	tree_respawn_label.text = "%.0f day%s" % [tree_respawn_days, "s" if not is_equal_approx(tree_respawn_days, 1.0) else ""]
 
@@ -289,7 +291,7 @@ func _create_brightness_control() -> void:
 	# Slider
 	brightness_slider = HSlider.new()
 	brightness_slider.min_value = 0.5
-	brightness_slider.max_value = 1.5
+	brightness_slider.max_value = 2.0
 	brightness_slider.step = 0.05
 	brightness_slider.value = screen_brightness
 	brightness_slider.custom_minimum_size.x = 200
@@ -524,6 +526,7 @@ func toggle_menu() -> void:
 
 	# If closing menu, hide both panels
 	if not is_visible:
+		SFXManager.play_sfx("menu_close")
 		panel.visible = false
 		if slot_panel:
 			slot_panel.visible = false
@@ -538,6 +541,7 @@ func toggle_menu() -> void:
 				pause_menu.panel.visible = true
 			return  # Don't change mouse mode, pause menu handles it
 	else:
+		SFXManager.play_sfx("menu_open")
 		# If opening and slot panel was visible, hide it and show main
 		if slot_panel and slot_panel.visible:
 			slot_panel.visible = false
@@ -560,6 +564,7 @@ func show_menu(from_pause_menu: bool = false) -> void:
 	opened_from_pause_menu = from_pause_menu
 	is_visible = true
 	panel.visible = true
+	SFXManager.play_sfx("menu_open")
 	if slot_panel:
 		slot_panel.visible = false
 	selecting_slot_for_save = false
@@ -952,6 +957,7 @@ func _navigate_controls(direction: int) -> void:
 		focused_control_index = focusable_controls.size() - 1
 
 	_update_control_focus()
+	SFXManager.play_sfx("select")
 
 
 ## Update focus on the current control.
@@ -975,12 +981,13 @@ func _adjust_focused_control(direction: int) -> void:
 
 	if control is HSlider:
 		var slider: HSlider = control as HSlider
-		var step: float = (slider.max_value - slider.min_value) / 10.0  # 10 steps
-		slider.value += direction * step
+		slider.value += direction * slider.step
+		SFXManager.play_sfx("select")
 	elif control is CheckButton:
 		# Toggle checkbox with left/right too
 		var check: CheckButton = control as CheckButton
 		check.button_pressed = not check.button_pressed
+		SFXManager.play_sfx("select")
 
 
 ## Activate the focused control (toggle checkbox or press button).
@@ -996,10 +1003,12 @@ func _activate_focused_control() -> void:
 	if control is CheckButton:
 		var check: CheckButton = control as CheckButton
 		check.button_pressed = not check.button_pressed
+		SFXManager.play_sfx("select")
 	elif control is Button:
 		var button: Button = control as Button
 		if not button.disabled:
 			button.pressed.emit()
+			SFXManager.play_sfx("select")
 
 
 # Slot panel navigation

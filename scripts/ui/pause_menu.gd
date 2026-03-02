@@ -201,6 +201,7 @@ func pause_game() -> void:
 	get_tree().paused = true
 	panel.visible = true
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	SFXManager.play_sfx("menu_open")
 
 	# Update hint label based on input device
 	_update_hint_label()
@@ -223,6 +224,7 @@ func _update_hint_label() -> void:
 func resume_game() -> void:
 	if not is_inside_tree():
 		return
+	SFXManager.play_sfx("menu_close")
 	is_paused = false
 	showing_credits = false
 	showing_slots = false
@@ -349,6 +351,7 @@ func _navigate_buttons(direction: int) -> void:
 
 	var button: Button = button_list[focused_button_index]
 	button.grab_focus()
+	SFXManager.play_sfx("select")
 
 
 ## Activate the currently focused button.
@@ -359,6 +362,7 @@ func _activate_focused_button() -> void:
 	if focused_button_index >= 0 and focused_button_index < button_list.size():
 		var button: Button = button_list[focused_button_index]
 		if not button.disabled:
+			SFXManager.play_sfx("select")
 			button.pressed.emit()
 
 
@@ -495,6 +499,7 @@ func _update_slot_panel() -> void:
 ## Show the slot selection panel.
 func _show_slot_panel() -> void:
 	if slot_panel:
+		SFXManager.play_sfx("menu_open")
 		showing_slots = true
 		panel.visible = false
 		slot_panel.visible = true
@@ -506,6 +511,7 @@ func _show_slot_panel() -> void:
 ## Hide the slot selection panel.
 func _hide_slot_panel() -> void:
 	if slot_panel:
+		SFXManager.play_sfx("cancel")
 		showing_slots = false
 		slot_panel.visible = false
 		panel.visible = true
@@ -557,6 +563,7 @@ func _navigate_slot_buttons(direction: int) -> void:
 		focused_slot_index = slot_buttons.size() - 1
 
 	slot_buttons[focused_slot_index].grab_focus()
+	SFXManager.play_sfx("select")
 
 
 ## Activate the focused slot button.
@@ -652,6 +659,7 @@ func _create_confirm_panel() -> void:
 
 ## Show the confirmation dialog.
 func _show_confirm(action: String, slot: int) -> void:
+	SFXManager.play_sfx("menu_open")
 	confirm_action = action
 	confirm_slot = slot
 	showing_confirm = true
@@ -671,6 +679,7 @@ func _show_confirm(action: String, slot: int) -> void:
 
 ## Hide the confirmation dialog and return to slot panel.
 func _hide_confirm_panel() -> void:
+	SFXManager.play_sfx("cancel")
 	showing_confirm = false
 	confirm_panel.visible = false
 	slot_panel.visible = true
@@ -724,6 +733,7 @@ func _navigate_confirm_buttons(direction: int) -> void:
 	if focused_confirm_index < 0:
 		focused_confirm_index = confirm_buttons.size() - 1
 	confirm_buttons[focused_confirm_index].grab_focus()
+	SFXManager.play_sfx("select")
 
 
 ## Activate the focused confirm button.

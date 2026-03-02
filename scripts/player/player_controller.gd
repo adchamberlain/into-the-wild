@@ -481,7 +481,10 @@ func _physics_process(delta: float) -> void:
 		if coca_leaf_timer <= 0.0:
 			coca_leaf_timer = 0.0
 			BREATH_BUBBLE_INTERVAL = _base_breath_interval
+			get_tree().call_group("hud", "update_coca_leaf_timer", 0.0)
 			get_tree().call_group("hud", "show_notification", "The coca leaf effect fades", Color(1, 0.85, 0.3, 1))
+		else:
+			get_tree().call_group("hud", "update_coca_leaf_timer", coca_leaf_timer)
 
 	# Play footstep/splash sounds based on actual movement (after collision resolution)
 	var horizontal_speed: float = Vector2(velocity.x, velocity.z).length()
@@ -1005,6 +1008,7 @@ func _try_eat() -> void:
 				coca_leaf_timer = 300.0  # 5 minutes
 				_base_breath_interval = 4.0
 				BREATH_BUBBLE_INTERVAL = _base_breath_interval * 2.0  # 4s -> 8s
+				SFXManager.play_sfx("coca_leaf")
 				get_tree().call_group("hud", "show_notification", "Your breathing slows... lungs feel stronger", Color(0.6, 1, 0.6, 1))
 	else:
 		if hud and hud.has_method("show_notification"):

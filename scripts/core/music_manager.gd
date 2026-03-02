@@ -46,6 +46,7 @@ var is_crossfading: bool = false
 var pause_timer: float = 0.0
 var waiting_for_next: bool = false
 var fade_tween: Tween  # Track fade-out tween so it can be killed on re-enable
+var is_first_play: bool = true  # True on game start to play Sunlight Through Leaves first
 
 
 func _ready() -> void:
@@ -89,15 +90,31 @@ func _process(delta: float) -> void:
 func _shuffle_tracks() -> void:
 	# Create shuffled order of track indices
 	track_order.clear()
-	for i in range(TRACK_LIST.size()):
-		track_order.append(i)
 
-	# Fisher-Yates shuffle
-	for i in range(track_order.size() - 1, 0, -1):
-		var j: int = randi() % (i + 1)
-		var temp: int = track_order[i]
-		track_order[i] = track_order[j]
-		track_order[j] = temp
+	if is_first_play:
+		# Always start with "Sunlight Through Leaves" on game start
+		var first_index: int = TRACK_LIST.find("Sunlight Through Leaves.mp3")
+		track_order.append(first_index)
+		# Add remaining tracks and shuffle them
+		for i in range(TRACK_LIST.size()):
+			if i != first_index:
+				track_order.append(i)
+		# Fisher-Yates shuffle on indices 1..end (keep index 0 fixed)
+		for i in range(track_order.size() - 1, 1, -1):
+			var j: int = 1 + randi() % i  # range [1, i]
+			var temp: int = track_order[i]
+			track_order[i] = track_order[j]
+			track_order[j] = temp
+		is_first_play = false
+	else:
+		for i in range(TRACK_LIST.size()):
+			track_order.append(i)
+		# Fisher-Yates shuffle (full random)
+		for i in range(track_order.size() - 1, 0, -1):
+			var j: int = randi() % (i + 1)
+			var temp: int = track_order[i]
+			track_order[i] = track_order[j]
+			track_order[j] = temp
 
 
 func _play_next_track() -> void:
