@@ -6227,6 +6227,28 @@ Added the Trailhead Signpost, the FINAL landmark in the trail-home endgame. A we
 
 ---
 
+## Session - Wilderness Inventory Viewer (2026-03-02)
+
+Added a read-only Journey Inventory UI for the house scene. When the player interacts with the storage box in the Oakland Hills house, this overlay displays all items they had when completing the wilderness journey.
+
+### Features
+- **CanvasLayer overlay** (layer 100): Full-screen dark background with centered PanelContainer, following the wilderness sign overlay pattern
+- **Lazy UI creation**: Builds UI programmatically on `open()`, destroys all children on `close()` for clean lifecycle
+- **Sorted item list**: Reads `journey_inventory` from GameState autoload, sorts items alphabetically by display name, renders in a ScrollContainer with alternating row backgrounds
+- **Item display**: Each row shows display name (32px white) and count (32px green "x{N}"), item keys converted via `.capitalize().replace("_", " ")` matching existing codebase pattern
+- **Empty state handling**: Graceful grey centered message if inventory is empty
+- **Player freeze/unfreeze**: Uses `set_resting(true/false)` pattern for player immobilization
+- **Controller support**: Close hint uses InputManager.get_prompt("ui_cancel") for dynamic button text
+- **Input handling**: Closes on `ui_cancel` action press
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/house/journey_inventory_ui.gd` | New | Read-only CanvasLayer overlay for viewing wilderness journey inventory from house storage box |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
