@@ -276,10 +276,25 @@ func _build_ui() -> void:
 ## Returns null for pages with no illustration (recipe pages).
 func _build_illustration(page_index: int, sf: float) -> Control:
 	var ink: Color = Color(0.35, 0.25, 0.12, 0.55)
-	var w: float = 2.0 * sf
+	var w: float = 3.0 * sf
 	var container: Control = Control.new()
-	var h: float = 90 * sf
-	container.custom_minimum_size = Vector2(0, h)
+	var h: float = 90 * sf  # original design height
+	var draw_scale: float = 1.8
+	container.custom_minimum_size = Vector2(0, h * draw_scale)
+	container.size_flags_horizontal = Control.SIZE_FILL
+	container.clip_contents = true
+
+	# All Line2D children go into a scaled Node2D for bigger, centered drawings
+	var drawing: Node2D = Node2D.new()
+	drawing.scale = Vector2(draw_scale, draw_scale)
+	container.add_child(drawing)
+
+	# Center the drawing when the container gets its final width
+	var design_cx: float = 145.0 * sf
+	container.resized.connect(func() -> void:
+		drawing.position.x = container.size.x / 2.0 - design_cx * draw_scale
+		drawing.position.y = (container.size.y - h * draw_scale) / 2.0
+	)
 
 	if page_index == 0:
 		# Compass rose
@@ -293,7 +308,7 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 		for i: int in range(33):
 			var a: float = i * TAU / 32.0
 			circle.add_point(Vector2(cx + cos(a) * r, cy + sin(a) * r))
-		container.add_child(circle)
+		drawing.add_child(circle)
 		# Cardinal lines
 		var pts: Array[Vector2] = [
 			Vector2(cx, cy - r * 1.3), Vector2(cx, cy - r * 0.4),  # N
@@ -307,7 +322,7 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 			line.default_color = ink
 			line.add_point(pts[i])
 			line.add_point(pts[i + 1])
-			container.add_child(line)
+			drawing.add_child(line)
 		# N/S/E/W diamond points
 		var diamond: Line2D = Line2D.new()
 		diamond.width = w * 0.8
@@ -317,7 +332,7 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 		diamond.add_point(Vector2(cx, cy + r * 0.4))
 		diamond.add_point(Vector2(cx - r * 0.4, cy))
 		diamond.add_point(Vector2(cx, cy - r * 0.4))
-		container.add_child(diamond)
+		drawing.add_child(diamond)
 
 	elif page_index == 1:
 		# Forest with trees and pond
@@ -326,7 +341,7 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 		ground.default_color = ink
 		ground.add_point(Vector2(10 * sf, h - 5 * sf))
 		ground.add_point(Vector2(280 * sf, h - 5 * sf))
-		container.add_child(ground)
+		drawing.add_child(ground)
 		# Trees (triangles on trunks)
 		var tree_positions: Array[float] = [40, 80, 130, 200, 250]
 		var tree_heights: Array[float] = [55, 65, 50, 60, 45]
@@ -340,7 +355,7 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 			trunk.default_color = ink
 			trunk.add_point(Vector2(tx, base_y))
 			trunk.add_point(Vector2(tx, base_y - th * 0.35))
-			container.add_child(trunk)
+			drawing.add_child(trunk)
 			# Canopy triangle
 			var canopy: Line2D = Line2D.new()
 			canopy.width = w
@@ -349,7 +364,7 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 			canopy.add_point(Vector2(tx, base_y - th))
 			canopy.add_point(Vector2(tx + 15 * sf, base_y - th * 0.3))
 			canopy.add_point(Vector2(tx - 15 * sf, base_y - th * 0.3))
-			container.add_child(canopy)
+			drawing.add_child(canopy)
 		# Pond (oval)
 		var pond: Line2D = Line2D.new()
 		pond.width = w
@@ -359,7 +374,7 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 		for i: int in range(25):
 			var a: float = i * TAU / 24.0
 			pond.add_point(Vector2(pcx + cos(a) * 25 * sf, pcy + sin(a) * 8 * sf))
-		container.add_child(pond)
+		drawing.add_child(pond)
 
 	elif page_index == 2:
 		# Cave entrance with crystals
@@ -370,13 +385,13 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 		ground.default_color = ink
 		ground.add_point(Vector2(10 * sf, base_y))
 		ground.add_point(Vector2(90 * sf, base_y))
-		container.add_child(ground)
+		drawing.add_child(ground)
 		var ground2: Line2D = Line2D.new()
 		ground2.width = w
 		ground2.default_color = ink
 		ground2.add_point(Vector2(200 * sf, base_y))
 		ground2.add_point(Vector2(280 * sf, base_y))
-		container.add_child(ground2)
+		drawing.add_child(ground2)
 		# Cave arch
 		var arch: Line2D = Line2D.new()
 		arch.width = w * 1.2
@@ -384,7 +399,7 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 		for i: int in range(21):
 			var a: float = PI + i * PI / 20.0
 			arch.add_point(Vector2(145 * sf + cos(a) * 55 * sf, base_y + sin(a) * 65 * sf))
-		container.add_child(arch)
+		drawing.add_child(arch)
 		# Crystals inside cave
 		var crystal_positions: Array[Vector2] = [
 			Vector2(120, 30), Vector2(135, 25), Vector2(155, 22),
@@ -398,7 +413,7 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 			crystal.add_point(Vector2((cp.x - 3) * sf, cp.y * sf))
 			crystal.add_point(Vector2((cp.x + 3) * sf, cp.y * sf))
 			crystal.add_point(Vector2(cp.x * sf, (cp.y + 12) * sf))
-			container.add_child(crystal)
+			drawing.add_child(crystal)
 		# Stalactites
 		for sx: float in [110, 130, 160, 180]:
 			var stal: Line2D = Line2D.new()
@@ -407,7 +422,7 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 			var top_y: float = base_y - 60 * sf + abs(sx - 145) * 0.3 * sf
 			stal.add_point(Vector2(sx * sf, top_y))
 			stal.add_point(Vector2(sx * sf, top_y + 10 * sf))
-			container.add_child(stal)
+			drawing.add_child(stal)
 
 	elif page_index == 3:
 		# Desert with palm trees and oasis
@@ -420,7 +435,7 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 			var x: float = (10 + i * 10) * sf
 			var y: float = base_y - sin(i * 0.6) * 8 * sf
 			dunes.add_point(Vector2(x, y))
-		container.add_child(dunes)
+		drawing.add_child(dunes)
 		# Palm trees
 		for px: float in [60, 180]:
 			# Curved trunk
@@ -432,7 +447,7 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 				var tx: float = px * sf + sin(t * 0.8) * 10 * sf
 				var ty: float = base_y - t * 55 * sf
 				trunk.add_point(Vector2(tx, ty))
-			container.add_child(trunk)
+			drawing.add_child(trunk)
 			# Fronds (3 drooping lines from top)
 			var top_x: float = px * sf + sin(0.8) * 10 * sf
 			var top_y: float = base_y - 55 * sf
@@ -443,7 +458,7 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 				frond.add_point(Vector2(top_x, top_y))
 				frond.add_point(Vector2(top_x + cos(angle_offset) * 25 * sf, top_y + 8 * sf))
 				frond.add_point(Vector2(top_x + cos(angle_offset) * 30 * sf, top_y + 18 * sf))
-				container.add_child(frond)
+				drawing.add_child(frond)
 		# Oasis pool
 		var oasis: Line2D = Line2D.new()
 		oasis.width = w
@@ -453,7 +468,7 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 		for i: int in range(25):
 			var a: float = i * TAU / 24.0
 			oasis.add_point(Vector2(ocx + cos(a) * 30 * sf, ocy + sin(a) * 10 * sf))
-		container.add_child(oasis)
+		drawing.add_child(oasis)
 		# Sun
 		var sun: Line2D = Line2D.new()
 		sun.width = w
@@ -464,7 +479,7 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 		for i: int in range(17):
 			var a: float = i * TAU / 16.0
 			sun.add_point(Vector2(scx + cos(a) * sr, scy + sin(a) * sr))
-		container.add_child(sun)
+		drawing.add_child(sun)
 		# Sun rays
 		for i: int in range(8):
 			var a: float = i * TAU / 8.0
@@ -473,7 +488,7 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 			ray.default_color = ink
 			ray.add_point(Vector2(scx + cos(a) * sr * 1.3, scy + sin(a) * sr * 1.3))
 			ray.add_point(Vector2(scx + cos(a) * sr * 1.8, scy + sin(a) * sr * 1.8))
-			container.add_child(ray)
+			drawing.add_child(ray)
 
 	elif page_index == 4:
 		# Mountain peaks with hang glider
@@ -484,7 +499,7 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 		ground.default_color = ink
 		ground.add_point(Vector2(10 * sf, base_y))
 		ground.add_point(Vector2(280 * sf, base_y))
-		container.add_child(ground)
+		drawing.add_child(ground)
 		# Mountain range
 		var mountains: Line2D = Line2D.new()
 		mountains.width = w
@@ -497,7 +512,7 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 		mountains.add_point(Vector2(190 * sf, base_y - 60 * sf))
 		mountains.add_point(Vector2(230 * sf, base_y - 35 * sf))
 		mountains.add_point(Vector2(280 * sf, base_y))
-		container.add_child(mountains)
+		drawing.add_child(mountains)
 		# Snow caps (small V marks on peaks)
 		for peak: Vector2 in [Vector2(120, -70), Vector2(190, -60), Vector2(50, -50)]:
 			var cap: Line2D = Line2D.new()
@@ -508,7 +523,7 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 			cap.add_point(Vector2(peak_x - 8 * sf, peak_y + 10 * sf))
 			cap.add_point(Vector2(peak_x, peak_y))
 			cap.add_point(Vector2(peak_x + 8 * sf, peak_y + 10 * sf))
-			container.add_child(cap)
+			drawing.add_child(cap)
 		# Hang glider
 		var gx: float = 210 * sf
 		var gy: float = 15 * sf
@@ -518,14 +533,14 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 		glider.add_point(Vector2(gx - 20 * sf, gy + 5 * sf))
 		glider.add_point(Vector2(gx, gy))
 		glider.add_point(Vector2(gx + 20 * sf, gy + 5 * sf))
-		container.add_child(glider)
+		drawing.add_child(glider)
 		# Pilot hanging below
 		var pilot: Line2D = Line2D.new()
 		pilot.width = w * 0.8
 		pilot.default_color = ink
 		pilot.add_point(Vector2(gx, gy))
 		pilot.add_point(Vector2(gx, gy + 12 * sf))
-		container.add_child(pilot)
+		drawing.add_child(pilot)
 
 	elif page_index == 5:
 		# Book on pedestal in water (sinkhole)
@@ -539,7 +554,7 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 				var x: float = (60 + i * 9) * sf
 				var y: float = ry + sin(i * 0.8 + ry * 0.01) * 2 * sf
 				ripple.add_point(Vector2(x, y))
-			container.add_child(ripple)
+			drawing.add_child(ripple)
 		# Pedestal
 		var pedestal: Line2D = Line2D.new()
 		pedestal.width = w
@@ -550,7 +565,7 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 		pedestal.add_point(Vector2(165 * sf, base_y))
 		pedestal.add_point(Vector2(120 * sf, base_y))
 		pedestal.add_point(Vector2(170 * sf, base_y))
-		container.add_child(pedestal)
+		drawing.add_child(pedestal)
 		# Book on top
 		var book: Line2D = Line2D.new()
 		book.width = w
@@ -560,14 +575,14 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 		book.add_point(Vector2(145 * sf, base_y - 32 * sf))
 		book.add_point(Vector2(160 * sf, base_y - 30 * sf))
 		book.add_point(Vector2(160 * sf, base_y - 20 * sf))
-		container.add_child(book)
+		drawing.add_child(book)
 		# Book spine
 		var spine: Line2D = Line2D.new()
 		spine.width = w * 0.6
 		spine.default_color = ink
 		spine.add_point(Vector2(145 * sf, base_y - 32 * sf))
 		spine.add_point(Vector2(145 * sf, base_y - 20 * sf))
-		container.add_child(spine)
+		drawing.add_child(spine)
 		# Glow lines radiating from book
 		for i: int in range(5):
 			var a: float = -PI * 0.8 + i * PI * 0.6 / 4.0
@@ -576,7 +591,7 @@ func _build_illustration(page_index: int, sf: float) -> Control:
 			glow.default_color = Color(ink.r, ink.g, ink.b, 0.35)
 			glow.add_point(Vector2(145 * sf + cos(a) * 18 * sf, (base_y - 26 * sf) + sin(a) * 18 * sf))
 			glow.add_point(Vector2(145 * sf + cos(a) * 28 * sf, (base_y - 26 * sf) + sin(a) * 28 * sf))
-			container.add_child(glow)
+			drawing.add_child(glow)
 
 	else:
 		# No illustration for recipe pages
