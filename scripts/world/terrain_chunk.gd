@@ -1017,6 +1017,11 @@ func _spawn_chunk_trees() -> void:
 				z += tree_grid_size
 				continue
 
+			# Skip if near trail landmark
+			if chunk_manager.is_near_trail_landmark(world_x, world_z):
+				z += tree_grid_size
+				continue
+
 			# Get region type and tree multiplier
 			var region: ChunkManager.RegionType = chunk_manager.get_region_at(world_x, world_z)
 			var tree_multiplier: float = chunk_manager.get_vegetation_multiplier(region, "tree")
@@ -1266,8 +1271,8 @@ func _spawn_chunk_resources() -> void:
 				z += resource_grid_size
 				continue
 
-			# Skip if near sinkhole
-			if chunk_manager.is_near_sinkhole(res_x, res_z):
+			# Skip if near sinkhole or trail landmark
+			if chunk_manager.is_near_sinkhole(res_x, res_z) or chunk_manager.is_near_trail_landmark(res_x, res_z):
 				z += resource_grid_size
 				continue
 

@@ -78,6 +78,20 @@ var pocket_desert_blend: float = 15.0  # Transition zone width
 var rock_spire_spawned: bool = false
 var rock_spire_position: Vector2 = Vector2.ZERO  # Computed in _ready
 
+# Trail home landmarks
+var carved_tree_script: GDScript
+var stone_cairn_script: GDScript
+var trail_signpost_script: GDScript
+
+var carved_tree_spawned: bool = false
+var stone_cairn_spawned: bool = false
+var trail_signpost_spawned: bool = false
+
+# Pre-computed positions (set in _ready)
+var carved_tree_position: Vector2 = Vector2.ZERO
+var stone_cairn_position: Vector2 = Vector2.ZERO
+var trail_signpost_position: Vector2 = Vector2.ZERO
+
 # Region-specific pond sizes {radius_min, radius_max, depth}
 var region_pond_params: Dictionary = {
 	RegionType.MEADOW: {"radius_min": 10.0, "radius_max": 14.0, "depth": 2.5},
@@ -993,6 +1007,29 @@ func _generate_desert_sinkhole() -> void:
 
 	print("[ChunkManager] Generated desert sinkhole at (%.0f, %.0f) in pocket desert" % [snapped_x, snapped_z])
 
+	# Trail home landmark positions (far-out, with slight seed-based variation)
+	var trail_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	trail_rng.seed = noise_seed + 7777
+
+	carved_tree_position = Vector2(
+		roundf((trail_rng.randf_range(-20, 20)) / cell_size) * cell_size,
+		roundf((-300.0 + trail_rng.randf_range(-15, 15)) / cell_size) * cell_size
+	)
+	stone_cairn_position = Vector2(
+		roundf((280.0 + trail_rng.randf_range(-20, 20)) / cell_size) * cell_size,
+		roundf((-280.0 + trail_rng.randf_range(-15, 15)) / cell_size) * cell_size
+	)
+	trail_signpost_position = Vector2(
+		roundf((350.0 + trail_rng.randf_range(-15, 15)) / cell_size) * cell_size,
+		roundf((-350.0 + trail_rng.randf_range(-15, 15)) / cell_size) * cell_size
+	)
+
+	print("[ChunkManager] Trail landmarks: tree=(%.0f,%.0f) cairn=(%.0f,%.0f) signpost=(%.0f,%.0f)" % [
+		carved_tree_position.x, carved_tree_position.y,
+		stone_cairn_position.x, stone_cairn_position.y,
+		trail_signpost_position.x, trail_signpost_position.y
+	])
+
 
 func is_near_sinkhole(world_x: float, world_z: float, buffer: float = 12.0) -> bool:
 	## Check if a world position is near the desert sinkhole or rock spire (for vegetation suppression)
@@ -1004,6 +1041,24 @@ func is_near_sinkhole(world_x: float, world_z: float, buffer: float = 12.0) -> b
 	# Also suppress vegetation near rock spire
 	var spire_dist: float = Vector2(world_x - rock_spire_position.x, world_z - rock_spire_position.y).length()
 	return spire_dist < 6.0
+
+
+func is_near_trail_landmark(world_x: float, world_z: float) -> bool:
+	## Returns true if position is within clearing radius of any trail landmark.
+	var clear_radius: float = 6.0
+	if carved_tree_position != Vector2.ZERO:
+		var dist: float = Vector2(world_x - carved_tree_position.x, world_z - carved_tree_position.y).length()
+		if dist < clear_radius:
+			return true
+	if stone_cairn_position != Vector2.ZERO:
+		var dist: float = Vector2(world_x - stone_cairn_position.x, world_z - stone_cairn_position.y).length()
+		if dist < clear_radius:
+			return true
+	if trail_signpost_position != Vector2.ZERO:
+		var dist: float = Vector2(world_x - trail_signpost_position.x, world_z - trail_signpost_position.y).length()
+		if dist < clear_radius:
+			return true
+	return false
 
 
 func _spawn_sinkhole_contents() -> void:
@@ -1400,6 +1455,11 @@ func _load_scenes() -> void:
 
 	# Load explorer's journal pickup script (sinkhole easter egg)
 	sinkhole_book_script = load("res://scripts/world/explorers_journal_pickup.gd")
+
+	# Load trail home landmark scripts
+	carved_tree_script = load("res://scripts/world/trail_carved_tree.gd")
+	stone_cairn_script = load("res://scripts/world/trail_stone_cairn.gd")
+	trail_signpost_script = load("res://scripts/world/trail_signpost.gd")
 
 	if not tree_scene:
 		push_warning("[ChunkManager] Failed to load tree scene")
@@ -1972,6 +2032,22 @@ func _load_chunk(chunk_coord: Vector2i) -> void:
 	# Spawn wilderness sign near spawn
 	_spawn_wilderness_sign(chunk_min_x, chunk_max_x, chunk_min_z, chunk_max_z)
 
+	# Spawn trail home landmarks
+	if not carved_tree_spawned:
+		if carved_tree_position.x >= chunk_min_x and carved_tree_position.x < chunk_max_x and \
+		   carved_tree_position.y >= chunk_min_z and carved_tree_position.y < chunk_max_z:
+			_spawn_trail_carved_tree()
+
+	if not stone_cairn_spawned:
+		if stone_cairn_position.x >= chunk_min_x and stone_cairn_position.x < chunk_max_x and \
+		   stone_cairn_position.y >= chunk_min_z and stone_cairn_position.y < chunk_max_z:
+			_spawn_trail_stone_cairn()
+
+	if not trail_signpost_spawned:
+		if trail_signpost_position.x >= chunk_min_x and trail_signpost_position.x < chunk_max_x and \
+		   trail_signpost_position.y >= chunk_min_z and trail_signpost_position.y < chunk_max_z:
+			_spawn_trail_signpost()
+
 
 func _unload_chunk(chunk_coord: Vector2i) -> void:
 	if not loaded_chunks.has(chunk_coord):
@@ -2495,6 +2571,47 @@ func _find_flat_spot_for_sign() -> Vector2:
 				best_variance = variance
 				best_candidate = Vector2(cx, cz)
 	return best_candidate
+
+
+func _spawn_trail_carved_tree() -> void:
+	if carved_tree_spawned or not carved_tree_script:
+		return
+	var node: StaticBody3D = StaticBody3D.new()
+	node.set_script(carved_tree_script)
+	node.name = "TrailCarvedTree"
+	var terrain_y: float = get_height_at(carved_tree_position.x, carved_tree_position.y)
+	node.position = Vector3(carved_tree_position.x, terrain_y, carved_tree_position.y)
+	add_child(node)
+	carved_tree_spawned = true
+	print("[ChunkManager] Spawned trail carved tree at (%.0f, %.0f)" % [carved_tree_position.x, carved_tree_position.y])
+
+
+func _spawn_trail_stone_cairn() -> void:
+	if stone_cairn_spawned or not stone_cairn_script:
+		return
+	var node: StaticBody3D = StaticBody3D.new()
+	node.set_script(stone_cairn_script)
+	node.name = "TrailStoneCairn"
+	var terrain_y: float = get_height_at(stone_cairn_position.x, stone_cairn_position.y)
+	node.position = Vector3(stone_cairn_position.x, terrain_y, stone_cairn_position.y)
+	add_child(node)
+	stone_cairn_spawned = true
+	print("[ChunkManager] Spawned trail stone cairn at (%.0f, %.0f)" % [stone_cairn_position.x, stone_cairn_position.y])
+
+
+func _spawn_trail_signpost() -> void:
+	if trail_signpost_spawned or not trail_signpost_script:
+		return
+	var node: StaticBody3D = StaticBody3D.new()
+	node.set_script(trail_signpost_script)
+	node.name = "TrailSignpost"
+	var terrain_y: float = get_height_at(trail_signpost_position.x, trail_signpost_position.y)
+	node.position = Vector3(trail_signpost_position.x, terrain_y, trail_signpost_position.y)
+	# Face back toward spawn (so the player sees the sign facing them)
+	node.rotation.y = atan2(-trail_signpost_position.x, -trail_signpost_position.y)
+	add_child(node)
+	trail_signpost_spawned = true
+	print("[ChunkManager] Spawned trail signpost at (%.0f, %.0f)" % [trail_signpost_position.x, trail_signpost_position.y])
 
 
 # Debug info
