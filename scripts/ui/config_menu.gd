@@ -34,6 +34,7 @@ var day_length_minutes: float = 20.0
 var music_enabled: bool = true
 var music_volume: float = 90.0  # 0-100
 var dev_mode_enabled: bool = false
+var screen_brightness: float = 1.0  # 0.5 to 1.5 (1.0 = default)
 
 # UI References
 @onready var panel: PanelContainer = $Panel
@@ -68,6 +69,10 @@ var slot_buttons: Array[Button] = []
 # UI Scale
 var ui_scale_slider: HSlider
 var ui_scale_label: Label
+
+# Screen Brightness
+var brightness_slider: HSlider
+var brightness_label: Label
 
 # Controller navigation
 var focused_control_index: int = 0
@@ -110,6 +115,9 @@ func _ready() -> void:
 
 	# Create UI scale control
 	_create_ui_scale_control()
+
+	# Create brightness control
+	_create_brightness_control()
 
 	# Create slot selection panel
 	_create_slot_panel()
@@ -254,6 +262,72 @@ func _on_ui_scale_changed(value: float) -> void:
 	var game_state: Node = get_node_or_null("/root/GameState")
 	if game_state and game_state.has_method("set_ui_scale"):
 		game_state.set_ui_scale(value)
+
+
+## Create the Screen Brightness slider programmatically and insert it before the hint label.
+func _create_brightness_control() -> void:
+	var vbox: VBoxContainer = panel.get_node("VBoxContainer")
+	var font: Font = load("res://resources/hud_font.tres")
+
+	# Separator before Brightness
+	var sep := HSeparator.new()
+	sep.name = "BrightnessSeparator"
+
+	# Container
+	var container := HBoxContainer.new()
+	container.name = "BrightnessContainer"
+	container.add_theme_constant_override("separation", 10)
+
+	# Name label
+	var name_label := Label.new()
+	name_label.text = "Brightness"
+	name_label.add_theme_font_override("font", font)
+	name_label.add_theme_font_size_override("font_size", 32)
+	name_label.custom_minimum_size.x = 200
+	container.add_child(name_label)
+
+	# Slider
+	brightness_slider = HSlider.new()
+	brightness_slider.min_value = 0.5
+	brightness_slider.max_value = 1.5
+	brightness_slider.step = 0.05
+	brightness_slider.value = screen_brightness
+	brightness_slider.custom_minimum_size.x = 200
+	brightness_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	container.add_child(brightness_slider)
+
+	# Value label
+	brightness_label = Label.new()
+	brightness_label.text = "%.0f%%" % (screen_brightness * 100)
+	brightness_label.add_theme_font_override("font", font)
+	brightness_label.add_theme_font_size_override("font_size", 28)
+	brightness_label.custom_minimum_size.x = 80
+	container.add_child(brightness_label)
+
+	# Insert before the hint separator
+	var hint_sep: Node = vbox.get_node_or_null("HSeparator4")
+	var insert_idx: int
+	if hint_sep:
+		insert_idx = hint_sep.get_index()
+	else:
+		insert_idx = vbox.get_child_count()
+	vbox.add_child(sep)
+	vbox.move_child(sep, insert_idx)
+	vbox.add_child(container)
+	vbox.move_child(container, insert_idx + 1)
+
+	# Connect
+	brightness_slider.value_changed.connect(_on_brightness_changed)
+
+	# Rebuild focusable controls
+	_build_focusable_controls()
+
+
+func _on_brightness_changed(value: float) -> void:
+	screen_brightness = value
+	if brightness_label:
+		brightness_label.text = "%.0f%%" % (value * 100)
+	_apply_brightness()
 
 
 ## Create the slot selection panel programmatically.
@@ -631,7 +705,17 @@ func _apply_config() -> void:
 		music_manager.set_music_enabled(music_enabled)
 		music_manager.set_volume(music_volume / 100.0)
 
+	# Apply brightness
+	_apply_brightness()
+
 	config_changed.emit()
+
+
+func _apply_brightness() -> void:
+	var env_mgr: Node = get_node_or_null("../EnvironmentManager")
+	if env_mgr and env_mgr is WorldEnvironment and env_mgr.environment:
+		env_mgr.environment.adjustment_enabled = true
+		env_mgr.environment.adjustment_brightness = screen_brightness
 
 
 ## Get current config as dictionary.
@@ -648,7 +732,8 @@ func get_config() -> Dictionary:
 		"day_length_minutes": day_length_minutes,
 		"music_enabled": music_enabled,
 		"music_volume": music_volume,
-		"dev_mode_enabled": dev_mode_enabled
+		"dev_mode_enabled": dev_mode_enabled,
+		"screen_brightness": screen_brightness
 	}
 
 
@@ -666,6 +751,7 @@ func apply_config(data: Dictionary) -> void:
 	music_enabled = data.get("music_enabled", true)
 	music_volume = data.get("music_volume", 90.0)
 	dev_mode_enabled = data.get("dev_mode_enabled", false)
+	screen_brightness = data.get("screen_brightness", 1.0)
 	# Update UI sliders/toggles
 	if hunger_toggle:
 		hunger_toggle.button_pressed = hunger_enabled
@@ -697,6 +783,10 @@ func apply_config(data: Dictionary) -> void:
 		music_volume_label.text = "%.0f%%" % music_volume
 	if dev_mode_toggle:
 		dev_mode_toggle.button_pressed = dev_mode_enabled
+	if brightness_slider:
+		brightness_slider.value = screen_brightness
+	if brightness_label:
+		brightness_label.text = "%.0f%%" % (screen_brightness * 100)
 	_apply_config()
 
 
@@ -846,6 +936,8 @@ func _build_focusable_controls() -> void:
 		focusable_controls.append(music_toggle)
 	if music_volume_slider:
 		focusable_controls.append(music_volume_slider)
+	if brightness_slider:
+		focusable_controls.append(brightness_slider)
 	if ui_scale_slider:
 		focusable_controls.append(ui_scale_slider)
 
