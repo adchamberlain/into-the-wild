@@ -28,10 +28,9 @@ var _selected_index: int = 0
 var _yes_label: Label
 var _no_label: Label
 
-# Colors for selection highlighting
-const COLOR_GOLD: Color = Color(1, 0.85, 0.3, 1)
-const COLOR_GREY: Color = Color(0.6, 0.6, 0.6, 1)
-const COLOR_WHITE: Color = Color(0.9, 0.9, 0.9, 1)
+# Colors for selection highlighting (park-sign style)
+const COLOR_SELECTED: Color = Color(0.15, 0.10, 0.02)  # Dark brown, bold
+const COLOR_UNSELECTED: Color = Color(0.50, 0.45, 0.35)  # Faded brown
 
 
 func _ready() -> void:
@@ -171,88 +170,121 @@ func _build_overlay() -> void:
 	overlay_layer.visible = false
 	add_child(overlay_layer)
 
-	# Semi-transparent dark background
+	# Semi-transparent dark green background (matching wilderness sign)
 	var bg: ColorRect = ColorRect.new()
-	bg.color = Color(0.05, 0.05, 0.08, 0.75)
+	bg.color = Color(0.05, 0.10, 0.04, 0.65)
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	overlay_layer.add_child(bg)
 
-	# Centered panel
-	var panel: PanelContainer = PanelContainer.new()
-	var panel_style: StyleBoxFlat = StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.1, 0.1, 0.12, 0.8)
-	panel_style.corner_radius_top_left = 10
-	panel_style.corner_radius_top_right = 10
-	panel_style.corner_radius_bottom_left = 10
-	panel_style.corner_radius_bottom_right = 10
-	panel_style.content_margin_left = 20.0
-	panel_style.content_margin_right = 20.0
-	panel_style.content_margin_top = 20.0
-	panel_style.content_margin_bottom = 20.0
-	panel.add_theme_stylebox_override("panel", panel_style)
-	panel.anchor_left = 0.2
-	panel.anchor_right = 0.8
-	panel.anchor_top = 0.15
-	panel.anchor_bottom = 0.85
-	panel.offset_left = 0.0
-	panel.offset_right = 0.0
-	panel.offset_top = 0.0
-	panel.offset_bottom = 0.0
-	overlay_layer.add_child(panel)
+	# Outer panel - forest green (matching wilderness sign)
+	var outer_panel: PanelContainer = PanelContainer.new()
+	var outer_style: StyleBoxFlat = StyleBoxFlat.new()
+	outer_style.bg_color = Color(0.15, 0.22, 0.12)
+	outer_style.corner_radius_top_left = 12
+	outer_style.corner_radius_top_right = 12
+	outer_style.corner_radius_bottom_left = 12
+	outer_style.corner_radius_bottom_right = 12
+	outer_style.content_margin_left = 40.0
+	outer_style.content_margin_right = 40.0
+	outer_style.content_margin_top = 30.0
+	outer_style.content_margin_bottom = 30.0
+	outer_panel.add_theme_stylebox_override("panel", outer_style)
+	outer_panel.anchor_left = 0.1
+	outer_panel.anchor_right = 0.9
+	outer_panel.anchor_top = 0.05
+	outer_panel.anchor_bottom = 0.95
+	outer_panel.offset_left = 0.0
+	outer_panel.offset_right = 0.0
+	outer_panel.offset_top = 0.0
+	outer_panel.offset_bottom = 0.0
+	overlay_layer.add_child(outer_panel)
+
+	# Inner panel - tan/cream (matching wilderness sign)
+	var inner_panel: PanelContainer = PanelContainer.new()
+	var inner_style: StyleBoxFlat = StyleBoxFlat.new()
+	inner_style.bg_color = Color(0.72, 0.68, 0.55)
+	inner_style.corner_radius_top_left = 8
+	inner_style.corner_radius_top_right = 8
+	inner_style.corner_radius_bottom_left = 8
+	inner_style.corner_radius_bottom_right = 8
+	inner_style.content_margin_left = 40.0
+	inner_style.content_margin_right = 40.0
+	inner_style.content_margin_top = 30.0
+	inner_style.content_margin_bottom = 30.0
+	inner_panel.add_theme_stylebox_override("panel", inner_style)
+	outer_panel.add_child(inner_panel)
+
+	# Dark brown text color (matching wilderness sign)
+	var text_color: Color = Color(0.30, 0.18, 0.05)
+	var hint_color: Color = Color(0.45, 0.40, 0.30)
 
 	# Content VBox
 	var vbox: VBoxContainer = VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 16)
-	panel.add_child(vbox)
+	inner_panel.add_child(vbox)
 
-	# Title: "The Old Signpost"
+	# Title: "TRAILHEAD"
 	var title: Label = Label.new()
-	title.text = "The Old Signpost"
+	title.text = "TRAILHEAD"
 	title.add_theme_font_override("font", HUD_FONT)
-	title.add_theme_font_size_override("font_size", 48)
-	title.add_theme_color_override("font_color", COLOR_GOLD)
+	title.add_theme_font_size_override("font_size", 56)
+	title.add_theme_color_override("font_color", text_color)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)
 
+	# Separator
+	var sep1: HSeparator = HSeparator.new()
+	var sep_style: StyleBoxFlat = StyleBoxFlat.new()
+	sep_style.bg_color = Color(0.30, 0.18, 0.05, 0.5)
+	sep_style.content_margin_top = 2.0
+	sep_style.content_margin_bottom = 2.0
+	sep1.add_theme_stylebox_override("separator", sep_style)
+	vbox.add_child(sep1)
+
 	# Spacer
 	var spacer_top: Control = Control.new()
-	spacer_top.custom_minimum_size = Vector2(0, 12)
+	spacer_top.custom_minimum_size = Vector2(0, 8)
 	vbox.add_child(spacer_top)
 
 	# Direction line 1: wilderness (backward)
 	var dir1: Label = Label.new()
-	dir1.text = "\u2190 Carlston Wilderness"
+	dir1.text = "\u2190  Carlston Wilderness"
 	dir1.add_theme_font_override("font", HUD_FONT)
-	dir1.add_theme_font_size_override("font_size", 32)
-	dir1.add_theme_color_override("font_color", COLOR_WHITE)
+	dir1.add_theme_font_size_override("font_size", 36)
+	dir1.add_theme_color_override("font_color", text_color)
 	dir1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(dir1)
 
 	# Direction line 2: Oakland (forward)
 	var dir2: Label = Label.new()
-	dir2.text = "Longridge Road, Oakland, California \u2014 225 miles \u2192"
+	dir2.text = "Longridge Road, Oakland, California \u2014 225 miles  \u2192"
 	dir2.add_theme_font_override("font", HUD_FONT)
-	dir2.add_theme_font_size_override("font_size", 32)
-	dir2.add_theme_color_override("font_color", COLOR_WHITE)
+	dir2.add_theme_font_size_override("font_size", 36)
+	dir2.add_theme_color_override("font_color", text_color)
 	dir2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	dir2.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	vbox.add_child(dir2)
 
+	# Spacer
+	var spacer_dirs: Control = Control.new()
+	spacer_dirs.custom_minimum_size = Vector2(0, 12)
+	vbox.add_child(spacer_dirs)
+
 	# Separator
-	var sep: HSeparator = HSeparator.new()
-	var sep_style: StyleBoxFlat = StyleBoxFlat.new()
-	sep_style.bg_color = Color(0.4, 0.4, 0.4, 0.5)
-	sep_style.content_margin_top = 2.0
-	sep_style.content_margin_bottom = 2.0
-	sep.add_theme_stylebox_override("separator", sep_style)
-	vbox.add_child(sep)
+	var sep2: HSeparator = HSeparator.new()
+	var sep_style2: StyleBoxFlat = StyleBoxFlat.new()
+	sep_style2.bg_color = Color(0.30, 0.18, 0.05, 0.5)
+	sep_style2.content_margin_top = 2.0
+	sep_style2.content_margin_bottom = 2.0
+	sep2.add_theme_stylebox_override("separator", sep_style2)
+	vbox.add_child(sep2)
 
 	# Body text
 	var body: Label = Label.new()
 	body.text = "The wood is weathered but the letters are still clear. Someone carved this sign a long time ago. This is the way home."
 	body.add_theme_font_override("font", HUD_FONT)
-	body.add_theme_font_size_override("font_size", 28)
-	body.add_theme_color_override("font_color", COLOR_GREY)
+	body.add_theme_font_size_override("font_size", 32)
+	body.add_theme_color_override("font_color", text_color)
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	vbox.add_child(body)
 
@@ -263,19 +295,19 @@ func _build_overlay() -> void:
 
 	# Choice: "Yes, head home"
 	_yes_label = Label.new()
-	_yes_label.text = "[ Yes, head home ]"
+	_yes_label.text = "\u25b6  Yes, head home"
 	_yes_label.add_theme_font_override("font", HUD_FONT)
-	_yes_label.add_theme_font_size_override("font_size", 32)
-	_yes_label.add_theme_color_override("font_color", COLOR_GOLD)
+	_yes_label.add_theme_font_size_override("font_size", 40)
+	_yes_label.add_theme_color_override("font_color", COLOR_SELECTED)
 	_yes_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_yes_label)
 
 	# Choice: "Not yet"
 	_no_label = Label.new()
-	_no_label.text = "[ Not yet ]"
+	_no_label.text = "   Not yet"
 	_no_label.add_theme_font_override("font", HUD_FONT)
-	_no_label.add_theme_font_size_override("font_size", 32)
-	_no_label.add_theme_color_override("font_color", COLOR_GREY)
+	_no_label.add_theme_font_size_override("font_size", 40)
+	_no_label.add_theme_color_override("font_color", COLOR_UNSELECTED)
 	_no_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_no_label)
 
@@ -286,21 +318,32 @@ func _build_overlay() -> void:
 
 	# Navigation hint
 	var hint: Label = Label.new()
-	hint.text = "[\u2191/\u2193] Select  [Enter] Confirm"
 	hint.add_theme_font_override("font", HUD_FONT)
-	hint.add_theme_font_size_override("font_size", 24)
-	hint.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5, 1))
+	hint.add_theme_font_size_override("font_size", 28)
+	hint.add_theme_color_override("font_color", hint_color)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(hint)
+
+	# Update hint with current input device
+	var input_mgr: Node = get_node_or_null("/root/InputManager")
+	var up_key: String = "\u2191/\u2193"
+	var confirm_key: String = "Enter"
+	if input_mgr and input_mgr.has_method("get_prompt"):
+		confirm_key = input_mgr.get_prompt("ui_accept")
+	hint.text = "[%s] Select  [%s] Confirm" % [up_key, confirm_key]
 
 
 func _update_selection_visuals() -> void:
 	if _yes_label:
+		_yes_label.text = ("\u25b6  Yes, head home" if _selected_index == 0
+			else "   Yes, head home")
 		_yes_label.add_theme_color_override("font_color",
-			COLOR_GOLD if _selected_index == 0 else COLOR_GREY)
+			COLOR_SELECTED if _selected_index == 0 else COLOR_UNSELECTED)
 	if _no_label:
+		_no_label.text = ("\u25b6  Not yet" if _selected_index == 1
+			else "   Not yet")
 		_no_label.add_theme_color_override("font_color",
-			COLOR_GOLD if _selected_index == 1 else COLOR_GREY)
+			COLOR_SELECTED if _selected_index == 1 else COLOR_UNSELECTED)
 
 
 ## Get the text to show in interaction prompt.
