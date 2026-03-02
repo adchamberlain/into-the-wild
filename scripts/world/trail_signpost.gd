@@ -279,16 +279,22 @@ func _build_overlay() -> void:
 	sep2.add_theme_stylebox_override("separator", sep_style2)
 	vbox.add_child(sep2)
 
-	# Body text
+	# Expanding spacer above body text to center it vertically
+	var spacer_top: Control = Control.new()
+	spacer_top.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(spacer_top)
+
+	# Body text — centered, larger
 	var body: Label = Label.new()
 	body.text = "The wood is weathered but the letters are still clear. Someone carved this sign a long time ago. This is the way home."
 	body.add_theme_font_override("font", HUD_FONT)
-	body.add_theme_font_size_override("font_size", 32)
+	body.add_theme_font_size_override("font_size", 40)
 	body.add_theme_color_override("font_color", text_color)
+	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	vbox.add_child(body)
 
-	# Expanding spacer to push choices to bottom area
+	# Expanding spacer below body text
 	var spacer_mid: Control = Control.new()
 	spacer_mid.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(spacer_mid)
