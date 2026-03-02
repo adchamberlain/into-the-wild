@@ -271,6 +271,319 @@ func _build_ui() -> void:
 	_populate_page()
 
 
+## Build a line-drawing illustration for the given page index.
+## Returns null for pages with no illustration (recipe pages).
+func _build_illustration(page_index: int, sf: float) -> Control:
+	var ink: Color = Color(0.35, 0.25, 0.12, 0.55)
+	var w: float = 2.0 * sf
+	var container: Control = Control.new()
+	var h: float = 90 * sf
+	container.custom_minimum_size = Vector2(0, h)
+
+	if page_index == 0:
+		# Compass rose
+		var cx: float = 140 * sf
+		var cy: float = h * 0.5
+		var r: float = 30 * sf
+		# Outer circle
+		var circle: Line2D = Line2D.new()
+		circle.width = w
+		circle.default_color = ink
+		for i: int in range(33):
+			var a: float = i * TAU / 32.0
+			circle.add_point(Vector2(cx + cos(a) * r, cy + sin(a) * r))
+		container.add_child(circle)
+		# Cardinal lines
+		var pts: Array[Vector2] = [
+			Vector2(cx, cy - r * 1.3), Vector2(cx, cy - r * 0.4),  # N
+			Vector2(cx, cy + r * 0.4), Vector2(cx, cy + r * 1.3),  # S
+			Vector2(cx - r * 1.3, cy), Vector2(cx - r * 0.4, cy),  # W
+			Vector2(cx + r * 0.4, cy), Vector2(cx + r * 1.3, cy),  # E
+		]
+		for i: int in range(0, pts.size(), 2):
+			var line: Line2D = Line2D.new()
+			line.width = w
+			line.default_color = ink
+			line.add_point(pts[i])
+			line.add_point(pts[i + 1])
+			container.add_child(line)
+		# N/S/E/W diamond points
+		var diamond: Line2D = Line2D.new()
+		diamond.width = w * 0.8
+		diamond.default_color = ink
+		diamond.add_point(Vector2(cx, cy - r * 0.4))
+		diamond.add_point(Vector2(cx + r * 0.4, cy))
+		diamond.add_point(Vector2(cx, cy + r * 0.4))
+		diamond.add_point(Vector2(cx - r * 0.4, cy))
+		diamond.add_point(Vector2(cx, cy - r * 0.4))
+		container.add_child(diamond)
+
+	elif page_index == 1:
+		# Forest with trees and pond
+		var ground: Line2D = Line2D.new()
+		ground.width = w
+		ground.default_color = ink
+		ground.add_point(Vector2(10 * sf, h - 5 * sf))
+		ground.add_point(Vector2(280 * sf, h - 5 * sf))
+		container.add_child(ground)
+		# Trees (triangles on trunks)
+		var tree_positions: Array[float] = [40, 80, 130, 200, 250]
+		var tree_heights: Array[float] = [55, 65, 50, 60, 45]
+		for i: int in range(tree_positions.size()):
+			var tx: float = tree_positions[i] * sf
+			var th: float = tree_heights[i] * sf
+			var base_y: float = h - 5 * sf
+			# Trunk
+			var trunk: Line2D = Line2D.new()
+			trunk.width = w
+			trunk.default_color = ink
+			trunk.add_point(Vector2(tx, base_y))
+			trunk.add_point(Vector2(tx, base_y - th * 0.35))
+			container.add_child(trunk)
+			# Canopy triangle
+			var canopy: Line2D = Line2D.new()
+			canopy.width = w
+			canopy.default_color = ink
+			canopy.add_point(Vector2(tx - 15 * sf, base_y - th * 0.3))
+			canopy.add_point(Vector2(tx, base_y - th))
+			canopy.add_point(Vector2(tx + 15 * sf, base_y - th * 0.3))
+			canopy.add_point(Vector2(tx - 15 * sf, base_y - th * 0.3))
+			container.add_child(canopy)
+		# Pond (oval)
+		var pond: Line2D = Line2D.new()
+		pond.width = w
+		pond.default_color = ink
+		var pcx: float = 165 * sf
+		var pcy: float = h - 8 * sf
+		for i: int in range(25):
+			var a: float = i * TAU / 24.0
+			pond.add_point(Vector2(pcx + cos(a) * 25 * sf, pcy + sin(a) * 8 * sf))
+		container.add_child(pond)
+
+	elif page_index == 2:
+		# Cave entrance with crystals
+		var base_y: float = h - 5 * sf
+		# Ground
+		var ground: Line2D = Line2D.new()
+		ground.width = w
+		ground.default_color = ink
+		ground.add_point(Vector2(10 * sf, base_y))
+		ground.add_point(Vector2(90 * sf, base_y))
+		container.add_child(ground)
+		var ground2: Line2D = Line2D.new()
+		ground2.width = w
+		ground2.default_color = ink
+		ground2.add_point(Vector2(200 * sf, base_y))
+		ground2.add_point(Vector2(280 * sf, base_y))
+		container.add_child(ground2)
+		# Cave arch
+		var arch: Line2D = Line2D.new()
+		arch.width = w * 1.2
+		arch.default_color = ink
+		for i: int in range(21):
+			var a: float = PI + i * PI / 20.0
+			arch.add_point(Vector2(145 * sf + cos(a) * 55 * sf, base_y + sin(a) * 65 * sf))
+		container.add_child(arch)
+		# Crystals inside cave
+		var crystal_positions: Array[Vector2] = [
+			Vector2(120, 30), Vector2(135, 25), Vector2(155, 22),
+			Vector2(170, 28), Vector2(145, 40),
+		]
+		for cp: Vector2 in crystal_positions:
+			var crystal: Line2D = Line2D.new()
+			crystal.width = w * 0.8
+			crystal.default_color = ink
+			crystal.add_point(Vector2(cp.x * sf, (cp.y + 12) * sf))
+			crystal.add_point(Vector2((cp.x - 3) * sf, cp.y * sf))
+			crystal.add_point(Vector2((cp.x + 3) * sf, cp.y * sf))
+			crystal.add_point(Vector2(cp.x * sf, (cp.y + 12) * sf))
+			container.add_child(crystal)
+		# Stalactites
+		for sx: float in [110, 130, 160, 180]:
+			var stal: Line2D = Line2D.new()
+			stal.width = w * 0.6
+			stal.default_color = ink
+			var top_y: float = base_y - 60 * sf + abs(sx - 145) * 0.3 * sf
+			stal.add_point(Vector2(sx * sf, top_y))
+			stal.add_point(Vector2(sx * sf, top_y + 10 * sf))
+			container.add_child(stal)
+
+	elif page_index == 3:
+		# Desert with palm trees and oasis
+		var base_y: float = h - 5 * sf
+		# Wavy sand dunes
+		var dunes: Line2D = Line2D.new()
+		dunes.width = w
+		dunes.default_color = ink
+		for i: int in range(29):
+			var x: float = (10 + i * 10) * sf
+			var y: float = base_y - sin(i * 0.6) * 8 * sf
+			dunes.add_point(Vector2(x, y))
+		container.add_child(dunes)
+		# Palm trees
+		for px: float in [60, 180]:
+			# Curved trunk
+			var trunk: Line2D = Line2D.new()
+			trunk.width = w
+			trunk.default_color = ink
+			for i: int in range(9):
+				var t: float = i / 8.0
+				var tx: float = px * sf + sin(t * 0.8) * 10 * sf
+				var ty: float = base_y - t * 55 * sf
+				trunk.add_point(Vector2(tx, ty))
+			container.add_child(trunk)
+			# Fronds (3 drooping lines from top)
+			var top_x: float = px * sf + sin(0.8) * 10 * sf
+			var top_y: float = base_y - 55 * sf
+			for angle_offset: float in [-0.8, 0.0, 0.8]:
+				var frond: Line2D = Line2D.new()
+				frond.width = w * 0.8
+				frond.default_color = ink
+				frond.add_point(Vector2(top_x, top_y))
+				frond.add_point(Vector2(top_x + cos(angle_offset) * 25 * sf, top_y + 8 * sf))
+				frond.add_point(Vector2(top_x + cos(angle_offset) * 30 * sf, top_y + 18 * sf))
+				container.add_child(frond)
+		# Oasis pool
+		var oasis: Line2D = Line2D.new()
+		oasis.width = w
+		oasis.default_color = ink
+		var ocx: float = 120 * sf
+		var ocy: float = base_y - 3 * sf
+		for i: int in range(25):
+			var a: float = i * TAU / 24.0
+			oasis.add_point(Vector2(ocx + cos(a) * 30 * sf, ocy + sin(a) * 10 * sf))
+		container.add_child(oasis)
+		# Sun
+		var sun: Line2D = Line2D.new()
+		sun.width = w
+		sun.default_color = ink
+		var scx: float = 240 * sf
+		var scy: float = 18 * sf
+		var sr: float = 12 * sf
+		for i: int in range(17):
+			var a: float = i * TAU / 16.0
+			sun.add_point(Vector2(scx + cos(a) * sr, scy + sin(a) * sr))
+		container.add_child(sun)
+		# Sun rays
+		for i: int in range(8):
+			var a: float = i * TAU / 8.0
+			var ray: Line2D = Line2D.new()
+			ray.width = w * 0.6
+			ray.default_color = ink
+			ray.add_point(Vector2(scx + cos(a) * sr * 1.3, scy + sin(a) * sr * 1.3))
+			ray.add_point(Vector2(scx + cos(a) * sr * 1.8, scy + sin(a) * sr * 1.8))
+			container.add_child(ray)
+
+	elif page_index == 4:
+		# Mountain peaks with hang glider
+		var base_y: float = h - 5 * sf
+		# Ground
+		var ground: Line2D = Line2D.new()
+		ground.width = w
+		ground.default_color = ink
+		ground.add_point(Vector2(10 * sf, base_y))
+		ground.add_point(Vector2(280 * sf, base_y))
+		container.add_child(ground)
+		# Mountain range
+		var mountains: Line2D = Line2D.new()
+		mountains.width = w
+		mountains.default_color = ink
+		mountains.add_point(Vector2(10 * sf, base_y))
+		mountains.add_point(Vector2(50 * sf, base_y - 50 * sf))
+		mountains.add_point(Vector2(80 * sf, base_y - 30 * sf))
+		mountains.add_point(Vector2(120 * sf, base_y - 70 * sf))
+		mountains.add_point(Vector2(150 * sf, base_y - 45 * sf))
+		mountains.add_point(Vector2(190 * sf, base_y - 60 * sf))
+		mountains.add_point(Vector2(230 * sf, base_y - 35 * sf))
+		mountains.add_point(Vector2(280 * sf, base_y))
+		container.add_child(mountains)
+		# Snow caps (small V marks on peaks)
+		for peak: Vector2 in [Vector2(120, -70), Vector2(190, -60), Vector2(50, -50)]:
+			var cap: Line2D = Line2D.new()
+			cap.width = w * 0.7
+			cap.default_color = ink
+			var peak_x: float = peak.x * sf
+			var peak_y: float = base_y + peak.y * sf
+			cap.add_point(Vector2(peak_x - 8 * sf, peak_y + 10 * sf))
+			cap.add_point(Vector2(peak_x, peak_y))
+			cap.add_point(Vector2(peak_x + 8 * sf, peak_y + 10 * sf))
+			container.add_child(cap)
+		# Hang glider
+		var gx: float = 210 * sf
+		var gy: float = 15 * sf
+		var glider: Line2D = Line2D.new()
+		glider.width = w
+		glider.default_color = ink
+		glider.add_point(Vector2(gx - 20 * sf, gy + 5 * sf))
+		glider.add_point(Vector2(gx, gy))
+		glider.add_point(Vector2(gx + 20 * sf, gy + 5 * sf))
+		container.add_child(glider)
+		# Pilot hanging below
+		var pilot: Line2D = Line2D.new()
+		pilot.width = w * 0.8
+		pilot.default_color = ink
+		pilot.add_point(Vector2(gx, gy))
+		pilot.add_point(Vector2(gx, gy + 12 * sf))
+		container.add_child(pilot)
+
+	elif page_index == 5:
+		# Book on pedestal in water (sinkhole)
+		var base_y: float = h - 5 * sf
+		# Water surface ripples
+		for ry: float in [base_y - 35 * sf, base_y - 30 * sf, base_y - 25 * sf]:
+			var ripple: Line2D = Line2D.new()
+			ripple.width = w * 0.6
+			ripple.default_color = ink
+			for i: int in range(21):
+				var x: float = (60 + i * 9) * sf
+				var y: float = ry + sin(i * 0.8 + ry * 0.01) * 2 * sf
+				ripple.add_point(Vector2(x, y))
+			container.add_child(ripple)
+		# Pedestal
+		var pedestal: Line2D = Line2D.new()
+		pedestal.width = w
+		pedestal.default_color = ink
+		pedestal.add_point(Vector2(125 * sf, base_y))
+		pedestal.add_point(Vector2(125 * sf, base_y - 20 * sf))
+		pedestal.add_point(Vector2(165 * sf, base_y - 20 * sf))
+		pedestal.add_point(Vector2(165 * sf, base_y))
+		pedestal.add_point(Vector2(120 * sf, base_y))
+		pedestal.add_point(Vector2(170 * sf, base_y))
+		container.add_child(pedestal)
+		# Book on top
+		var book: Line2D = Line2D.new()
+		book.width = w
+		book.default_color = ink
+		book.add_point(Vector2(130 * sf, base_y - 20 * sf))
+		book.add_point(Vector2(130 * sf, base_y - 30 * sf))
+		book.add_point(Vector2(145 * sf, base_y - 32 * sf))
+		book.add_point(Vector2(160 * sf, base_y - 30 * sf))
+		book.add_point(Vector2(160 * sf, base_y - 20 * sf))
+		container.add_child(book)
+		# Book spine
+		var spine: Line2D = Line2D.new()
+		spine.width = w * 0.6
+		spine.default_color = ink
+		spine.add_point(Vector2(145 * sf, base_y - 32 * sf))
+		spine.add_point(Vector2(145 * sf, base_y - 20 * sf))
+		container.add_child(spine)
+		# Glow lines radiating from book
+		for i: int in range(5):
+			var a: float = -PI * 0.8 + i * PI * 0.6 / 4.0
+			var glow: Line2D = Line2D.new()
+			glow.width = w * 0.5
+			glow.default_color = Color(ink.r, ink.g, ink.b, 0.35)
+			glow.add_point(Vector2(145 * sf + cos(a) * 18 * sf, (base_y - 26 * sf) + sin(a) * 18 * sf))
+			glow.add_point(Vector2(145 * sf + cos(a) * 28 * sf, (base_y - 26 * sf) + sin(a) * 28 * sf))
+			container.add_child(glow)
+
+	else:
+		# No illustration for recipe pages
+		return null
+
+	return container
+
+
 func _populate_page() -> void:
 	if not is_instance_valid(_left_vbox) or not is_instance_valid(_right_vbox):
 		return
@@ -325,132 +638,10 @@ func _populate_page() -> void:
 		left_body.add_theme_color_override("font_color", Color(0.45, 0.32, 0.15, 0.7))
 		_left_vbox.add_child(left_body)
 
-		# --- DEMO: 3 sketch style comparisons ---
-		var sketch_ink: Color = Color(0.35, 0.25, 0.12, 0.7)
-
-		# Style 1: ASCII Art
-		var ascii_label_hdr: Label = Label.new()
-		ascii_label_hdr.text = "Style 1: ASCII Art"
-		ascii_label_hdr.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		ascii_label_hdr.add_theme_font_override("font", font)
-		ascii_label_hdr.add_theme_font_size_override("font_size", int(14 * sf))
-		ascii_label_hdr.add_theme_color_override("font_color", sketch_ink)
-		_left_vbox.add_child(ascii_label_hdr)
-
-		var ascii_art: Label = Label.new()
-		ascii_art.text = "        /\\          \n       /  \\    /\\   \n      /    \\  /  \\  \n     /      \\/    \\ \n    /  ~~  /\\     \\\n___/______/  \\____\\\n  ^^^  ^^   ^^^  ^"
-		ascii_art.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		ascii_art.add_theme_font_override("font", font)
-		ascii_art.add_theme_font_size_override("font_size", int(12 * sf))
-		ascii_art.add_theme_color_override("font_color", sketch_ink)
-		_left_vbox.add_child(ascii_art)
-
-		# Style 2: Line2D Drawing
-		var line_label_hdr: Label = Label.new()
-		line_label_hdr.text = "Style 2: Line Drawing"
-		line_label_hdr.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		line_label_hdr.add_theme_font_override("font", font)
-		line_label_hdr.add_theme_font_size_override("font_size", int(14 * sf))
-		line_label_hdr.add_theme_color_override("font_color", sketch_ink)
-		_left_vbox.add_child(line_label_hdr)
-
-		var line_container: Control = Control.new()
-		line_container.custom_minimum_size = Vector2(0, 80 * sf)
-		# Mountain outline
-		var mountain_line: Line2D = Line2D.new()
-		mountain_line.width = 2.0 * sf
-		mountain_line.default_color = sketch_ink
-		var cx: float = line_container.custom_minimum_size.x * 0.5
-		var h: float = 80 * sf
-		mountain_line.add_point(Vector2(20 * sf, h))
-		mountain_line.add_point(Vector2(80 * sf, 15 * sf))
-		mountain_line.add_point(Vector2(110 * sf, 35 * sf))
-		mountain_line.add_point(Vector2(140 * sf, 10 * sf))
-		mountain_line.add_point(Vector2(200 * sf, h))
-		line_container.add_child(mountain_line)
-		# Sun circle
-		var sun_line: Line2D = Line2D.new()
-		sun_line.width = 2.0 * sf
-		sun_line.default_color = sketch_ink
-		var sun_cx: float = 240 * sf
-		var sun_cy: float = 25 * sf
-		var sun_r: float = 12 * sf
-		for i: int in range(17):
-			var angle: float = i * TAU / 16.0
-			sun_line.add_point(Vector2(sun_cx + cos(angle) * sun_r, sun_cy + sin(angle) * sun_r))
-		line_container.add_child(sun_line)
-		# Trees
-		var tree_line: Line2D = Line2D.new()
-		tree_line.width = 2.0 * sf
-		tree_line.default_color = sketch_ink
-		# Tree 1
-		tree_line.add_point(Vector2(45 * sf, h))
-		tree_line.add_point(Vector2(45 * sf, h - 20 * sf))
-		tree_line.add_point(Vector2(35 * sf, h - 15 * sf))
-		tree_line.add_point(Vector2(45 * sf, h - 30 * sf))
-		tree_line.add_point(Vector2(55 * sf, h - 15 * sf))
-		tree_line.add_point(Vector2(45 * sf, h - 20 * sf))
-		line_container.add_child(tree_line)
-		# Ground line
-		var ground_line: Line2D = Line2D.new()
-		ground_line.width = 1.5 * sf
-		ground_line.default_color = sketch_ink
-		ground_line.add_point(Vector2(10 * sf, h))
-		ground_line.add_point(Vector2(270 * sf, h))
-		line_container.add_child(ground_line)
-		_left_vbox.add_child(line_container)
-
-		# Style 3: Pixel Mosaic
-		var pixel_label_hdr: Label = Label.new()
-		pixel_label_hdr.text = "Style 3: Pixel Mosaic"
-		pixel_label_hdr.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		pixel_label_hdr.add_theme_font_override("font", font)
-		pixel_label_hdr.add_theme_font_size_override("font_size", int(14 * sf))
-		pixel_label_hdr.add_theme_color_override("font_color", sketch_ink)
-		_left_vbox.add_child(pixel_label_hdr)
-
-		var pixel_container: Control = Control.new()
-		pixel_container.custom_minimum_size = Vector2(0, 80 * sf)
-		var px: float = 6 * sf  # pixel size
-		# Mountain colors
-		var rock_color: Color = Color(0.40, 0.30, 0.18, 0.8)
-		var peak_color: Color = Color(0.55, 0.45, 0.30, 0.8)
-		var snow_color: Color = Color(0.75, 0.70, 0.55, 0.6)
-		var tree_color: Color = Color(0.25, 0.35, 0.15, 0.8)
-		var sky_sun_color: Color = Color(0.65, 0.55, 0.25, 0.5)
-		# Mountain shape (each row from top)
-		var mountain_pixels: Array = [
-			# row, col, color  (row 0 = top)
-			[0, 8, snow_color],
-			[1, 7, peak_color], [1, 8, snow_color], [1, 9, peak_color],
-			[2, 6, peak_color], [2, 7, peak_color], [2, 8, peak_color], [2, 9, peak_color], [2, 10, peak_color],
-			[2, 16, snow_color],
-			[3, 5, rock_color], [3, 6, rock_color], [3, 7, peak_color], [3, 8, peak_color], [3, 9, peak_color], [3, 10, rock_color], [3, 11, rock_color],
-			[3, 15, peak_color], [3, 16, snow_color], [3, 17, peak_color],
-			[4, 4, rock_color], [4, 5, rock_color], [4, 6, rock_color], [4, 7, rock_color], [4, 8, rock_color], [4, 9, rock_color], [4, 10, rock_color], [4, 11, rock_color], [4, 12, rock_color],
-			[4, 14, rock_color], [4, 15, peak_color], [4, 16, peak_color], [4, 17, peak_color], [4, 18, rock_color],
-			[5, 3, rock_color], [5, 4, rock_color], [5, 5, rock_color], [5, 6, rock_color], [5, 7, rock_color], [5, 8, rock_color], [5, 9, rock_color], [5, 10, rock_color], [5, 11, rock_color], [5, 12, rock_color], [5, 13, rock_color], [5, 14, rock_color], [5, 15, rock_color], [5, 16, rock_color], [5, 17, rock_color], [5, 18, rock_color], [5, 19, rock_color],
-			# Trees at base
-			[6, 2, tree_color], [6, 4, tree_color], [6, 5, tree_color], [6, 19, tree_color], [6, 21, tree_color],
-			[7, 1, tree_color], [7, 2, tree_color], [7, 3, tree_color], [7, 4, tree_color], [7, 5, tree_color], [7, 6, tree_color], [7, 19, tree_color], [7, 20, tree_color], [7, 21, tree_color], [7, 22, tree_color],
-			# Sun
-			[0, 22, sky_sun_color], [0, 23, sky_sun_color],
-			[1, 22, sky_sun_color], [1, 23, sky_sun_color],
-		]
-		var offset_x: float = 40 * sf
-		var offset_y: float = 5 * sf
-		for pixel_data: Array in mountain_pixels:
-			var rect: ColorRect = ColorRect.new()
-			rect.color = pixel_data[2]
-			rect.position = Vector2(offset_x + pixel_data[1] * px, offset_y + pixel_data[0] * px)
-			rect.size = Vector2(px, px)
-			pixel_container.add_child(rect)
-		_left_vbox.add_child(pixel_container)
-
-		# Spacer to push demos down
-		var spacer: Control = Control.new()
-		spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		_left_vbox.add_child(spacer)
+		# Illustration
+		var illustration: Control = _build_illustration(_current_page, sf)
+		if illustration:
+			_left_vbox.add_child(illustration)
 
 	elif page.is_recipe_page:
 		# Header label
@@ -513,6 +704,12 @@ func _populate_page() -> void:
 	right_body.add_theme_color_override("font_color", ink_color)
 	right_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_right_vbox.add_child(right_body)
+
+	# Illustration on right page (diary pages only, not title or recipe)
+	if not page.is_title_page and not page.is_recipe_page:
+		var right_illus: Control = _build_illustration(_current_page, sf)
+		if right_illus:
+			_right_vbox.add_child(right_illus)
 
 	# --- Navigation bar at bottom of right page ---
 	var nav_hbox: HBoxContainer = HBoxContainer.new()
