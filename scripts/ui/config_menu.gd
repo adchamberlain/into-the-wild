@@ -936,10 +936,10 @@ func _build_focusable_controls() -> void:
 		focusable_controls.append(music_toggle)
 	if music_volume_slider:
 		focusable_controls.append(music_volume_slider)
-	if brightness_slider:
-		focusable_controls.append(brightness_slider)
 	if ui_scale_slider:
 		focusable_controls.append(ui_scale_slider)
+	if brightness_slider:
+		focusable_controls.append(brightness_slider)
 
 
 ## Navigate through controls with D-pad.
