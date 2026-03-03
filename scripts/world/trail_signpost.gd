@@ -281,9 +281,9 @@ func _build_overlay() -> void:
 	vbox.add_child(sep2)
 
 	# Expanding spacer above body text to center it vertically
-	var spacer_top: Control = Control.new()
-	spacer_top.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	vbox.add_child(spacer_top)
+	var spacer_body_top: Control = Control.new()
+	spacer_body_top.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(spacer_body_top)
 
 	# Body text — centered, larger
 	var body: Label = Label.new()
