@@ -1166,8 +1166,9 @@ func _build_kitchen_furniture() -> void:
 	var mat_bowl: StandardMaterial3D = StandardMaterial3D.new()
 	mat_bowl.albedo_color = Color(0.85, 0.82, 0.75)
 	mat_bowl.roughness = 0.5
+	var bowl_x: float = 1.8  # On main counter near left end
 	_box(self, Vector3(0.2, 0.1, 0.2),
-		Vector3(return_x, 0.97, 8.3), mat_bowl)
+		Vector3(bowl_x, 0.97, counter_z), mat_bowl)
 	# Fruit (small colored boxes in bowl)
 	var mat_apple: StandardMaterial3D = StandardMaterial3D.new()
 	mat_apple.albedo_color = Color(0.7, 0.15, 0.1)
@@ -1176,11 +1177,11 @@ func _build_kitchen_furniture() -> void:
 	mat_banana.albedo_color = Color(0.9, 0.8, 0.2)
 	mat_banana.roughness = 0.8
 	_box(self, Vector3(0.06, 0.06, 0.06),
-		Vector3(return_x - 0.03, 1.05, 8.27), mat_apple)
+		Vector3(bowl_x - 0.03, 1.05, counter_z - 0.03), mat_apple)
 	_box(self, Vector3(0.06, 0.06, 0.06),
-		Vector3(return_x + 0.04, 1.05, 8.32), mat_apple)
+		Vector3(bowl_x + 0.04, 1.05, counter_z + 0.02), mat_apple)
 	_box(self, Vector3(0.04, 0.04, 0.12),
-		Vector3(return_x, 1.04, 8.3), mat_banana)
+		Vector3(bowl_x, 1.04, counter_z), mat_banana)
 
 
 func _add_granite_speckle(center: Vector3, area: Vector3) -> void:
