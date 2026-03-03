@@ -490,7 +490,11 @@ func _update_slot_panel() -> void:
 			if i < delete_buttons.size():
 				delete_buttons[i].visible = false
 		else:
-			btn.text = "Slot %d: Level %d - %s" % [i + 1, info["campsite_level"], info["formatted_time"]]
+			var location: String = info.get("player_location", "wilderness")
+			if location == "house":
+				btn.text = "Slot %d: House - %s" % [i + 1, info["formatted_time"]]
+			else:
+				btn.text = "Slot %d: Level %d - %s" % [i + 1, info["campsite_level"], info["formatted_time"]]
 			btn.disabled = false
 			if i < delete_buttons.size():
 				delete_buttons[i].visible = true

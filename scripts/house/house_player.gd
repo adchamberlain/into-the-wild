@@ -11,6 +11,11 @@ const INTERACT_COOLDOWN: float = 0.15
 const CAMERA_PITCH_MIN: float = -89.0
 const CAMERA_PITCH_MAX: float = 89.0
 const FOOTSTEP_INTERVAL: float = 0.45
+const CROUCH_SPEED: float = 2.5
+const CROUCH_HEIGHT: float = 0.9
+const STAND_HEIGHT: float = 1.8
+const CROUCH_CAMERA_Y: float = 0.8
+const JUMP_VELOCITY: float = 5.5
 
 const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 
@@ -18,11 +23,15 @@ var _camera: Camera3D
 var _interaction_raycast: RayCast3D
 var _current_target: Node = null
 var _is_resting: bool = false
+var is_crouching: bool = false
 
 # Interaction prompt UI
 var _prompt_canvas: CanvasLayer
 var _prompt_panel: PanelContainer
 var _prompt_label: Label
+var _crosshair_canvas: CanvasLayer
+var _crosshair_label: Label
+var _col_shape: CollisionShape3D
 
 # Timers
 var _interaction_check_timer: float = 0.0
@@ -37,12 +46,12 @@ func _ready() -> void:
 	add_to_group("player")
 
 	# Create collision shape (same as wilderness player)
-	var col_shape: CollisionShape3D = CollisionShape3D.new()
+	_col_shape = CollisionShape3D.new()
 	var box_shape: BoxShape3D = BoxShape3D.new()
 	box_shape.size = Vector3(0.6, 1.8, 0.6)
-	col_shape.shape = box_shape
-	col_shape.position = Vector3(0, 0.9, 0)
-	add_child(col_shape)
+	_col_shape.shape = box_shape
+	_col_shape.position = Vector3(0, 0.9, 0)
+	add_child(_col_shape)
 
 	# Create camera
 	_camera = Camera3D.new()
@@ -63,6 +72,9 @@ func _ready() -> void:
 
 	# Create interaction prompt UI
 	_build_prompt_ui()
+
+	# Create crosshair
+	_build_crosshair()
 
 
 func _build_prompt_ui() -> void:
@@ -103,6 +115,24 @@ func _build_prompt_ui() -> void:
 	_prompt_panel.add_child(_prompt_label)
 
 
+func _build_crosshair() -> void:
+	_crosshair_canvas = CanvasLayer.new()
+	_crosshair_canvas.layer = 50
+	add_child(_crosshair_canvas)
+
+	_crosshair_label = Label.new()
+	_crosshair_label.text = "+"
+	_crosshair_label.add_theme_font_override("font", HUD_FONT)
+	_crosshair_label.add_theme_font_size_override("font_size", 24)
+	_crosshair_label.add_theme_color_override("font_color", Color(1, 1, 1, 0.7))
+	_crosshair_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_crosshair_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_crosshair_label.set_anchors_preset(Control.PRESET_CENTER)
+	_crosshair_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_crosshair_label.grow_vertical = Control.GROW_DIRECTION_BOTH
+	_crosshair_canvas.add_child(_crosshair_label)
+
+
 func _input(event: InputEvent) -> void:
 	# Handle mouse capture on click
 	if event is InputEventMouseButton:
@@ -122,6 +152,22 @@ func _input(event: InputEvent) -> void:
 			return
 		_interact_cooldown_timer = INTERACT_COOLDOWN
 		_try_interact()
+		return
+
+	# Handle crouch toggle
+	if event.is_action_pressed("crouch") and not _is_resting:
+		_toggle_crouch()
+		return
+
+	# Handle jump
+	if event.is_action_pressed("jump") and not _is_resting:
+		if is_on_floor():
+			if is_crouching:
+				if _can_stand_up():
+					_toggle_crouch()
+					velocity.y = JUMP_VELOCITY
+			else:
+				velocity.y = JUMP_VELOCITY
 		return
 
 	# Handle escape to uncapture mouse
@@ -170,20 +216,27 @@ func _physics_process(delta: float) -> void:
 		if velocity.y < 0:
 			velocity.y = 0
 
-	# Get movement input (WASD only, no sprint, no jump)
+	# Determine current movement speed
+	var move_speed: float = CROUCH_SPEED if is_crouching else WALK_SPEED
+
+	# Get movement input (WASD only, no sprint)
 	var input_dir: Vector2 = Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
 	var direction: Vector3 = Vector3.ZERO
 	if input_dir.length() > 0:
 		direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 
 	if direction.length() > 0:
-		velocity.x = direction.x * WALK_SPEED
-		velocity.z = direction.z * WALK_SPEED
+		velocity.x = direction.x * move_speed
+		velocity.z = direction.z * move_speed
 	else:
-		velocity.x = move_toward(velocity.x, 0, WALK_SPEED)
-		velocity.z = move_toward(velocity.z, 0, WALK_SPEED)
+		velocity.x = move_toward(velocity.x, 0, move_speed)
+		velocity.z = move_toward(velocity.z, 0, move_speed)
 
 	move_and_slide()
+
+	# Smoothly lerp camera Y for crouch/stand transitions
+	var target_cam_y: float = CROUCH_CAMERA_Y if is_crouching else 1.6
+	_camera.position.y = lerp(_camera.position.y, target_cam_y, 10.0 * delta)
 
 	# Footstep sounds on hardwood floors
 	var h_speed: float = Vector2(velocity.x, velocity.z).length()
@@ -264,3 +317,38 @@ func set_resting(val: bool, _source: Node = null) -> void:
 	if val:
 		_current_target = null
 		_prompt_panel.visible = false
+		_crosshair_label.visible = false
+	else:
+		_crosshair_label.visible = true
+
+
+func _toggle_crouch() -> void:
+	if is_crouching:
+		# Try to stand up — check clearance first
+		if not _can_stand_up():
+			return
+		is_crouching = false
+	else:
+		is_crouching = true
+	_update_crouch_collision()
+
+
+func _update_crouch_collision() -> void:
+	var box: BoxShape3D = _col_shape.shape as BoxShape3D
+	if is_crouching:
+		box.size = Vector3(0.6, CROUCH_HEIGHT, 0.6)
+		_col_shape.position = Vector3(0, CROUCH_HEIGHT / 2.0, 0)
+	else:
+		box.size = Vector3(0.6, STAND_HEIGHT, 0.6)
+		_col_shape.position = Vector3(0, STAND_HEIGHT / 2.0, 0)
+
+
+func _can_stand_up() -> bool:
+	# Raycast upward from current position to check if there is room to stand
+	var space_state: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+	var ray_origin: Vector3 = global_position + Vector3(0, CROUCH_HEIGHT, 0)
+	var ray_end: Vector3 = ray_origin + Vector3(0, STAND_HEIGHT - CROUCH_HEIGHT, 0)
+	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(ray_origin, ray_end)
+	query.exclude = [get_rid()]
+	var result: Dictionary = space_state.intersect_ray(query)
+	return result.is_empty()

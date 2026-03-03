@@ -14,7 +14,6 @@ const MAX_SELECTIONS: int = 5
 # UI references (built in code)
 var _bg_rect: ColorRect
 var _main_panel: PanelContainer
-var _scroll_container: ScrollContainer
 var _item_container: VBoxContainer
 var _counter_label: Label
 var _confirm_label: Label
@@ -35,6 +34,11 @@ var _input_manager: Node
 
 # Confirm pulse animation state
 var _pulse_time: float = 0.0
+
+# Confirmation dialog state
+var _showing_confirmation: bool = false
+var _confirm_dialog: PanelContainer = null
+var _confirm_cursor: int = 0  # 0 = Cancel, 1 = Confirm
 
 
 func _ready() -> void:
@@ -68,6 +72,26 @@ func _input(event: InputEvent) -> void:
 	if not is_open:
 		return
 
+	# Handle confirmation dialog input separately
+	if _showing_confirmation:
+		if event.is_action_pressed("ui_cancel"):
+			_dismiss_confirmation()
+			_handle_input()
+		elif event.is_action_pressed("ui_left") or event.is_action_pressed("ui_right"):
+			_confirm_cursor = 1 - _confirm_cursor
+			_update_confirmation_display()
+			SFXManager.play_sfx("select")
+			_handle_input()
+		elif event.is_action_pressed("ui_accept"):
+			if _confirm_cursor == 1:
+				_actually_depart()
+			else:
+				_dismiss_confirmation()
+			_handle_input()
+		elif event.is_action_pressed("jump"):
+			_handle_input()
+		return
+
 	if event.is_action_pressed("ui_cancel"):
 		close()
 		_handle_input()
@@ -81,7 +105,7 @@ func _input(event: InputEvent) -> void:
 		_handle_input()
 	elif event.is_action_pressed("ui_accept"):
 		if _on_confirm:
-			_confirm_departure()
+			_show_confirmation()
 		else:
 			_toggle_selection()
 		_handle_input()
@@ -141,7 +165,6 @@ func close() -> void:
 	_row_panels.clear()
 	_bg_rect = null
 	_main_panel = null
-	_scroll_container = null
 	_item_container = null
 	_counter_label = null
 	_confirm_label = null
@@ -176,9 +199,9 @@ func _build_ui() -> void:
 	panel_style.content_margin_bottom = 20
 	_main_panel.add_theme_stylebox_override("panel", panel_style)
 
-	# Position panel: anchors 0.15-0.85 horizontal, 0.08-0.92 vertical
-	_main_panel.anchor_left = 0.15
-	_main_panel.anchor_right = 0.85
+	# Position panel: centered, moderate width
+	_main_panel.anchor_left = 0.2
+	_main_panel.anchor_right = 0.8
 	_main_panel.anchor_top = 0.08
 	_main_panel.anchor_bottom = 0.92
 	_main_panel.offset_left = 0
@@ -224,16 +247,11 @@ func _build_ui() -> void:
 	sep.add_theme_constant_override("separation", 4)
 	vbox.add_child(sep)
 
-	# Scroll container for item list
-	_scroll_container = ScrollContainer.new()
-	_scroll_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_scroll_container.custom_minimum_size = Vector2(0, 100)
-	vbox.add_child(_scroll_container)
-
+	# Item grid container (centered, fills remaining vertical space)
 	_item_container = VBoxContainer.new()
-	_item_container.add_theme_constant_override("separation", 2)
+	_item_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_item_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_scroll_container.add_child(_item_container)
+	vbox.add_child(_item_container)
 
 	# Build item rows
 	_rebuild_item_rows()
@@ -283,7 +301,7 @@ func _build_ui() -> void:
 	_update_hint_label()
 
 
-## Rebuild item rows in the scroll container.
+## Rebuild item rows in a compact, centered multi-column grid.
 func _rebuild_item_rows() -> void:
 	# Clear existing rows
 	for child: Node in _item_container.get_children():
@@ -291,44 +309,74 @@ func _rebuild_item_rows() -> void:
 	_row_panels.clear()
 
 	var inventory: Dictionary = _get_journey_inventory()
+	var item_count: int = _available_items.size()
+	if item_count == 0:
+		return
 
-	for i: int in range(_available_items.size()):
+	# Calculate grid layout: max ~12 rows per column, add columns as needed
+	var max_rows_per_col: int = 12
+	var num_columns: int = ceili(float(item_count) / float(max_rows_per_col))
+	if num_columns < 1:
+		num_columns = 1
+	var rows_per_col: int = ceili(float(item_count) / float(num_columns))
+
+	# Centered columns container (shrinks to content width, centers in parent)
+	var columns_hbox: HBoxContainer = HBoxContainer.new()
+	columns_hbox.add_theme_constant_override("separation", 30)
+	columns_hbox.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	columns_hbox.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_item_container.add_child(columns_hbox)
+
+	# Create column VBoxes
+	var columns: Array[VBoxContainer] = []
+	for c: int in range(num_columns):
+		var col_vbox: VBoxContainer = VBoxContainer.new()
+		col_vbox.add_theme_constant_override("separation", 2)
+		columns_hbox.add_child(col_vbox)
+		columns.append(col_vbox)
+
+	# Distribute items across columns (column-major order)
+	for i: int in range(item_count):
+		var col_idx: int = i / rows_per_col
+		if col_idx >= num_columns:
+			col_idx = num_columns - 1
+
 		var item_type: String = _available_items[i]
 		var count: int = inventory.get(item_type, 0)
 		var is_focused: bool = (i == _cursor_index and not _on_confirm)
 		var is_selected: bool = _selected_items.has(item_type)
 
-		# Row panel with highlight background
+		# Row panel with highlight background when focused
 		var row_panel: PanelContainer = PanelContainer.new()
 		var row_style: StyleBoxFlat = StyleBoxFlat.new()
 		if is_focused:
 			row_style.bg_color = Color(0.25, 0.25, 0.35, 0.8)
 		else:
 			row_style.bg_color = Color(0, 0, 0, 0)
-		row_style.content_margin_left = 8
-		row_style.content_margin_right = 8
-		row_style.content_margin_top = 4
-		row_style.content_margin_bottom = 4
-		row_style.corner_radius_top_left = 6
-		row_style.corner_radius_top_right = 6
-		row_style.corner_radius_bottom_left = 6
-		row_style.corner_radius_bottom_right = 6
+		row_style.content_margin_left = 6
+		row_style.content_margin_right = 6
+		row_style.content_margin_top = 3
+		row_style.content_margin_bottom = 3
+		row_style.corner_radius_top_left = 4
+		row_style.corner_radius_top_right = 4
+		row_style.corner_radius_bottom_left = 4
+		row_style.corner_radius_bottom_right = 4
 		row_panel.add_theme_stylebox_override("panel", row_style)
 
 		var hbox: HBoxContainer = HBoxContainer.new()
-		hbox.add_theme_constant_override("separation", 8)
+		hbox.add_theme_constant_override("separation", 6)
 		row_panel.add_child(hbox)
 
-		# Cursor indicator
+		# Cursor indicator (compact)
 		var cursor_label: Label = Label.new()
 		cursor_label.text = ">" if is_focused else " "
 		cursor_label.add_theme_font_override("font", HUD_FONT)
-		cursor_label.add_theme_font_size_override("font_size", 28)
+		cursor_label.add_theme_font_size_override("font_size", 32)
 		cursor_label.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
-		cursor_label.custom_minimum_size = Vector2(20, 0)
+		cursor_label.custom_minimum_size = Vector2(18, 0)
 		hbox.add_child(cursor_label)
 
-		# Item name
+		# Item name (compact, no expand — stays close to count)
 		var name_label: Label = Label.new()
 		name_label.text = _get_display_name(item_type)
 		name_label.add_theme_font_override("font", HUD_FONT)
@@ -337,10 +385,9 @@ func _rebuild_item_rows() -> void:
 			name_label.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
 		else:
 			name_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9, 1))
-		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		hbox.add_child(name_label)
 
-		# Item count
+		# Item count (right next to name)
 		var count_label: Label = Label.new()
 		count_label.text = "x%d" % count
 		count_label.add_theme_font_override("font", HUD_FONT)
@@ -348,16 +395,7 @@ func _rebuild_item_rows() -> void:
 		count_label.add_theme_color_override("font_color", Color(0.6, 1.0, 0.6, 1))
 		hbox.add_child(count_label)
 
-		# Selection status
-		var status_label: Label = Label.new()
-		status_label.text = "[SELECTED]" if is_selected else ""
-		status_label.add_theme_font_override("font", HUD_FONT)
-		status_label.add_theme_font_size_override("font_size", 28)
-		status_label.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
-		status_label.custom_minimum_size = Vector2(160, 0)
-		hbox.add_child(status_label)
-
-		_item_container.add_child(row_panel)
+		columns[col_idx].add_child(row_panel)
 		_row_panels.append(row_panel)
 
 
@@ -457,19 +495,123 @@ func _update_confirm_style() -> void:
 		_confirm_label.add_theme_color_override("font_color", Color(0.8, 0.68, 0.25, 0.8))
 
 
-## Ensure the focused item row is scrolled into view.
+## No-op: multi-column grid doesn't need scrolling.
 func _ensure_focused_visible() -> void:
-	if _on_confirm or _row_panels.is_empty():
-		return
-	if _cursor_index < 0 or _cursor_index >= _row_panels.size():
-		return
-	var panel: PanelContainer = _row_panels[_cursor_index]
-	if is_instance_valid(panel) and is_instance_valid(_scroll_container):
-		_scroll_container.ensure_control_visible(panel)
+	pass
 
 
-## Confirm departure with selected items (any count including zero is fine).
-func _confirm_departure() -> void:
+## Show confirmation dialog before departing.
+func _show_confirmation() -> void:
+	if _showing_confirmation:
+		return
+	_showing_confirmation = true
+	_confirm_cursor = 0  # Default to "Cancel" for safety
+
+	_confirm_dialog = PanelContainer.new()
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.08, 0.1, 0.95)
+	style.corner_radius_top_left = 10
+	style.corner_radius_top_right = 10
+	style.corner_radius_bottom_left = 10
+	style.corner_radius_bottom_right = 10
+	style.content_margin_left = 30
+	style.content_margin_right = 30
+	style.content_margin_top = 20
+	style.content_margin_bottom = 20
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	style.border_color = Color(1, 0.85, 0.3, 0.6)
+	_confirm_dialog.add_theme_stylebox_override("panel", style)
+	_confirm_dialog.anchor_left = 0.3
+	_confirm_dialog.anchor_right = 0.7
+	_confirm_dialog.anchor_top = 0.35
+	_confirm_dialog.anchor_bottom = 0.65
+	_confirm_dialog.offset_left = 0
+	_confirm_dialog.offset_right = 0
+	_confirm_dialog.offset_top = 0
+	_confirm_dialog.offset_bottom = 0
+	add_child(_confirm_dialog)
+
+	var vbox: VBoxContainer = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 16)
+	_confirm_dialog.add_child(vbox)
+
+	var question: Label = Label.new()
+	question.text = "Are you sure you want to\nreturn to the Wilderness?"
+	question.add_theme_font_override("font", HUD_FONT)
+	question.add_theme_font_size_override("font_size", 36)
+	question.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9, 1))
+	question.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	question.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vbox.add_child(question)
+
+	var spacer: Control = Control.new()
+	spacer.custom_minimum_size = Vector2(0, 8)
+	vbox.add_child(spacer)
+
+	var buttons_hbox: HBoxContainer = HBoxContainer.new()
+	buttons_hbox.name = "ButtonsHBox"
+	buttons_hbox.add_theme_constant_override("separation", 30)
+	buttons_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_child(buttons_hbox)
+
+	# Cancel button
+	var cancel_label: Label = Label.new()
+	cancel_label.name = "CancelBtn"
+	cancel_label.text = "[ Stay Home ]"
+	cancel_label.add_theme_font_override("font", HUD_FONT)
+	cancel_label.add_theme_font_size_override("font_size", 32)
+	cancel_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	buttons_hbox.add_child(cancel_label)
+
+	# Depart button
+	var depart_label: Label = Label.new()
+	depart_label.name = "DepartBtn"
+	depart_label.text = "[ Depart ]"
+	depart_label.add_theme_font_override("font", HUD_FONT)
+	depart_label.add_theme_font_size_override("font_size", 32)
+	depart_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	buttons_hbox.add_child(depart_label)
+
+	_update_confirmation_display()
+	SFXManager.play_sfx("menu_open")
+
+
+## Update the visual highlight on confirmation buttons.
+func _update_confirmation_display() -> void:
+	if not is_instance_valid(_confirm_dialog):
+		return
+	var buttons: HBoxContainer = _confirm_dialog.find_child("ButtonsHBox") as HBoxContainer
+	if not buttons:
+		return
+	var cancel_btn: Label = buttons.find_child("CancelBtn") as Label
+	var depart_btn: Label = buttons.find_child("DepartBtn") as Label
+	if cancel_btn:
+		if _confirm_cursor == 0:
+			cancel_btn.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
+		else:
+			cancel_btn.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5, 1))
+	if depart_btn:
+		if _confirm_cursor == 1:
+			depart_btn.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
+		else:
+			depart_btn.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5, 1))
+
+
+## Dismiss the confirmation dialog and return to item selection.
+func _dismiss_confirmation() -> void:
+	_showing_confirmation = false
+	if is_instance_valid(_confirm_dialog):
+		_confirm_dialog.queue_free()
+	_confirm_dialog = null
+	SFXManager.play_sfx("menu_close")
+
+
+## Actually depart after confirmation.
+func _actually_depart() -> void:
+	_showing_confirmation = false
 
 	# Save to GameState
 	var game_state: Node = get_node_or_null("/root/GameState")

@@ -197,6 +197,25 @@ func load_game_slot(slot: int) -> bool:
 	if version != SAVE_VERSION:
 		push_warning("[SaveLoad] Save version mismatch (expected %d, got %d)" % [SAVE_VERSION, version])
 
+	# Check if save is from the house scene — transition to house instead of applying wilderness data
+	var player_location: String = save_data.get("player_location", "")
+	if player_location == "house":
+		print("[SaveLoad] Save is from house scene — transitioning to house")
+		var game_state: Node = get_node_or_null("/root/GameState")
+		if game_state:
+			game_state.journey_completed = true
+			game_state.pending_house_transition = true
+			# Restore trail progression if present
+			if save_data.has("trail"):
+				var trail: Dictionary = save_data["trail"]
+				game_state.trail_carved_tree_found = trail.get("carved_tree_found", false)
+				game_state.trail_stone_cairn_found = trail.get("stone_cairn_found", false)
+				game_state.trail_signpost_found = trail.get("signpost_found", false)
+		get_tree().paused = false
+		get_tree().change_scene_to_file("res://scenes/house/house.tscn")
+		game_loaded.emit(filepath, slot)
+		return true
+
 	# Check if world seed matches - if not, we need to reload the scene with correct seed
 	var saved_seed: int = save_data.get("world_seed", 0)
 	var current_seed: int = 0
@@ -287,12 +306,16 @@ func get_slot_info(slot: int) -> Dictionary:
 	var timestamp: String = save_data.get("timestamp", "")
 	var formatted_time: String = _format_timestamp(timestamp)
 
+	# Check if this is a house save
+	var player_location: String = save_data.get("player_location", "wilderness")
+
 	return {
 		"empty": false,
 		"slot": slot,
 		"timestamp": timestamp,
 		"campsite_level": campsite_level,
-		"formatted_time": formatted_time
+		"formatted_time": formatted_time,
+		"player_location": player_location
 	}
 
 

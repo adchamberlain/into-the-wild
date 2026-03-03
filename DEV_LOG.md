@@ -6509,6 +6509,64 @@ Major visual polish pass across the house interior and the trailhead endgame sig
 
 ---
 
+## Session 40: House Interior Batch Updates (2026-03-03)
+
+### What Was Built
+
+Large batch of house interior improvements driven by playtesting feedback. Many changes across furniture positioning, collision, UI, and player controller.
+
+#### Kitchen Rework
+- **Counter/stove shifted right** toward bedroom door: counter_x 1.75→2.45, stove_x 3.3→4.0. Closes the gap between stove and bedroom door area
+- **Wine fridge relocated** from center divider wall to north wall, left of counter. Rotated 90° so glass door faces -Z into kitchen. Added collision body
+- **Sink shifted right** with counter: sink_x 2.0→2.7, cutting board 2.6→3.3, fruit bowl 1.0→1.7
+- **Upper cabinets shifted right**: 0.9→1.6, range hood 3.3→4.0 (above stove)
+- **Counter/sink collision added**: Single StaticBody3D covering full counter run
+- **Stove collision added**: Separate StaticBody3D for stove
+- **Explorer's Journal on kitchen table**: Interactable book that opens the full journal UI, always available
+
+#### Living Room Furniture
+- **Cat portraits moved** from west wall to center divider wall (X=6) behind couch, facing -X into living room
+- **Interactable name plaques** added: Tuxedo cat = "Melvin" (left), Black cat = "Webster" (right), with brass nameplates
+- **Coffee table collision** added
+- **Armchair collision** added
+- **Kitchen table + chairs collision** added
+
+#### Crown Molding & Baseboards
+- **Baseboards split around all doorways**: Kitchen/LR doorway (X=2-4 at Z=5), center divider doorway (Z=6.75-8.25), bedroom doorway (X=4.5-5.5 at Z=10). Players no longer step over baseboards
+- **Doorway casing** already had sides + top only (verified correct)
+
+#### Wall Paintings
+- **Large east wall map moved to north wall**: Two maps now centered on dining room north wall at X=8.0 and X=10.0
+
+#### House Player Controller
+- **Crosshair** added: Centered "+" label on screen (white, semi-transparent)
+- **Crouch system**: Toggle on "crouch" action, reduces speed to 2.5, lowers collision box (0.9 height), camera lerps to Y=0.8, ceiling clearance check before standing
+- **Jump system**: JUMP_VELOCITY=5.5, auto-stand from crouch before jumping, gravity already handled
+
+#### House Pause Menu
+- **Save Game button** added between Resume and Quit to Desktop
+- Saves to slot 1 with player_location="house" marker
+- Shows green "Game Saved!" confirmation for 2 seconds
+- **Load system updated**: Detects house saves and transitions directly to house scene
+
+#### NG+ UI (from previous session, committed together)
+- **Redesigned to compact centered grid**: Multi-column layout, items no longer stretch full width
+- **Confirmation dialog**: "Are you sure?" modal before departing to wilderness
+- **Front door reopen fix**: Checks .is_open and cleans up stale instances
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/house/house_scene.gd` | Modified | Kitchen shifted right, wine fridge relocated, collision on counter/stove/table/chairs/armchair, cat portraits moved with plaques, baseboard splits, map painting moved, journal on kitchen table |
+| `scripts/house/house_player.gd` | Modified | Crosshair, crouch system, jump system |
+| `scripts/house/house_pause_menu.gd` | Modified | Save Game button, confirmation label, save to slot 1 |
+| `scripts/house/new_game_plus_ui.gd` | Modified | Compact grid layout, confirmation dialog, front door reopen fix |
+| `scripts/core/save_load.gd` | Modified | House save detection in load_game_slot(), house save display in get_slot_info() |
+| `scripts/ui/pause_menu.gd` | Modified | Display "House" for house saves in slot panel |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
