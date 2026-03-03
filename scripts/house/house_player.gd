@@ -73,10 +73,10 @@ func _build_prompt_ui() -> void:
 	# Anchor container at bottom-center
 	var anchor: Control = Control.new()
 	anchor.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	anchor.offset_top = -80.0
+	anchor.offset_top = -100.0
 	anchor.offset_bottom = -30.0
-	anchor.offset_left = -200.0
-	anchor.offset_right = 200.0
+	anchor.offset_left = -300.0
+	anchor.offset_right = 300.0
 	_prompt_canvas.add_child(anchor)
 
 	_prompt_panel = PanelContainer.new()
@@ -86,10 +86,10 @@ func _build_prompt_ui() -> void:
 	style.corner_radius_top_right = 8
 	style.corner_radius_bottom_left = 8
 	style.corner_radius_bottom_right = 8
-	style.content_margin_left = 16.0
-	style.content_margin_right = 16.0
-	style.content_margin_top = 8.0
-	style.content_margin_bottom = 8.0
+	style.content_margin_left = 24.0
+	style.content_margin_right = 24.0
+	style.content_margin_top = 12.0
+	style.content_margin_bottom = 12.0
 	_prompt_panel.add_theme_stylebox_override("panel", style)
 	_prompt_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_prompt_panel.visible = false
@@ -97,7 +97,7 @@ func _build_prompt_ui() -> void:
 
 	_prompt_label = Label.new()
 	_prompt_label.add_theme_font_override("font", HUD_FONT)
-	_prompt_label.add_theme_font_size_override("font_size", 28)
+	_prompt_label.add_theme_font_size_override("font_size", 40)
 	_prompt_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9, 1))
 	_prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_prompt_panel.add_child(_prompt_label)

@@ -80,6 +80,7 @@ func _ready() -> void:
 	_build_exterior_walls()
 	_build_interior_walls()
 	_build_crown_molding()
+	_build_doorway_molding()
 	_build_hardwood_planks()
 	_build_windows()
 	_build_front_door()
@@ -363,14 +364,14 @@ func _build_exterior_walls() -> void:
 	south.name = "SouthWall"
 	add_child(south)
 	var door_x: float = 2.0
-	var dls: float = door_x - 0.5   # 1.5 — left edge of door
-	var drs: float = door_x + 0.5   # 2.5 — right edge of door
+	var dls: float = door_x - 0.6   # 1.4 — left edge of door
+	var drs: float = door_x + 0.6   # 2.6 — right edge of door
 	var w1l: float = 4.5 - WIN_WIDTH / 2.0   # 3.9
 	var w1r: float = 4.5 + WIN_WIDTH / 2.0   # 5.1
 	var w2l: float = 9.0 - WIN_WIDTH / 2.0   # 8.4
 	var w2r: float = 9.0 + WIN_WIDTH / 2.0   # 9.6
 	_south_wall_section(south, 0.0, dls, 0.0, CEILING_HEIGHT)
-	_south_wall_section(south, dls, drs, 2.2, CEILING_HEIGHT)  # Above door
+	_south_wall_section(south, dls, drs, 2.5, CEILING_HEIGHT)  # Above door
 	_south_wall_section(south, drs, w1l, 0.0, CEILING_HEIGHT)
 	_south_wall_section(south, w1l, w1r, 0.0, WIN_SILL_Y)  # Below window 1
 	_south_wall_section(south, w1l, w1r, WIN_SILL_Y + WIN_HEIGHT, CEILING_HEIGHT)  # Above window 1
@@ -390,12 +391,12 @@ func _build_exterior_walls() -> void:
 	_north_wall_section(north, bdl, bdr, 2.2, CEILING_HEIGHT)  # Above doorway
 	_north_wall_section(north, bdr, HOUSE_WIDTH, 0.0, CEILING_HEIGHT)
 
-	# West wall (X=0) — windows at Z=2.5, Z=7.5
+	# West wall (X=0) — window at Z=0.95, fireplace at Z=2.5, window at Z=7.5
 	var west: StaticBody3D = StaticBody3D.new()
 	west.name = "WestWall"
 	add_child(west)
-	var ww1l: float = 2.5 - WIN_WIDTH / 2.0
-	var ww1r: float = 2.5 + WIN_WIDTH / 2.0
+	var ww1l: float = 0.95 - WIN_WIDTH / 2.0
+	var ww1r: float = 0.95 + WIN_WIDTH / 2.0
 	var ww2l: float = 7.5 - WIN_WIDTH / 2.0
 	var ww2r: float = 7.5 + WIN_WIDTH / 2.0
 	_west_wall_section(west, 0.0, ww1l, 0.0, CEILING_HEIGHT)
@@ -655,6 +656,99 @@ func _build_crown_molding() -> void:
 
 
 # =============================================================================
+# DOORWAY MOLDING / CASING
+# =============================================================================
+
+func _build_doorway_molding() -> void:
+	## Add crown molding / casing around all interior doorways.
+	var trim_w: float = 0.07   # Width of casing trim
+	var trim_d: float = 0.035  # Depth (how far it protrudes)
+	var door_h: float = 2.2    # Standard interior door height
+
+	# --- Center divider doorway (kitchen-to-dining, X=6, Z=6.75..8.25) ---
+	var cd_z: float = 7.5
+	var cd_w: float = 1.5
+	var cd_dl: float = cd_z - cd_w / 2.0  # 6.75
+	var cd_dr: float = cd_z + cd_w / 2.0  # 8.25
+	# Kitchen side (-X face)
+	var cd_kx: float = LIVING_ROOM_WIDTH - trim_d / 2.0
+	# Left casing
+	_box(self, Vector3(trim_d, door_h, trim_w),
+		Vector3(cd_kx, door_h / 2.0, cd_dl - trim_w / 2.0), _mat_molding)
+	# Right casing
+	_box(self, Vector3(trim_d, door_h, trim_w),
+		Vector3(cd_kx, door_h / 2.0, cd_dr + trim_w / 2.0), _mat_molding)
+	# Head casing
+	_box(self, Vector3(trim_d, trim_w, cd_w + trim_w * 2.0),
+		Vector3(cd_kx, door_h + trim_w / 2.0, cd_z), _mat_molding)
+	# Crown piece
+	_box(self, Vector3(trim_d + 0.01, 0.04, cd_w + trim_w * 2.0 + 0.04),
+		Vector3(cd_kx, door_h + trim_w + 0.02, cd_z), _mat_molding)
+	# Dining side (+X face)
+	var cd_dx: float = LIVING_ROOM_WIDTH + trim_d / 2.0
+	_box(self, Vector3(trim_d, door_h, trim_w),
+		Vector3(cd_dx, door_h / 2.0, cd_dl - trim_w / 2.0), _mat_molding)
+	_box(self, Vector3(trim_d, door_h, trim_w),
+		Vector3(cd_dx, door_h / 2.0, cd_dr + trim_w / 2.0), _mat_molding)
+	_box(self, Vector3(trim_d, trim_w, cd_w + trim_w * 2.0),
+		Vector3(cd_dx, door_h + trim_w / 2.0, cd_z), _mat_molding)
+	_box(self, Vector3(trim_d + 0.01, 0.04, cd_w + trim_w * 2.0 + 0.04),
+		Vector3(cd_dx, door_h + trim_w + 0.02, cd_z), _mat_molding)
+
+	# --- Kitchen/living room doorway (Z=5, X=2..4) ---
+	var kl_x: float = LIVING_ROOM_WIDTH / 2.0  # 3.0
+	var kl_w: float = 2.0
+	var kl_dl: float = kl_x - kl_w / 2.0  # 2.0
+	var kl_dr: float = kl_x + kl_w / 2.0  # 4.0
+	# Living room side (-Z face)
+	var kl_lz: float = LIVING_ROOM_DEPTH - trim_d / 2.0
+	_box(self, Vector3(trim_w, door_h, trim_d),
+		Vector3(kl_dl - trim_w / 2.0, door_h / 2.0, kl_lz), _mat_molding)
+	_box(self, Vector3(trim_w, door_h, trim_d),
+		Vector3(kl_dr + trim_w / 2.0, door_h / 2.0, kl_lz), _mat_molding)
+	_box(self, Vector3(kl_w + trim_w * 2.0, trim_w, trim_d),
+		Vector3(kl_x, door_h + trim_w / 2.0, kl_lz), _mat_molding)
+	_box(self, Vector3(kl_w + trim_w * 2.0 + 0.04, 0.04, trim_d + 0.01),
+		Vector3(kl_x, door_h + trim_w + 0.02, kl_lz), _mat_molding)
+	# Kitchen side (+Z face)
+	var kl_kz: float = LIVING_ROOM_DEPTH + trim_d / 2.0
+	_box(self, Vector3(trim_w, door_h, trim_d),
+		Vector3(kl_dl - trim_w / 2.0, door_h / 2.0, kl_kz), _mat_molding)
+	_box(self, Vector3(trim_w, door_h, trim_d),
+		Vector3(kl_dr + trim_w / 2.0, door_h / 2.0, kl_kz), _mat_molding)
+	_box(self, Vector3(kl_w + trim_w * 2.0, trim_w, trim_d),
+		Vector3(kl_x, door_h + trim_w / 2.0, kl_kz), _mat_molding)
+	_box(self, Vector3(kl_w + trim_w * 2.0 + 0.04, 0.04, trim_d + 0.01),
+		Vector3(kl_x, door_h + trim_w + 0.02, kl_kz), _mat_molding)
+
+	# --- Bedroom doorway (Z=10, X=4.5..5.5) ---
+	var bd_x: float = BEDROOM_DOOR_X  # 5.0
+	var bd_w: float = BEDROOM_DOOR_WIDTH  # 1.0
+	var bd_dl: float = bd_x - bd_w / 2.0  # 4.5
+	var bd_dr: float = bd_x + bd_w / 2.0  # 5.5
+	# Kitchen side (-Z face)
+	var bd_kz: float = HOUSE_DEPTH - trim_d / 2.0
+	_box(self, Vector3(trim_w, door_h, trim_d),
+		Vector3(bd_dl - trim_w / 2.0, door_h / 2.0, bd_kz), _mat_molding)
+	_box(self, Vector3(trim_w, door_h, trim_d),
+		Vector3(bd_dr + trim_w / 2.0, door_h / 2.0, bd_kz), _mat_molding)
+	_box(self, Vector3(bd_w + trim_w * 2.0, trim_w, trim_d),
+		Vector3(bd_x, door_h + trim_w / 2.0, bd_kz), _mat_molding)
+	_box(self, Vector3(bd_w + trim_w * 2.0 + 0.04, 0.04, trim_d + 0.01),
+		Vector3(bd_x, door_h + trim_w + 0.02, bd_kz), _mat_molding)
+	# Bedroom side (+Z face)
+	var bd_bz: float = HOUSE_DEPTH + trim_d / 2.0
+	_box(self, Vector3(trim_w, door_h, trim_d),
+		Vector3(bd_dl - trim_w / 2.0, door_h / 2.0, bd_bz), _mat_molding)
+	_box(self, Vector3(trim_w, door_h, trim_d),
+		Vector3(bd_dr + trim_w / 2.0, door_h / 2.0, bd_bz), _mat_molding)
+	_box(self, Vector3(bd_w + trim_w * 2.0, trim_w, trim_d),
+		Vector3(bd_x, door_h + trim_w / 2.0, bd_bz), _mat_molding)
+	_box(self, Vector3(bd_w + trim_w * 2.0 + 0.04, 0.04, trim_d + 0.01),
+		Vector3(bd_x, door_h + trim_w + 0.02, bd_bz), _mat_molding)
+
+
+# =============================================================================
 # WINDOWS (six-pane colonial)
 # =============================================================================
 
@@ -664,7 +758,7 @@ func _build_windows() -> void:
 	_build_six_pane_window("south", 4.5)   # Living room
 	_build_six_pane_window("south", 9.0)   # Dining room
 	# West wall windows (coord = Z position)
-	_build_six_pane_window("west", 2.5)    # Living room
+	_build_six_pane_window("west", 0.95)   # Living room (south of fireplace)
 	_build_six_pane_window("west", 7.5)    # Kitchen
 	# North wall — no kitchen window (now interior wall to bedroom)
 	# East wall windows
@@ -717,43 +811,44 @@ func _build_six_pane_window(wall: String, coord: float) -> void:
 			base = Vector3(coord, cy, BEDROOM_Z_END - WALL_THICKNESS / 2.0)
 			inward = Vector3(0, 0, -1)
 
-	# Direction-based sky and hill colors for varied outdoor views
+	# Direction-based views: west/south = SF Bay ocean, east/north = Oakland Hills
 	var sky_color: Color
-	var hill_color: Color
+	var ground_color: Color
+	var is_ocean_view: bool = wall in ["west", "south", "bedroom_west"]
 	match wall:
 		"south":
-			# Bay view — bluer sky, muted green hills
 			sky_color = Color(0.45, 0.6, 0.85)
-			hill_color = Color(0.25, 0.4, 0.3)
-		"north", "bedroom_north":
-			# Deeper green hills, slightly overcast
-			sky_color = Color(0.5, 0.6, 0.72)
-			hill_color = Color(0.22, 0.42, 0.2)
+			ground_color = Color(0.2, 0.35, 0.5)    # Ocean blue-grey
 		"west", "bedroom_west":
-			# Warm sunset tinge
-			sky_color = Color(0.55, 0.6, 0.75)
-			hill_color = Color(0.3, 0.48, 0.25)
+			sky_color = Color(0.55, 0.65, 0.85)
+			ground_color = Color(0.18, 0.32, 0.48)   # Deeper ocean
+		"north", "bedroom_north":
+			sky_color = Color(0.5, 0.6, 0.72)
+			ground_color = Color(0.22, 0.42, 0.2)    # Green hills
 		"east", "bedroom_east":
-			# Morning light, crisp
 			sky_color = Color(0.5, 0.65, 0.82)
-			hill_color = Color(0.28, 0.5, 0.22)
+			ground_color = Color(0.28, 0.5, 0.22)    # Lush green hills
 		_:
 			sky_color = Color(0.5, 0.65, 0.8)
-			hill_color = Color(0.3, 0.5, 0.25)
+			ground_color = Color(0.3, 0.5, 0.25)
 
 	# Create local materials with direction-appropriate colors
 	var mat_sky_local: StandardMaterial3D = StandardMaterial3D.new()
 	mat_sky_local.albedo_color = sky_color
 	mat_sky_local.roughness = 0.9
-	var mat_hills_local: StandardMaterial3D = StandardMaterial3D.new()
-	mat_hills_local.albedo_color = hill_color
-	mat_hills_local.roughness = 0.9
+	var mat_ground_local: StandardMaterial3D = StandardMaterial3D.new()
+	mat_ground_local.albedo_color = ground_color
+	mat_ground_local.roughness = 0.9
 
 	# Layer depths along inward normal (from wall center):
-	#   backdrop: -0.05 (toward exterior)
-	#   glass:     0.04 (toward interior)
-	#   frame:     0.06 (at/past interior face)
+	#   sky:    -0.06 (furthest from viewer)
+	#   ground: -0.05 (slightly closer to avoid Z-fighting)
+	#   detail: -0.04 (closest backdrop layer)
+	#   glass:   0.04 (toward interior)
+	#   frame:   0.06 (at/past interior face)
+	var sky_backdrop_pos: Vector3 = base + inward * (-0.06)
 	var backdrop_pos: Vector3 = base + inward * (-0.05)
+	var detail_pos: Vector3 = base + inward * (-0.04)
 	var glass_pos: Vector3 = base + inward * 0.04
 	var frame_pos: Vector3 = base + inward * 0.06
 	var sill_pos: Vector3 = base + inward * 0.10
@@ -762,20 +857,35 @@ func _build_six_pane_window(wall: String, coord: float) -> void:
 
 	if is_ns:
 		# Window panes in XY plane, thin in Z
-		# Sky backdrop (upper 60%)
-		var sky_p: Vector3 = backdrop_pos
+		# Sky backdrop (upper 60%) — further from viewer
+		var sky_p: Vector3 = sky_backdrop_pos
 		sky_p.y += WIN_HEIGHT * 0.2
 		_box(wc, Vector3(WIN_WIDTH - 0.06, WIN_HEIGHT * 0.55, thin), sky_p, mat_sky_local)
-		# Hills backdrop (lower 40%)
-		var hill_p: Vector3 = backdrop_pos
-		hill_p.y -= WIN_HEIGHT * 0.25
-		_box(wc, Vector3(WIN_WIDTH - 0.06, WIN_HEIGHT * 0.4, thin), hill_p, mat_hills_local)
-		# Distant houses on hills
-		for i: int in range(3):
-			var hp: Vector3 = hill_p
-			hp.y += 0.1
-			hp.x += (float(i) - 1.0) * 0.25
-			_box(wc, Vector3(0.1, 0.07, thin), hp, _mat_window_houses)
+		# Ground backdrop (lower 40%) — closer to avoid Z-fighting
+		var ground_p: Vector3 = backdrop_pos
+		ground_p.y -= WIN_HEIGHT * 0.25
+		_box(wc, Vector3(WIN_WIDTH - 0.06, WIN_HEIGHT * 0.4, thin), ground_p, mat_ground_local)
+		# Scene details
+		if is_ocean_view:
+			var mat_bridge: StandardMaterial3D = StandardMaterial3D.new()
+			mat_bridge.albedo_color = Color(0.25, 0.25, 0.3)
+			mat_bridge.roughness = 0.8
+			var dp: Vector3 = detail_pos
+			dp.y = ground_p.y + 0.15
+			_box(wc, Vector3(0.03, 0.2, thin), Vector3(dp.x - 0.2, dp.y, dp.z), mat_bridge)
+			_box(wc, Vector3(0.03, 0.2, thin), Vector3(dp.x + 0.15, dp.y, dp.z), mat_bridge)
+			_box(wc, Vector3(0.5, 0.015, thin), Vector3(dp.x, dp.y - 0.05, dp.z), mat_bridge)
+		else:
+			for i: int in range(3):
+				var hp: Vector3 = detail_pos
+				hp.y = ground_p.y + 0.1
+				hp.x += (float(i) - 1.0) * 0.25
+				_box(wc, Vector3(0.1, 0.07, thin), hp, _mat_window_houses)
+			for i: int in range(2):
+				var hp2: Vector3 = detail_pos
+				hp2.y = ground_p.y + 0.05
+				hp2.x += (float(i) - 0.5) * 0.35
+				_box(wc, Vector3(0.06, 0.05, thin), hp2, _mat_window_houses)
 		# Glass pane
 		_box(wc, Vector3(WIN_WIDTH - 0.06, WIN_HEIGHT - 0.06, thin), glass_pos, _mat_window_glass)
 		# Frame borders (4 edges)
@@ -798,20 +908,35 @@ func _build_six_pane_window(wall: String, coord: float) -> void:
 			Vector3(sill_pos.x, WIN_SILL_Y - 0.025, sill_pos.z), _mat_window_frame)
 	else:
 		# Window panes in YZ plane, thin in X
-		# Sky backdrop
-		var sky_p: Vector3 = backdrop_pos
+		# Sky backdrop (furthest layer)
+		var sky_p: Vector3 = sky_backdrop_pos
 		sky_p.y += WIN_HEIGHT * 0.2
 		_box(wc, Vector3(thin, WIN_HEIGHT * 0.55, WIN_WIDTH - 0.06), sky_p, mat_sky_local)
-		# Hills backdrop
-		var hill_p: Vector3 = backdrop_pos
-		hill_p.y -= WIN_HEIGHT * 0.25
-		_box(wc, Vector3(thin, WIN_HEIGHT * 0.4, WIN_WIDTH - 0.06), hill_p, mat_hills_local)
-		# Distant houses
-		for i: int in range(3):
-			var hp: Vector3 = hill_p
-			hp.y += 0.1
-			hp.z += (float(i) - 1.0) * 0.25
-			_box(wc, Vector3(thin, 0.07, 0.1), hp, _mat_window_houses)
+		# Ground backdrop (middle layer)
+		var ground_p: Vector3 = backdrop_pos
+		ground_p.y -= WIN_HEIGHT * 0.25
+		_box(wc, Vector3(thin, WIN_HEIGHT * 0.4, WIN_WIDTH - 0.06), ground_p, mat_ground_local)
+		# Scene details (closest backdrop layer)
+		if is_ocean_view:
+			var mat_bridge: StandardMaterial3D = StandardMaterial3D.new()
+			mat_bridge.albedo_color = Color(0.25, 0.25, 0.3)
+			mat_bridge.roughness = 0.8
+			var dp: Vector3 = detail_pos
+			dp.y = ground_p.y + 0.15
+			_box(wc, Vector3(thin, 0.2, 0.03), Vector3(dp.x, dp.y, dp.z - 0.2), mat_bridge)
+			_box(wc, Vector3(thin, 0.2, 0.03), Vector3(dp.x, dp.y, dp.z + 0.15), mat_bridge)
+			_box(wc, Vector3(thin, 0.015, 0.5), Vector3(dp.x, dp.y - 0.05, dp.z), mat_bridge)
+		else:
+			for i: int in range(3):
+				var hp: Vector3 = detail_pos
+				hp.y = ground_p.y + 0.1
+				hp.z += (float(i) - 1.0) * 0.25
+				_box(wc, Vector3(thin, 0.07, 0.1), hp, _mat_window_houses)
+			for i: int in range(2):
+				var hp2: Vector3 = detail_pos
+				hp2.y = ground_p.y + 0.05
+				hp2.z += (float(i) - 0.5) * 0.35
+				_box(wc, Vector3(thin, 0.05, 0.06), hp2, _mat_window_houses)
 		# Glass pane
 		_box(wc, Vector3(thin, WIN_HEIGHT - 0.06, WIN_WIDTH - 0.06), glass_pos, _mat_window_glass)
 		# Frame borders
@@ -840,6 +965,9 @@ func _build_six_pane_window(wall: String, coord: float) -> void:
 
 func _build_front_door() -> void:
 	var door_x: float = 2.0
+	var door_w: float = 1.2
+	var door_h: float = 2.5
+	var door_z: float = WALL_THICKNESS / 2.0
 	var door_body: StaticBody3D = StaticBody3D.new()
 	door_body.name = "FrontDoor"
 	door_body.set_script(_create_interactable_script(
@@ -848,19 +976,71 @@ func _build_front_door() -> void:
 	))
 
 	# Door panel
-	_box(door_body, Vector3(1.0, 2.2, 0.08),
-		Vector3(door_x, 1.1, WALL_THICKNESS / 2.0), _mat_door)
+	_box(door_body, Vector3(door_w, door_h, 0.08),
+		Vector3(door_x, door_h / 2.0, door_z), _mat_door)
 
-	# Door handle
+	# Door handle (slightly further out for wider door)
 	_box(door_body, Vector3(0.04, 0.12, 0.05),
-		Vector3(door_x + 0.35, 1.0, WALL_THICKNESS / 2.0 + 0.04), _mat_handle)
+		Vector3(door_x + 0.45, 1.0, door_z + 0.04), _mat_handle)
+
+	# Four small windows at top of door (2x2 grid)
+	var mat_door_glass: StandardMaterial3D = StandardMaterial3D.new()
+	mat_door_glass.albedo_color = Color(0.7, 0.78, 0.85, 0.6)
+	mat_door_glass.roughness = 0.1
+	mat_door_glass.metallic = 0.1
+	var pane_w: float = 0.2
+	var pane_h: float = 0.22
+	var pane_top_y: float = door_h - 0.2  # Near top of door
+	for row: int in range(2):
+		for col_i: int in range(2):
+			var px: float = door_x + (float(col_i) - 0.5) * 0.28
+			var py: float = pane_top_y - float(row) * 0.3
+			# Glass pane
+			_box(door_body, Vector3(pane_w, pane_h, 0.02),
+				Vector3(px, py, door_z + 0.04), mat_door_glass)
+	# Muntin bars (window dividers) — horizontal and vertical
+	var mat_muntin: StandardMaterial3D = StandardMaterial3D.new()
+	mat_muntin.albedo_color = Color(0.25, 0.15, 0.08)
+	mat_muntin.roughness = 0.7
+	# Vertical muntin (center)
+	_box(door_body, Vector3(0.025, 0.74, 0.025),
+		Vector3(door_x, pane_top_y - 0.15, door_z + 0.05), mat_muntin)
+	# Horizontal muntin (between rows)
+	_box(door_body, Vector3(0.56, 0.025, 0.025),
+		Vector3(door_x, pane_top_y - 0.3 + 0.04, door_z + 0.05), mat_muntin)
+	# Window frame border
+	_box(door_body, Vector3(0.6, 0.025, 0.025),
+		Vector3(door_x, pane_top_y + 0.13, door_z + 0.05), mat_muntin)  # Top
+	_box(door_body, Vector3(0.6, 0.025, 0.025),
+		Vector3(door_x, pane_top_y - 0.56, door_z + 0.05), mat_muntin)  # Bottom
+	_box(door_body, Vector3(0.025, 0.74, 0.025),
+		Vector3(door_x - 0.29, pane_top_y - 0.15, door_z + 0.05), mat_muntin)  # Left
+	_box(door_body, Vector3(0.025, 0.74, 0.025),
+		Vector3(door_x + 0.29, pane_top_y - 0.15, door_z + 0.05), mat_muntin)  # Right
+
+	# Crown molding / door casing (interior side)
+	var trim_d: float = 0.04
+	var trim_w: float = 0.08
+	var interior_z: float = WALL_THICKNESS + trim_d / 2.0
+	# Left casing
+	_box(door_body, Vector3(trim_w, door_h, trim_d),
+		Vector3(door_x - door_w / 2.0 - trim_w / 2.0, door_h / 2.0, interior_z), _mat_molding)
+	# Right casing
+	_box(door_body, Vector3(trim_w, door_h, trim_d),
+		Vector3(door_x + door_w / 2.0 + trim_w / 2.0, door_h / 2.0, interior_z), _mat_molding)
+	# Head casing (across top)
+	_box(door_body, Vector3(door_w + trim_w * 2.0, trim_w, trim_d),
+		Vector3(door_x, door_h + trim_w / 2.0, interior_z), _mat_molding)
+	# Crown piece (stepped, above head casing)
+	_box(door_body, Vector3(door_w + trim_w * 2.0 + 0.06, 0.05, trim_d + 0.02),
+		Vector3(door_x, door_h + trim_w + 0.025, interior_z), _mat_molding)
 
 	# Collision for interaction raycast
 	var col: CollisionShape3D = CollisionShape3D.new()
 	var shape: BoxShape3D = BoxShape3D.new()
-	shape.size = Vector3(1.0, 2.2, 0.15)
+	shape.size = Vector3(door_w, door_h, 0.15)
 	col.shape = shape
-	col.position = Vector3(door_x, 1.1, WALL_THICKNESS / 2.0)
+	col.position = Vector3(door_x, door_h / 2.0, door_z)
 	door_body.add_child(col)
 
 	add_child(door_body)
@@ -872,46 +1052,46 @@ func _build_front_door() -> void:
 
 func _build_living_room_furniture() -> void:
 	# Room bounds: X 0..6, Z 0..5
-	# West wall window at Z=2.5 (opening Z=1.9-3.1)
-	# Fireplace goes south of that window, centered at Z=0.95
+	# West wall window at Z=0.95 (opening Z=0.35-1.55)
+	# Fireplace centered at Z=2.5 (middle of west wall)
 
-	# --- Fireplace (against west wall, centered at Z=0.95) ---
+	# --- Fireplace (against west wall, centered at Z=2.5) ---
 	var fp: Node3D = Node3D.new()
 	fp.name = "Fireplace"
 	add_child(fp)
 	# Brick back wall (against west wall)
 	_box(fp, Vector3(0.15, 1.3, 1.1),
-		Vector3(0.15, 0.65, 0.95), _mat_brick)
+		Vector3(0.15, 0.65, 2.5), _mat_brick)
 	# Brick left pilaster
 	_box(fp, Vector3(0.4, 1.3, 0.15),
-		Vector3(0.35, 0.65, 0.475), _mat_brick)
+		Vector3(0.35, 0.65, 2.025), _mat_brick)
 	# Brick right pilaster
 	_box(fp, Vector3(0.4, 1.3, 0.15),
-		Vector3(0.35, 0.65, 1.425), _mat_brick)
+		Vector3(0.35, 0.65, 2.975), _mat_brick)
 	# Firebox interior (dark charcoal recess)
 	_box(fp, Vector3(0.2, 0.9, 0.8),
-		Vector3(0.25, 0.45, 0.95), _mat_fireplace_interior)
+		Vector3(0.25, 0.45, 2.5), _mat_fireplace_interior)
 	# Hearth (stone/brick slab on floor, protruding forward)
 	_box(fp, Vector3(0.55, 0.08, 1.3),
-		Vector3(0.425, 0.04, 0.95), _mat_brick)
+		Vector3(0.425, 0.04, 2.5), _mat_brick)
 	# Mantel shelf (wooden)
 	_box(fp, Vector3(0.55, 0.08, 1.3),
-		Vector3(0.425, 1.34, 0.95), _mat_furniture_wood)
+		Vector3(0.425, 1.34, 2.5), _mat_furniture_wood)
 	# Left candlestick
 	_box(fp, Vector3(0.03, 0.12, 0.03),
-		Vector3(0.5, 1.46, 0.5), _mat_chandelier)
+		Vector3(0.5, 1.46, 2.05), _mat_chandelier)
 	_box(fp, Vector3(0.02, 0.03, 0.02),
-		Vector3(0.5, 1.535, 0.5), _mat_pillow)
+		Vector3(0.5, 1.535, 2.05), _mat_pillow)
 	# Right candlestick
 	_box(fp, Vector3(0.03, 0.12, 0.03),
-		Vector3(0.5, 1.46, 1.4), _mat_chandelier)
+		Vector3(0.5, 1.46, 2.95), _mat_chandelier)
 	_box(fp, Vector3(0.02, 0.03, 0.02),
-		Vector3(0.5, 1.535, 1.4), _mat_pillow)
+		Vector3(0.5, 1.535, 2.95), _mat_pillow)
 	# Chimney breast above mantel (stops below crown molding at 2.85)
 	var chimney_top: float = CEILING_HEIGHT - 0.15  # Below crown molding
 	var chimney_h: float = chimney_top - 1.38
 	_box(fp, Vector3(0.15, chimney_h, 1.1),
-		Vector3(0.15, 1.38 + chimney_h / 2.0, 0.95), _mat_brick)
+		Vector3(0.15, 1.38 + chimney_h / 2.0, 2.5), _mat_brick)
 	# Fireplace collision (hearth + surround)
 	var fp_body: StaticBody3D = StaticBody3D.new()
 	fp_body.name = "FireplaceCollision"
@@ -920,7 +1100,7 @@ func _build_living_room_furniture() -> void:
 	var fp_shape: BoxShape3D = BoxShape3D.new()
 	fp_shape.size = Vector3(0.55, 1.4, 1.3)
 	fp_col.shape = fp_shape
-	fp_col.position = Vector3(0.425, 0.7, 0.95)
+	fp_col.position = Vector3(0.425, 0.7, 2.5)
 	fp_body.add_child(fp_col)
 
 	# --- Couch (Restoration Hardware style leather, back against east divider wall) ---
@@ -943,7 +1123,7 @@ func _build_living_room_furniture() -> void:
 	couch_container.name = "Couch"
 	add_child(couch_container)
 	var couch_x: float = 5.4
-	var couch_z: float = 1.5
+	var couch_z: float = 3.4
 	# Seat base
 	_box(couch_container, Vector3(0.8, 0.35, 2.0),
 		Vector3(couch_x, 0.42, couch_z), mat_leather)
@@ -996,7 +1176,7 @@ func _build_living_room_furniture() -> void:
 	table_container.name = "CoffeeTable"
 	add_child(table_container)
 	var table_x: float = 3.8
-	var table_z: float = 1.5
+	var table_z: float = 3.4
 	_box(table_container, Vector3(0.5, 0.05, 1.0),
 		Vector3(table_x, 0.4, table_z), _mat_furniture_wood)
 	for lx: float in [-0.18, 0.18]:
@@ -1004,36 +1184,64 @@ func _build_living_room_furniture() -> void:
 			_box(table_container, Vector3(0.05, 0.35, 0.05),
 				Vector3(table_x + lx, 0.175, table_z + lz), _mat_furniture_wood)
 
-	# --- Armchair (south of fireplace, facing east toward couch) ---
+	# --- Armchair (between fireplace and bookshelf, facing east toward couch) ---
+	# Matching leather material (same as couch)
+	var mat_chair_leather: StandardMaterial3D = StandardMaterial3D.new()
+	mat_chair_leather.albedo_color = Color(0.82, 0.72, 0.58)
+	mat_chair_leather.roughness = 0.45
+	mat_chair_leather.metallic = 0.05
+	var mat_chair_leather_dark: StandardMaterial3D = StandardMaterial3D.new()
+	mat_chair_leather_dark.albedo_color = Color(0.72, 0.62, 0.48)
+	mat_chair_leather_dark.roughness = 0.5
+	mat_chair_leather_dark.metallic = 0.05
+
 	var chair: Node3D = Node3D.new()
 	chair.name = "Armchair"
 	add_child(chair)
 	var chair_x: float = 1.8
-	var chair_z: float = 0.5
+	var chair_z: float = 3.8
 	# Seat
 	_box(chair, Vector3(0.7, 0.35, 0.7),
-		Vector3(chair_x, 0.38, chair_z), _mat_upholstery)
+		Vector3(chair_x, 0.38, chair_z), mat_chair_leather)
+	# Seat cushion
+	_box(chair, Vector3(0.6, 0.08, 0.6),
+		Vector3(chair_x + 0.02, 0.60, chair_z), mat_chair_leather)
+	# Cushion piping
+	_box(chair, Vector3(0.58, 0.01, 0.01),
+		Vector3(chair_x + 0.02, 0.64, chair_z - 0.29), mat_chair_leather_dark)
+	_box(chair, Vector3(0.58, 0.01, 0.01),
+		Vector3(chair_x + 0.02, 0.64, chair_z + 0.29), mat_chair_leather_dark)
 	# Back (on -X west side, facing +X east toward couch)
 	_box(chair, Vector3(0.12, 0.5, 0.7),
-		Vector3(chair_x - 0.35 + 0.06, 0.6, chair_z), _mat_upholstery)
+		Vector3(chair_x - 0.35 + 0.06, 0.6, chair_z), mat_chair_leather)
+	# Back cushion
+	_box(chair, Vector3(0.06, 0.38, 0.55),
+		Vector3(chair_x - 0.24, 0.65, chair_z), mat_chair_leather)
 	# South arm (at -Z side)
 	_box(chair, Vector3(0.7, 0.4, 0.12),
-		Vector3(chair_x, 0.48, chair_z - 0.35 + 0.06), _mat_upholstery)
+		Vector3(chair_x, 0.48, chair_z - 0.35 + 0.06), mat_chair_leather)
+	_box(chair, Vector3(0.5, 0.06, 0.11),
+		Vector3(chair_x - 0.06, 0.70, chair_z - 0.35 + 0.06), mat_chair_leather_dark)
 	# North arm (at +Z side)
 	_box(chair, Vector3(0.7, 0.4, 0.12),
-		Vector3(chair_x, 0.48, chair_z + 0.35 - 0.06), _mat_upholstery)
-	# 4 legs
+		Vector3(chair_x, 0.48, chair_z + 0.35 - 0.06), mat_chair_leather)
+	_box(chair, Vector3(0.5, 0.06, 0.11),
+		Vector3(chair_x - 0.06, 0.70, chair_z + 0.35 - 0.06), mat_chair_leather_dark)
+	# 4 dark walnut legs
+	var mat_chair_legs: StandardMaterial3D = StandardMaterial3D.new()
+	mat_chair_legs.albedo_color = Color(0.28, 0.18, 0.10)
+	mat_chair_legs.roughness = 0.6
 	for lx: float in [-0.25, 0.25]:
 		for lz: float in [-0.25, 0.25]:
 			_box(chair, Vector3(0.05, 0.18, 0.05),
-				Vector3(chair_x + lx, 0.09, chair_z + lz), _mat_furniture_wood)
+				Vector3(chair_x + lx, 0.09, chair_z + lz), mat_chair_legs)
 
 	# --- End Table with Lamp (at north end of couch) ---
 	var end_table: Node3D = Node3D.new()
-	end_table.name = "EndTable"
+	end_table.name = "EndTableNorth"
 	add_child(end_table)
 	var et_x: float = 5.4
-	var et_z: float = 2.8
+	var et_z: float = 4.7
 	# Table body
 	_box(end_table, Vector3(0.4, 0.5, 0.4),
 		Vector3(et_x, 0.25, et_z), _mat_furniture_wood)
@@ -1047,9 +1255,28 @@ func _build_living_room_furniture() -> void:
 	_box(end_table, Vector3(0.15, 0.12, 0.15),
 		Vector3(et_x, 0.77, et_z), _mat_pillow)
 
+	# --- End Table with Lamp (at south end of couch) ---
+	var end_table_s: Node3D = Node3D.new()
+	end_table_s.name = "EndTableSouth"
+	add_child(end_table_s)
+	var ets_x: float = 5.4
+	var ets_z: float = 2.1
+	# Table body
+	_box(end_table_s, Vector3(0.4, 0.5, 0.4),
+		Vector3(ets_x, 0.25, ets_z), _mat_furniture_wood)
+	# Table top (slightly wider)
+	_box(end_table_s, Vector3(0.44, 0.04, 0.44),
+		Vector3(ets_x, 0.52, ets_z), _mat_furniture_wood)
+	# Lamp base (metallic)
+	_box(end_table_s, Vector3(0.08, 0.15, 0.08),
+		Vector3(ets_x, 0.62, ets_z), _mat_kettle)
+	# Lamp shade (white)
+	_box(end_table_s, Vector3(0.15, 0.12, 0.15),
+		Vector3(ets_x, 0.77, ets_z), _mat_pillow)
+
 	# --- Rug (under seating group) ---
-	_box(self, Vector3(3.0, 0.02, 2.5),
-		Vector3(4.2, 0.01, 1.8), _mat_rug)
+	_box(self, Vector3(3.0, 0.02, 3.5),
+		Vector3(4.2, 0.01, 3.4), _mat_rug)
 
 	# --- Bookshelves (against kitchen divider wall, left of doorway, facing into room) ---
 	_build_bookshelf(Vector3(1.0, 0.0, LIVING_ROOM_DEPTH - 0.1))
@@ -1163,8 +1390,8 @@ func _build_kitchen_furniture() -> void:
 	var kitchen_z_start: float = LIVING_ROOM_DEPTH
 
 	# --- L-shaped Counter ---
-	# Main run along north wall (X 1.5 to 4.0)
-	var counter_x: float = 2.75
+	# Main run along north wall (X 0.5 to 3.0), shifted left to clear bedroom doorway
+	var counter_x: float = 1.75
 	var counter_z: float = HOUSE_DEPTH - 0.5
 	# Counter top (granite)
 	_box(self, Vector3(2.5, 0.05, 0.6),
@@ -1183,7 +1410,7 @@ func _build_kitchen_furniture() -> void:
 
 	# (L-return counter removed to keep bedroom doorway clear)
 
-	# --- Kitchen Sink (under window at X=3.0) ---
+	# --- Kitchen Sink (centered on counter at X=2.0) ---
 	var mat_sink: StandardMaterial3D = StandardMaterial3D.new()
 	mat_sink.albedo_color = Color(0.6, 0.6, 0.62)
 	mat_sink.roughness = 0.25
@@ -1194,53 +1421,54 @@ func _build_kitchen_furniture() -> void:
 	mat_basin_interior.roughness = 0.3
 	mat_basin_interior.metallic = 0.4
 	# Basin bottom (well below counter surface for visible depth)
+	var sink_x: float = 2.0
 	_box(self, Vector3(0.52, 0.02, 0.35),
-		Vector3(3.0, 0.68, counter_z), mat_basin_interior)
+		Vector3(sink_x, 0.68, counter_z), mat_basin_interior)
 	# Basin walls (from bottom up to counter surface at Y=0.9)
 	_box(self, Vector3(0.55, 0.22, 0.02),
-		Vector3(3.0, 0.79, counter_z + 0.19), mat_sink)  # Back
+		Vector3(sink_x, 0.79, counter_z + 0.19), mat_sink)  # Back
 	_box(self, Vector3(0.55, 0.22, 0.02),
-		Vector3(3.0, 0.79, counter_z - 0.19), mat_sink)  # Front
+		Vector3(sink_x, 0.79, counter_z - 0.19), mat_sink)  # Front
 	_box(self, Vector3(0.02, 0.22, 0.38),
-		Vector3(2.73, 0.79, counter_z), mat_sink)  # Left
+		Vector3(sink_x - 0.27, 0.79, counter_z), mat_sink)  # Left
 	_box(self, Vector3(0.02, 0.22, 0.38),
-		Vector3(3.27, 0.79, counter_z), mat_sink)  # Right
+		Vector3(sink_x + 0.27, 0.79, counter_z), mat_sink)  # Right
 	# Sink rim (sits at counter level, frames the opening)
 	_box(self, Vector3(0.60, 0.02, 0.03),
-		Vector3(3.0, 0.91, counter_z + 0.20), mat_sink)  # Back rim
+		Vector3(sink_x, 0.91, counter_z + 0.20), mat_sink)  # Back rim
 	_box(self, Vector3(0.60, 0.02, 0.03),
-		Vector3(3.0, 0.91, counter_z - 0.20), mat_sink)  # Front rim
+		Vector3(sink_x, 0.91, counter_z - 0.20), mat_sink)  # Front rim
 	_box(self, Vector3(0.03, 0.02, 0.40),
-		Vector3(2.71, 0.91, counter_z), mat_sink)  # Left rim
+		Vector3(sink_x - 0.29, 0.91, counter_z), mat_sink)  # Left rim
 	_box(self, Vector3(0.03, 0.02, 0.40),
-		Vector3(3.29, 0.91, counter_z), mat_sink)  # Right rim
+		Vector3(sink_x + 0.29, 0.91, counter_z), mat_sink)  # Right rim
 	# Faucet base (against back/wall side of counter = +Z)
 	_box(self, Vector3(0.04, 0.28, 0.04),
-		Vector3(3.0, 1.07, counter_z + 0.2), _mat_kettle)
+		Vector3(sink_x, 1.07, counter_z + 0.2), _mat_kettle)
 	# Faucet arch (from back over basin toward room = -Z)
 	_box(self, Vector3(0.04, 0.04, 0.14),
-		Vector3(3.0, 1.21, counter_z + 0.14), _mat_kettle)
+		Vector3(sink_x, 1.21, counter_z + 0.14), _mat_kettle)
 	# Faucet spout (hanging down over basin center)
 	_box(self, Vector3(0.03, 0.08, 0.03),
-		Vector3(3.0, 1.15, counter_z + 0.08), _mat_kettle)
+		Vector3(sink_x, 1.15, counter_z + 0.08), _mat_kettle)
 
-	# --- Upper Cabinets (above counter, avoiding window at X=3.0) ---
-	# Left upper cabinet (X 1.5 to 2.3)
+	# --- Upper Cabinets (above counter, avoiding sink) ---
+	# Left upper cabinet
 	_box(self, Vector3(0.8, 0.6, 0.35),
-		Vector3(1.9, 1.85, counter_z), _mat_cabinet_face)
+		Vector3(0.9, 1.85, counter_z), _mat_cabinet_face)
 	_box(self, Vector3(0.35, 0.5, 0.02),
-		Vector3(1.75, 1.85, counter_z + 0.18), _mat_cabinet_face)
+		Vector3(0.75, 1.85, counter_z + 0.18), _mat_cabinet_face)
 	_box(self, Vector3(0.35, 0.5, 0.02),
-		Vector3(2.05, 1.85, counter_z + 0.18), _mat_cabinet_face)
+		Vector3(1.05, 1.85, counter_z + 0.18), _mat_cabinet_face)
 	# Range hood above stove (proper ventilation hood, no cabinet above stove)
 	_box(self, Vector3(0.65, 0.06, 0.45),
-		Vector3(4.3, 1.35, counter_z), _mat_stove)
+		Vector3(3.3, 1.35, counter_z), _mat_stove)
 	# Hood chimney/vent going up to ceiling
 	_box(self, Vector3(0.35, 0.8, 0.25),
-		Vector3(4.3, 1.78, counter_z + 0.05), _mat_stove)
+		Vector3(3.3, 1.78, counter_z + 0.05), _mat_stove)
 
-	# --- Stove (next to counter, against north wall) ---
-	var stove_x: float = 4.3
+	# --- Stove (next to counter, against north wall, clear of bedroom door) ---
+	var stove_x: float = 3.3
 	var stove_z: float = HOUSE_DEPTH - 0.5
 	_box(self, Vector3(0.6, 0.9, 0.6),
 		Vector3(stove_x, 0.45, stove_z), _mat_stove)
@@ -1327,12 +1555,12 @@ func _build_kitchen_furniture() -> void:
 	fridge_col.position = Vector3(fridge_x, fridge_h / 2.0, fridge_z)
 	fridge_body.add_child(fridge_col)
 
-	# --- Wine Fridge (NE corner of kitchen, against north+east walls) ---
-	var wf_x: float = LIVING_ROOM_WIDTH - WALL_THICKNESS - 0.35
-	var wf_z: float = HOUSE_DEPTH - WALL_THICKNESS - 0.35
-	var wf_w: float = 0.55  # Width
+	# --- Wine Fridge (against east divider wall, south of doorway, glass faces -X into room) ---
+	var wf_w: float = 0.55  # Width (along Z)
 	var wf_h: float = 0.9   # Counter height (under-counter style)
-	var wf_d: float = 0.55  # Depth
+	var wf_d: float = 0.55  # Depth (along X, against wall)
+	var wf_x: float = LIVING_ROOM_WIDTH - WALL_THICKNESS - wf_d / 2.0  # Against east divider wall
+	var wf_z: float = LIVING_ROOM_DEPTH + 1.0  # South of kitchen doorway (Z=6.0)
 	# Dark glass/steel material for wine fridge body
 	var mat_wf_body: StandardMaterial3D = StandardMaterial3D.new()
 	mat_wf_body.albedo_color = Color(0.12, 0.12, 0.14)
@@ -1354,36 +1582,36 @@ func _build_kitchen_furniture() -> void:
 	mat_wine_bottle.albedo_color = Color(0.15, 0.08, 0.05)
 	mat_wine_bottle.roughness = 0.2
 	mat_wine_bottle.metallic = 0.3
-	# Main body
-	_box(self, Vector3(wf_w, wf_h, wf_d),
+	# Main body (depth along X, width along Z)
+	_box(self, Vector3(wf_d, wf_h, wf_w),
 		Vector3(wf_x, wf_h / 2.0, wf_z), mat_wf_body)
-	# Glass door panel (front face)
-	_box(self, Vector3(wf_w - 0.06, wf_h - 0.1, 0.02),
-		Vector3(wf_x, wf_h / 2.0, wf_z + wf_d / 2.0 + 0.01), mat_wf_glass)
-	# Chrome frame around glass (4 strips)
-	_box(self, Vector3(wf_w - 0.02, 0.02, 0.025),
-		Vector3(wf_x, wf_h - 0.03, wf_z + wf_d / 2.0 + 0.015), mat_wf_chrome)  # Top
-	_box(self, Vector3(wf_w - 0.02, 0.02, 0.025),
-		Vector3(wf_x, 0.03, wf_z + wf_d / 2.0 + 0.015), mat_wf_chrome)  # Bottom
-	_box(self, Vector3(0.02, wf_h - 0.06, 0.025),
-		Vector3(wf_x - wf_w / 2.0 + 0.03, wf_h / 2.0, wf_z + wf_d / 2.0 + 0.015), mat_wf_chrome)  # Left
-	_box(self, Vector3(0.02, wf_h - 0.06, 0.025),
-		Vector3(wf_x + wf_w / 2.0 - 0.03, wf_h / 2.0, wf_z + wf_d / 2.0 + 0.015), mat_wf_chrome)  # Right
-	# Door handle (vertical chrome bar)
-	_box(self, Vector3(0.02, 0.2, 0.04),
-		Vector3(wf_x + wf_w / 2.0 - 0.08, wf_h / 2.0, wf_z + wf_d / 2.0 + 0.035), mat_wf_chrome)
+	# Glass door panel (-X face, facing into room)
+	_box(self, Vector3(0.02, wf_h - 0.1, wf_w - 0.06),
+		Vector3(wf_x - wf_d / 2.0 - 0.01, wf_h / 2.0, wf_z), mat_wf_glass)
+	# Chrome frame around glass (4 strips on -X face)
+	_box(self, Vector3(0.025, 0.02, wf_w - 0.02),
+		Vector3(wf_x - wf_d / 2.0 - 0.015, wf_h - 0.03, wf_z), mat_wf_chrome)  # Top
+	_box(self, Vector3(0.025, 0.02, wf_w - 0.02),
+		Vector3(wf_x - wf_d / 2.0 - 0.015, 0.03, wf_z), mat_wf_chrome)  # Bottom
+	_box(self, Vector3(0.025, wf_h - 0.06, 0.02),
+		Vector3(wf_x - wf_d / 2.0 - 0.015, wf_h / 2.0, wf_z - wf_w / 2.0 + 0.03), mat_wf_chrome)  # Left
+	_box(self, Vector3(0.025, wf_h - 0.06, 0.02),
+		Vector3(wf_x - wf_d / 2.0 - 0.015, wf_h / 2.0, wf_z + wf_w / 2.0 - 0.03), mat_wf_chrome)  # Right
+	# Door handle (vertical chrome bar on -X face)
+	_box(self, Vector3(0.04, 0.2, 0.02),
+		Vector3(wf_x - wf_d / 2.0 - 0.035, wf_h / 2.0, wf_z + wf_w / 2.0 - 0.08), mat_wf_chrome)
 	# Interior shelves visible through glass (3 wire rack lines)
 	for shelf_i: int in range(3):
 		var shelf_y: float = 0.15 + float(shelf_i) * 0.28
-		_box(self, Vector3(wf_w - 0.1, 0.01, wf_d - 0.1),
+		_box(self, Vector3(wf_d - 0.1, 0.01, wf_w - 0.1),
 			Vector3(wf_x, shelf_y, wf_z), mat_wf_chrome)
-	# Wine bottles on shelves (horizontal, visible through glass)
+	# Wine bottles on shelves (horizontal, visible through glass, along X axis)
 	for shelf_i: int in range(3):
 		var shelf_y: float = 0.20 + float(shelf_i) * 0.28
 		for bi: int in range(3):
-			var bx: float = wf_x - 0.14 + float(bi) * 0.14
-			_box(self, Vector3(0.04, 0.04, 0.3),
-				Vector3(bx, shelf_y, wf_z), mat_wine_bottle)
+			var bz: float = wf_z - 0.14 + float(bi) * 0.14
+			_box(self, Vector3(0.3, 0.04, 0.04),
+				Vector3(wf_x, shelf_y, bz), mat_wine_bottle)
 	# Blue LED accent glow inside
 	var wf_light: OmniLight3D = OmniLight3D.new()
 	wf_light.light_color = Color(0.3, 0.4, 0.8)
@@ -1442,45 +1670,26 @@ func _build_kitchen_furniture() -> void:
 	_box(herb_planter, Vector3(0.08, 0.07, 0.1),
 		Vector3(hp_x, hp_y + 0.085, hp_z + 0.12), mat_herb)
 
-	# --- Table settings (plates, napkins, vase with flowers) ---
-	var mat_napkin: StandardMaterial3D = StandardMaterial3D.new()
-	mat_napkin.albedo_color = Color(0.85, 0.85, 0.82)
-	mat_napkin.roughness = 0.9
-	var mat_vase: StandardMaterial3D = StandardMaterial3D.new()
-	mat_vase.albedo_color = Color(0.55, 0.6, 0.7)
-	mat_vase.roughness = 0.4
-	var mat_flower_petal: StandardMaterial3D = StandardMaterial3D.new()
-	mat_flower_petal.albedo_color = Color(0.95, 0.85, 0.15)
-	mat_flower_petal.roughness = 0.8
-	var mat_stem: StandardMaterial3D = StandardMaterial3D.new()
-	mat_stem.albedo_color = Color(0.2, 0.45, 0.15)
-	mat_stem.roughness = 0.85
-
-	# Place setting 1 (left side, near left stool)
-	_box(self, Vector3(0.18, 0.01, 0.18),
-		Vector3(table_x - 0.2, 0.785, table_z), _mat_plate)  # Plate
-	_box(self, Vector3(0.08, 0.005, 0.12),
-		Vector3(table_x - 0.2 + 0.16, 0.783, table_z), mat_napkin)  # Napkin
-
-	# Place setting 2 (right side, near right stool)
-	_box(self, Vector3(0.18, 0.01, 0.18),
-		Vector3(table_x + 0.2, 0.785, table_z), _mat_plate)  # Plate
-	_box(self, Vector3(0.08, 0.005, 0.12),
-		Vector3(table_x + 0.2 - 0.16, 0.783, table_z), mat_napkin)  # Napkin
-
-	# Vase with yellow flowers (center of table)
+	# --- Vase with yellow flowers (center of kitchen table) ---
+	var mat_vase_k: StandardMaterial3D = StandardMaterial3D.new()
+	mat_vase_k.albedo_color = Color(0.55, 0.6, 0.7)
+	mat_vase_k.roughness = 0.4
+	var mat_flower_petal_k: StandardMaterial3D = StandardMaterial3D.new()
+	mat_flower_petal_k.albedo_color = Color(0.95, 0.85, 0.15)
+	mat_flower_petal_k.roughness = 0.8
+	var mat_stem_k: StandardMaterial3D = StandardMaterial3D.new()
+	mat_stem_k.albedo_color = Color(0.2, 0.45, 0.15)
+	mat_stem_k.roughness = 0.85
 	_box(self, Vector3(0.06, 0.12, 0.06),
-		Vector3(table_x, 0.84, table_z), mat_vase)  # Vase body
+		Vector3(table_x, 0.84, table_z), mat_vase_k)
 	_box(self, Vector3(0.07, 0.01, 0.07),
-		Vector3(table_x, 0.9, table_z), mat_vase)  # Vase rim
-	# 3 flower stems
+		Vector3(table_x, 0.9, table_z), mat_vase_k)
 	for fi: int in range(3):
 		var foff: float = (float(fi) - 1.0) * 0.02
 		_box(self, Vector3(0.01, 0.12, 0.01),
-			Vector3(table_x + foff, 0.96, table_z + foff * 0.5), mat_stem)
-		# Flower heads (small yellow boxes)
+			Vector3(table_x + foff, 0.96, table_z + foff * 0.5), mat_stem_k)
 		_box(self, Vector3(0.04, 0.03, 0.04),
-			Vector3(table_x + foff, 1.03, table_z + foff * 0.5), mat_flower_petal)
+			Vector3(table_x + foff, 1.03, table_z + foff * 0.5), mat_flower_petal_k)
 
 	# --- Counter-top items ---
 	# Cutting board (on main counter)
@@ -1555,6 +1764,9 @@ func _build_wall_maps() -> void:
 	# Map on north wall of dining room (right of window)
 	var north_z: float = HOUSE_DEPTH - WALL_THICKNESS - 0.03
 	_build_terrain_map(Vector3(8.5, 1.6, north_z), "north", 0.8, 0.6, 89)
+
+	# Map on south wall of dining room
+	_build_terrain_map(Vector3(9.0, 1.6, WALL_THICKNESS + 0.03), "south", 0.9, 0.7, 55)
 
 
 func _build_terrain_map(pos: Vector3, wall: String, map_w: float, map_h: float, seed_val: int) -> void:
@@ -1758,8 +1970,88 @@ func _build_dining_room_furniture() -> void:
 	_build_chair(Vector3(table_x - 0.5, 0.0, table_z - 0.8), 0.0)      # North side (back faces away from table)
 	_build_chair(Vector3(table_x + 0.5, 0.0, table_z - 0.8), 0.0)      # North side
 
-	# --- Sandwich Plate on Table ---
-	_build_sandwich(Vector3(table_x + 0.3, 0.78, table_z - 0.1))
+	# --- 4 Place Settings ---
+	var mat_napkin: StandardMaterial3D = StandardMaterial3D.new()
+	mat_napkin.albedo_color = Color(0.85, 0.85, 0.82)
+	mat_napkin.roughness = 0.9
+	var mat_silverware: StandardMaterial3D = StandardMaterial3D.new()
+	mat_silverware.albedo_color = Color(0.75, 0.75, 0.78)
+	mat_silverware.roughness = 0.2
+	mat_silverware.metallic = 0.7
+	# 4 place settings: 2 south-side chairs, 2 north-side chairs
+	var setting_positions: Array[Vector3] = [
+		Vector3(table_x - 0.5, 0.78, table_z + 0.25),  # South-left
+		Vector3(table_x + 0.5, 0.78, table_z + 0.25),  # South-right
+		Vector3(table_x - 0.5, 0.78, table_z - 0.25),  # North-left
+		Vector3(table_x + 0.5, 0.78, table_z - 0.25),  # North-right
+	]
+	for sp: Vector3 in setting_positions:
+		# Plate
+		_box(self, Vector3(0.2, 0.01, 0.2), sp, _mat_plate)
+		# Napkin (folded, to the right of plate)
+		_box(self, Vector3(0.06, 0.008, 0.14),
+			Vector3(sp.x + 0.17, sp.y + 0.005, sp.z), mat_napkin)
+		# Fork (left of plate)
+		_box(self, Vector3(0.01, 0.005, 0.12),
+			Vector3(sp.x - 0.15, sp.y + 0.005, sp.z), mat_silverware)
+		# Knife (right of napkin)
+		_box(self, Vector3(0.01, 0.005, 0.12),
+			Vector3(sp.x + 0.25, sp.y + 0.005, sp.z), mat_silverware)
+
+	# --- Centerpiece vase with flowers ---
+	var mat_vase: StandardMaterial3D = StandardMaterial3D.new()
+	mat_vase.albedo_color = Color(0.55, 0.6, 0.7)
+	mat_vase.roughness = 0.4
+	var mat_flower_petal: StandardMaterial3D = StandardMaterial3D.new()
+	mat_flower_petal.albedo_color = Color(0.95, 0.85, 0.15)
+	mat_flower_petal.roughness = 0.8
+	var mat_stem: StandardMaterial3D = StandardMaterial3D.new()
+	mat_stem.albedo_color = Color(0.2, 0.45, 0.15)
+	mat_stem.roughness = 0.85
+	_box(self, Vector3(0.06, 0.12, 0.06),
+		Vector3(table_x, 0.84, table_z), mat_vase)
+	_box(self, Vector3(0.07, 0.01, 0.07),
+		Vector3(table_x, 0.9, table_z), mat_vase)
+	for fi: int in range(3):
+		var foff: float = (float(fi) - 1.0) * 0.02
+		_box(self, Vector3(0.01, 0.12, 0.01),
+			Vector3(table_x + foff, 0.96, table_z + foff * 0.5), mat_stem)
+		_box(self, Vector3(0.04, 0.03, 0.04),
+			Vector3(table_x + foff, 1.03, table_z + foff * 0.5), mat_flower_petal)
+
+	# --- Explorer's Journal on Table ---
+	var journal_body: StaticBody3D = StaticBody3D.new()
+	journal_body.name = "DiningJournal"
+	journal_body.set_script(_create_interactable_script(
+		"Read Explorer's Journal", "explorers_journal"
+	))
+	# Book cover (leather brown)
+	var mat_journal_cover: StandardMaterial3D = StandardMaterial3D.new()
+	mat_journal_cover.albedo_color = Color(0.45, 0.3, 0.15)
+	mat_journal_cover.roughness = 0.7
+	var mat_journal_pages: StandardMaterial3D = StandardMaterial3D.new()
+	mat_journal_pages.albedo_color = Color(0.85, 0.82, 0.72)
+	mat_journal_pages.roughness = 0.8
+	var mat_journal_spine: StandardMaterial3D = StandardMaterial3D.new()
+	mat_journal_spine.albedo_color = Color(0.35, 0.22, 0.1)
+	mat_journal_spine.roughness = 0.75
+	var jx: float = table_x - 0.15
+	var jy: float = 0.79
+	var jz: float = table_z
+	# Cover
+	_box(journal_body, Vector3(0.2, 0.03, 0.28), Vector3(jx, jy, jz), mat_journal_cover)
+	# Pages (slightly inset)
+	_box(journal_body, Vector3(0.18, 0.02, 0.26), Vector3(jx, jy, jz), mat_journal_pages)
+	# Spine
+	_box(journal_body, Vector3(0.02, 0.035, 0.28), Vector3(jx - 0.1, jy, jz), mat_journal_spine)
+	# Collision for interaction
+	var jcol: CollisionShape3D = CollisionShape3D.new()
+	var jshape: BoxShape3D = BoxShape3D.new()
+	jshape.size = Vector3(0.25, 0.1, 0.3)
+	jcol.shape = jshape
+	jcol.position = Vector3(jx, jy, jz)
+	journal_body.add_child(jcol)
+	add_child(journal_body)
 
 	# --- Chandelier ---
 	_build_chandelier(Vector3(dining_cx, CEILING_HEIGHT, dining_cz))
@@ -1814,36 +2106,44 @@ func _build_dining_room_furniture() -> void:
 	_box(self, Vector3(2.5, 0.02, 1.8),
 		Vector3(dining_cx, 0.01, dining_cz), mat_dining_rug)
 
-	# --- Potted Plant (southeast corner of dining room) ---
-	var plant: Node3D = Node3D.new()
-	plant.name = "PottedPlant"
-	add_child(plant)
-	var plant_x: float = HOUSE_WIDTH - 0.6
-	var plant_z: float = 0.6
-	# Pot (terracotta)
+	# --- Potted Plants (all four corners of dining room) ---
 	var mat_terracotta: StandardMaterial3D = StandardMaterial3D.new()
 	mat_terracotta.albedo_color = Color(0.65, 0.35, 0.2)
 	mat_terracotta.roughness = 0.85
-	_box(plant, Vector3(0.25, 0.3, 0.25),
-		Vector3(plant_x, 0.15, plant_z), mat_terracotta)
-	# Soil
 	var mat_soil: StandardMaterial3D = StandardMaterial3D.new()
 	mat_soil.albedo_color = Color(0.2, 0.12, 0.05)
 	mat_soil.roughness = 0.95
-	_box(plant, Vector3(0.2, 0.03, 0.2),
-		Vector3(plant_x, 0.31, plant_z), mat_soil)
-	# Plant leaves (green boxes at various heights)
 	var mat_plant_leaf: StandardMaterial3D = StandardMaterial3D.new()
 	mat_plant_leaf.albedo_color = Color(0.2, 0.45, 0.15)
 	mat_plant_leaf.roughness = 0.85
-	_box(plant, Vector3(0.15, 0.2, 0.08),
-		Vector3(plant_x - 0.05, 0.45, plant_z), mat_plant_leaf)
-	_box(plant, Vector3(0.08, 0.25, 0.15),
-		Vector3(plant_x + 0.05, 0.5, plant_z + 0.03), mat_plant_leaf)
-	_box(plant, Vector3(0.12, 0.18, 0.1),
-		Vector3(plant_x, 0.55, plant_z - 0.04), mat_plant_leaf)
-	_box(plant, Vector3(0.06, 0.15, 0.12),
-		Vector3(plant_x + 0.03, 0.6, plant_z + 0.05), mat_plant_leaf)
+	var plant_corners: Array[Vector2] = [
+		Vector2(HOUSE_WIDTH - 0.6, 0.6),            # SE corner
+		Vector2(LIVING_ROOM_WIDTH + 0.6, 0.6),      # SW corner
+		Vector2(HOUSE_WIDTH - 0.6, HOUSE_DEPTH - 0.6),  # NE corner
+		Vector2(LIVING_ROOM_WIDTH + 0.6, HOUSE_DEPTH - 0.6),  # NW corner
+	]
+	for i: int in range(plant_corners.size()):
+		var corner: Vector2 = plant_corners[i]
+		var px: float = corner.x
+		var pz: float = corner.y
+		var plant: Node3D = Node3D.new()
+		plant.name = "PottedPlant" + str(i)
+		add_child(plant)
+		# Pot (terracotta)
+		_box(plant, Vector3(0.25, 0.3, 0.25),
+			Vector3(px, 0.15, pz), mat_terracotta)
+		# Soil
+		_box(plant, Vector3(0.2, 0.03, 0.2),
+			Vector3(px, 0.31, pz), mat_soil)
+		# Plant leaves (green boxes at various heights)
+		_box(plant, Vector3(0.15, 0.2, 0.08),
+			Vector3(px - 0.05, 0.45, pz), mat_plant_leaf)
+		_box(plant, Vector3(0.08, 0.25, 0.15),
+			Vector3(px + 0.05, 0.5, pz + 0.03), mat_plant_leaf)
+		_box(plant, Vector3(0.12, 0.18, 0.1),
+			Vector3(px, 0.55, pz - 0.04), mat_plant_leaf)
+		_box(plant, Vector3(0.06, 0.15, 0.12),
+			Vector3(px + 0.03, 0.6, pz + 0.05), mat_plant_leaf)
 
 
 func _build_chair(pos: Vector3, rot_y: float) -> void:
@@ -1938,7 +2238,7 @@ func _build_cat_portraits() -> void:
 	# On the west wall of the living room, at eye height
 	var wall_x: float = WALL_THICKNESS + 0.03  # Slightly off wall
 
-	# Portrait 1: All-black cat — on west wall, between window (Z≈2.5) and divider (Z=5.0)
+	# Portrait 1: All-black cat — on west wall, between fireplace (Z≈2.5) and divider (Z=5.0)
 	_build_cat_portrait_black(Vector3(wall_x, 1.6, 3.5))
 
 	# Portrait 2: Tuxedo cat — next to first
@@ -2117,7 +2417,11 @@ func _build_bedroom_furniture() -> void:
 
 	# Bed collision (so player can't walk through it)
 	var bed_body: StaticBody3D = StaticBody3D.new()
-	bed_body.name = "BedCollision"
+	bed_body.name = "Bed"
+	bed_body.set_script(_create_interactable_script(
+		"Rest in Bed",
+		"bed_rest"
+	))
 	add_child(bed_body)
 	var bed_col: CollisionShape3D = CollisionShape3D.new()
 	var bed_shape: BoxShape3D = BoxShape3D.new()
@@ -2150,6 +2454,31 @@ func _build_bedroom_furniture() -> void:
 		Vector3(ns_x, 0.63, ns_z), _mat_kettle)
 	_box(nightstand, Vector3(0.15, 0.12, 0.15),
 		Vector3(ns_x, 0.78, ns_z), _mat_pillow)
+
+	# --- Nightstand (left side of bed, near headboard = +Z end) ---
+	var nsl_x: float = bed_x - 1.1
+	var nsl_z: float = bed_z + 0.7
+	var nightstand_left: Node3D = Node3D.new()
+	nightstand_left.name = "NightstandLeft"
+	add_child(nightstand_left)
+
+	# Body
+	_box(nightstand_left, Vector3(0.4, 0.5, 0.35),
+		Vector3(nsl_x, 0.27, nsl_z), _mat_furniture_wood)
+	# Top
+	_box(nightstand_left, Vector3(0.44, 0.04, 0.38),
+		Vector3(nsl_x, 0.55, nsl_z), _mat_furniture_wood)
+	# Drawer face (facing south = -Z toward room)
+	_box(nightstand_left, Vector3(0.32, 0.16, 0.02),
+		Vector3(nsl_x, 0.35, nsl_z - 0.18), _mat_furniture_wood)
+	# Handle
+	_box(nightstand_left, Vector3(0.08, 0.02, 0.02),
+		Vector3(nsl_x, 0.35, nsl_z - 0.20), _mat_handle)
+	# Lamp on nightstand
+	_box(nightstand_left, Vector3(0.08, 0.15, 0.08),
+		Vector3(nsl_x, 0.63, nsl_z), _mat_kettle)
+	_box(nightstand_left, Vector3(0.15, 0.12, 0.15),
+		Vector3(nsl_x, 0.78, nsl_z), _mat_pillow)
 
 	# --- Dresser (against east wall, between windows at Z=12.5 and Z=15.5) ---
 	var dr_x: float = LIVING_ROOM_WIDTH - WALL_THICKNESS - 0.25
@@ -2328,11 +2657,11 @@ func _build_tree_pictures() -> void:
 
 	# North wall interior face (above headboard, between windows at X=1.5 and X=4.5)
 	var nz: float = BEDROOM_Z_END - WALL_THICKNESS - 0.03
-	_build_tree_picture(Vector3(3.0, 1.9, nz), "north", "birch", mats)
+	_build_winnie_portrait(Vector3(3.0, 1.9, nz))
 
 	# East wall interior face (between windows at Z=12.5 and Z=15.5)
 	var ex: float = LIVING_ROOM_WIDTH - WALL_THICKNESS - 0.03
-	_build_tree_picture(Vector3(ex, 1.6, 11.0), "east", "cactus", mats)
+	_build_tree_picture(Vector3(wx, 1.6, 13.5), "west", "cactus", mats)
 	_build_tree_picture(Vector3(ex, 1.6, 16.5), "east", "palm", mats)
 
 
@@ -2372,11 +2701,11 @@ func _build_tree_picture(pos: Vector3, wall: String, tree_type: String, mats: Di
 		var v_sz: float = piece[3]
 		var mat: StandardMaterial3D = piece[4]
 		if is_ew:
-			_box(p, Vector3(thin, v_sz, h_sz),
-				Vector3(pos.x + dir * 0.02, pos.y + v_off, pos.z + h_off), mat)
+			_box(p, Vector3(thin, v_sz * 0.8, h_sz * 0.8),
+				Vector3(pos.x + dir * 0.02, pos.y + v_off * 0.8, pos.z + h_off * 0.8), mat)
 		else:
-			_box(p, Vector3(h_sz, v_sz, thin),
-				Vector3(pos.x + h_off, pos.y + v_off, pos.z + dir * 0.02), mat)
+			_box(p, Vector3(h_sz * 0.8, v_sz * 0.8, thin),
+				Vector3(pos.x + h_off * 0.8, pos.y + v_off * 0.8, pos.z + dir * 0.02), mat)
 
 	# Nameplate below painting (small brass plate on dark wood backing)
 	var mat_brass: StandardMaterial3D = StandardMaterial3D.new()
@@ -2525,10 +2854,13 @@ func _setup_lighting() -> void:
 	_add_light("LivingLight2", Vector3(4.0, 2.5, 3.5),
 		Color(1.0, 0.9, 0.7), 0.6, 5.0)
 	# Fireplace glow (low, warm orange near floor level)
-	_add_light("FireplaceGlow", Vector3(0.5, 0.4, 0.95),
+	_add_light("FireplaceGlow", Vector3(0.5, 0.4, 2.5),
 		Color(1.0, 0.6, 0.3), 0.5, 3.0)
-	# End table lamp
-	_add_light("EndTableLamp", Vector3(3.5, 1.0, 2.8),
+	# End table lamp (north)
+	_add_light("EndTableLampN", Vector3(5.4, 1.0, 4.7),
+		Color(1.0, 0.9, 0.7), 0.4, 3.0)
+	# End table lamp (south)
+	_add_light("EndTableLampS", Vector3(5.4, 1.0, 2.1),
 		Color(1.0, 0.9, 0.7), 0.4, 3.0)
 
 	# Kitchen — slightly cooler/brighter (task lighting)
@@ -2549,6 +2881,8 @@ func _setup_lighting() -> void:
 		Color(1.0, 0.85, 0.65), 0.4, 5.0)
 	# Nightstand lamp glow
 	_add_light("NightstandLamp", Vector3(4.1, 0.9, 16.7),
+		Color(1.0, 0.85, 0.6), 0.3, 2.5)
+	_add_light("NightstandLampLeft", Vector3(1.9, 0.9, 16.7),
 		Color(1.0, 0.85, 0.6), 0.3, 2.5)
 
 
@@ -2738,6 +3072,20 @@ func open_new_game_plus(player: Node) -> void:
 	_new_game_plus_ui.open(player)
 
 
+var _journal_ui: Node = null
+
+func open_journal(player: Node) -> void:
+	## Opens the Explorer's Journal for reading.
+	if _journal_ui and is_instance_valid(_journal_ui):
+		return  # Already open
+	var script: GDScript = load("res://scripts/ui/journal_ui.gd")
+	_journal_ui = CanvasLayer.new()
+	_journal_ui.set_script(script)
+	_journal_ui.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(_journal_ui)
+	_journal_ui.open_journal(false)  # Not first read
+
+
 # =============================================================================
 # HARDWOOD FLOOR PLANKS
 # =============================================================================
@@ -2777,6 +3125,127 @@ func _build_hardwood_planks() -> void:
 		var mat: StandardMaterial3D = plank_mats[rng.randi_range(0, plank_mats.size() - 1)]
 		_box(self, Vector3(plank_w - 0.02, 0.005, BEDROOM_DEPTH - 0.02),
 			Vector3(x, 0.003, HOUSE_DEPTH + BEDROOM_DEPTH / 2.0), mat)
+
+
+# =============================================================================
+# WINNIE PORTRAIT (Australian Shepherd)
+# =============================================================================
+
+func _build_winnie_portrait(pos: Vector3) -> void:
+	## Build a framed portrait of Winnie (Australian Shepherd) on the north wall.
+	var body: StaticBody3D = StaticBody3D.new()
+	body.name = "WinniePortrait"
+	body.set_script(_create_interactable_script(
+		"View Portrait",
+		"winnie_portrait"
+	))
+	add_child(body)
+
+	# Frame (north wall = X/Y face, thin on Z)
+	_box(body, Vector3(0.55, 0.55, 0.03), pos, _mat_portrait_frame)
+	# Background
+	_box(body, Vector3(0.49, 0.49, 0.02),
+		Vector3(pos.x, pos.y, pos.z - 0.01), _mat_portrait_bg)
+
+	# Collision shape for interaction
+	var col: CollisionShape3D = CollisionShape3D.new()
+	var shape: BoxShape3D = BoxShape3D.new()
+	shape.size = Vector3(0.55, 0.55, 0.1)
+	col.shape = shape
+	col.position = pos
+	body.add_child(col)
+
+	# Materials for Australian Shepherd
+	var mat_black: StandardMaterial3D = StandardMaterial3D.new()
+	mat_black.albedo_color = Color(0.08, 0.08, 0.1)
+	mat_black.roughness = 0.9
+
+	var mat_white: StandardMaterial3D = StandardMaterial3D.new()
+	mat_white.albedo_color = Color(0.92, 0.9, 0.88)
+	mat_white.roughness = 0.9
+
+	var mat_tan: StandardMaterial3D = StandardMaterial3D.new()
+	mat_tan.albedo_color = Color(0.7, 0.4, 0.15)
+	mat_tan.roughness = 0.9
+
+	var mat_nose: StandardMaterial3D = StandardMaterial3D.new()
+	mat_nose.albedo_color = Color(0.15, 0.1, 0.1)
+	mat_nose.roughness = 0.8
+
+	var thin: float = 0.015
+	var cx: float = pos.x  # Center X of portrait
+	var cy: float = pos.y  # Center Y of portrait
+	var cz: float = pos.z - 0.02  # Slightly in front of background
+
+	# --- Ears (triangular-ish black pieces at top) ---
+	_box(body, Vector3(0.05, 0.05, thin),
+		Vector3(cx - 0.09, cy + 0.15, cz), mat_black)  # Left ear
+	_box(body, Vector3(0.05, 0.05, thin),
+		Vector3(cx + 0.09, cy + 0.15, cz), mat_black)  # Right ear
+	# Ear tips (slightly higher, smaller)
+	_box(body, Vector3(0.03, 0.03, thin),
+		Vector3(cx - 0.10, cy + 0.17, cz), mat_black)  # Left ear tip
+	_box(body, Vector3(0.03, 0.03, thin),
+		Vector3(cx + 0.10, cy + 0.17, cz), mat_black)  # Right ear tip
+
+	# --- Head (black top, tan cheeks, white muzzle) ---
+	# Black skull/top of head
+	_box(body, Vector3(0.16, 0.06, thin),
+		Vector3(cx, cy + 0.12, cz), mat_black)
+	# Tan cheeks
+	_box(body, Vector3(0.05, 0.05, thin),
+		Vector3(cx - 0.06, cy + 0.08, cz), mat_tan)  # Left cheek
+	_box(body, Vector3(0.05, 0.05, thin),
+		Vector3(cx + 0.06, cy + 0.08, cz), mat_tan)  # Right cheek
+	# White muzzle blaze (center stripe down face)
+	_box(body, Vector3(0.04, 0.08, thin),
+		Vector3(cx, cy + 0.08, cz), mat_white)
+
+	# --- Eyes (small tan dots) ---
+	_box(body, Vector3(0.02, 0.02, thin),
+		Vector3(cx - 0.04, cy + 0.10, cz), mat_tan)  # Left eye
+	_box(body, Vector3(0.02, 0.02, thin),
+		Vector3(cx + 0.04, cy + 0.10, cz), mat_tan)  # Right eye
+
+	# --- Nose ---
+	_box(body, Vector3(0.03, 0.02, thin),
+		Vector3(cx, cy + 0.04, cz), mat_nose)
+
+	# --- Chest / collar area (white) ---
+	_box(body, Vector3(0.10, 0.06, thin),
+		Vector3(cx, cy + 0.0, cz), mat_white)
+
+	# --- Body (black sides, white chest front) ---
+	_box(body, Vector3(0.06, 0.10, thin),
+		Vector3(cx - 0.08, cy - 0.06, cz), mat_black)  # Left body
+	_box(body, Vector3(0.06, 0.10, thin),
+		Vector3(cx + 0.08, cy - 0.06, cz), mat_black)  # Right body
+	_box(body, Vector3(0.08, 0.10, thin),
+		Vector3(cx, cy - 0.06, cz), mat_white)  # Chest front
+
+	# --- Front legs (black with tan/white paws) ---
+	_box(body, Vector3(0.04, 0.06, thin),
+		Vector3(cx - 0.06, cy - 0.14, cz), mat_black)  # Left leg
+	_box(body, Vector3(0.04, 0.06, thin),
+		Vector3(cx + 0.06, cy - 0.14, cz), mat_black)  # Right leg
+	# Paws (white/tan at bottom of legs)
+	_box(body, Vector3(0.04, 0.02, thin),
+		Vector3(cx - 0.06, cy - 0.17, cz), mat_white)  # Left paw
+	_box(body, Vector3(0.04, 0.02, thin),
+		Vector3(cx + 0.06, cy - 0.17, cz), mat_tan)    # Right paw
+
+	# --- Nameplate below portrait ---
+	var mat_brass: StandardMaterial3D = StandardMaterial3D.new()
+	mat_brass.albedo_color = Color(0.7, 0.6, 0.35)
+	mat_brass.roughness = 0.4
+	mat_brass.metallic = 0.5
+	var np_y: float = pos.y - 0.4
+	# Dark wood backing
+	_box(body, Vector3(0.25, 0.06, 0.025),
+		Vector3(pos.x, np_y, pos.z - 0.015), _mat_furniture_wood)
+	# Brass plate
+	_box(body, Vector3(0.2, 0.04, 0.028),
+		Vector3(pos.x, np_y, pos.z - 0.02), mat_brass)
 
 
 # =============================================================================
@@ -2821,6 +3290,15 @@ func interact(player: Node) -> bool:
 		"front_door":
 			if house.has_method("open_new_game_plus"):
 				house.open_new_game_plus(player)
+		"winnie_portrait":
+			if house.has_method("show_text_overlay"):
+				house.show_text_overlay("Winnie", 2.0)
+		"bed_rest":
+			if house.has_method("show_text_overlay"):
+				house.show_text_overlay("You rest peacefully...", 2.0)
+		"explorers_journal":
+			if house.has_method("open_journal"):
+				house.open_journal(player)
 	return true
 """ % [interaction_label, object_type]
 
