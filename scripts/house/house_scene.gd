@@ -25,8 +25,8 @@ const WIN_HEIGHT: float = 1.5
 const WIN_SILL_Y: float = 1.0
 
 # Bedroom extension (behind kitchen, extending north)
-const BEDROOM_DEPTH: float = 5.0
-const BEDROOM_Z_END: float = HOUSE_DEPTH + BEDROOM_DEPTH  # 15.0
+const BEDROOM_DEPTH: float = 7.0
+const BEDROOM_Z_END: float = HOUSE_DEPTH + BEDROOM_DEPTH  # 17.0
 const BEDROOM_DOOR_X: float = 5.0
 const BEDROOM_DOOR_WIDTH: float = 1.0
 
@@ -92,6 +92,7 @@ func _ready() -> void:
 	_setup_lighting()
 	_setup_environment()
 	_create_player()
+	_build_pause_menu()
 	_build_text_overlay()
 	_start_fade_in()
 
@@ -640,10 +641,10 @@ func _build_windows() -> void:
 	_build_six_pane_window("east", 3.0)    # Dining room
 	_build_six_pane_window("east", 7.0)    # Dining room
 	# Bedroom windows (many!)
-	_build_six_pane_window("bedroom_west", 11.5)
-	_build_six_pane_window("bedroom_west", 13.5)
-	_build_six_pane_window("bedroom_east", 11.5)
-	_build_six_pane_window("bedroom_east", 13.5)
+	_build_six_pane_window("bedroom_west", 12.5)
+	_build_six_pane_window("bedroom_west", 15.5)
+	_build_six_pane_window("bedroom_east", 12.5)
+	_build_six_pane_window("bedroom_east", 15.5)
 	_build_six_pane_window("bedroom_north", 1.5)
 	_build_six_pane_window("bedroom_north", 4.5)
 
@@ -1002,47 +1003,34 @@ func _build_kitchen_furniture() -> void:
 		_box(self, Vector3(0.1, 0.02, 0.03),
 			Vector3(counter_x + cx, 0.5, counter_z + 0.33), _mat_handle)
 
-	# L-return along center divider (Z 8.0 to 9.5)
-	var return_x: float = LIVING_ROOM_WIDTH - 0.5
-	var return_z: float = 8.75
-	# Counter top (granite)
-	_box(self, Vector3(0.6, 0.05, 1.5),
-		Vector3(return_x, 0.9, return_z), _mat_granite)
-	_add_granite_speckle(Vector3(return_x, 0.926, return_z), Vector3(0.55, 0.0, 1.4))
-	_box(self, Vector3(0.6, 0.85, 1.5),
-		Vector3(return_x, 0.425, return_z), _mat_cabinet_face)
-	# Cabinet doors on return
-	for cz: float in [-0.35, 0.35]:
-		_box(self, Vector3(0.02, 0.65, 0.6),
-			Vector3(return_x - 0.31, 0.4, return_z + cz), _mat_cabinet_face)
-		_box(self, Vector3(0.03, 0.02, 0.1),
-			Vector3(return_x - 0.33, 0.5, return_z + cz), _mat_handle)
+	# (L-return counter removed to keep bedroom doorway clear)
 
 	# --- Kitchen Sink (under window at X=3.0) ---
 	var mat_sink: StandardMaterial3D = StandardMaterial3D.new()
 	mat_sink.albedo_color = Color(0.6, 0.6, 0.62)
 	mat_sink.roughness = 0.25
 	mat_sink.metallic = 0.6
-	# Sink basin (recessed into counter)
+	# Sink basin (recessed into counter, deeper for visibility)
 	_box(self, Vector3(0.55, 0.02, 0.38),
-		Vector3(3.0, 0.88, counter_z + 0.03), mat_sink)  # Basin bottom
-	# Basin walls (4 thin sides)
-	_box(self, Vector3(0.55, 0.08, 0.02),
-		Vector3(3.0, 0.91, counter_z - 0.17), mat_sink)  # Back
-	_box(self, Vector3(0.55, 0.08, 0.02),
-		Vector3(3.0, 0.91, counter_z + 0.23), mat_sink)  # Front
-	_box(self, Vector3(0.02, 0.08, 0.38),
-		Vector3(2.73, 0.91, counter_z + 0.03), mat_sink)  # Left
-	_box(self, Vector3(0.02, 0.08, 0.38),
-		Vector3(3.27, 0.91, counter_z + 0.03), mat_sink)  # Right
-	# Faucet (taller, arched)
+		Vector3(3.0, 0.84, counter_z), mat_sink)  # Basin bottom
+	# Basin walls (4 thin sides rising to counter surface)
+	_box(self, Vector3(0.55, 0.10, 0.02),
+		Vector3(3.0, 0.89, counter_z + 0.19), mat_sink)  # Back (toward wall)
+	_box(self, Vector3(0.55, 0.10, 0.02),
+		Vector3(3.0, 0.89, counter_z - 0.19), mat_sink)  # Front (toward room)
+	_box(self, Vector3(0.02, 0.10, 0.38),
+		Vector3(2.73, 0.89, counter_z), mat_sink)  # Left
+	_box(self, Vector3(0.02, 0.10, 0.38),
+		Vector3(3.27, 0.89, counter_z), mat_sink)  # Right
+	# Faucet base (against back/wall side of counter = +Z)
 	_box(self, Vector3(0.04, 0.28, 0.04),
-		Vector3(3.0, 1.07, counter_z - 0.2), _mat_kettle)
+		Vector3(3.0, 1.07, counter_z + 0.2), _mat_kettle)
+	# Faucet arch (from back over basin toward room = -Z)
 	_box(self, Vector3(0.04, 0.04, 0.14),
-		Vector3(3.0, 1.21, counter_z - 0.14), _mat_kettle)
-	# Faucet spout (hanging down)
+		Vector3(3.0, 1.21, counter_z + 0.14), _mat_kettle)
+	# Faucet spout (hanging down over basin center)
 	_box(self, Vector3(0.03, 0.08, 0.03),
-		Vector3(3.0, 1.15, counter_z - 0.08), _mat_kettle)
+		Vector3(3.0, 1.15, counter_z + 0.08), _mat_kettle)
 
 	# --- Upper Cabinets (above counter, avoiding window at X=3.0) ---
 	# Left upper cabinet (X 1.5 to 2.3)
@@ -1569,14 +1557,14 @@ func _build_bedroom_walls() -> void:
 	var bz_start: float = HOUSE_DEPTH
 	var bz_end: float = BEDROOM_Z_END
 
-	# West bedroom wall (X=0, Z=10 to 15) — 2 windows at Z=11.5 and Z=13.5
+	# West bedroom wall (X=0, Z=10 to 17) — 2 windows at Z=12.5 and Z=15.5
 	var bw_west: StaticBody3D = StaticBody3D.new()
 	bw_west.name = "BedroomWestWall"
 	add_child(bw_west)
-	var bww1l: float = 11.5 - WIN_WIDTH / 2.0
-	var bww1r: float = 11.5 + WIN_WIDTH / 2.0
-	var bww2l: float = 13.5 - WIN_WIDTH / 2.0
-	var bww2r: float = 13.5 + WIN_WIDTH / 2.0
+	var bww1l: float = 12.5 - WIN_WIDTH / 2.0
+	var bww1r: float = 12.5 + WIN_WIDTH / 2.0
+	var bww2l: float = 15.5 - WIN_WIDTH / 2.0
+	var bww2r: float = 15.5 + WIN_WIDTH / 2.0
 	_bedroom_west_section(bw_west, bz_start, bww1l, 0.0, CEILING_HEIGHT)
 	_bedroom_west_section(bw_west, bww1l, bww1r, 0.0, WIN_SILL_Y)
 	_bedroom_west_section(bw_west, bww1l, bww1r, WIN_SILL_Y + WIN_HEIGHT, CEILING_HEIGHT)
@@ -1585,7 +1573,7 @@ func _build_bedroom_walls() -> void:
 	_bedroom_west_section(bw_west, bww2l, bww2r, WIN_SILL_Y + WIN_HEIGHT, CEILING_HEIGHT)
 	_bedroom_west_section(bw_west, bww2r, bz_end, 0.0, CEILING_HEIGHT)
 
-	# North bedroom wall (Z=15, X=0 to 6) — 2 windows at X=1.5 and X=4.5
+	# North bedroom wall (Z=17, X=0 to 6) — 2 windows at X=1.5 and X=4.5
 	var bw_north: StaticBody3D = StaticBody3D.new()
 	bw_north.name = "BedroomNorthWall"
 	add_child(bw_north)
@@ -1601,14 +1589,14 @@ func _build_bedroom_walls() -> void:
 	_bedroom_north_section(bw_north, bnw2l, bnw2r, WIN_SILL_Y + WIN_HEIGHT, CEILING_HEIGHT)
 	_bedroom_north_section(bw_north, bnw2r, LIVING_ROOM_WIDTH, 0.0, CEILING_HEIGHT)
 
-	# East bedroom wall (X=6, Z=10 to 15) — 2 windows at Z=11.5 and Z=13.5
+	# East bedroom wall (X=6, Z=10 to 17) — 2 windows at Z=12.5 and Z=15.5
 	var bw_east: StaticBody3D = StaticBody3D.new()
 	bw_east.name = "BedroomEastWall"
 	add_child(bw_east)
-	var bew1l: float = 11.5 - WIN_WIDTH / 2.0
-	var bew1r: float = 11.5 + WIN_WIDTH / 2.0
-	var bew2l: float = 13.5 - WIN_WIDTH / 2.0
-	var bew2r: float = 13.5 + WIN_WIDTH / 2.0
+	var bew1l: float = 12.5 - WIN_WIDTH / 2.0
+	var bew1r: float = 12.5 + WIN_WIDTH / 2.0
+	var bew2l: float = 15.5 - WIN_WIDTH / 2.0
+	var bew2r: float = 15.5 + WIN_WIDTH / 2.0
 	_bedroom_east_section(bw_east, bz_start, bew1l, 0.0, CEILING_HEIGHT)
 	_bedroom_east_section(bw_east, bew1l, bew1r, 0.0, WIN_SILL_Y)
 	_bedroom_east_section(bw_east, bew1l, bew1r, WIN_SILL_Y + WIN_HEIGHT, CEILING_HEIGHT)
@@ -1627,7 +1615,7 @@ func _build_bedroom_furniture() -> void:
 
 	# --- Bed (centered at X=3.0 between north wall windows at X=1.5 and X=4.5) ---
 	var bed_x: float = 3.0
-	var bed_z: float = 13.5  # Center of bed; headboard north, footboard south
+	var bed_z: float = 16.0  # Center of bed; headboard north (+Z), footboard south (-Z)
 	var bed: Node3D = Node3D.new()
 	bed.name = "Bed"
 	add_child(bed)
@@ -1638,20 +1626,20 @@ func _build_bedroom_furniture() -> void:
 	# Mattress
 	_box(bed, Vector3(1.4, 0.2, 1.9),
 		Vector3(bed_x, 0.4, bed_z), _mat_pillow)
-	# Bedspread / duvet
+	# Bedspread / duvet (toward footboard = south = -Z)
 	_box(bed, Vector3(1.5, 0.1, 1.5),
-		Vector3(bed_x, 0.55, bed_z + 0.15), _mat_bedding)
-	# Pillows
+		Vector3(bed_x, 0.55, bed_z - 0.15), _mat_bedding)
+	# Pillows (near headboard = north = +Z)
 	_box(bed, Vector3(0.5, 0.1, 0.3),
-		Vector3(bed_x - 0.2, 0.55, bed_z - 0.75), _mat_pillow)
+		Vector3(bed_x - 0.2, 0.55, bed_z + 0.75), _mat_pillow)
 	_box(bed, Vector3(0.5, 0.1, 0.3),
-		Vector3(bed_x + 0.2, 0.55, bed_z - 0.75), _mat_pillow)
-	# Headboard (against north wall)
+		Vector3(bed_x + 0.2, 0.55, bed_z + 0.75), _mat_pillow)
+	# Headboard (against north wall = +Z)
 	_box(bed, Vector3(1.6, 0.8, 0.08),
-		Vector3(bed_x, 0.7, bed_z - 1.0), _mat_furniture_wood)
-	# Footboard (shorter)
+		Vector3(bed_x, 0.7, bed_z + 1.0), _mat_furniture_wood)
+	# Footboard (shorter, toward door = -Z)
 	_box(bed, Vector3(1.6, 0.4, 0.08),
-		Vector3(bed_x, 0.35, bed_z + 1.0), _mat_furniture_wood)
+		Vector3(bed_x, 0.35, bed_z - 1.0), _mat_furniture_wood)
 
 	# Bed collision (so player can't walk through it)
 	var bed_body: StaticBody3D = StaticBody3D.new()
@@ -1664,9 +1652,9 @@ func _build_bedroom_furniture() -> void:
 	bed_col.position = Vector3(bed_x, 0.3, bed_z)
 	bed_body.add_child(bed_col)
 
-	# --- Nightstand (right side of bed, near headboard) ---
+	# --- Nightstand (right side of bed, near headboard = +Z end) ---
 	var ns_x: float = bed_x + 1.1
-	var ns_z: float = bed_z - 0.7
+	var ns_z: float = bed_z + 0.7
 	var nightstand: Node3D = Node3D.new()
 	nightstand.name = "Nightstand"
 	add_child(nightstand)
@@ -1677,21 +1665,21 @@ func _build_bedroom_furniture() -> void:
 	# Top
 	_box(nightstand, Vector3(0.44, 0.04, 0.38),
 		Vector3(ns_x, 0.55, ns_z), _mat_furniture_wood)
-	# Drawer face
+	# Drawer face (facing south = -Z toward room)
 	_box(nightstand, Vector3(0.32, 0.16, 0.02),
-		Vector3(ns_x, 0.35, ns_z + 0.18), _mat_furniture_wood)
+		Vector3(ns_x, 0.35, ns_z - 0.18), _mat_furniture_wood)
 	# Handle
 	_box(nightstand, Vector3(0.08, 0.02, 0.02),
-		Vector3(ns_x, 0.35, ns_z + 0.20), _mat_handle)
+		Vector3(ns_x, 0.35, ns_z - 0.20), _mat_handle)
 	# Lamp on nightstand
 	_box(nightstand, Vector3(0.08, 0.15, 0.08),
 		Vector3(ns_x, 0.63, ns_z), _mat_kettle)
 	_box(nightstand, Vector3(0.15, 0.12, 0.15),
 		Vector3(ns_x, 0.78, ns_z), _mat_pillow)
 
-	# --- Dresser (against east wall, between windows at Z=11.5 and Z=13.5) ---
+	# --- Dresser (against east wall, between windows at Z=12.5 and Z=15.5) ---
 	var dr_x: float = LIVING_ROOM_WIDTH - WALL_THICKNESS - 0.25
-	var dr_z: float = 12.5
+	var dr_z: float = 14.0
 	var dresser: Node3D = Node3D.new()
 	dresser.name = "Dresser"
 	add_child(dresser)
@@ -1737,7 +1725,7 @@ func _build_bedroom_furniture() -> void:
 	mat_bedroom_rug.albedo_color = Color(0.45, 0.35, 0.55)
 	mat_bedroom_rug.roughness = 0.9
 	_box(self, Vector3(1.8, 0.02, 1.2),
-		Vector3(bed_x, 0.01, bed_z + 0.3), mat_bedroom_rug)
+		Vector3(bed_x, 0.01, bed_z - 1.5), mat_bedroom_rug)
 
 
 # =============================================================================
@@ -1760,19 +1748,20 @@ func _build_tree_pictures() -> void:
 		"palm_frond": _make_mat(Color(0.2, 0.5, 0.15)),
 	}
 
-	# West wall interior face
+	# West wall interior face (between windows at Z=12.5 and Z=15.5)
+	# Wall gaps: Z=10-11.9, Z=13.1-14.9, Z=16.1-17
 	var wx: float = WALL_THICKNESS + 0.03
-	_build_tree_picture(Vector3(wx, 1.6, 12.5), "west", "ponderosa_pine", mats)
-	_build_tree_picture(Vector3(wx, 1.6, 10.7), "west", "oak", mats)
+	_build_tree_picture(Vector3(wx, 1.6, 11.0), "west", "ponderosa_pine", mats)
+	_build_tree_picture(Vector3(wx, 1.6, 14.0), "west", "oak", mats)
 
-	# North wall interior face (above headboard, between windows)
+	# North wall interior face (above headboard, between windows at X=1.5 and X=4.5)
 	var nz: float = BEDROOM_Z_END - WALL_THICKNESS - 0.03
 	_build_tree_picture(Vector3(3.0, 1.9, nz), "north", "birch", mats)
 
-	# East wall interior face
+	# East wall interior face (between windows at Z=12.5 and Z=15.5)
 	var ex: float = LIVING_ROOM_WIDTH - WALL_THICKNESS - 0.03
-	_build_tree_picture(Vector3(ex, 1.6, 10.7), "east", "cactus", mats)
-	_build_tree_picture(Vector3(ex, 1.6, 14.2), "east", "palm", mats)
+	_build_tree_picture(Vector3(ex, 1.6, 11.0), "east", "cactus", mats)
+	_build_tree_picture(Vector3(ex, 1.6, 16.5), "east", "palm", mats)
 
 
 func _make_mat(color: Color) -> StandardMaterial3D:
@@ -1956,10 +1945,10 @@ func _setup_lighting() -> void:
 	_add_light("DiningFill", Vector3(dining_cx, 2.5, 2.0),
 		Color(1.0, 0.9, 0.7), 0.5, 5.0)
 
-	# Bedroom lights (warm, cozy)
-	_add_light("BedroomLight1", Vector3(3.0, 2.5, 12.0),
+	# Bedroom lights (warm, cozy — spread for larger room)
+	_add_light("BedroomLight1", Vector3(3.0, 2.5, 12.5),
 		Color(1.0, 0.9, 0.7), 0.8, 6.0)
-	_add_light("BedroomLight2", Vector3(3.0, 2.5, 14.0),
+	_add_light("BedroomLight2", Vector3(3.0, 2.5, 15.5),
 		Color(1.0, 0.9, 0.7), 0.6, 5.0)
 
 
@@ -2004,6 +1993,19 @@ func _create_player() -> void:
 	# Spawn in the living room, facing into the room
 	player.position = Vector3(2.0, 0.0, 2.0)
 	add_child(player)
+
+
+# =============================================================================
+# HOUSE PAUSE MENU
+# =============================================================================
+
+const HousePauseMenuScript: GDScript = preload("res://scripts/house/house_pause_menu.gd")
+
+func _build_pause_menu() -> void:
+	var pause_menu: CanvasLayer = CanvasLayer.new()
+	pause_menu.name = "HousePauseMenu"
+	pause_menu.set_script(HousePauseMenuScript)
+	add_child(pause_menu)
 
 
 # =============================================================================

@@ -10,6 +10,7 @@ const INTERACTION_CHECK_INTERVAL: float = 0.1
 const INTERACT_COOLDOWN: float = 0.15
 const CAMERA_PITCH_MIN: float = -89.0
 const CAMERA_PITCH_MAX: float = 89.0
+const FOOTSTEP_INTERVAL: float = 0.45
 
 const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 
@@ -26,6 +27,7 @@ var _prompt_label: Label
 # Timers
 var _interaction_check_timer: float = 0.0
 var _interact_cooldown_timer: float = 0.0
+var _footstep_timer: float = 0.0
 
 # Gravity
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
@@ -182,6 +184,16 @@ func _physics_process(delta: float) -> void:
 		velocity.z = move_toward(velocity.z, 0, WALK_SPEED)
 
 	move_and_slide()
+
+	# Footstep sounds on hardwood floors
+	var h_speed: float = Vector2(velocity.x, velocity.z).length()
+	if h_speed > 0.5 and is_on_floor():
+		_footstep_timer += delta
+		if _footstep_timer >= FOOTSTEP_INTERVAL:
+			_footstep_timer = 0.0
+			SFXManager.play_footstep("stone")
+	else:
+		_footstep_timer = 0.0
 
 
 func _handle_controller_look(delta: float) -> void:
