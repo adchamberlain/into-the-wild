@@ -1,10 +1,11 @@
 extends CanvasLayer
 ## Pause menu for the house scene.
-## Resume, Save Game, and Quit to Desktop.
+## Resume, Save Game (with slot selection), and Quit to Desktop.
 
 const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 const SAVE_DIR: String = "user://saves/"
 const SAVE_VERSION: int = 1
+const NUM_SLOTS: int = 3
 
 var is_paused: bool = false
 var panel: PanelContainer
@@ -12,6 +13,12 @@ var button_list: Array[Button] = []
 var focused_index: int = 0
 var save_confirmation_label: Label
 var vbox: VBoxContainer
+
+# Slot picker state
+var _showing_slot_picker: bool = false
+var _slot_picker_panel: PanelContainer = null
+var _slot_cursor: int = 0
+var _slot_labels: Array[Label] = []
 
 
 func _ready() -> void:
@@ -113,6 +120,33 @@ func _input(event: InputEvent) -> void:
 	if not is_inside_tree():
 		return
 
+	# Handle slot picker input first
+	if _showing_slot_picker:
+		if event.is_action_pressed("ui_cancel"):
+			_dismiss_slot_picker()
+			get_viewport().set_input_as_handled()
+			return
+		if event.is_action_pressed("ui_down"):
+			_slot_cursor = (_slot_cursor + 1) % NUM_SLOTS
+			_update_slot_highlight()
+			SFXManager.play_sfx("select")
+			get_viewport().set_input_as_handled()
+			return
+		if event.is_action_pressed("ui_up"):
+			_slot_cursor = (_slot_cursor - 1 + NUM_SLOTS) % NUM_SLOTS
+			_update_slot_highlight()
+			SFXManager.play_sfx("select")
+			get_viewport().set_input_as_handled()
+			return
+		if event.is_action_pressed("ui_accept"):
+			_save_to_slot(_slot_cursor + 1)
+			get_viewport().set_input_as_handled()
+			return
+		# Consume all other input while slot picker is open
+		if event is InputEventKey or event is InputEventJoypadButton:
+			get_viewport().set_input_as_handled()
+		return
+
 	if event.is_action_pressed("pause"):
 		toggle_pause()
 		get_viewport().set_input_as_handled()
@@ -157,6 +191,8 @@ func toggle_pause() -> void:
 
 
 func _on_resume() -> void:
+	if _showing_slot_picker:
+		_dismiss_slot_picker()
 	SFXManager.play_sfx("menu_close")
 	is_paused = false
 	get_tree().paused = false
@@ -166,16 +202,7 @@ func _on_resume() -> void:
 
 
 func _on_save_game() -> void:
-	var success: bool = _save_house_state()
-	if success:
-		_show_save_confirmation()
-		SFXManager.play_sfx("select")
-	else:
-		# Show error briefly
-		save_confirmation_label.text = "Save Failed!"
-		save_confirmation_label.add_theme_color_override("font_color", Color(1, 0.5, 0.5, 1))
-		save_confirmation_label.visible = true
-		_start_confirmation_timer()
+	_show_slot_picker()
 
 
 func _on_quit() -> void:
@@ -184,20 +211,152 @@ func _on_quit() -> void:
 
 
 # ============================================================================
+# Slot Picker
+# ============================================================================
+
+func _show_slot_picker() -> void:
+	if _showing_slot_picker:
+		return
+	_showing_slot_picker = true
+	_slot_cursor = 0
+	_slot_labels.clear()
+
+	_slot_picker_panel = PanelContainer.new()
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.08, 0.1, 0.95)
+	style.corner_radius_top_left = 10
+	style.corner_radius_top_right = 10
+	style.corner_radius_bottom_left = 10
+	style.corner_radius_bottom_right = 10
+	style.content_margin_left = 30
+	style.content_margin_right = 30
+	style.content_margin_top = 20
+	style.content_margin_bottom = 20
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	style.border_color = Color(1, 0.85, 0.3, 0.6)
+	_slot_picker_panel.add_theme_stylebox_override("panel", style)
+	_slot_picker_panel.anchor_left = 0.3
+	_slot_picker_panel.anchor_right = 0.7
+	_slot_picker_panel.anchor_top = 0.25
+	_slot_picker_panel.anchor_bottom = 0.75
+	_slot_picker_panel.offset_left = 0
+	_slot_picker_panel.offset_right = 0
+	_slot_picker_panel.offset_top = 0
+	_slot_picker_panel.offset_bottom = 0
+	add_child(_slot_picker_panel)
+
+	var slot_vbox: VBoxContainer = VBoxContainer.new()
+	slot_vbox.add_theme_constant_override("separation", 12)
+	_slot_picker_panel.add_child(slot_vbox)
+
+	# Title
+	var picker_title: Label = Label.new()
+	picker_title.text = "Choose Save Slot"
+	picker_title.add_theme_font_override("font", HUD_FONT)
+	picker_title.add_theme_font_size_override("font_size", 40)
+	picker_title.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
+	picker_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	slot_vbox.add_child(picker_title)
+
+	var sep: HSeparator = HSeparator.new()
+	slot_vbox.add_child(sep)
+
+	# Build slot rows
+	for i: int in range(NUM_SLOTS):
+		var slot_num: int = i + 1
+		var info: String = _get_slot_info_text(slot_num)
+		var slot_label: Label = Label.new()
+		slot_label.text = "  Slot %d  -  %s" % [slot_num, info]
+		slot_label.add_theme_font_override("font", HUD_FONT)
+		slot_label.add_theme_font_size_override("font_size", 32)
+		slot_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		slot_vbox.add_child(slot_label)
+		_slot_labels.append(slot_label)
+
+	# Hint
+	var hint: Label = Label.new()
+	hint.text = "[Esc] Cancel"
+	hint.add_theme_font_override("font", HUD_FONT)
+	hint.add_theme_font_size_override("font_size", 24)
+	hint.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5, 1))
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	slot_vbox.add_child(hint)
+
+	_update_slot_highlight()
+	SFXManager.play_sfx("menu_open")
+
+
+func _dismiss_slot_picker() -> void:
+	_showing_slot_picker = false
+	_slot_labels.clear()
+	if is_instance_valid(_slot_picker_panel):
+		_slot_picker_panel.queue_free()
+	_slot_picker_panel = null
+	SFXManager.play_sfx("menu_close")
+
+
+func _update_slot_highlight() -> void:
+	for i: int in range(_slot_labels.size()):
+		if i == _slot_cursor:
+			_slot_labels[i].add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
+			_slot_labels[i].text = "> Slot %d  -  %s" % [i + 1, _get_slot_info_text(i + 1)]
+		else:
+			_slot_labels[i].add_theme_color_override("font_color", Color(0.7, 0.7, 0.7, 1))
+			_slot_labels[i].text = "  Slot %d  -  %s" % [i + 1, _get_slot_info_text(i + 1)]
+
+
+func _save_to_slot(slot_num: int) -> void:
+	var success: bool = _save_house_state(slot_num)
+	_dismiss_slot_picker()
+	if success:
+		_show_save_confirmation(slot_num)
+		SFXManager.play_sfx("select")
+	else:
+		save_confirmation_label.text = "Save Failed!"
+		save_confirmation_label.add_theme_color_override("font_color", Color(1, 0.5, 0.5, 1))
+		save_confirmation_label.visible = true
+		_start_confirmation_timer()
+
+
+func _get_slot_info_text(slot_num: int) -> String:
+	var filepath: String = SAVE_DIR + "save_slot_%d.json" % slot_num
+	if not FileAccess.file_exists(filepath):
+		return "Empty"
+	var file: FileAccess = FileAccess.open(filepath, FileAccess.READ)
+	if not file:
+		return "Empty"
+	var json: JSON = JSON.new()
+	var err: Error = json.parse(file.get_as_text())
+	file.close()
+	if err != OK:
+		return "Corrupt"
+	var data: Dictionary = json.data as Dictionary
+	if not data:
+		return "Corrupt"
+	var location: String = data.get("player_location", "wilderness")
+	var timestamp: String = data.get("timestamp", "")
+	var display_loc: String = "House" if location == "house" else "Wilderness"
+	if timestamp.length() >= 10:
+		return "%s  (%s)" % [display_loc, timestamp.left(10)]
+	return display_loc
+
+
+# ============================================================================
 # House Save System
 # ============================================================================
 
-## Save the house state to slot 1 (the default save slot).
-## This writes a save file that marks the player as being in the house,
-## so loading this save will transition directly to the house scene.
-func _save_house_state() -> bool:
+## Save the house state to the specified slot.
+func _save_house_state(slot_num: int = 1) -> bool:
 	# Ensure save directory exists
 	var dir: DirAccess = DirAccess.open("user://")
 	if dir and not dir.dir_exists("saves"):
 		dir.make_dir("saves")
 
 	var save_data: Dictionary = _collect_house_save_data()
-	var filepath: String = SAVE_DIR + "save_slot_1.json"
+	var filepath: String = SAVE_DIR + "save_slot_%d.json" % slot_num
 	var file: FileAccess = FileAccess.open(filepath, FileAccess.WRITE)
 
 	if not file:
@@ -234,8 +393,8 @@ func _collect_house_save_data() -> Dictionary:
 
 
 ## Show the "Game Saved!" confirmation and auto-hide after 2 seconds.
-func _show_save_confirmation() -> void:
-	save_confirmation_label.text = "Game Saved!"
+func _show_save_confirmation(slot_num: int = 1) -> void:
+	save_confirmation_label.text = "Saved to Slot %d!" % slot_num
 	save_confirmation_label.add_theme_color_override("font_color", Color(0.6, 1, 0.6, 1))
 	save_confirmation_label.visible = true
 	_start_confirmation_timer()

@@ -1135,7 +1135,7 @@ func _build_living_room_furniture() -> void:
 	fp_col.position = Vector3(0.425, 0.7, 2.5)
 	fp_body.add_child(fp_col)
 
-	# --- Couch (Restoration Hardware style leather, back against east divider wall) ---
+	# --- Couch (Restoration Hardware style leather, back against center divider wall) ---
 	# Premium light-grained Italian leather material
 	var mat_leather: StandardMaterial3D = StandardMaterial3D.new()
 	mat_leather.albedo_color = Color(0.82, 0.72, 0.58)  # Warm tan/camel leather
@@ -1154,8 +1154,8 @@ func _build_living_room_furniture() -> void:
 	var couch_container: Node3D = Node3D.new()
 	couch_container.name = "Couch"
 	add_child(couch_container)
-	var couch_x: float = 4.2
-	var couch_z: float = 3.4
+	var couch_x: float = 5.45  # Back flush against divider wall at X=6
+	var couch_z: float = 2.5   # Centered along wall (living room Z=0..5)
 	# Seat base
 	_box(couch_container, Vector3(0.8, 0.35, 2.0),
 		Vector3(couch_x, 0.42, couch_z), mat_leather)
@@ -1169,7 +1169,7 @@ func _build_living_room_furniture() -> void:
 			Vector3(couch_x - 0.04, 0.68, cz - 0.27), mat_leather_dark)
 		_box(couch_container, Vector3(0.68, 0.01, 0.01),
 			Vector3(couch_x - 0.04, 0.68, cz + 0.27), mat_leather_dark)
-	# Back (on +X east side, facing west toward fireplace)
+	# Back (on +X east side, flush against divider wall)
 	_box(couch_container, Vector3(0.15, 0.55, 2.0),
 		Vector3(couch_x + 0.4 - 0.075, 0.68, couch_z), mat_leather)
 	# Back cushions (3 sections)
@@ -1203,12 +1203,12 @@ func _build_living_room_furniture() -> void:
 	couch_col.position = Vector3(couch_x, 0.4, couch_z)
 	couch_body.add_child(couch_col)
 
-	# --- Coffee Table (between couch and fireplace) ---
+	# --- Coffee Table (between couch and armchair) ---
 	var table_container: Node3D = Node3D.new()
 	table_container.name = "CoffeeTable"
 	add_child(table_container)
-	var table_x: float = 2.7
-	var table_z: float = 3.4
+	var table_x: float = 3.7
+	var table_z: float = 2.5
 	_box(table_container, Vector3(0.5, 0.05, 1.0),
 		Vector3(table_x, 0.4, table_z), _mat_furniture_wood)
 	for lx: float in [-0.18, 0.18]:
@@ -1226,7 +1226,7 @@ func _build_living_room_furniture() -> void:
 	ct_col.position = Vector3(table_x, 0.225, table_z)
 	ct_body.add_child(ct_col)
 
-	# --- Armchair (between fireplace and bookshelf, facing east toward couch) ---
+	# --- Armchair (facing +X east toward couch, conversational layout) ---
 	# Matching leather material (same as couch)
 	var mat_chair_leather: StandardMaterial3D = StandardMaterial3D.new()
 	mat_chair_leather.albedo_color = Color(0.82, 0.72, 0.58)
@@ -1240,37 +1240,36 @@ func _build_living_room_furniture() -> void:
 	var chair: Node3D = Node3D.new()
 	chair.name = "Armchair"
 	add_child(chair)
-	var chair_x: float = 2.0
-	var chair_z: float = 4.0
-	# Chair rotated 90° CW from above: now faces -Z (south, toward room center)
-	# Back is on +Z (north) side
+	var chair_x: float = 1.8
+	var chair_z: float = 2.5
+	# Chair faces +X (east toward couch). Back is on -X (west) side.
 	# Seat (square, symmetric)
 	_box(chair, Vector3(0.7, 0.35, 0.7),
 		Vector3(chair_x, 0.38, chair_z), mat_chair_leather)
-	# Seat cushion (offset toward front = -Z)
+	# Seat cushion (offset toward front = +X)
 	_box(chair, Vector3(0.6, 0.08, 0.6),
-		Vector3(chair_x, 0.60, chair_z - 0.02), mat_chair_leather)
-	# Cushion piping (runs along X axis)
-	_box(chair, Vector3(0.01, 0.01, 0.58),
-		Vector3(chair_x - 0.29, 0.64, chair_z - 0.02), mat_chair_leather_dark)
-	_box(chair, Vector3(0.01, 0.01, 0.58),
-		Vector3(chair_x + 0.29, 0.64, chair_z - 0.02), mat_chair_leather_dark)
-	# Back (on +Z north side, facing -Z south toward room)
-	_box(chair, Vector3(0.7, 0.5, 0.12),
-		Vector3(chair_x, 0.6, chair_z + 0.35 - 0.06), mat_chair_leather)
+		Vector3(chair_x + 0.02, 0.60, chair_z), mat_chair_leather)
+	# Cushion piping (runs along Z axis)
+	_box(chair, Vector3(0.58, 0.01, 0.01),
+		Vector3(chair_x + 0.02, 0.64, chair_z - 0.29), mat_chair_leather_dark)
+	_box(chair, Vector3(0.58, 0.01, 0.01),
+		Vector3(chair_x + 0.02, 0.64, chair_z + 0.29), mat_chair_leather_dark)
+	# Back (on -X west side, facing +X east toward couch)
+	_box(chair, Vector3(0.12, 0.5, 0.7),
+		Vector3(chair_x - 0.35 + 0.06, 0.6, chair_z), mat_chair_leather)
 	# Back cushion
-	_box(chair, Vector3(0.55, 0.38, 0.06),
-		Vector3(chair_x, 0.65, chair_z + 0.24), mat_chair_leather)
-	# West arm (at -X side = right side when seated facing south)
-	_box(chair, Vector3(0.12, 0.4, 0.7),
-		Vector3(chair_x - 0.35 + 0.06, 0.48, chair_z), mat_chair_leather)
-	_box(chair, Vector3(0.11, 0.06, 0.5),
-		Vector3(chair_x - 0.35 + 0.06, 0.70, chair_z + 0.06), mat_chair_leather_dark)
-	# East arm (at +X side = left side when seated facing south)
-	_box(chair, Vector3(0.12, 0.4, 0.7),
-		Vector3(chair_x + 0.35 - 0.06, 0.48, chair_z), mat_chair_leather)
-	_box(chair, Vector3(0.11, 0.06, 0.5),
-		Vector3(chair_x + 0.35 - 0.06, 0.70, chair_z + 0.06), mat_chair_leather_dark)
+	_box(chair, Vector3(0.06, 0.38, 0.55),
+		Vector3(chair_x - 0.24, 0.65, chair_z), mat_chair_leather)
+	# South arm (at -Z side)
+	_box(chair, Vector3(0.7, 0.4, 0.12),
+		Vector3(chair_x, 0.48, chair_z - 0.35 + 0.06), mat_chair_leather)
+	_box(chair, Vector3(0.5, 0.06, 0.11),
+		Vector3(chair_x - 0.06, 0.70, chair_z - 0.35 + 0.06), mat_chair_leather_dark)
+	# North arm (at +Z side)
+	_box(chair, Vector3(0.7, 0.4, 0.12),
+		Vector3(chair_x, 0.48, chair_z + 0.35 - 0.06), mat_chair_leather)
+	_box(chair, Vector3(0.5, 0.06, 0.11),
+		Vector3(chair_x - 0.06, 0.70, chair_z + 0.35 - 0.06), mat_chair_leather_dark)
 	# 4 dark walnut legs
 	var mat_chair_legs: StandardMaterial3D = StandardMaterial3D.new()
 	mat_chair_legs.albedo_color = Color(0.28, 0.18, 0.10)
@@ -1290,12 +1289,12 @@ func _build_living_room_furniture() -> void:
 	arm_col.position = Vector3(chair_x, 0.4, chair_z)
 	arm_body.add_child(arm_col)
 
-	# --- Side Table (right side of armchair = -X/west side) ---
+	# --- Side Table (south side of armchair) ---
 	var chair_side_table: Node3D = Node3D.new()
 	chair_side_table.name = "ArmchairSideTable"
 	add_child(chair_side_table)
-	var cst_x: float = chair_x - 0.65
-	var cst_z: float = chair_z
+	var cst_x: float = chair_x
+	var cst_z: float = chair_z - 0.7
 	_box(chair_side_table, Vector3(0.35, 0.45, 0.35),
 		Vector3(cst_x, 0.225, cst_z), _mat_furniture_wood)
 	_box(chair_side_table, Vector3(0.38, 0.04, 0.38),
@@ -1305,8 +1304,8 @@ func _build_living_room_furniture() -> void:
 	var end_table: Node3D = Node3D.new()
 	end_table.name = "EndTableNorth"
 	add_child(end_table)
-	var et_x: float = 4.2
-	var et_z: float = 4.7
+	var et_x: float = couch_x
+	var et_z: float = couch_z + 1.3
 	# Table body
 	_box(end_table, Vector3(0.4, 0.5, 0.4),
 		Vector3(et_x, 0.25, et_z), _mat_furniture_wood)
@@ -1324,8 +1323,8 @@ func _build_living_room_furniture() -> void:
 	var end_table_s: Node3D = Node3D.new()
 	end_table_s.name = "EndTableSouth"
 	add_child(end_table_s)
-	var ets_x: float = 4.2
-	var ets_z: float = 2.1
+	var ets_x: float = couch_x
+	var ets_z: float = couch_z - 1.3
 	# Table body
 	_box(end_table_s, Vector3(0.4, 0.5, 0.4),
 		Vector3(ets_x, 0.25, ets_z), _mat_furniture_wood)
@@ -1339,9 +1338,9 @@ func _build_living_room_furniture() -> void:
 	_box(end_table_s, Vector3(0.15, 0.12, 0.15),
 		Vector3(ets_x, 0.77, ets_z), _mat_pillow)
 
-	# --- Rug (under seating group, centered in room) ---
-	_box(self, Vector3(3.0, 0.02, 3.5),
-		Vector3(3.0, 0.01, 3.4), _mat_rug)
+	# --- Rug (under seating group, centered in living room) ---
+	_box(self, Vector3(3.0, 0.02, 3.0),
+		Vector3(3.5, 0.01, 2.5), _mat_rug)
 
 	# --- Bookshelves (against kitchen divider wall, left of doorway, facing into room) ---
 	_build_bookshelf(Vector3(1.0, 0.0, LIVING_ROOM_DEPTH - 0.1))
@@ -1888,7 +1887,7 @@ func _build_wall_maps() -> void:
 	# Two maps on north wall of dining room, centered (large + small)
 	var north_z: float = HOUSE_DEPTH - WALL_THICKNESS - 0.03
 	_build_terrain_map(Vector3(8.0, 1.6, north_z), "north", 1.2, 0.9, 42)
-	_build_terrain_map(Vector3(10.0, 1.6, north_z), "north", 0.8, 0.6, 89)
+	_build_terrain_map(Vector3(10.0, 1.6, north_z), "north", 1.2, 0.9, 89)
 
 	# Map on south wall of dining room (left of window)
 	_build_terrain_map(Vector3(7.0, 1.6, WALL_THICKNESS + 0.03), "south", 0.9, 0.7, 55)
@@ -2143,40 +2142,6 @@ func _build_dining_room_furniture() -> void:
 			Vector3(table_x + foff, 0.96, table_z + foff * 0.5), mat_stem)
 		_box(self, Vector3(0.04, 0.03, 0.04),
 			Vector3(table_x + foff, 1.03, table_z + foff * 0.5), mat_flower_petal)
-
-	# --- Explorer's Journal on Table ---
-	var journal_body: StaticBody3D = StaticBody3D.new()
-	journal_body.name = "DiningJournal"
-	journal_body.set_script(_create_interactable_script(
-		"Read Explorer's Journal", "explorers_journal"
-	))
-	# Book cover (leather brown)
-	var mat_journal_cover: StandardMaterial3D = StandardMaterial3D.new()
-	mat_journal_cover.albedo_color = Color(0.45, 0.3, 0.15)
-	mat_journal_cover.roughness = 0.7
-	var mat_journal_pages: StandardMaterial3D = StandardMaterial3D.new()
-	mat_journal_pages.albedo_color = Color(0.85, 0.82, 0.72)
-	mat_journal_pages.roughness = 0.8
-	var mat_journal_spine: StandardMaterial3D = StandardMaterial3D.new()
-	mat_journal_spine.albedo_color = Color(0.35, 0.22, 0.1)
-	mat_journal_spine.roughness = 0.75
-	var jx: float = table_x - 0.15
-	var jy: float = 0.79
-	var jz: float = table_z
-	# Cover
-	_box(journal_body, Vector3(0.2, 0.03, 0.28), Vector3(jx, jy, jz), mat_journal_cover)
-	# Pages (slightly inset)
-	_box(journal_body, Vector3(0.18, 0.02, 0.26), Vector3(jx, jy, jz), mat_journal_pages)
-	# Spine
-	_box(journal_body, Vector3(0.02, 0.035, 0.28), Vector3(jx - 0.1, jy, jz), mat_journal_spine)
-	# Collision for interaction
-	var jcol: CollisionShape3D = CollisionShape3D.new()
-	var jshape: BoxShape3D = BoxShape3D.new()
-	jshape.size = Vector3(0.25, 0.1, 0.3)
-	jcol.shape = jshape
-	jcol.position = Vector3(jx, jy, jz)
-	journal_body.add_child(jcol)
-	add_child(journal_body)
 
 	# --- Chandelier ---
 	_build_chandelier(Vector3(dining_cx, CEILING_HEIGHT, dining_cz))
@@ -2814,17 +2779,19 @@ func _build_tree_pictures() -> void:
 	# West wall interior face (between windows at Z=12.5 and Z=15.5)
 	# Wall gaps: Z=10-11.9, Z=13.1-14.9, Z=16.1-17
 	var wx: float = WALL_THICKNESS + 0.03
-	_build_tree_picture(Vector3(wx, 1.6, 11.0), "west", "ponderosa_pine", mats)
+	_build_sunset_painting(Vector3(wx, 1.6, 11.0), "west")
 	_build_tree_picture(Vector3(wx, 1.6, 14.0), "west", "oak", mats)
 
 	# North wall interior face (above headboard, between windows at X=1.5 and X=4.5)
 	var nz: float = BEDROOM_Z_END - WALL_THICKNESS - 0.03
 	_build_winnie_portrait(Vector3(3.0, 1.9, nz))
 
-	# East wall interior face (between windows at Z=12.5 and Z=15.5)
+	# East wall interior face
 	var ex: float = LIVING_ROOM_WIDTH - WALL_THICKNESS - 0.03
+	# Cactus on west wall between windows
 	_build_tree_picture(Vector3(wx, 1.6, 13.5), "west", "cactus", mats)
-	_build_tree_picture(Vector3(ex, 1.6, 16.5), "east", "palm", mats)
+	# Palm on east wall, viewable from bed (between entry and first window)
+	_build_tree_picture(Vector3(ex, 1.6, 11.0), "east", "palm", mats)
 
 
 func _make_mat(color: Color) -> StandardMaterial3D:
@@ -2843,14 +2810,14 @@ func _build_tree_picture(pos: Vector3, wall: String, tree_type: String, mats: Di
 	var is_ew: bool = (wall == "east" or wall == "west")
 	var dir: float = 1.0 if (wall == "west" or wall == "south") else -1.0
 
-	# Frame & background
+	# Frame & background (0.7 x 0.7 square)
 	if is_ew:
-		_box(p, Vector3(0.03, 0.55, 0.55), pos, _mat_portrait_frame)
-		_box(p, Vector3(0.02, 0.49, 0.49),
+		_box(p, Vector3(0.03, 0.7, 0.7), pos, _mat_portrait_frame)
+		_box(p, Vector3(0.02, 0.64, 0.64),
 			Vector3(pos.x + dir * 0.01, pos.y, pos.z), _mat_portrait_bg)
 	else:
-		_box(p, Vector3(0.55, 0.55, 0.03), pos, _mat_portrait_frame)
-		_box(p, Vector3(0.49, 0.49, 0.02),
+		_box(p, Vector3(0.7, 0.7, 0.03), pos, _mat_portrait_frame)
+		_box(p, Vector3(0.64, 0.64, 0.02),
 			Vector3(pos.x, pos.y, pos.z + dir * 0.01), _mat_portrait_bg)
 
 	# Get tree art description and place pieces
@@ -3312,11 +3279,9 @@ func _build_winnie_portrait(pos: Vector3) -> void:
 
 	# Frame (north wall = X/Y face, thin on Z)
 	_box(body, Vector3(0.55, 0.55, 0.03), pos, _mat_portrait_frame)
-	# Background
 	_box(body, Vector3(0.49, 0.49, 0.02),
 		Vector3(pos.x, pos.y, pos.z - 0.01), _mat_portrait_bg)
 
-	# Collision shape for interaction
 	var col: CollisionShape3D = CollisionShape3D.new()
 	var shape: BoxShape3D = BoxShape3D.new()
 	shape.size = Vector3(0.55, 0.55, 0.1)
@@ -3324,97 +3289,159 @@ func _build_winnie_portrait(pos: Vector3) -> void:
 	col.position = pos
 	body.add_child(col)
 
-	# Materials for Australian Shepherd
-	var mat_black: StandardMaterial3D = StandardMaterial3D.new()
-	mat_black.albedo_color = Color(0.08, 0.08, 0.1)
-	mat_black.roughness = 0.9
-
-	var mat_white: StandardMaterial3D = StandardMaterial3D.new()
-	mat_white.albedo_color = Color(0.92, 0.9, 0.88)
-	mat_white.roughness = 0.9
-
-	var mat_tan: StandardMaterial3D = StandardMaterial3D.new()
-	mat_tan.albedo_color = Color(0.7, 0.4, 0.15)
-	mat_tan.roughness = 0.9
-
-	var mat_nose: StandardMaterial3D = StandardMaterial3D.new()
-	mat_nose.albedo_color = Color(0.15, 0.1, 0.1)
-	mat_nose.roughness = 0.8
+	var mat_black: StandardMaterial3D = _make_mat(Color(0.08, 0.08, 0.1))
+	var mat_white: StandardMaterial3D = _make_mat(Color(0.92, 0.9, 0.88))
+	var mat_tan: StandardMaterial3D = _make_mat(Color(0.7, 0.4, 0.15))
+	var mat_nose: StandardMaterial3D = _make_mat(Color(0.15, 0.1, 0.1))
 
 	var thin: float = 0.015
-	var cx: float = pos.x  # Center X of portrait
-	var cy: float = pos.y  # Center Y of portrait
-	var cz: float = pos.z - 0.02  # Slightly in front of background
+	var cx: float = pos.x
+	var cy: float = pos.y
+	var cz: float = pos.z - 0.02
 
-	# --- Ears (triangular-ish black pieces at top) ---
-	_box(body, Vector3(0.05, 0.05, thin),
-		Vector3(cx - 0.09, cy + 0.15, cz), mat_black)  # Left ear
-	_box(body, Vector3(0.05, 0.05, thin),
-		Vector3(cx + 0.09, cy + 0.15, cz), mat_black)  # Right ear
-	# Ear tips (slightly higher, smaller)
-	_box(body, Vector3(0.03, 0.03, thin),
-		Vector3(cx - 0.10, cy + 0.17, cz), mat_black)  # Left ear tip
-	_box(body, Vector3(0.03, 0.03, thin),
-		Vector3(cx + 0.10, cy + 0.17, cz), mat_black)  # Right ear tip
+	# Ears
+	_box(body, Vector3(0.05, 0.05, thin), Vector3(cx - 0.09, cy + 0.15, cz), mat_black)
+	_box(body, Vector3(0.05, 0.05, thin), Vector3(cx + 0.09, cy + 0.15, cz), mat_black)
+	_box(body, Vector3(0.03, 0.03, thin), Vector3(cx - 0.10, cy + 0.17, cz), mat_black)
+	_box(body, Vector3(0.03, 0.03, thin), Vector3(cx + 0.10, cy + 0.17, cz), mat_black)
+	# Head
+	_box(body, Vector3(0.16, 0.06, thin), Vector3(cx, cy + 0.12, cz), mat_black)
+	_box(body, Vector3(0.05, 0.05, thin), Vector3(cx - 0.06, cy + 0.08, cz), mat_tan)
+	_box(body, Vector3(0.05, 0.05, thin), Vector3(cx + 0.06, cy + 0.08, cz), mat_tan)
+	_box(body, Vector3(0.04, 0.08, thin), Vector3(cx, cy + 0.08, cz), mat_white)
+	# Eyes
+	_box(body, Vector3(0.02, 0.02, thin), Vector3(cx - 0.04, cy + 0.10, cz), mat_tan)
+	_box(body, Vector3(0.02, 0.02, thin), Vector3(cx + 0.04, cy + 0.10, cz), mat_tan)
+	# Nose
+	_box(body, Vector3(0.03, 0.02, thin), Vector3(cx, cy + 0.04, cz), mat_nose)
+	# Chest/collar
+	_box(body, Vector3(0.10, 0.06, thin), Vector3(cx, cy + 0.0, cz), mat_white)
+	# Body
+	_box(body, Vector3(0.06, 0.10, thin), Vector3(cx - 0.08, cy - 0.06, cz), mat_black)
+	_box(body, Vector3(0.06, 0.10, thin), Vector3(cx + 0.08, cy - 0.06, cz), mat_black)
+	_box(body, Vector3(0.08, 0.10, thin), Vector3(cx, cy - 0.06, cz), mat_white)
+	# Legs and paws
+	_box(body, Vector3(0.04, 0.06, thin), Vector3(cx - 0.06, cy - 0.14, cz), mat_black)
+	_box(body, Vector3(0.04, 0.06, thin), Vector3(cx + 0.06, cy - 0.14, cz), mat_black)
+	_box(body, Vector3(0.04, 0.02, thin), Vector3(cx - 0.06, cy - 0.17, cz), mat_white)
+	_box(body, Vector3(0.04, 0.02, thin), Vector3(cx + 0.06, cy - 0.17, cz), mat_tan)
 
-	# --- Head (black top, tan cheeks, white muzzle) ---
-	# Black skull/top of head
-	_box(body, Vector3(0.16, 0.06, thin),
-		Vector3(cx, cy + 0.12, cz), mat_black)
-	# Tan cheeks
-	_box(body, Vector3(0.05, 0.05, thin),
-		Vector3(cx - 0.06, cy + 0.08, cz), mat_tan)  # Left cheek
-	_box(body, Vector3(0.05, 0.05, thin),
-		Vector3(cx + 0.06, cy + 0.08, cz), mat_tan)  # Right cheek
-	# White muzzle blaze (center stripe down face)
-	_box(body, Vector3(0.04, 0.08, thin),
-		Vector3(cx, cy + 0.08, cz), mat_white)
-
-	# --- Eyes (small tan dots) ---
-	_box(body, Vector3(0.02, 0.02, thin),
-		Vector3(cx - 0.04, cy + 0.10, cz), mat_tan)  # Left eye
-	_box(body, Vector3(0.02, 0.02, thin),
-		Vector3(cx + 0.04, cy + 0.10, cz), mat_tan)  # Right eye
-
-	# --- Nose ---
-	_box(body, Vector3(0.03, 0.02, thin),
-		Vector3(cx, cy + 0.04, cz), mat_nose)
-
-	# --- Chest / collar area (white) ---
-	_box(body, Vector3(0.10, 0.06, thin),
-		Vector3(cx, cy + 0.0, cz), mat_white)
-
-	# --- Body (black sides, white chest front) ---
-	_box(body, Vector3(0.06, 0.10, thin),
-		Vector3(cx - 0.08, cy - 0.06, cz), mat_black)  # Left body
-	_box(body, Vector3(0.06, 0.10, thin),
-		Vector3(cx + 0.08, cy - 0.06, cz), mat_black)  # Right body
-	_box(body, Vector3(0.08, 0.10, thin),
-		Vector3(cx, cy - 0.06, cz), mat_white)  # Chest front
-
-	# --- Front legs (black with tan/white paws) ---
-	_box(body, Vector3(0.04, 0.06, thin),
-		Vector3(cx - 0.06, cy - 0.14, cz), mat_black)  # Left leg
-	_box(body, Vector3(0.04, 0.06, thin),
-		Vector3(cx + 0.06, cy - 0.14, cz), mat_black)  # Right leg
-	# Paws (white/tan at bottom of legs)
-	_box(body, Vector3(0.04, 0.02, thin),
-		Vector3(cx - 0.06, cy - 0.17, cz), mat_white)  # Left paw
-	_box(body, Vector3(0.04, 0.02, thin),
-		Vector3(cx + 0.06, cy - 0.17, cz), mat_tan)    # Right paw
-
-	# --- Nameplate below portrait ---
+	# Nameplate
 	var mat_brass: StandardMaterial3D = StandardMaterial3D.new()
 	mat_brass.albedo_color = Color(0.7, 0.6, 0.35)
 	mat_brass.roughness = 0.4
 	mat_brass.metallic = 0.5
 	var np_y: float = pos.y - 0.4
-	# Dark wood backing
 	_box(body, Vector3(0.25, 0.06, 0.025),
 		Vector3(pos.x, np_y, pos.z - 0.015), _mat_furniture_wood)
-	# Brass plate
 	_box(body, Vector3(0.2, 0.04, 0.028),
 		Vector3(pos.x, np_y, pos.z - 0.02), mat_brass)
+
+
+func _build_sunset_painting(pos: Vector3, wall: String) -> void:
+	## Build a framed pixelated sunset-over-ocean painting on an east/west wall.
+	var body: StaticBody3D = StaticBody3D.new()
+	body.name = "SunsetPainting"
+	body.set_script(_create_interactable_script(
+		"View Painting",
+		"sunset_painting"
+	))
+	add_child(body)
+
+	var dir: float = 1.0 if wall == "west" else -1.0
+
+	# Frame (EW wall = thin in X, square Y/Z) — 0.7 x 0.7
+	_box(body, Vector3(0.03, 0.7, 0.7), pos, _mat_portrait_frame)
+	var mat_bg: StandardMaterial3D = _make_mat(Color(0.08, 0.06, 0.15))
+	_box(body, Vector3(0.02, 0.64, 0.64),
+		Vector3(pos.x + dir * 0.01, pos.y, pos.z), mat_bg)
+
+	# Collision
+	var col: CollisionShape3D = CollisionShape3D.new()
+	var shape: BoxShape3D = BoxShape3D.new()
+	shape.size = Vector3(0.1, 0.7, 0.7)
+	col.shape = shape
+	col.position = pos
+	body.add_child(col)
+
+	# Sunset color palette
+	var mat_deep_sky: StandardMaterial3D = _make_mat(Color(0.15, 0.1, 0.35))
+	var mat_purple_sky: StandardMaterial3D = _make_mat(Color(0.35, 0.15, 0.4))
+	var mat_pink_sky: StandardMaterial3D = _make_mat(Color(0.75, 0.3, 0.35))
+	var mat_orange_sky: StandardMaterial3D = _make_mat(Color(0.9, 0.5, 0.2))
+	var mat_warm_orange: StandardMaterial3D = _make_mat(Color(0.95, 0.6, 0.15))
+	var mat_golden: StandardMaterial3D = _make_mat(Color(1.0, 0.75, 0.2))
+	var mat_sun_core: StandardMaterial3D = StandardMaterial3D.new()
+	mat_sun_core.albedo_color = Color(1.0, 0.9, 0.5)
+	mat_sun_core.roughness = 0.3
+	mat_sun_core.emission_enabled = true
+	mat_sun_core.emission = Color(1.0, 0.8, 0.3)
+	mat_sun_core.emission_energy_multiplier = 0.3
+	var mat_sun_glow: StandardMaterial3D = _make_mat(Color(1.0, 0.85, 0.35))
+	var mat_deep_ocean: StandardMaterial3D = _make_mat(Color(0.05, 0.08, 0.2))
+	var mat_dark_ocean: StandardMaterial3D = _make_mat(Color(0.08, 0.12, 0.28))
+	var mat_ocean: StandardMaterial3D = _make_mat(Color(0.1, 0.15, 0.35))
+	var mat_ocean_reflect: StandardMaterial3D = _make_mat(Color(0.6, 0.35, 0.15))
+	var mat_ocean_shimmer: StandardMaterial3D = _make_mat(Color(0.8, 0.5, 0.2))
+	var mat_cloud_dark: StandardMaterial3D = _make_mat(Color(0.4, 0.2, 0.3))
+	var mat_cloud_lit: StandardMaterial3D = _make_mat(Color(0.85, 0.55, 0.3))
+
+	var thin: float = 0.015
+	var cx: float = pos.x + dir * 0.02  # Offset from wall
+	var cy: float = pos.y
+	var cz: float = pos.z
+	var pw: float = 0.04  # Pixel width for blocky look
+
+	# For EW walls: thin in X, height in Y, "width" across wall in Z
+	# Sky layers (top to bottom, full-width horizontal strips)
+	_box(body, Vector3(thin, pw, 0.60), Vector3(cx, cy + 0.28, cz), mat_deep_sky)
+	_box(body, Vector3(thin, pw, 0.60), Vector3(cx, cy + 0.24, cz), mat_deep_sky)
+	_box(body, Vector3(thin, pw, 0.60), Vector3(cx, cy + 0.20, cz), mat_purple_sky)
+	_box(body, Vector3(thin, pw, 0.60), Vector3(cx, cy + 0.16, cz), mat_purple_sky)
+	_box(body, Vector3(thin, pw, 0.60), Vector3(cx, cy + 0.12, cz), mat_pink_sky)
+	_box(body, Vector3(thin, pw, 0.60), Vector3(cx, cy + 0.08, cz), mat_pink_sky)
+	_box(body, Vector3(thin, pw, 0.60), Vector3(cx, cy + 0.04, cz), mat_orange_sky)
+	_box(body, Vector3(thin, pw, 0.60), Vector3(cx, cy + 0.00, cz), mat_warm_orange)
+	_box(body, Vector3(thin, pw, 0.60), Vector3(cx, cy - 0.04, cz), mat_golden)
+
+	# Sun (centered at horizon)
+	_box(body, Vector3(thin, 0.08, 0.08), Vector3(cx, cy - 0.02, cz), mat_sun_core)
+	_box(body, Vector3(thin, pw, 0.12), Vector3(cx, cy + 0.03, cz), mat_sun_glow)
+	_box(body, Vector3(thin, 0.04, pw), Vector3(cx, cy - 0.01, cz - 0.06), mat_sun_glow)
+	_box(body, Vector3(thin, 0.04, pw), Vector3(cx, cy - 0.01, cz + 0.06), mat_sun_glow)
+
+	# Clouds
+	_box(body, Vector3(thin, pw, 0.10), Vector3(cx, cy + 0.14, cz - 0.18), mat_cloud_lit)
+	_box(body, Vector3(thin, pw, 0.06), Vector3(cx, cy + 0.18, cz - 0.14), mat_cloud_dark)
+	_box(body, Vector3(thin, pw, 0.08), Vector3(cx, cy + 0.10, cz + 0.20), mat_cloud_lit)
+	_box(body, Vector3(thin, pw, 0.12), Vector3(cx, cy + 0.06, cz + 0.16), mat_cloud_dark)
+
+	# Ocean (bottom half)
+	_box(body, Vector3(thin, pw, 0.60), Vector3(cx, cy - 0.08, cz), mat_ocean)
+	_box(body, Vector3(thin, pw, 0.60), Vector3(cx, cy - 0.12, cz), mat_dark_ocean)
+	_box(body, Vector3(thin, pw, 0.60), Vector3(cx, cy - 0.16, cz), mat_dark_ocean)
+	_box(body, Vector3(thin, pw, 0.60), Vector3(cx, cy - 0.20, cz), mat_deep_ocean)
+	_box(body, Vector3(thin, pw, 0.60), Vector3(cx, cy - 0.24, cz), mat_deep_ocean)
+	_box(body, Vector3(thin, pw, 0.60), Vector3(cx, cy - 0.28, cz), mat_deep_ocean)
+
+	# Sun reflection on water
+	_box(body, Vector3(thin, pw, 0.06), Vector3(cx, cy - 0.08, cz), mat_ocean_shimmer)
+	_box(body, Vector3(thin, pw, pw), Vector3(cx, cy - 0.12, cz - 0.02), mat_ocean_reflect)
+	_box(body, Vector3(thin, pw, pw), Vector3(cx, cy - 0.12, cz + 0.02), mat_ocean_reflect)
+	_box(body, Vector3(thin, pw, 0.06), Vector3(cx, cy - 0.16, cz), mat_ocean_reflect)
+	_box(body, Vector3(thin, pw, pw), Vector3(cx, cy - 0.20, cz - 0.01), mat_ocean_reflect)
+	_box(body, Vector3(thin, pw, pw), Vector3(cx, cy - 0.24, cz + 0.01), mat_ocean_reflect)
+
+	# Nameplate
+	var mat_brass: StandardMaterial3D = StandardMaterial3D.new()
+	mat_brass.albedo_color = Color(0.7, 0.6, 0.35)
+	mat_brass.roughness = 0.4
+	mat_brass.metallic = 0.5
+	var np_y: float = pos.y - 0.48
+	_box(body, Vector3(0.025, 0.06, 0.25),
+		Vector3(pos.x + dir * 0.015, np_y, pos.z), _mat_furniture_wood)
+	_box(body, Vector3(0.028, 0.04, 0.2),
+		Vector3(pos.x + dir * 0.02, np_y, pos.z), mat_brass)
 
 
 # =============================================================================
@@ -3452,7 +3479,7 @@ func interact(player: Node) -> bool:
 				house.show_text_overlay("A good sandwich.", 2.0)
 		"bookshelves":
 			if house.has_method("show_text_overlay"):
-				house.show_text_overlay("Your old field guides. You smile.", 2.0)
+				house.show_text_overlay("Your old field guides.", 2.0)
 		"storage_box":
 			if house.has_method("open_journey_inventory"):
 				house.open_journey_inventory(player)
@@ -3462,6 +3489,9 @@ func interact(player: Node) -> bool:
 		"winnie_portrait":
 			if house.has_method("show_text_overlay"):
 				house.show_text_overlay("Winnie", 2.0)
+		"sunset_painting":
+			if house.has_method("show_text_overlay"):
+				house.show_text_overlay("Sunset over the Pacific", 2.0)
 		"cat_portrait_melvin":
 			if house.has_method("show_text_overlay"):
 				house.show_text_overlay("Melvin", 2.0)

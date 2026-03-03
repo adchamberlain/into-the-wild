@@ -77,7 +77,7 @@ func _input(event: InputEvent) -> void:
 		if event.is_action_pressed("ui_cancel"):
 			_dismiss_confirmation()
 			_handle_input()
-		elif event.is_action_pressed("ui_left") or event.is_action_pressed("ui_right"):
+		elif event.is_action_pressed("ui_left") or event.is_action_pressed("ui_right") or event.is_action_pressed("ui_up") or event.is_action_pressed("ui_down"):
 			_confirm_cursor = 1 - _confirm_cursor
 			_update_confirmation_display()
 			SFXManager.play_sfx("select")

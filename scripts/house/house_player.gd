@@ -159,17 +159,6 @@ func _input(event: InputEvent) -> void:
 		_toggle_crouch()
 		return
 
-	# Handle jump
-	if event.is_action_pressed("jump") and not _is_resting:
-		if is_on_floor():
-			if is_crouching:
-				if _can_stand_up():
-					_toggle_crouch()
-					velocity.y = JUMP_VELOCITY
-			else:
-				velocity.y = JUMP_VELOCITY
-		return
-
 	# Handle escape to uncapture mouse
 	if event.is_action_pressed("ui_cancel"):
 		if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
