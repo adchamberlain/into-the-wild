@@ -1463,12 +1463,31 @@ func _build_kitchen_furniture() -> void:
 	# Counter base
 	_box(self, Vector3(2.5, 0.85, 0.6),
 		Vector3(counter_x, 0.425, counter_z), _mat_cabinet_face)
-	# Cabinet doors (3 sections)
-	for cx: float in [-0.7, 0.0, 0.7]:
-		_box(self, Vector3(0.6, 0.65, 0.02),
-			Vector3(counter_x + cx, 0.4, counter_z + 0.31), _mat_cabinet_face)
-		_box(self, Vector3(0.1, 0.02, 0.03),
-			Vector3(counter_x + cx, 0.5, counter_z + 0.33), _mat_handle)
+	# Cabinet doors (4 sections with crown molding)
+	var cab_dw: float = 0.53   # Door width
+	var cab_dh: float = 0.65   # Door height
+	var cab_dy: float = 0.4    # Door center Y
+	var cab_door_z: float = counter_z + 0.31
+	var cab_trim_z: float = cab_door_z + 0.02  # Molding in front of door
+	var cab_tw: float = 0.025  # Trim width
+	var cab_td: float = 0.015  # Trim depth
+	for cx: float in [-0.94, -0.31, 0.31, 0.94]:
+		var dx: float = counter_x + cx
+		# Door panel
+		_box(self, Vector3(cab_dw, cab_dh, 0.02),
+			Vector3(dx, cab_dy, cab_door_z), _mat_cabinet_face)
+		# Handle
+		_box(self, Vector3(0.08, 0.02, 0.03),
+			Vector3(dx, cab_dy + 0.1, cab_door_z + 0.02), _mat_handle)
+		# Crown molding trim (left, right, top, bottom)
+		_box(self, Vector3(cab_tw, cab_dh + cab_tw, cab_td),
+			Vector3(dx - cab_dw / 2.0 - cab_tw / 2.0, cab_dy, cab_trim_z), _mat_molding)
+		_box(self, Vector3(cab_tw, cab_dh + cab_tw, cab_td),
+			Vector3(dx + cab_dw / 2.0 + cab_tw / 2.0, cab_dy, cab_trim_z), _mat_molding)
+		_box(self, Vector3(cab_dw + cab_tw * 2.0, cab_tw, cab_td),
+			Vector3(dx, cab_dy + cab_dh / 2.0 + cab_tw / 2.0, cab_trim_z), _mat_molding)
+		_box(self, Vector3(cab_dw + cab_tw * 2.0, cab_tw, cab_td),
+			Vector3(dx, cab_dy - cab_dh / 2.0 - cab_tw / 2.0, cab_trim_z), _mat_molding)
 	# Counter + sink collision (single box covering the full counter run)
 	var counter_body: StaticBody3D = StaticBody3D.new()
 	counter_body.name = "CounterCollision"
@@ -1518,15 +1537,82 @@ func _build_kitchen_furniture() -> void:
 	# --- Upper Cabinets (above counter, avoiding sink area) ---
 	_box(self, Vector3(0.8, 0.6, 0.35),
 		Vector3(1.6, 1.85, counter_z), _mat_cabinet_face)
-	_box(self, Vector3(0.35, 0.5, 0.02),
-		Vector3(1.45, 1.85, counter_z + 0.18), _mat_cabinet_face)
-	_box(self, Vector3(0.35, 0.5, 0.02),
-		Vector3(1.75, 1.85, counter_z + 0.18), _mat_cabinet_face)
+	# Two upper cabinet doors with crown molding
+	var uc_door_z: float = counter_z + 0.18
+	var uc_trim_z: float = uc_door_z + 0.02
+	var uc_dw: float = 0.35   # Door width
+	var uc_dh: float = 0.5    # Door height
+	var uc_dy: float = 1.85   # Door center Y
+	var uc_tw: float = 0.02   # Trim width
+	var uc_td: float = 0.012  # Trim depth
+	for uc_x: float in [1.45, 1.75]:
+		# Door panel
+		_box(self, Vector3(uc_dw, uc_dh, 0.02),
+			Vector3(uc_x, uc_dy, uc_door_z), _mat_cabinet_face)
+		# Small handle
+		_box(self, Vector3(0.06, 0.02, 0.03),
+			Vector3(uc_x, uc_dy - 0.1, uc_door_z + 0.02), _mat_handle)
+		# Crown molding trim (left, right, top, bottom)
+		_box(self, Vector3(uc_tw, uc_dh + uc_tw, uc_td),
+			Vector3(uc_x - uc_dw / 2.0 - uc_tw / 2.0, uc_dy, uc_trim_z), _mat_molding)
+		_box(self, Vector3(uc_tw, uc_dh + uc_tw, uc_td),
+			Vector3(uc_x + uc_dw / 2.0 + uc_tw / 2.0, uc_dy, uc_trim_z), _mat_molding)
+		_box(self, Vector3(uc_dw + uc_tw * 2.0, uc_tw, uc_td),
+			Vector3(uc_x, uc_dy + uc_dh / 2.0 + uc_tw / 2.0, uc_trim_z), _mat_molding)
+		_box(self, Vector3(uc_dw + uc_tw * 2.0, uc_tw, uc_td),
+			Vector3(uc_x, uc_dy - uc_dh / 2.0 - uc_tw / 2.0, uc_trim_z), _mat_molding)
 	# Range hood above stove
 	_box(self, Vector3(0.65, 0.06, 0.45),
 		Vector3(4.0, 1.35, counter_z), _mat_stove)
 	_box(self, Vector3(0.35, 0.8, 0.25),
 		Vector3(4.0, 1.78, counter_z + 0.05), _mat_stove)
+
+	# --- Small shelf with flower vase above kitchen sink ---
+	var ss_x: float = sink_x  # 2.7 — centered above sink
+	var ss_y: float = 1.55
+	var wall_inner_z: float = HOUSE_DEPTH - WALL_THICKNESS  # 9.85
+	var ss_depth: float = 0.14
+	var ss_z: float = wall_inner_z - ss_depth / 2.0  # 9.78
+	# Shelf board
+	_box(self, Vector3(0.35, 0.025, ss_depth),
+		Vector3(ss_x, ss_y, ss_z), _mat_cabinet_face)
+	# Shelf brackets (two small metal L-brackets)
+	for bx: float in [-0.12, 0.12]:
+		_box(self, Vector3(0.02, 0.08, 0.02),
+			Vector3(ss_x + bx, ss_y - 0.05, wall_inner_z - 0.01), _mat_handle)
+		_box(self, Vector3(0.02, 0.02, ss_depth - 0.02),
+			Vector3(ss_x + bx, ss_y - 0.02, ss_z), _mat_handle)
+	# Small ceramic vase
+	var mat_vase: StandardMaterial3D = StandardMaterial3D.new()
+	mat_vase.albedo_color = Color(0.85, 0.82, 0.75)
+	mat_vase.roughness = 0.6
+	var vase_top_y: float = ss_y + 0.0125  # Top of shelf surface
+	_box(self, Vector3(0.055, 0.09, 0.055),
+		Vector3(ss_x, vase_top_y + 0.045, ss_z), mat_vase)
+	_box(self, Vector3(0.065, 0.02, 0.065),
+		Vector3(ss_x, vase_top_y + 0.1, ss_z), mat_vase)
+	# Flower stems and heads
+	var mat_stem: StandardMaterial3D = StandardMaterial3D.new()
+	mat_stem.albedo_color = Color(0.2, 0.5, 0.15)
+	mat_stem.roughness = 0.9
+	var flower_base_y: float = vase_top_y + 0.09
+	var stem_data: Array[Dictionary] = [
+		{"dx": -0.015, "dz": -0.01, "h": 0.07, "color": Color(0.95, 0.3, 0.4)},
+		{"dx": 0.015, "dz": 0.005, "h": 0.08, "color": Color(1.0, 0.85, 0.2)},
+		{"dx": -0.005, "dz": 0.015, "h": 0.09, "color": Color(0.95, 0.95, 0.9)},
+		{"dx": 0.01, "dz": -0.012, "h": 0.075, "color": Color(0.85, 0.4, 0.7)},
+	]
+	for fd: Dictionary in stem_data:
+		var fx: float = ss_x + (fd["dx"] as float)
+		var fz: float = ss_z + (fd["dz"] as float)
+		var fh: float = fd["h"] as float
+		_box(self, Vector3(0.008, fh, 0.008),
+			Vector3(fx, flower_base_y + fh / 2.0, fz), mat_stem)
+		var mat_flower: StandardMaterial3D = StandardMaterial3D.new()
+		mat_flower.albedo_color = fd["color"] as Color
+		mat_flower.roughness = 0.8
+		_box(self, Vector3(0.025, 0.02, 0.025),
+			Vector3(fx, flower_base_y + fh + 0.01, fz), mat_flower)
 
 	# --- Stove (flush against counter right side, near bedroom door) ---
 	var stove_x: float = 4.0  # Shifted right (was 3.3)
@@ -2628,16 +2714,7 @@ func _build_bedroom_furniture() -> void:
 		_box(dresser, Vector3(0.03, 0.02, 0.12),
 			Vector3(dr_x - 0.25, dy, dr_z), _mat_handle)
 
-	# Mirror above dresser
-	var mat_mirror: StandardMaterial3D = StandardMaterial3D.new()
-	mat_mirror.albedo_color = Color(0.7, 0.75, 0.8, 0.5)
-	mat_mirror.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat_mirror.roughness = 0.05
-	mat_mirror.metallic = 0.8
-	_box(dresser, Vector3(0.03, 0.7, 0.65),
-		Vector3(dr_x + 0.22, 1.35, dr_z), _mat_portrait_frame)
-	_box(dresser, Vector3(0.02, 0.62, 0.57),
-		Vector3(dr_x + 0.21, 1.35, dr_z), mat_mirror)
+	# (Sunset painting placed above dresser via _build_sunset_painting in _build_tree_pictures)
 
 	# Dresser collision
 	var dr_body: StaticBody3D = StaticBody3D.new()
@@ -2779,7 +2856,6 @@ func _build_tree_pictures() -> void:
 	# West wall interior face (between windows at Z=12.5 and Z=15.5)
 	# Wall gaps: Z=10-11.9, Z=13.1-14.9, Z=16.1-17
 	var wx: float = WALL_THICKNESS + 0.03
-	_build_sunset_painting(Vector3(wx, 1.6, 11.0), "west")
 	_build_tree_picture(Vector3(wx, 1.6, 14.0), "west", "oak", mats)
 
 	# North wall interior face (above headboard, between windows at X=1.5 and X=4.5)
@@ -2792,6 +2868,8 @@ func _build_tree_pictures() -> void:
 	_build_tree_picture(Vector3(wx, 1.6, 13.5), "west", "cactus", mats)
 	# Palm on east wall, viewable from bed (between entry and first window)
 	_build_tree_picture(Vector3(ex, 1.6, 11.0), "east", "palm", mats)
+	# Sunset painting on east wall above dresser, between windows
+	_build_sunset_painting(Vector3(ex, 1.6, 14.0), "east")
 
 
 func _make_mat(color: Color) -> StandardMaterial3D:
@@ -3386,8 +3464,8 @@ func _build_sunset_painting(pos: Vector3, wall: String) -> void:
 	var mat_cloud_dark: StandardMaterial3D = _make_mat(Color(0.4, 0.2, 0.3))
 	var mat_cloud_lit: StandardMaterial3D = _make_mat(Color(0.85, 0.55, 0.3))
 
-	var thin: float = 0.015
-	var cx: float = pos.x + dir * 0.02  # Offset from wall
+	var thin: float = 0.012
+	var cx: float = pos.x + dir * 0.03  # Offset from wall (clear of background to prevent Z-fighting)
 	var cy: float = pos.y
 	var cz: float = pos.z
 	var pw: float = 0.04  # Pixel width for blocky look
@@ -3470,7 +3548,7 @@ func interact(player: Node) -> bool:
 	match _object_type:
 		"kettle":
 			if house.has_method("show_text_overlay"):
-				house.show_text_overlay("Warm. Familiar.", 2.0)
+				house.show_text_overlay("Pine needle tea with osha root honey -- perfect.", 3.0)
 			var sfx: Node = player.get_node_or_null("/root/SFXManager")
 			if sfx and sfx.has_method("play_sfx"):
 				sfx.play_sfx("pickup")

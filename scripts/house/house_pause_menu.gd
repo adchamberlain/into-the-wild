@@ -5,7 +5,7 @@ extends CanvasLayer
 const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 const SAVE_DIR: String = "user://saves/"
 const SAVE_VERSION: int = 1
-const NUM_SLOTS: int = 3
+const NUM_SLOTS: int = 5
 
 var is_paused: bool = false
 var panel: PanelContainer
@@ -19,6 +19,8 @@ var _showing_slot_picker: bool = false
 var _slot_picker_panel: PanelContainer = null
 var _slot_cursor: int = 0
 var _slot_labels: Array[Label] = []
+var _hint_label: Label
+var _input_manager: Node
 
 
 func _ready() -> void:
@@ -106,14 +108,19 @@ func _ready() -> void:
 	save_confirmation_label.visible = false
 	vbox.add_child(save_confirmation_label)
 
-	# Hint label
-	var hint: Label = Label.new()
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_font_override("font", HUD_FONT)
-	hint.add_theme_font_size_override("font_size", 28)
-	hint.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6, 1))
-	hint.text = "[ESC to resume]"
-	vbox.add_child(hint)
+	# Hint label (dynamic based on input device)
+	_hint_label = Label.new()
+	_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_hint_label.add_theme_font_override("font", HUD_FONT)
+	_hint_label.add_theme_font_size_override("font_size", 28)
+	_hint_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6, 1))
+	vbox.add_child(_hint_label)
+
+	# Get InputManager for dynamic prompts
+	_input_manager = get_node_or_null("/root/InputManager")
+	_update_hint_text()
+	if _input_manager and _input_manager.has_signal("input_device_changed"):
+		_input_manager.input_device_changed.connect(_on_input_device_changed)
 
 
 func _input(event: InputEvent) -> void:
@@ -411,3 +418,18 @@ func _start_confirmation_timer() -> void:
 func _hide_save_confirmation() -> void:
 	if is_instance_valid(save_confirmation_label):
 		save_confirmation_label.visible = false
+
+
+## Update the hint text based on current input device.
+func _update_hint_text() -> void:
+	if not is_instance_valid(_hint_label):
+		return
+	var prompt: String = "ESC"
+	if _input_manager and _input_manager.has_method("get_prompt"):
+		prompt = _input_manager.get_prompt("ui_cancel")
+	_hint_label.text = "[%s to resume]" % prompt
+
+
+## Called when input device changes (keyboard <-> controller).
+func _on_input_device_changed(_is_controller: bool) -> void:
+	_update_hint_text()
