@@ -6465,6 +6465,50 @@ Extensive playtest-driven bug fixing across the house interior, addressing furni
 
 ---
 
+## Session 39: House Interior Polish & Trailhead Sign (2026-03-03)
+
+### What Was Built
+
+Major visual polish pass across the house interior and the trailhead endgame sign, driven by playtest feedback.
+
+#### Trailhead Sign (Endgame)
+- **Font sizes dramatically increased** for climactic impact: title 56→120px, directions 36→64px, body 40→64px, choices 40→64px, hint 28→48px
+- **Panel shrunk** from 80%→70% width, 90%→84% height so text fills the space better
+- **VBox spacing** increased from 16→24 for breathing room
+
+#### Living Room Furniture
+- **Couch upgraded to Restoration Hardware leather**: warm tan/camel leather material (0.82, 0.72, 0.58), darker accent leather for cushion piping, 3-section tufted seat and back cushions, rolled arm details, dark walnut wooden legs
+- **Couch moved against east wall**: X=3.5→5.4 (back against divider wall), coffee table shifted to X=3.8, rug centered at X=4.2
+- **Armchair repositioned**: Moved from north side (X=2.0, Z=3.8) to south of fireplace (X=1.8, Z=0.5), rotated to face east toward couch
+
+#### Kitchen Upgrades
+- **Fridge: modern stainless steel French-door**: white→stainless steel material (metallic=0.7), French-door style with center seam, vertical handles, freezer drawer, ice/water dispenser, top chrome trim. Rotated 90° to sit flat against west wall with doors facing into kitchen. Moved south to clear window. Added collision body.
+- **Wine fridge added** in NE corner: under-counter style (0.55×0.9×0.55), dark body with tinted glass door, chrome frame, 3 wire rack shelves with wine bottles, blue LED accent light inside
+
+#### Fireplace Fix
+- **Chimney breast shortened**: brick extended to Y=3.0 (ceiling), clipping through crown molding. Reduced to stop at Y=2.85 (below molding). Width narrowed from 1.3→1.1 to match back wall
+
+#### Chandelier Shadows Fix
+- **Disabled shadow** on dining room chandelier OmniLight. A real 4-bulb chandelier wouldn't cast sharp X-shaped arm shadows — the multiple light sources wash each other out
+
+#### Terrain Map Paintings Redesigned
+- **Complete rewrite** of `_build_terrain_map`: replaced random grid with coherent geographic features
+- Winding sinusoidal river, elliptical lake with lighter shoreline, mountain cluster with grey peaks
+- Forest zones with distance-based density, diagonal trail, orange campsite marker
+- Finer grid (0.04 vs 0.08 cell size) for more detail
+
+#### Console Table Moved
+- Relocated from transition zone (Z=10.5, blocking hallway) to bedroom east wall (Z=12.5)
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/world/trail_signpost.gd` | Modified | All font sizes increased for dramatic endgame feel, panel anchors tightened, vbox spacing increased |
+| `scripts/house/house_scene.gd` | Modified | Leather couch, couch/chair/table repositioned, stainless steel French-door fridge with collision, wine fridge, chimney breast fix, chandelier shadow fix, terrain maps rewritten, console table moved |
+
+---
+
 ## Next Session
 
 ### Planned Tasks

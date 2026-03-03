@@ -190,10 +190,10 @@ func _build_overlay() -> void:
 	outer_style.content_margin_top = 30.0
 	outer_style.content_margin_bottom = 30.0
 	outer_panel.add_theme_stylebox_override("panel", outer_style)
-	outer_panel.anchor_left = 0.1
-	outer_panel.anchor_right = 0.9
-	outer_panel.anchor_top = 0.05
-	outer_panel.anchor_bottom = 0.95
+	outer_panel.anchor_left = 0.15
+	outer_panel.anchor_right = 0.85
+	outer_panel.anchor_top = 0.08
+	outer_panel.anchor_bottom = 0.92
 	outer_panel.offset_left = 0.0
 	outer_panel.offset_right = 0.0
 	outer_panel.offset_top = 0.0
@@ -221,14 +221,14 @@ func _build_overlay() -> void:
 
 	# Content VBox
 	var vbox: VBoxContainer = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 16)
+	vbox.add_theme_constant_override("separation", 24)
 	inner_panel.add_child(vbox)
 
 	# Title: "TRAILHEAD"
 	var title: Label = Label.new()
 	title.text = "TRAILHEAD"
 	title.add_theme_font_override("font", HUD_FONT)
-	title.add_theme_font_size_override("font_size", 56)
+	title.add_theme_font_size_override("font_size", 120)
 	title.add_theme_color_override("font_color", text_color)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)
@@ -251,7 +251,7 @@ func _build_overlay() -> void:
 	var dir1: Label = Label.new()
 	dir1.text = "\u2190  Carlston Wilderness"
 	dir1.add_theme_font_override("font", HUD_FONT)
-	dir1.add_theme_font_size_override("font_size", 36)
+	dir1.add_theme_font_size_override("font_size", 64)
 	dir1.add_theme_color_override("font_color", text_color)
 	dir1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(dir1)
@@ -260,7 +260,7 @@ func _build_overlay() -> void:
 	var dir2: Label = Label.new()
 	dir2.text = "Longridge Road, Oakland, California \u2014 225 miles  \u2192"
 	dir2.add_theme_font_override("font", HUD_FONT)
-	dir2.add_theme_font_size_override("font_size", 36)
+	dir2.add_theme_font_size_override("font_size", 64)
 	dir2.add_theme_color_override("font_color", text_color)
 	dir2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	dir2.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -289,7 +289,7 @@ func _build_overlay() -> void:
 	var body: Label = Label.new()
 	body.text = "The wood is weathered but the letters are still clear. Someone carved this sign a long time ago. This is the way home."
 	body.add_theme_font_override("font", HUD_FONT)
-	body.add_theme_font_size_override("font_size", 40)
+	body.add_theme_font_size_override("font_size", 64)
 	body.add_theme_color_override("font_color", text_color)
 	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -304,7 +304,7 @@ func _build_overlay() -> void:
 	_yes_label = Label.new()
 	_yes_label.text = "\u25b6  Yes, head home"
 	_yes_label.add_theme_font_override("font", HUD_FONT)
-	_yes_label.add_theme_font_size_override("font_size", 40)
+	_yes_label.add_theme_font_size_override("font_size", 64)
 	_yes_label.add_theme_color_override("font_color", COLOR_SELECTED)
 	_yes_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_yes_label)
@@ -313,7 +313,7 @@ func _build_overlay() -> void:
 	_no_label = Label.new()
 	_no_label.text = "   Not yet"
 	_no_label.add_theme_font_override("font", HUD_FONT)
-	_no_label.add_theme_font_size_override("font_size", 40)
+	_no_label.add_theme_font_size_override("font_size", 64)
 	_no_label.add_theme_color_override("font_color", COLOR_UNSELECTED)
 	_no_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_no_label)
@@ -326,7 +326,7 @@ func _build_overlay() -> void:
 	# Navigation hint (updated dynamically for controller/keyboard)
 	_hint_label = Label.new()
 	_hint_label.add_theme_font_override("font", HUD_FONT)
-	_hint_label.add_theme_font_size_override("font_size", 28)
+	_hint_label.add_theme_font_size_override("font_size", 48)
 	_hint_label.add_theme_color_override("font_color", hint_color)
 	_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_hint_label)

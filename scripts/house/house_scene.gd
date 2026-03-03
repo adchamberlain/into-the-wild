@@ -202,10 +202,11 @@ static func _init_materials() -> void:
 	_mat_kettle.roughness = 0.3
 	_mat_kettle.metallic = 0.6
 
-	# Fridge: white
+	# Fridge: stainless steel
 	_mat_fridge = StandardMaterial3D.new()
-	_mat_fridge.albedo_color = Color(0.92, 0.92, 0.92)
-	_mat_fridge.roughness = 0.4
+	_mat_fridge.albedo_color = Color(0.72, 0.73, 0.75)
+	_mat_fridge.roughness = 0.25
+	_mat_fridge.metallic = 0.7
 
 	# Cabinet face: white
 	_mat_cabinet_face = StandardMaterial3D.new()
@@ -906,9 +907,11 @@ func _build_living_room_furniture() -> void:
 		Vector3(0.5, 1.46, 1.4), _mat_chandelier)
 	_box(fp, Vector3(0.02, 0.03, 0.02),
 		Vector3(0.5, 1.535, 1.4), _mat_pillow)
-	# Chimney breast above mantel to ceiling
-	_box(fp, Vector3(0.15, CEILING_HEIGHT - 1.38, 1.3),
-		Vector3(0.15, 1.38 + (CEILING_HEIGHT - 1.38) / 2.0, 0.95), _mat_brick)
+	# Chimney breast above mantel (stops below crown molding at 2.85)
+	var chimney_top: float = CEILING_HEIGHT - 0.15  # Below crown molding
+	var chimney_h: float = chimney_top - 1.38
+	_box(fp, Vector3(0.15, chimney_h, 1.1),
+		Vector3(0.15, 1.38 + chimney_h / 2.0, 0.95), _mat_brick)
 	# Fireplace collision (hearth + surround)
 	var fp_body: StaticBody3D = StaticBody3D.new()
 	fp_body.name = "FireplaceCollision"
@@ -920,24 +923,63 @@ func _build_living_room_furniture() -> void:
 	fp_col.position = Vector3(0.425, 0.7, 0.95)
 	fp_body.add_child(fp_col)
 
-	# --- Couch (faces west toward fireplace, runs along Z axis) ---
+	# --- Couch (Restoration Hardware style leather, back against east divider wall) ---
+	# Premium light-grained Italian leather material
+	var mat_leather: StandardMaterial3D = StandardMaterial3D.new()
+	mat_leather.albedo_color = Color(0.82, 0.72, 0.58)  # Warm tan/camel leather
+	mat_leather.roughness = 0.45
+	mat_leather.metallic = 0.05
+	# Slightly darker leather for tufting/seams
+	var mat_leather_dark: StandardMaterial3D = StandardMaterial3D.new()
+	mat_leather_dark.albedo_color = Color(0.72, 0.62, 0.48)  # Darker accent
+	mat_leather_dark.roughness = 0.5
+	mat_leather_dark.metallic = 0.05
+	# Wooden legs material (dark walnut)
+	var mat_couch_legs: StandardMaterial3D = StandardMaterial3D.new()
+	mat_couch_legs.albedo_color = Color(0.28, 0.18, 0.10)
+	mat_couch_legs.roughness = 0.6
+
 	var couch_container: Node3D = Node3D.new()
 	couch_container.name = "Couch"
 	add_child(couch_container)
-	var couch_x: float = 3.5
+	var couch_x: float = 5.4
 	var couch_z: float = 1.5
-	# Seat (0.8m deep in X, 2.0m long in Z)
-	_box(couch_container, Vector3(0.8, 0.4, 2.0),
-		Vector3(couch_x, 0.4, couch_z), _mat_upholstery)
-	# Back (on +X east side, facing -X west toward fireplace)
-	_box(couch_container, Vector3(0.15, 0.5, 2.0),
-		Vector3(couch_x + 0.4 - 0.075, 0.65, couch_z), _mat_upholstery)
-	# South arm (at Z=0.5)
-	_box(couch_container, Vector3(0.8, 0.5, 0.15),
-		Vector3(couch_x, 0.55, couch_z - 1.0 + 0.075), _mat_upholstery)
-	# North arm (at Z=2.5)
-	_box(couch_container, Vector3(0.8, 0.5, 0.15),
-		Vector3(couch_x, 0.55, couch_z + 1.0 - 0.075), _mat_upholstery)
+	# Seat base
+	_box(couch_container, Vector3(0.8, 0.35, 2.0),
+		Vector3(couch_x, 0.42, couch_z), mat_leather)
+	# Seat cushions (3 sections with gaps for tufted look)
+	for ci: int in range(3):
+		var cz: float = couch_z - 0.6 + float(ci) * 0.6
+		_box(couch_container, Vector3(0.7, 0.08, 0.55),
+			Vector3(couch_x - 0.04, 0.64, cz), mat_leather)
+		# Cushion piping/seam accent
+		_box(couch_container, Vector3(0.68, 0.01, 0.01),
+			Vector3(couch_x - 0.04, 0.68, cz - 0.27), mat_leather_dark)
+		_box(couch_container, Vector3(0.68, 0.01, 0.01),
+			Vector3(couch_x - 0.04, 0.68, cz + 0.27), mat_leather_dark)
+	# Back (on +X east side, facing west toward fireplace)
+	_box(couch_container, Vector3(0.15, 0.55, 2.0),
+		Vector3(couch_x + 0.4 - 0.075, 0.68, couch_z), mat_leather)
+	# Back cushions (3 sections)
+	for ci: int in range(3):
+		var cz: float = couch_z - 0.6 + float(ci) * 0.6
+		_box(couch_container, Vector3(0.06, 0.4, 0.55),
+			Vector3(couch_x + 0.28, 0.72, cz), mat_leather)
+	# South arm (rolled/tapered style)
+	_box(couch_container, Vector3(0.8, 0.45, 0.15),
+		Vector3(couch_x, 0.58, couch_z - 1.0 + 0.075), mat_leather)
+	_box(couch_container, Vector3(0.6, 0.08, 0.14),
+		Vector3(couch_x - 0.08, 0.83, couch_z - 1.0 + 0.075), mat_leather_dark)
+	# North arm (rolled/tapered style)
+	_box(couch_container, Vector3(0.8, 0.45, 0.15),
+		Vector3(couch_x, 0.58, couch_z + 1.0 - 0.075), mat_leather)
+	_box(couch_container, Vector3(0.6, 0.08, 0.14),
+		Vector3(couch_x - 0.08, 0.83, couch_z + 1.0 - 0.075), mat_leather_dark)
+	# Wooden legs (4 tapered walnut legs)
+	for lx: float in [-0.3, 0.3]:
+		for lz: float in [-0.85, 0.85]:
+			_box(couch_container, Vector3(0.05, 0.2, 0.05),
+				Vector3(couch_x + lx, 0.12, couch_z + lz), mat_couch_legs)
 	# Couch collision
 	var couch_body: StaticBody3D = StaticBody3D.new()
 	couch_body.name = "CouchCollision"
@@ -953,7 +995,7 @@ func _build_living_room_furniture() -> void:
 	var table_container: Node3D = Node3D.new()
 	table_container.name = "CoffeeTable"
 	add_child(table_container)
-	var table_x: float = 2.0
+	var table_x: float = 3.8
 	var table_z: float = 1.5
 	_box(table_container, Vector3(0.5, 0.05, 1.0),
 		Vector3(table_x, 0.4, table_z), _mat_furniture_wood)
@@ -962,24 +1004,24 @@ func _build_living_room_furniture() -> void:
 			_box(table_container, Vector3(0.05, 0.35, 0.05),
 				Vector3(table_x + lx, 0.175, table_z + lz), _mat_furniture_wood)
 
-	# --- Armchair (near north side of living room, facing south) ---
+	# --- Armchair (south of fireplace, facing east toward couch) ---
 	var chair: Node3D = Node3D.new()
 	chair.name = "Armchair"
 	add_child(chair)
-	var chair_x: float = 2.0
-	var chair_z: float = 3.8
+	var chair_x: float = 1.8
+	var chair_z: float = 0.5
 	# Seat
 	_box(chair, Vector3(0.7, 0.35, 0.7),
 		Vector3(chair_x, 0.38, chair_z), _mat_upholstery)
-	# Back (on +Z side, facing -Z toward seating area)
-	_box(chair, Vector3(0.7, 0.5, 0.12),
-		Vector3(chair_x, 0.6, chair_z + 0.35 - 0.06), _mat_upholstery)
-	# Left arm
-	_box(chair, Vector3(0.12, 0.4, 0.7),
-		Vector3(chair_x - 0.35 + 0.06, 0.48, chair_z), _mat_upholstery)
-	# Right arm
-	_box(chair, Vector3(0.12, 0.4, 0.7),
-		Vector3(chair_x + 0.35 - 0.06, 0.48, chair_z), _mat_upholstery)
+	# Back (on -X west side, facing +X east toward couch)
+	_box(chair, Vector3(0.12, 0.5, 0.7),
+		Vector3(chair_x - 0.35 + 0.06, 0.6, chair_z), _mat_upholstery)
+	# South arm (at -Z side)
+	_box(chair, Vector3(0.7, 0.4, 0.12),
+		Vector3(chair_x, 0.48, chair_z - 0.35 + 0.06), _mat_upholstery)
+	# North arm (at +Z side)
+	_box(chair, Vector3(0.7, 0.4, 0.12),
+		Vector3(chair_x, 0.48, chair_z + 0.35 - 0.06), _mat_upholstery)
 	# 4 legs
 	for lx: float in [-0.25, 0.25]:
 		for lz: float in [-0.25, 0.25]:
@@ -990,7 +1032,7 @@ func _build_living_room_furniture() -> void:
 	var end_table: Node3D = Node3D.new()
 	end_table.name = "EndTable"
 	add_child(end_table)
-	var et_x: float = 3.5
+	var et_x: float = 5.4
 	var et_z: float = 2.8
 	# Table body
 	_box(end_table, Vector3(0.4, 0.5, 0.4),
@@ -1007,7 +1049,7 @@ func _build_living_room_furniture() -> void:
 
 	# --- Rug (under seating group) ---
 	_box(self, Vector3(3.0, 0.02, 2.5),
-		Vector3(2.5, 0.01, 1.8), _mat_rug)
+		Vector3(4.2, 0.01, 1.8), _mat_rug)
 
 	# --- Bookshelves (against kitchen divider wall, left of doorway, facing into room) ---
 	_build_bookshelf(Vector3(1.0, 0.0, LIVING_ROOM_DEPTH - 0.1))
@@ -1234,20 +1276,122 @@ func _build_kitchen_furniture() -> void:
 	kettle_body.add_child(kettle_col)
 	add_child(kettle_body)
 
-	# --- Fridge (against west wall) ---
-	var fridge_x: float = 0.55
-	var fridge_z: float = kitchen_z_start + 1.5
-	_box(self, Vector3(0.8, 1.8, 0.7),
-		Vector3(fridge_x, 0.9, fridge_z), _mat_fridge)
-	# Fridge handle
-	_box(self, Vector3(0.02, 0.3, 0.04),
-		Vector3(fridge_x + 0.38, 1.2, fridge_z + 0.36), _mat_handle)
-	# Freezer line
-	_box(self, Vector3(0.78, 0.02, 0.68),
-		Vector3(fridge_x, 1.4, fridge_z), _mat_handle)
-	# Freezer handle
-	_box(self, Vector3(0.02, 0.15, 0.04),
-		Vector3(fridge_x + 0.38, 1.55, fridge_z + 0.36), _mat_handle)
+	# --- Large French-door stainless steel fridge (against west wall, doors face +X) ---
+	var fridge_z: float = kitchen_z_start + 0.9
+	var fridge_w: float = 1.4  # Width along Z (wide face parallel to wall)
+	var fridge_h: float = 2.1  # Tall
+	var fridge_d: float = 0.8  # Depth along X (into room)
+	var fridge_x: float = fridge_d / 2.0 + 0.1  # Snug against west wall (X=0)
+	# Stainless steel handle material
+	var mat_fridge_handle: StandardMaterial3D = StandardMaterial3D.new()
+	mat_fridge_handle.albedo_color = Color(0.80, 0.81, 0.83)
+	mat_fridge_handle.roughness = 0.15
+	mat_fridge_handle.metallic = 0.85
+	# Darker accent strip material
+	var mat_fridge_accent: StandardMaterial3D = StandardMaterial3D.new()
+	mat_fridge_accent.albedo_color = Color(0.55, 0.56, 0.58)
+	mat_fridge_accent.roughness = 0.2
+	mat_fridge_accent.metallic = 0.75
+	# Main body (depth along X, width along Z)
+	_box(self, Vector3(fridge_d, fridge_h, fridge_w),
+		Vector3(fridge_x, fridge_h / 2.0, fridge_z), _mat_fridge)
+	# Center seam (French door split, on +X face, vertical line splitting Z)
+	_box(self, Vector3(0.01, fridge_h * 0.6, 0.02),
+		Vector3(fridge_x + fridge_d / 2.0 + 0.005, fridge_h * 0.65, fridge_z), mat_fridge_accent)
+	# Left door handle (vertical bar, on +X face, offset in Z)
+	_box(self, Vector3(0.06, 0.5, 0.03),
+		Vector3(fridge_x + fridge_d / 2.0 + 0.04, fridge_h * 0.65, fridge_z - 0.08), mat_fridge_handle)
+	# Right door handle (vertical bar, on +X face, offset in Z)
+	_box(self, Vector3(0.06, 0.5, 0.03),
+		Vector3(fridge_x + fridge_d / 2.0 + 0.04, fridge_h * 0.65, fridge_z + 0.08), mat_fridge_handle)
+	# Freezer drawer line (horizontal, lower third)
+	_box(self, Vector3(fridge_d - 0.04, 0.02, fridge_w - 0.04),
+		Vector3(fridge_x, fridge_h * 0.33, fridge_z), mat_fridge_accent)
+	# Freezer drawer handle (horizontal bar, on +X face)
+	_box(self, Vector3(0.06, 0.03, 0.5),
+		Vector3(fridge_x + fridge_d / 2.0 + 0.04, fridge_h * 0.22, fridge_z), mat_fridge_handle)
+	# Top trim strip
+	_box(self, Vector3(fridge_d + 0.02, 0.03, fridge_w + 0.02),
+		Vector3(fridge_x, fridge_h + 0.015, fridge_z), mat_fridge_accent)
+	# Ice/water dispenser recess on left door (on +X face)
+	_box(self, Vector3(0.04, 0.18, 0.25),
+		Vector3(fridge_x + fridge_d / 2.0 + 0.005, fridge_h * 0.55, fridge_z - 0.25), mat_fridge_accent)
+	# Fridge collision
+	var fridge_body: StaticBody3D = StaticBody3D.new()
+	fridge_body.name = "FridgeCollision"
+	add_child(fridge_body)
+	var fridge_col: CollisionShape3D = CollisionShape3D.new()
+	var fridge_shape: BoxShape3D = BoxShape3D.new()
+	fridge_shape.size = Vector3(fridge_d + 0.1, fridge_h, fridge_w + 0.1)
+	fridge_col.shape = fridge_shape
+	fridge_col.position = Vector3(fridge_x, fridge_h / 2.0, fridge_z)
+	fridge_body.add_child(fridge_col)
+
+	# --- Wine Fridge (NE corner of kitchen, against north+east walls) ---
+	var wf_x: float = LIVING_ROOM_WIDTH - WALL_THICKNESS - 0.35
+	var wf_z: float = HOUSE_DEPTH - WALL_THICKNESS - 0.35
+	var wf_w: float = 0.55  # Width
+	var wf_h: float = 0.9   # Counter height (under-counter style)
+	var wf_d: float = 0.55  # Depth
+	# Dark glass/steel material for wine fridge body
+	var mat_wf_body: StandardMaterial3D = StandardMaterial3D.new()
+	mat_wf_body.albedo_color = Color(0.12, 0.12, 0.14)
+	mat_wf_body.roughness = 0.3
+	mat_wf_body.metallic = 0.5
+	# Tinted glass door
+	var mat_wf_glass: StandardMaterial3D = StandardMaterial3D.new()
+	mat_wf_glass.albedo_color = Color(0.08, 0.06, 0.12, 0.6)
+	mat_wf_glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat_wf_glass.roughness = 0.1
+	mat_wf_glass.metallic = 0.4
+	# Chrome trim
+	var mat_wf_chrome: StandardMaterial3D = StandardMaterial3D.new()
+	mat_wf_chrome.albedo_color = Color(0.78, 0.80, 0.82)
+	mat_wf_chrome.roughness = 0.1
+	mat_wf_chrome.metallic = 0.9
+	# Wine bottle material (dark glass)
+	var mat_wine_bottle: StandardMaterial3D = StandardMaterial3D.new()
+	mat_wine_bottle.albedo_color = Color(0.15, 0.08, 0.05)
+	mat_wine_bottle.roughness = 0.2
+	mat_wine_bottle.metallic = 0.3
+	# Main body
+	_box(self, Vector3(wf_w, wf_h, wf_d),
+		Vector3(wf_x, wf_h / 2.0, wf_z), mat_wf_body)
+	# Glass door panel (front face)
+	_box(self, Vector3(wf_w - 0.06, wf_h - 0.1, 0.02),
+		Vector3(wf_x, wf_h / 2.0, wf_z + wf_d / 2.0 + 0.01), mat_wf_glass)
+	# Chrome frame around glass (4 strips)
+	_box(self, Vector3(wf_w - 0.02, 0.02, 0.025),
+		Vector3(wf_x, wf_h - 0.03, wf_z + wf_d / 2.0 + 0.015), mat_wf_chrome)  # Top
+	_box(self, Vector3(wf_w - 0.02, 0.02, 0.025),
+		Vector3(wf_x, 0.03, wf_z + wf_d / 2.0 + 0.015), mat_wf_chrome)  # Bottom
+	_box(self, Vector3(0.02, wf_h - 0.06, 0.025),
+		Vector3(wf_x - wf_w / 2.0 + 0.03, wf_h / 2.0, wf_z + wf_d / 2.0 + 0.015), mat_wf_chrome)  # Left
+	_box(self, Vector3(0.02, wf_h - 0.06, 0.025),
+		Vector3(wf_x + wf_w / 2.0 - 0.03, wf_h / 2.0, wf_z + wf_d / 2.0 + 0.015), mat_wf_chrome)  # Right
+	# Door handle (vertical chrome bar)
+	_box(self, Vector3(0.02, 0.2, 0.04),
+		Vector3(wf_x + wf_w / 2.0 - 0.08, wf_h / 2.0, wf_z + wf_d / 2.0 + 0.035), mat_wf_chrome)
+	# Interior shelves visible through glass (3 wire rack lines)
+	for shelf_i: int in range(3):
+		var shelf_y: float = 0.15 + float(shelf_i) * 0.28
+		_box(self, Vector3(wf_w - 0.1, 0.01, wf_d - 0.1),
+			Vector3(wf_x, shelf_y, wf_z), mat_wf_chrome)
+	# Wine bottles on shelves (horizontal, visible through glass)
+	for shelf_i: int in range(3):
+		var shelf_y: float = 0.20 + float(shelf_i) * 0.28
+		for bi: int in range(3):
+			var bx: float = wf_x - 0.14 + float(bi) * 0.14
+			_box(self, Vector3(0.04, 0.04, 0.3),
+				Vector3(bx, shelf_y, wf_z), mat_wine_bottle)
+	# Blue LED accent glow inside
+	var wf_light: OmniLight3D = OmniLight3D.new()
+	wf_light.light_color = Color(0.3, 0.4, 0.8)
+	wf_light.light_energy = 0.3
+	wf_light.omni_range = 0.6
+	wf_light.shadow_enabled = false
+	wf_light.position = Vector3(wf_x, wf_h / 2.0, wf_z)
+	add_child(wf_light)
 
 	# --- Small kitchen table (center of kitchen) ---
 	var table_x: float = 2.8
@@ -1453,66 +1597,131 @@ func _build_terrain_map(pos: Vector3, wall: String, map_w: float, map_h: float, 
 	else:
 		_box(map_node, Vector3(map_w, map_h, 0.015), Vector3(pos.x, pos.y, pos.z), mat_paper)
 
-	# Terrain grid — colored cells representing game biomes
+	# Terrain grid — geographic map with recognizable features
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = seed_val
-	var cols: int = int(map_w / 0.08)
-	var rows: int = int(map_h / 0.08)
+	var cols: int = int(map_w / 0.04)  # Finer grid for detail
+	var rows: int = int(map_h / 0.04)
 	var cell_w: float = map_w / float(cols)
 	var cell_h: float = map_h / float(rows)
 
-	# Biome colors matching the game
-	var biome_colors: Array[Color] = [
-		Color(0.25, 0.45, 0.20),  # Forest (dark green)
-		Color(0.35, 0.55, 0.25),  # Forest (lighter)
-		Color(0.30, 0.50, 0.22),  # Forest (mid)
-		Color(0.55, 0.50, 0.35),  # Rocky/mountain
-		Color(0.45, 0.42, 0.30),  # Rocky darker
-		Color(0.60, 0.55, 0.40),  # Plains/meadow
-		Color(0.50, 0.47, 0.33),  # Dirt/trail
-	]
-	var water_color: Color = Color(0.25, 0.40, 0.55)
-	var campsite_color: Color = Color(0.75, 0.45, 0.15)
-
-	var biome_mats: Array[StandardMaterial3D] = []
-	for c: Color in biome_colors:
-		var m: StandardMaterial3D = StandardMaterial3D.new()
-		m.albedo_color = c
-		m.roughness = 0.9
-		biome_mats.append(m)
+	# Map colors
+	var mat_deep_forest: StandardMaterial3D = StandardMaterial3D.new()
+	mat_deep_forest.albedo_color = Color(0.18, 0.35, 0.15)
+	mat_deep_forest.roughness = 0.9
+	var mat_forest: StandardMaterial3D = StandardMaterial3D.new()
+	mat_forest.albedo_color = Color(0.28, 0.48, 0.22)
+	mat_forest.roughness = 0.9
+	var mat_light_forest: StandardMaterial3D = StandardMaterial3D.new()
+	mat_light_forest.albedo_color = Color(0.40, 0.55, 0.30)
+	mat_light_forest.roughness = 0.9
+	var mat_meadow: StandardMaterial3D = StandardMaterial3D.new()
+	mat_meadow.albedo_color = Color(0.55, 0.62, 0.35)
+	mat_meadow.roughness = 0.9
+	var mat_mountain: StandardMaterial3D = StandardMaterial3D.new()
+	mat_mountain.albedo_color = Color(0.50, 0.45, 0.35)
+	mat_mountain.roughness = 0.9
+	var mat_peak: StandardMaterial3D = StandardMaterial3D.new()
+	mat_peak.albedo_color = Color(0.65, 0.62, 0.58)
+	mat_peak.roughness = 0.9
 	var mat_water: StandardMaterial3D = StandardMaterial3D.new()
-	mat_water.albedo_color = water_color
-	mat_water.roughness = 0.5
+	mat_water.albedo_color = Color(0.22, 0.38, 0.52)
+	mat_water.roughness = 0.4
+	var mat_water_light: StandardMaterial3D = StandardMaterial3D.new()
+	mat_water_light.albedo_color = Color(0.30, 0.48, 0.58)
+	mat_water_light.roughness = 0.4
+	var mat_trail: StandardMaterial3D = StandardMaterial3D.new()
+	mat_trail.albedo_color = Color(0.60, 0.50, 0.35)
+	mat_trail.roughness = 0.9
 	var mat_camp: StandardMaterial3D = StandardMaterial3D.new()
-	mat_camp.albedo_color = campsite_color
+	mat_camp.albedo_color = Color(0.80, 0.45, 0.15)
 	mat_camp.roughness = 0.8
+
+	# Precompute elevation field for coherent terrain
+	var river_x_offset: float = rng.randf_range(-0.15, 0.15)
+	var lake_cx: float = rng.randf_range(-0.25, 0.0)
+	var lake_cy: float = rng.randf_range(-0.15, 0.15)
+	var lake_rx: float = rng.randf_range(0.08, 0.14)
+	var lake_ry: float = rng.randf_range(0.06, 0.10)
+	var mtn_cx: float = rng.randf_range(0.15, 0.35)
+	var mtn_cy: float = rng.randf_range(-0.25, -0.05)
+	var mtn_r: float = rng.randf_range(0.12, 0.2)
 
 	for row: int in range(rows):
 		for col: int in range(cols):
+			var nx: float = float(col) / float(cols) - 0.5  # -0.5 to 0.5
+			var ny: float = float(row) / float(rows) - 0.5
 			var cx: float = -map_w / 2.0 + (float(col) + 0.5) * cell_w
 			var cy: float = -map_h / 2.0 + (float(row) + 0.5) * cell_h
 
-			# Choose biome based on position + noise
 			var mat: StandardMaterial3D
-			var dist_from_center: float = sqrt(cx * cx + cy * cy)
-			var r: float = rng.randf()
-			if row == rows / 2 and col > cols / 3 and col < cols * 2 / 3:
-				mat = mat_water  # River through middle
-			elif row == rows / 2 + 1 and col > cols / 3 + 1 and col < cols * 2 / 3 - 1:
-				mat = mat_water  # River width
-			elif row == rows / 2 and col == cols / 2:
-				mat = mat_camp  # Campsite marker
-			elif dist_from_center < map_w * 0.2 and r < 0.7:
-				mat = biome_mats[rng.randi_range(0, 2)]  # Dense forest center
-			elif r < 0.15:
-				mat = biome_mats[rng.randi_range(3, 4)]  # Rocky patches
-			elif r < 0.25:
-				mat = biome_mats[rng.randi_range(5, 6)]  # Plains
+
+			# Winding river (sinusoidal path from top to bottom)
+			var river_center: float = river_x_offset + sin(ny * 8.0) * 0.08 + sin(ny * 3.0) * 0.05
+			var river_dist: float = abs(nx - river_center)
+			var is_river: bool = river_dist < 0.025
+
+			# Lake (ellipse)
+			var lake_dx: float = (nx - lake_cx) / lake_rx
+			var lake_dy: float = (ny - lake_cy) / lake_ry
+			var is_lake: bool = (lake_dx * lake_dx + lake_dy * lake_dy) < 1.0
+			var is_lake_shore: bool = not is_lake and (lake_dx * lake_dx + lake_dy * lake_dy) < 1.4
+
+			# Mountain region (circular cluster)
+			var mtn_dx: float = nx - mtn_cx
+			var mtn_dy: float = ny - mtn_cy
+			var mtn_dist: float = sqrt(mtn_dx * mtn_dx + mtn_dy * mtn_dy)
+			var is_mountain: bool = mtn_dist < mtn_r
+			var is_peak: bool = mtn_dist < mtn_r * 0.4
+
+			# Trail (diagonal path from campsite toward mountains)
+			var camp_nx: float = 0.0
+			var camp_ny: float = 0.0
+			var trail_t: float = clampf((nx * (mtn_cx - camp_nx) + ny * (mtn_cy - camp_ny)) /
+				(pow(mtn_cx - camp_nx, 2) + pow(mtn_cy - camp_ny, 2)), 0.0, 1.0)
+			var trail_px: float = camp_nx + trail_t * (mtn_cx - camp_nx)
+			var trail_py: float = camp_ny + trail_t * (mtn_cy - camp_ny)
+			var trail_dist: float = sqrt(pow(nx - trail_px, 2) + pow(ny - trail_py, 2))
+			var is_trail: bool = trail_dist < 0.02
+
+			# Campsite (center marker)
+			var camp_dist: float = sqrt(nx * nx + ny * ny)
+			var is_camp: bool = camp_dist < 0.03
+
+			# Assign terrain type
+			if is_camp:
+				mat = mat_camp
+			elif is_lake:
+				mat = mat_water if (lake_dx * lake_dx + lake_dy * lake_dy) < 0.7 else mat_water_light
+			elif is_river:
+				mat = mat_water
+			elif is_trail and not is_mountain:
+				mat = mat_trail
+			elif is_peak:
+				mat = mat_peak
+			elif is_mountain:
+				mat = mat_mountain if rng.randf() > 0.3 else mat_peak
+			elif is_lake_shore:
+				mat = mat_meadow
 			else:
-				mat = biome_mats[rng.randi_range(0, 2)]  # Forest (dominant)
+				# Forest with distance-based density
+				var edge_dist: float = min(min(abs(nx + 0.5), abs(nx - 0.5)),
+					min(abs(ny + 0.5), abs(ny - 0.5)))
+				var noise: float = rng.randf()
+				if edge_dist < 0.08:
+					mat = mat_light_forest if noise > 0.3 else mat_meadow
+				elif camp_dist < 0.15:
+					mat = mat_deep_forest if noise > 0.2 else mat_forest
+				elif noise < 0.15:
+					mat = mat_meadow
+				elif noise < 0.4:
+					mat = mat_light_forest
+				elif noise < 0.7:
+					mat = mat_forest
+				else:
+					mat = mat_deep_forest
 
 			if is_ew:
-				# Offset cells toward room interior so they sit on top of paper
 				var cell_off_x: float = -0.01 if wall == "east" else 0.01
 				_box(map_node, Vector3(0.012, cell_h * 0.9, cell_w * 0.9),
 					Vector3(pos.x + cell_off_x, pos.y + cy, pos.z + cx), mat)
@@ -2057,12 +2266,12 @@ func _build_bedroom_furniture() -> void:
 	ward_col.position = Vector3(ward_x, 1.05, ward_z)
 	ward_body.add_child(ward_col)
 
-	# --- Console table (transition zone, against east wall) ---
+	# --- Console table (bedroom, against east wall — clear of doorway) ---
 	var ct: Node3D = Node3D.new()
 	ct.name = "ConsoleTable"
 	add_child(ct)
 	var ct_x: float = 5.5
-	var ct_z: float = 10.5
+	var ct_z: float = 12.5
 	# Body
 	_box(ct, Vector3(0.4, 0.7, 0.8),
 		Vector3(ct_x, 0.35, ct_z), _mat_furniture_wood)
@@ -2326,9 +2535,9 @@ func _setup_lighting() -> void:
 	_add_light("KitchenLight", Vector3(3.0, 2.5, 7.5),
 		Color(1.0, 0.95, 0.85), 1.1, 5.0)
 
-	# Dining room — chandelier with shadow
+	# Dining room — chandelier (no shadow: 4 real bulbs would wash out arm shadows)
 	var dining_cx: float = LIVING_ROOM_WIDTH + DINING_ROOM_WIDTH / 2.0
-	_add_light_with_shadow("DiningChandelier", Vector3(dining_cx, 2.4, HOUSE_DEPTH / 2.0),
+	_add_light("DiningChandelier", Vector3(dining_cx, 2.4, HOUSE_DEPTH / 2.0),
 		Color(1.0, 0.92, 0.75), 1.0, 7.0)
 	_add_light("DiningFill", Vector3(dining_cx, 2.5, 2.0),
 		Color(1.0, 0.9, 0.7), 0.4, 5.0)
