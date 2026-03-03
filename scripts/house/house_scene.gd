@@ -75,6 +75,8 @@ var _text_overlay_active: bool = false
 
 
 func _ready() -> void:
+	# Set clear color to black immediately to prevent blue flash during scene transition
+	RenderingServer.set_default_clear_color(Color(0, 0, 0, 1))
 	_init_materials()
 	_build_floor_and_ceiling()
 	_build_exterior_walls()
@@ -2208,6 +2210,51 @@ func _build_dining_room_furniture() -> void:
 		_box(self, Vector3(0.01, 0.005, 0.12),
 			Vector3(sp.x + 0.25, sp.y + 0.005, sp.z), mat_silverware)
 
+	# --- Sandwich and water glass at south-left place setting ---
+	var sand_sp: Vector3 = setting_positions[0]  # South-left place
+	var sand_body: StaticBody3D = StaticBody3D.new()
+	sand_body.name = "DiningSandwich"
+	sand_body.set_script(_create_interactable_script("Eat Sandwich", "dining_sandwich"))
+	# Sandwich on the plate
+	_box(sand_body, Vector3(0.12, 0.06, 0.1),
+		Vector3(sand_sp.x, sand_sp.y + 0.04, sand_sp.z), _mat_sandwich)
+	var mat_lettuce_d: StandardMaterial3D = StandardMaterial3D.new()
+	mat_lettuce_d.albedo_color = Color(0.3, 0.55, 0.2)
+	mat_lettuce_d.roughness = 0.9
+	_box(sand_body, Vector3(0.13, 0.01, 0.11),
+		Vector3(sand_sp.x, sand_sp.y + 0.04, sand_sp.z), mat_lettuce_d)
+	# Pastrami peeking out (pink-brown strip)
+	var mat_pastrami: StandardMaterial3D = StandardMaterial3D.new()
+	mat_pastrami.albedo_color = Color(0.6, 0.3, 0.25)
+	mat_pastrami.roughness = 0.85
+	_box(sand_body, Vector3(0.13, 0.012, 0.11),
+		Vector3(sand_sp.x, sand_sp.y + 0.025, sand_sp.z), mat_pastrami)
+	var sand_col: CollisionShape3D = CollisionShape3D.new()
+	var sand_shape: BoxShape3D = BoxShape3D.new()
+	sand_shape.size = Vector3(0.2, 0.1, 0.2)
+	sand_col.shape = sand_shape
+	sand_col.position = Vector3(sand_sp.x, sand_sp.y + 0.03, sand_sp.z)
+	sand_body.add_child(sand_col)
+	add_child(sand_body)
+	# Water glass (transparent, next to sandwich plate)
+	var mat_glass: StandardMaterial3D = StandardMaterial3D.new()
+	mat_glass.albedo_color = Color(0.7, 0.8, 0.95, 0.35)
+	mat_glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat_glass.roughness = 0.05
+	mat_glass.metallic = 0.3
+	var mat_water: StandardMaterial3D = StandardMaterial3D.new()
+	mat_water.albedo_color = Color(0.5, 0.65, 0.85, 0.4)
+	mat_water.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat_water.roughness = 0.1
+	var glass_x: float = sand_sp.x + 0.2
+	var glass_z: float = sand_sp.z
+	# Glass body (hollow cylinder approximated with box walls)
+	_box(self, Vector3(0.05, 0.1, 0.05),
+		Vector3(glass_x, sand_sp.y + 0.06, glass_z), mat_glass)
+	# Water inside
+	_box(self, Vector3(0.04, 0.07, 0.04),
+		Vector3(glass_x, sand_sp.y + 0.045, glass_z), mat_water)
+
 	# --- Centerpiece vase with flowers ---
 	var mat_vase: StandardMaterial3D = StandardMaterial3D.new()
 	mat_vase.albedo_color = Color(0.55, 0.6, 0.7)
@@ -2866,8 +2913,7 @@ func _build_tree_pictures() -> void:
 	var ex: float = LIVING_ROOM_WIDTH - WALL_THICKNESS - 0.03
 	# Cactus on west wall between windows
 	_build_tree_picture(Vector3(wx, 1.6, 13.5), "west", "cactus", mats)
-	# Palm on east wall, viewable from bed (between entry and first window)
-	_build_tree_picture(Vector3(ex, 1.6, 11.0), "east", "palm", mats)
+	# (Palm painting removed from east wall near armoire)
 	# Sunset painting on east wall above dresser, between windows
 	_build_sunset_painting(Vector3(ex, 1.6, 14.0), "east")
 
@@ -3555,6 +3601,9 @@ func interact(player: Node) -> bool:
 		"sandwich":
 			if house.has_method("show_text_overlay"):
 				house.show_text_overlay("A good sandwich.", 2.0)
+		"dining_sandwich":
+			if house.has_method("show_text_overlay"):
+				house.show_text_overlay("Pastrami on rye -- my favorite.", 3.0)
 		"bookshelves":
 			if house.has_method("show_text_overlay"):
 				house.show_text_overlay("Your old field guides.", 2.0)

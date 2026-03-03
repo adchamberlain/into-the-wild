@@ -212,8 +212,9 @@ func load_game_slot(slot: int) -> bool:
 				game_state.trail_stone_cairn_found = trail.get("stone_cairn_found", false)
 				game_state.trail_signpost_found = trail.get("signpost_found", false)
 		get_tree().paused = false
+		# Don't emit game_loaded before scene change — the HUD listener would
+		# call get_tree().create_timer() after the scene is freed, causing a crash.
 		get_tree().change_scene_to_file("res://scenes/house/house.tscn")
-		game_loaded.emit(filepath, slot)
 		return true
 
 	# Check if world seed matches - if not, we need to reload the scene with correct seed

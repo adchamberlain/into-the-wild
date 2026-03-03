@@ -376,7 +376,7 @@ func _rebuild_item_rows() -> void:
 		cursor_label.custom_minimum_size = Vector2(18, 0)
 		hbox.add_child(cursor_label)
 
-		# Item name (left-aligned, expands to fill)
+		# Item name
 		var name_label: Label = Label.new()
 		name_label.text = _get_display_name(item_type)
 		name_label.add_theme_font_override("font", HUD_FONT)
@@ -385,16 +385,14 @@ func _rebuild_item_rows() -> void:
 			name_label.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
 		else:
 			name_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9, 1))
-		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		hbox.add_child(name_label)
 
-		# Item count (right-aligned, green)
+		# Item count (green, with spacing gap)
 		var count_label: Label = Label.new()
-		count_label.text = "x%d" % count
+		count_label.text = "     x%d" % count
 		count_label.add_theme_font_override("font", HUD_FONT)
 		count_label.add_theme_font_size_override("font_size", 28)
 		count_label.add_theme_color_override("font_color", Color(0.6, 1.0, 0.6, 1))
-		count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		hbox.add_child(count_label)
 
 		columns[col_idx].add_child(row_panel)

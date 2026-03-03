@@ -409,6 +409,8 @@ func _show_save_confirmation(slot_num: int = 1) -> void:
 
 ## Start a 2-second timer to hide the confirmation label.
 func _start_confirmation_timer() -> void:
+	if not is_inside_tree():
+		return
 	# Use a SceneTreeTimer so it works while paused (process_mode handled by PROCESS_MODE_ALWAYS)
 	var timer: SceneTreeTimer = get_tree().create_timer(2.0, true, false, true)
 	timer.timeout.connect(_hide_save_confirmation)

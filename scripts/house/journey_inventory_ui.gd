@@ -213,16 +213,14 @@ func _add_item_row(parent: VBoxContainer, display_name: String, count: int, alt_
 	name_label.add_theme_font_override("font", HUD_FONT)
 	name_label.add_theme_font_size_override("font_size", 40)
 	name_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9, 1))
-	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hbox.add_child(name_label)
 
-	# Item count (right-aligned, green)
+	# Item count (green, with spacing gap)
 	var count_label: Label = Label.new()
-	count_label.text = "x%d" % count
+	count_label.text = "     x%d" % count
 	count_label.add_theme_font_override("font", HUD_FONT)
 	count_label.add_theme_font_size_override("font_size", 40)
 	count_label.add_theme_color_override("font_color", Color(0.6, 1.0, 0.6, 1))
-	count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	hbox.add_child(count_label)
 
 	parent.add_child(row_panel)

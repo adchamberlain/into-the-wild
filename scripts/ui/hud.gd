@@ -810,6 +810,8 @@ func _reset_damage_flash() -> void:
 
 ## Show a notification message. Duration scales with line count unless overridden.
 func show_notification(message: String, color: Color = Color.WHITE, override_duration: float = 0.0) -> void:
+	if not is_inside_tree():
+		return
 	if notification_label and notification_panel:
 		notification_label.text = message
 		notification_label.add_theme_color_override("font_color", color)
