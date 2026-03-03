@@ -6567,6 +6567,94 @@ Large batch of house interior improvements driven by playtesting feedback. Many 
 
 ---
 
+## Session 41: House Playtesting Fixes (2026-03-03)
+
+### What Was Built
+
+Large batch of playtesting-driven fixes for the house interior.
+
+#### Living Room
+- **Couch repositioned** to X=5.45, Z=2.5 (back against divider wall, centered)
+- **Armchair repositioned** to X=1.8, Z=2.5, rotated to face couch (+X direction)
+- **Coffee table centered** at X=3.7, Z=2.5 between couch and chair
+- **Side tables and end tables** repositioned around furniture
+- **Rug fixed**: Size 3.0x3.0 at (3.5, 0.01, 2.5) — no longer extends into kitchen
+
+#### Bedroom
+- **Ponderosa painting replaced** with pixelated sunset over the ocean painting
+- **Sunset painting** has full art: sky gradient, sun with emission glow, clouds, ocean, sun reflection
+- **Palm painting moved** from east wall Z=16.5 to Z=11.0
+- **All tree picture frames enlarged** from 0.55x0.55 to 0.7x0.7
+- **Mirror above dresser removed**, replaced with sunset painting above dresser on east wall
+- **Z-fighting fix**: Art offset increased to 0.03, thinned to 0.012
+
+#### Kitchen/Dining
+- **Bookshelf text** changed: removed "You smile." from interaction
+- **Kettle text** changed to "Pine needle tea with osha root honey -- perfect."
+- **Dining room maps** made same size (both 1.2x0.9)
+- **Dining room journal removed** from dinner table (kept on kitchen table only)
+
+#### UI & Controls
+- **Jumping disabled** in house (removed jump handler)
+- **NG+ controller fix**: Added ui_up/ui_down navigation to confirmation dialog
+- **Save slot selection** added: Pause menu now shows slot picker when saving
+
+#### Bug Fixes
+- **Winnie portrait** accidentally replaced — restored correctly above bed
+- **Variable ordering bug** fixed for sunset painting placement
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/house/house_scene.gd` | Modified | Living room layout, paintings, sunset art, kettle text, journal removed, maps resized |
+| `scripts/house/house_player.gd` | Modified | Jump handling removed |
+| `scripts/house/house_pause_menu.gd` | Rewritten | Save slot picker with 3 slots, slot info display |
+| `scripts/house/new_game_plus_ui.gd` | Modified | Controller navigation for confirmation dialog |
+
+---
+
+## Session 42: Bug Fixes, Cabinet Molding, Dining Sandwich (2026-03-03)
+
+### What Was Built
+
+Bug fixes, UI polish, and new house details.
+
+#### Bug Fixes
+- **House save load crash fixed**: `game_loaded` signal was emitted after `change_scene_to_file()`, causing HUD's `show_notification` to call `get_tree().create_timer()` on a freed node. Removed the signal emit for house transitions. Added null guards in HUD and pause menu timer.
+- **Blue flash on house load fixed**: Set `RenderingServer.set_default_clear_color(Color.BLACK)` at start of house `_ready()` to prevent default blue sky showing for one frame.
+- **Save slots increased** from 3 to 5 (matching wilderness game)
+
+#### Kitchen
+- **Lower cabinet doors**: Changed from 3 to 4 doors, each with crown molding trim
+- **Upper cabinet doors**: Added handles and crown molding trim around both door panels
+- **Shelf with flower vase** added above kitchen sink: small shelf with metal L-brackets, cream ceramic vase, 4 colored flowers (pink, yellow, white, mauve)
+
+#### Dining Room
+- **Pastrami sandwich** added at south-left place setting with lettuce and pastrami layers
+- **Water glass** added next to sandwich (transparent glass with water inside)
+- **Interaction**: "Pastrami on rye -- my favorite." (3s display)
+
+#### Bedroom
+- **Palm painting removed** from east wall near armoire (user reported as blank frame)
+
+#### UI
+- **Pause menu hint** made dynamic: shows "[ESC to resume]" on keyboard, "[✕ to resume]" on controller. Updates in real-time via InputManager signal.
+- **Inventory spacing fixed** (both journey inventory and NG+ UI): Changed from full-width expand to 5-space text padding between item names and quantities
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/house/house_scene.gd` | Modified | Cabinet molding, sink shelf with flowers, dining sandwich + water, blue flash fix, palm painting removed |
+| `scripts/house/house_pause_menu.gd` | Modified | 5 save slots, dynamic hint text, timer null guard |
+| `scripts/house/journey_inventory_ui.gd` | Modified | Item spacing fixed (5-space padding) |
+| `scripts/house/new_game_plus_ui.gd` | Modified | Item spacing fixed (5-space padding) |
+| `scripts/core/save_load.gd` | Modified | Removed game_loaded emit for house scene transitions |
+| `scripts/ui/hud.gd` | Modified | Null guard in show_notification |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
