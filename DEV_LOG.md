@@ -6361,17 +6361,74 @@ Comprehensive interior redesign of the Oakland Hills colonial house to create a 
 
 ---
 
+## Session 37: Bedroom/Kitchen Fixes, Pause Menu, Footsteps, Trail Progression Gating
+
+### What Was Built
+
+Fixed several house interior issues, added missing house scene features, and implemented trail progression gating for the endgame.
+
+#### Bedroom Layout Fixes
+- **Room depth increased** from 5.0 to 7.0 (`BEDROOM_DEPTH = 7.0`, Z=10-17)
+- **Bed orientation fixed** — headboard now at +Z (toward north wall), footboard at -Z
+- **Bed repositioned** to Z=16.0 (closer to north wall for proper bedroom feel)
+- **Windows spread** to Z=12.5 and Z=15.5 (were at Z=11.5 and Z=13.5)
+- **Paintings repositioned** into clear wall gaps: West at Z=11.0,14.0; East at Z=11.0,16.5; North at X=3.0
+- **Nightstand** moved near headboard, drawer face flipped to face into room
+- **Dresser** moved to Z=14.0 (between new window positions)
+- **Rug** moved to bed_z - 1.5 (in front of footboard)
+- **Bedroom lights** spread for larger room (Z=12.5 and Z=15.5)
+
+#### Kitchen Sink Fix
+- **Faucet flipped** to +Z (toward wall, was facing into room)
+- **Basin deepened** (Y=0.84) with taller basin walls
+- **L-return counter removed** — was blocking bedroom doorway
+
+#### House Pause Menu (New)
+- New file `scripts/house/house_pause_menu.gd`
+- Resume and Quit to Desktop buttons
+- Controller D-pad navigation with ui_accept to activate
+- PROCESS_MODE_ALWAYS so it works while tree is paused
+- SFXManager sounds on open/close/navigate
+
+#### House Footsteps
+- Added footstep sounds to `house_player.gd`
+- FOOTSTEP_INTERVAL = 0.45, uses `SFXManager.play_footstep("stone")` for hardwood floors
+
+#### Trail Progression Gating
+- **Carved tree** (first marker): No prerequisite, sets `trail_carved_tree_found = true`
+- **Stone cairn** (second marker): Requires carved tree found. Sets `trail_stone_cairn_found = true`
+- **Signpost** (final marker): Requires stone cairn found. Sets `trail_signpost_found = true`
+- Each marker has `_can_interact()` check — returns empty prompt text and blocks interaction if prerequisite not met
+- `trail_testing_mode = true` in GameState bypasses all checks for development
+- Trail state saved/loaded through save system (`data["trail"]` dictionary)
+- `reset_journey()` resets all trail flags
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/house/house_scene.gd` | Modified | Bedroom depth 5→7, bed orientation fix, window/painting/furniture repositioning, sink faucet flip, L-return counter removed, fruit bowl moved to main counter |
+| `scripts/house/house_player.gd` | Modified | Added footstep sounds (FOOTSTEP_INTERVAL, SFXManager.play_footstep) |
+| `scripts/house/house_pause_menu.gd` | New | Simplified pause menu with Resume/Quit, controller support |
+| `scripts/core/game_state.gd` | Modified | Added trail_carved_tree_found, trail_stone_cairn_found, trail_signpost_found, trail_testing_mode; updated reset_journey() |
+| `scripts/world/trail_carved_tree.gd` | Modified | Sets trail_carved_tree_found in _show_overlay() |
+| `scripts/world/trail_stone_cairn.gd` | Modified | Added _can_interact() prerequisite check (requires carved tree), sets trail_stone_cairn_found |
+| `scripts/world/trail_signpost.gd` | Modified | Added _can_interact() prerequisite check (requires stone cairn), sets trail_signpost_found |
+| `scripts/core/save_load.gd` | Modified | Trail state saved in _collect_save_data(), restored in _apply_save_data() |
+| `scenes/main.tscn` | Modified | Player spawn at (345, 25, -345) for testing near signpost |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test full endgame loop: journal clue → carved tree → stone cairn → signpost → transition → house → NG+
-2. Play-test house scene — room layout, furniture, cat portraits, window views, lighting
-3. Play-test interactables — kettle, sandwich, bookshelves, storage box (inventory viewer), front door (NG+ UI)
-4. Play-test NG+ — select 5 items, confirm, verify new wilderness loads with those items
-5. Play-test food menu, journal, pocket desert from previous sessions
-6. Bug fixing from play-testing
+1. Bug fixing from play-testing
+2. When testing is done: set `trail_testing_mode = false` in `scripts/core/game_state.gd:24`
+3. When testing is done: revert player spawn in `scenes/main.tscn` from (345, 25, -345) to (0, 5, 0)
 
 ### Known Issues
+- Player spawn in main.tscn is at (345, 25, -345) for testing — needs revert to (0, 5, 0)
+- `trail_testing_mode = true` bypasses trail progression — needs to be set to false for release
 - Tortoise materials are per-instance (minor, could be shared static)
 - Rock spire uses per-instance materials (minor, only one ever spawns)
 - Interactable script factory uses string formatting — fragile if labels contain special characters (current labels are all safe)
