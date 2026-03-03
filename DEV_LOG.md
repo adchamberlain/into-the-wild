@@ -6298,6 +6298,69 @@ Fixed two critical integration issues from the endgame implementation: the stora
 
 ---
 
+---
+
+## Session 36: House Interior Redesign
+
+### What Was Built
+
+Comprehensive interior redesign of the Oakland Hills colonial house to create a more authentic, lived-in feel with varied room character.
+
+#### Living Room — Fireplace & Reoriented Layout
+- **Brick fireplace** against west wall (south of window at Z=2.5), with firebox, hearth, mantel shelf, candlesticks, framed photo, and chimney breast to ceiling
+- **Couch** reoriented to face west toward fireplace (runs along Z axis at X=3.5)
+- **Coffee table** between couch and fireplace at X=2.0
+- **Armchair** repositioned to north side at (2.0, 3.8), facing south toward seating area
+- **End table with lamp** next to couch arm at (4.2, 2.5)
+- **Rug** repositioned under seating group
+- **Storage box** moved to southwest corner near kitchen divider
+
+#### Kitchen-to-Dining Room Doorway
+- Center divider wall (X=6) split into 3 sections with 1.5m doorway at Z=7.5
+- Allows passage between kitchen and dining room
+
+#### Kitchen Improvements
+- Kitchen stools upgraded to **proper chairs with backs**
+- **Window herb planter** on west wall kitchen window sill (terracotta box with green leaf clusters)
+
+#### Dining Room Additions
+- **Sideboard/buffet** against east wall between windows, with 4 cabinet doors, handles, candlestick holders, and serving tray
+- **Deep navy area rug** under dining table
+- **Potted plant** in southeast corner (terracotta pot, soil, 4 green leaf boxes at varying heights)
+
+#### Bedroom Additions
+- **Reading chair** near west wall at Z=11.0 with small side table
+- **Wardrobe/armoire** against south bedroom wall with double doors, handles, and crown piece
+- **Console table** in transition zone near east wall with decorative vase
+- **Framed photo** on west wall in hallway transition area
+
+#### Lighting Overhaul
+- Living room: dimmer warm light + fireplace glow (orange, near floor) + end table lamp glow
+- Kitchen: slightly cooler/brighter task lighting
+- Dining room: chandelier with shadow casting + fill light
+- Bedroom: warmer/dimmer cozy tones + nightstand lamp glow
+- Added `_add_light_with_shadow()` helper function
+
+#### Window Backdrops
+- Direction-based sky and hill colors: south (bay view, bluer), north (overcast, deep green), west (warm sunset), east (crisp morning)
+- Local materials created per window instead of shared static materials
+
+#### Tree Painting Nameplates
+- Small brass nameplate on dark wood backing below each tree painting
+- Matches wall orientation (east/west vs north/south)
+
+#### New Materials
+- `_mat_brick`: warm red-brown (Color(0.55, 0.28, 0.18))
+- `_mat_fireplace_interior`: dark charcoal (Color(0.12, 0.1, 0.1))
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/house/house_scene.gd` | Modified | Rewrote living room furniture (fireplace, couch reorientation), split center divider wall with doorway, added dining room sideboard/rug/plant, kitchen chair backs and herb planter, bedroom reading chair/wardrobe/console table, overhauled lighting, direction-based window colors, tree painting nameplates, new brick materials |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
