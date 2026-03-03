@@ -16,6 +16,13 @@ var new_game_plus_items: Array[String] = []  # 5 chosen items for NG+
 var is_new_game_plus: bool = false
 var pending_house_transition: bool = false
 
+# Trail progression (must be discovered in order: carved tree → stone cairn → signpost)
+var trail_carved_tree_found: bool = false
+var trail_stone_cairn_found: bool = false
+var trail_signpost_found: bool = false
+# TESTING: set to true to bypass trail progression requirements
+var trail_testing_mode: bool = true
+
 # UI scale factor (persisted to user://display_config.cfg)
 var ui_scale: float = 1.0
 
@@ -131,3 +138,6 @@ func reset_journey() -> void:
 	new_game_plus_items.clear()
 	is_new_game_plus = false
 	pending_house_transition = false
+	trail_carved_tree_found = false
+	trail_stone_cairn_found = false
+	trail_signpost_found = false

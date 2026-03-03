@@ -271,6 +271,11 @@ func _show_overlay(player_node: Node) -> void:
 	has_been_read = true
 	overlay_layer.visible = true
 
+	# Mark as found in global state for trail progression
+	var game_state: Node = get_node_or_null("/root/GameState")
+	if game_state:
+		game_state.trail_carved_tree_found = true
+
 	# Update close hint with current input device
 	var input_mgr: Node = get_node_or_null("/root/InputManager")
 	var interact_key: String = "E"

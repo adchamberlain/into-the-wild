@@ -386,6 +386,15 @@ func _collect_save_data() -> Dictionary:
 	if cave_transition and cave_transition.has_method("get_save_data"):
 		data["cave"] = cave_transition.get_save_data()
 
+	# Trail progression state
+	var game_state: Node = get_node_or_null("/root/GameState")
+	if game_state:
+		data["trail"] = {
+			"carved_tree_found": game_state.trail_carved_tree_found,
+			"stone_cairn_found": game_state.trail_stone_cairn_found,
+			"signpost_found": game_state.trail_signpost_found,
+		}
+
 	# Config settings
 	var config_menu: Node = get_tree().root.get_node_or_null("Main/ConfigMenu")
 	if config_menu and config_menu.has_method("get_config"):
@@ -579,6 +588,15 @@ func _apply_save_data(data: Dictionary) -> void:
 		_apply_player_data(data["player"])
 	elif data.has("player"):
 		push_error("[SaveLoad] Cannot apply player data - player is null!")
+
+	# Trail progression state
+	if data.has("trail"):
+		var game_state: Node = get_node_or_null("/root/GameState")
+		if game_state:
+			var trail: Dictionary = data["trail"]
+			game_state.trail_carved_tree_found = trail.get("carved_tree_found", false)
+			game_state.trail_stone_cairn_found = trail.get("stone_cairn_found", false)
+			game_state.trail_signpost_found = trail.get("signpost_found", false)
 
 	# Config settings
 	if data.has("config"):

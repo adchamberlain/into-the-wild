@@ -249,10 +249,22 @@ func _build_overlay() -> void:
 	vbox.add_child(close_hint_label)
 
 
+## Check if trail prerequisite is met (carved tree must be found first).
+func _can_interact() -> bool:
+	var game_state: Node = get_node_or_null("/root/GameState")
+	if game_state and game_state.trail_testing_mode:
+		return true
+	if game_state and game_state.trail_carved_tree_found:
+		return true
+	return false
+
+
 ## Get the text to show in interaction prompt.
 func get_interaction_text() -> String:
 	if is_overlay_visible:
 		return "Close"
+	if not _can_interact():
+		return ""
 	return "Read Cairn"
 
 
@@ -260,7 +272,7 @@ func get_interaction_text() -> String:
 func interact(player: Node) -> void:
 	if is_overlay_visible:
 		_hide_overlay()
-	else:
+	elif _can_interact():
 		_show_overlay(player)
 
 
@@ -279,6 +291,11 @@ func _show_overlay(player_node: Node) -> void:
 	has_been_read = true
 	overlay_layer.visible = true
 	_player_ref = player_node
+
+	# Mark as found in global state for trail progression
+	var game_state: Node = get_node_or_null("/root/GameState")
+	if game_state:
+		game_state.trail_stone_cairn_found = true
 
 	# Update close hint with current input device
 	var input_mgr: Node = get_node_or_null("/root/InputManager")
