@@ -501,6 +501,10 @@ func _fade_and_transition() -> void:
 	tween.tween_property(fade_rect, "color:a", 1.0, 2.0)
 	tween.tween_interval(1.0)
 	tween.tween_callback(func() -> void:
+		# Free the fade overlay before changing scenes — it was added to root
+		# and would persist as a permanent black screen over the new scene
+		if is_instance_valid(fade_canvas):
+			fade_canvas.queue_free()
 		get_tree().change_scene_to_file("res://scenes/main.tscn")
 	)
 

@@ -895,11 +895,6 @@ func _build_living_room_furniture() -> void:
 	# Mantel shelf (wooden)
 	_box(fp, Vector3(0.55, 0.08, 1.3),
 		Vector3(0.425, 1.34, 0.95), _mat_furniture_wood)
-	# Mantel decorations: small framed photo (center)
-	_box(fp, Vector3(0.02, 0.12, 0.1),
-		Vector3(0.55, 1.5, 0.95), _mat_portrait_frame)
-	_box(fp, Vector3(0.015, 0.1, 0.08),
-		Vector3(0.555, 1.5, 0.95), _mat_portrait_bg)
 	# Left candlestick
 	_box(fp, Vector3(0.03, 0.12, 0.03),
 		Vector3(0.5, 1.46, 0.5), _mat_chandelier)
@@ -994,8 +989,8 @@ func _build_living_room_furniture() -> void:
 	var end_table: Node3D = Node3D.new()
 	end_table.name = "EndTable"
 	add_child(end_table)
-	var et_x: float = 4.2
-	var et_z: float = 2.5
+	var et_x: float = 3.5
+	var et_z: float = 2.8
 	# Table body
 	_box(end_table, Vector3(0.4, 0.5, 0.4),
 		Vector3(et_x, 0.25, et_z), _mat_furniture_wood)
@@ -1249,14 +1244,15 @@ func _build_kitchen_furniture() -> void:
 			_box(self, Vector3(0.05, 0.7, 0.05),
 				Vector3(table_x + lx, 0.35, table_z + lz), _mat_furniture_wood)
 
-	# 2 chairs at kitchen table (stools with backs)
+	# 2 chairs at kitchen table (on left/right sides, facing inward toward table)
 	for sx: float in [-0.55, 0.55]:
 		# Seat
 		_box(self, Vector3(0.35, 0.04, 0.35),
 			Vector3(table_x + sx, 0.5, table_z), _mat_furniture_wood)
-		# Chair back (on -Z side, facing +Z toward table)
-		_box(self, Vector3(0.35, 0.4, 0.05),
-			Vector3(table_x + sx, 0.72, table_z - 0.175), _mat_furniture_wood)
+		# Chair back (on outer side, away from table center)
+		var back_offset_x: float = sign(sx) * 0.175
+		_box(self, Vector3(0.05, 0.4, 0.35),
+			Vector3(table_x + sx + back_offset_x, 0.72, table_z), _mat_furniture_wood)
 		# 4 legs
 		for slx: float in [-0.12, 0.12]:
 			for slz: float in [-0.12, 0.12]:
@@ -1501,11 +1497,14 @@ func _build_terrain_map(pos: Vector3, wall: String, map_w: float, map_h: float, 
 				mat = biome_mats[rng.randi_range(0, 2)]  # Forest (dominant)
 
 			if is_ew:
+				# Offset cells toward room interior so they sit on top of paper
+				var cell_off_x: float = -0.01 if wall == "east" else 0.01
 				_box(map_node, Vector3(0.012, cell_h * 0.9, cell_w * 0.9),
-					Vector3(pos.x, pos.y + cy, pos.z + cx), mat)
+					Vector3(pos.x + cell_off_x, pos.y + cy, pos.z + cx), mat)
 			else:
+				var cell_off_z: float = -0.01 if wall == "north" else 0.01
 				_box(map_node, Vector3(cell_w * 0.9, cell_h * 0.9, 0.012),
-					Vector3(pos.x + cx, pos.y + cy, pos.z), mat)
+					Vector3(pos.x + cx, pos.y + cy, pos.z + cell_off_z), mat)
 
 
 # =============================================================================
@@ -1530,10 +1529,10 @@ func _build_dining_room_furniture() -> void:
 				Vector3(table_x + lx, 0.35, table_z + lz), _mat_furniture_wood)
 
 	# --- 4 Chairs ---
-	_build_chair(Vector3(table_x - 0.5, 0.0, table_z + 0.8), 0.0)      # South side
-	_build_chair(Vector3(table_x + 0.5, 0.0, table_z + 0.8), 0.0)      # South side
-	_build_chair(Vector3(table_x - 0.5, 0.0, table_z - 0.8), PI)       # North side (rotated)
-	_build_chair(Vector3(table_x + 0.5, 0.0, table_z - 0.8), PI)       # North side (rotated)
+	_build_chair(Vector3(table_x - 0.5, 0.0, table_z + 0.8), PI)       # South side (back faces away from table)
+	_build_chair(Vector3(table_x + 0.5, 0.0, table_z + 0.8), PI)       # South side
+	_build_chair(Vector3(table_x - 0.5, 0.0, table_z - 0.8), 0.0)      # North side (back faces away from table)
+	_build_chair(Vector3(table_x + 0.5, 0.0, table_z - 0.8), 0.0)      # North side
 
 	# --- Sandwich Plate on Table ---
 	_build_sandwich(Vector3(table_x + 0.3, 0.78, table_z - 0.1))
@@ -1715,11 +1714,11 @@ func _build_cat_portraits() -> void:
 	# On the west wall of the living room, at eye height
 	var wall_x: float = WALL_THICKNESS + 0.03  # Slightly off wall
 
-	# Portrait 1: All-black cat — on west wall, between corner and window
-	_build_cat_portrait_black(Vector3(wall_x, 1.6, 0.8))
+	# Portrait 1: All-black cat — on west wall, between window (Z≈2.5) and divider (Z=5.0)
+	_build_cat_portrait_black(Vector3(wall_x, 1.6, 3.5))
 
 	# Portrait 2: Tuxedo cat — next to first
-	_build_cat_portrait_tuxedo(Vector3(wall_x, 1.6, 1.4))
+	_build_cat_portrait_tuxedo(Vector3(wall_x, 1.6, 4.2))
 
 
 func _build_cat_portrait_black(pos: Vector3) -> void:
@@ -2305,7 +2304,7 @@ func _setup_lighting() -> void:
 	_add_light("FireplaceGlow", Vector3(0.5, 0.4, 0.95),
 		Color(1.0, 0.6, 0.3), 0.5, 3.0)
 	# End table lamp
-	_add_light("EndTableLamp", Vector3(4.2, 1.0, 2.5),
+	_add_light("EndTableLamp", Vector3(3.5, 1.0, 2.8),
 		Color(1.0, 0.9, 0.7), 0.4, 3.0)
 
 	# Kitchen — slightly cooler/brighter (task lighting)
