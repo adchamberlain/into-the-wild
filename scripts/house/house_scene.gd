@@ -80,6 +80,7 @@ func _ready() -> void:
 	_build_exterior_walls()
 	_build_interior_walls()
 	_build_crown_molding()
+	_build_hardwood_planks()
 	_build_windows()
 	_build_front_door()
 	_build_living_room_furniture()
@@ -1012,7 +1013,7 @@ func _build_living_room_furniture() -> void:
 	_build_bookshelf(Vector3(1.0, 0.0, LIVING_ROOM_DEPTH - 0.1))
 
 	# --- Wilderness Storage Box (tucked in southwest corner of kitchen divider area) ---
-	_build_storage_box(Vector3(0.5, 0.0, 4.5))
+	_build_storage_box(Vector3(5.5, 0.0, 12.0))
 
 
 func _build_bookshelf(pos: Vector3) -> void:
@@ -1145,18 +1146,32 @@ func _build_kitchen_furniture() -> void:
 	mat_sink.albedo_color = Color(0.6, 0.6, 0.62)
 	mat_sink.roughness = 0.25
 	mat_sink.metallic = 0.6
-	# Sink basin (recessed into counter, deeper for visibility)
-	_box(self, Vector3(0.55, 0.02, 0.38),
-		Vector3(3.0, 0.84, counter_z), mat_sink)  # Basin bottom
-	# Basin walls (4 thin sides rising to counter surface)
-	_box(self, Vector3(0.55, 0.10, 0.02),
-		Vector3(3.0, 0.89, counter_z + 0.19), mat_sink)  # Back (toward wall)
-	_box(self, Vector3(0.55, 0.10, 0.02),
-		Vector3(3.0, 0.89, counter_z - 0.19), mat_sink)  # Front (toward room)
-	_box(self, Vector3(0.02, 0.10, 0.38),
-		Vector3(2.73, 0.89, counter_z), mat_sink)  # Left
-	_box(self, Vector3(0.02, 0.10, 0.38),
-		Vector3(3.27, 0.89, counter_z), mat_sink)  # Right
+	# Dark basin interior for visible depth
+	var mat_basin_interior: StandardMaterial3D = StandardMaterial3D.new()
+	mat_basin_interior.albedo_color = Color(0.35, 0.35, 0.38)
+	mat_basin_interior.roughness = 0.3
+	mat_basin_interior.metallic = 0.4
+	# Basin bottom (well below counter surface for visible depth)
+	_box(self, Vector3(0.52, 0.02, 0.35),
+		Vector3(3.0, 0.68, counter_z), mat_basin_interior)
+	# Basin walls (from bottom up to counter surface at Y=0.9)
+	_box(self, Vector3(0.55, 0.22, 0.02),
+		Vector3(3.0, 0.79, counter_z + 0.19), mat_sink)  # Back
+	_box(self, Vector3(0.55, 0.22, 0.02),
+		Vector3(3.0, 0.79, counter_z - 0.19), mat_sink)  # Front
+	_box(self, Vector3(0.02, 0.22, 0.38),
+		Vector3(2.73, 0.79, counter_z), mat_sink)  # Left
+	_box(self, Vector3(0.02, 0.22, 0.38),
+		Vector3(3.27, 0.79, counter_z), mat_sink)  # Right
+	# Sink rim (sits at counter level, frames the opening)
+	_box(self, Vector3(0.60, 0.02, 0.03),
+		Vector3(3.0, 0.91, counter_z + 0.20), mat_sink)  # Back rim
+	_box(self, Vector3(0.60, 0.02, 0.03),
+		Vector3(3.0, 0.91, counter_z - 0.20), mat_sink)  # Front rim
+	_box(self, Vector3(0.03, 0.02, 0.40),
+		Vector3(2.71, 0.91, counter_z), mat_sink)  # Left rim
+	_box(self, Vector3(0.03, 0.02, 0.40),
+		Vector3(3.29, 0.91, counter_z), mat_sink)  # Right rim
 	# Faucet base (against back/wall side of counter = +Z)
 	_box(self, Vector3(0.04, 0.28, 0.04),
 		Vector3(3.0, 1.07, counter_z + 0.2), _mat_kettle)
@@ -1175,12 +1190,12 @@ func _build_kitchen_furniture() -> void:
 		Vector3(1.75, 1.85, counter_z + 0.18), _mat_cabinet_face)
 	_box(self, Vector3(0.35, 0.5, 0.02),
 		Vector3(2.05, 1.85, counter_z + 0.18), _mat_cabinet_face)
-	# Right upper cabinet (X 3.7 to 4.0, above stove area)
-	_box(self, Vector3(0.6, 0.6, 0.35),
-		Vector3(4.3, 1.85, counter_z), _mat_cabinet_face)
-	# Range hood above stove
-	_box(self, Vector3(0.65, 0.15, 0.45),
-		Vector3(4.3, 1.45, counter_z), _mat_stove)
+	# Range hood above stove (proper ventilation hood, no cabinet above stove)
+	_box(self, Vector3(0.65, 0.06, 0.45),
+		Vector3(4.3, 1.35, counter_z), _mat_stove)
+	# Hood chimney/vent going up to ceiling
+	_box(self, Vector3(0.35, 0.8, 0.25),
+		Vector3(4.3, 1.78, counter_z + 0.05), _mat_stove)
 
 	# --- Stove (next to counter, against north wall) ---
 	var stove_x: float = 4.3
@@ -1982,7 +1997,7 @@ func _build_bedroom_furniture() -> void:
 	rc.name = "ReadingChair"
 	add_child(rc)
 	var rc_x: float = 0.8
-	var rc_z: float = 11.0
+	var rc_z: float = 12.0
 	# Seat
 	_box(rc, Vector3(0.7, 0.35, 0.7),
 		Vector3(rc_x, 0.38, rc_z), _mat_upholstery)
@@ -2130,12 +2145,12 @@ func _build_tree_picture(pos: Vector3, wall: String, tree_type: String, mats: Di
 
 	# Frame & background
 	if is_ew:
-		_box(p, Vector3(0.03, 0.65, 0.55), pos, _mat_portrait_frame)
-		_box(p, Vector3(0.02, 0.59, 0.49),
+		_box(p, Vector3(0.03, 0.55, 0.55), pos, _mat_portrait_frame)
+		_box(p, Vector3(0.02, 0.49, 0.49),
 			Vector3(pos.x + dir * 0.01, pos.y, pos.z), _mat_portrait_bg)
 	else:
-		_box(p, Vector3(0.55, 0.65, 0.03), pos, _mat_portrait_frame)
-		_box(p, Vector3(0.49, 0.59, 0.02),
+		_box(p, Vector3(0.55, 0.55, 0.03), pos, _mat_portrait_frame)
+		_box(p, Vector3(0.49, 0.49, 0.02),
 			Vector3(pos.x, pos.y, pos.z + dir * 0.01), _mat_portrait_bg)
 
 	# Get tree art description and place pieces
@@ -2512,6 +2527,47 @@ func open_new_game_plus(player: Node) -> void:
 	_new_game_plus_ui.set_script(script)
 	add_child(_new_game_plus_ui)
 	_new_game_plus_ui.open(player)
+
+
+# =============================================================================
+# HARDWOOD FLOOR PLANKS
+# =============================================================================
+
+func _build_hardwood_planks() -> void:
+	## Overlay hardwood plank strips on the base floor for visual variation.
+	var plank_colors: Array[Color] = [
+		Color(0.28, 0.17, 0.09),
+		Color(0.33, 0.21, 0.11),
+		Color(0.24, 0.13, 0.06),
+		Color(0.30, 0.19, 0.09),
+		Color(0.36, 0.23, 0.12),
+	]
+	var plank_mats: Array[StandardMaterial3D] = []
+	for c: Color in plank_colors:
+		var m: StandardMaterial3D = StandardMaterial3D.new()
+		m.albedo_color = c
+		m.roughness = 0.75
+		plank_mats.append(m)
+
+	var plank_w: float = 0.4
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 7531
+
+	# Main house floor planks (run along Z axis)
+	var main_cols: int = int(HOUSE_WIDTH / plank_w)
+	for col: int in range(main_cols):
+		var x: float = plank_w / 2.0 + float(col) * plank_w
+		var mat: StandardMaterial3D = plank_mats[rng.randi_range(0, plank_mats.size() - 1)]
+		_box(self, Vector3(plank_w - 0.02, 0.005, HOUSE_DEPTH - 0.02),
+			Vector3(x, 0.003, HOUSE_DEPTH / 2.0), mat)
+
+	# Bedroom floor planks
+	var br_cols: int = int(LIVING_ROOM_WIDTH / plank_w)
+	for col: int in range(br_cols):
+		var x: float = plank_w / 2.0 + float(col) * plank_w
+		var mat: StandardMaterial3D = plank_mats[rng.randi_range(0, plank_mats.size() - 1)]
+		_box(self, Vector3(plank_w - 0.02, 0.005, BEDROOM_DEPTH - 0.02),
+			Vector3(x, 0.003, HOUSE_DEPTH + BEDROOM_DEPTH / 2.0), mat)
 
 
 # =============================================================================
