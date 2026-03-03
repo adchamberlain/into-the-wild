@@ -6419,10 +6419,56 @@ Fixed several house interior issues, added missing house scene features, and imp
 
 ---
 
+## Session 38: House Playtest Bug Fixes
+
+### What Was Built
+
+Extensive playtest-driven bug fixing across the house interior, addressing furniture placement, visual issues, and a critical NG+ transition bug.
+
+#### NG+ Black Screen Fix
+- **Root cause**: Fade overlay (`CanvasLayer`, layer 200) was added to `get_tree().root` and persisted across the scene change, covering everything with an opaque black rect permanently
+- **Fix**: `fade_canvas.queue_free()` called in the tween callback before `change_scene_to_file()`
+- File: `scripts/house/new_game_plus_ui.gd`
+
+#### Living Room Fixes
+- **End table**: Moved from (4.2, 2.5) behind the couch back to (3.5, 2.8) beside the north arm
+- **Fireplace photo removed**: Framed photo was placed on the chimney breast brick wall — looked wrong, removed
+- **Cat portraits relocated**: Were at Z=0.8 and Z=1.4 on west wall, hidden behind the fireplace/chimney (Z≈0.3-1.6). Moved to Z=3.5 and Z=4.2 (between window and kitchen divider)
+
+#### Kitchen Fixes
+- **Sink rebuilt with depth**: Basin bottom lowered from Y=0.84 to Y=0.68, dark `mat_basin_interior` for visible depth, walls 0.22 tall (was 0.10), proper rim at counter level
+- **Kitchen chairs rotated 90°**: Backs were on -Z side (perpendicular to table). Fixed to face outward along X axis using `sign(sx) * 0.175` offset
+- **Upper cabinet above stove removed**: Replaced with proper standalone range hood + chimney vent to ceiling. Stoves don't have cabinets above them.
+
+#### Dining Room Fixes
+- **Chairs rotated 180°**: All 4 chairs had backs facing toward the table instead of away. Swapped rotations: south-side chairs now `PI`, north-side now `0.0`
+- **Terrain maps visible**: Grid cells were at same Z-depth as paper background (hidden inside). Offset cells 0.01 toward room interior so biome colors are visible
+
+#### Bedroom Fixes
+- **Reading chair spacing**: Moved from Z=11.0 to Z=12.0 — was only 0.15m from wardrobe at Z=10.25
+- **Tree paintings squared**: Frame was 0.65×0.55 (rectangular). Changed to 0.55×0.55 (square) on all walls
+- **Storage box relocated**: Moved from (0.5, 4.5) near kitchen divider (blocking doorway, unreachable) to bedroom east wall at (5.5, 12.0)
+
+#### Hardwood Floor Planks
+- New `_build_hardwood_planks()` function overlays alternating-color plank strips on the base floor
+- 5 wood tone variations (Color range 0.24-0.36 red, 0.13-0.23 green, 0.06-0.12 blue)
+- 0.4m wide planks with 0.02m gaps between them for visible plank lines
+- Seeded RNG (seed=7531) for consistent appearance
+- Covers both main house (30 planks) and bedroom (15 planks)
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/house/house_scene.gd` | Modified | End table moved, fireplace photo removed, cat portraits relocated, sink rebuilt with depth, kitchen chairs rotated, upper stove cabinet → range hood, dining chairs flipped, terrain map cells offset, reading chair moved, tree paintings squared, storage box relocated, hardwood floor planks added |
+| `scripts/house/new_game_plus_ui.gd` | Modified | Free fade_canvas before scene change to prevent permanent black overlay |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Bug fixing from play-testing
+1. Continue play-testing house scene and NG+ flow
 2. When testing is done: set `trail_testing_mode = false` in `scripts/core/game_state.gd:24`
 3. When testing is done: revert player spawn in `scenes/main.tscn` from (345, 25, -345) to (0, 5, 0)
 
