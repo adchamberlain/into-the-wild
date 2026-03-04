@@ -183,13 +183,13 @@ func _exit_rest_mode(player: Node) -> void:
 	is_player_resting = false
 	_is_sleeping = false
 
-	# Move player back outside (to the open/front side of shelter - positive local Z is the door)
-	var exit_offset: Vector3 = Vector3(0, 0, 2.5).rotated(Vector3.UP, rotation.y)
+	# Move player back outside (to the open/front side of shelter - negative local Z is the door)
+	var exit_offset: Vector3 = Vector3(0, 0, -2.5).rotated(Vector3.UP, rotation.y)
 	player.global_position = global_position + exit_offset
 	player.global_position.y = global_position.y + 1.0  # Stand height
 
-	# Face the player away from the shelter (looking outward)
-	player.rotation.y = rotation.y
+	# Face the player away from the shelter (looking outward from the open end)
+	player.rotation.y = rotation.y + PI
 
 	# Restore camera rotation
 	if player.has_node("Camera3D"):
