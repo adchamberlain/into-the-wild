@@ -1146,9 +1146,10 @@ func _build_living_room_furniture() -> void:
 	var chimney_h: float = chimney_top - 1.38
 	_box(fp, Vector3(0.15, chimney_h, 1.1),
 		Vector3(0.15, 1.38 + chimney_h / 2.0, 2.5), _mat_brick)
-	# Fireplace collision (hearth + surround)
+	# Fireplace collision (hearth + surround) — interactable
 	var fp_body: StaticBody3D = StaticBody3D.new()
-	fp_body.name = "FireplaceCollision"
+	fp_body.name = "FireplaceBody"
+	fp_body.set_script(_create_interactable_script("Light Fireplace", "fireplace"))
 	add_child(fp_body)
 	var fp_col: CollisionShape3D = CollisionShape3D.new()
 	var fp_shape: BoxShape3D = BoxShape3D.new()
@@ -1156,6 +1157,9 @@ func _build_living_room_furniture() -> void:
 	fp_col.shape = fp_shape
 	fp_col.position = Vector3(0.425, 0.7, 2.5)
 	fp_body.add_child(fp_col)
+
+	# Fire mesh and light (initially hidden — toggled by interaction)
+	_build_fireplace_fire()
 
 	# --- Couch (Restoration Hardware style leather, back against center divider wall) ---
 	# Premium light-grained Italian leather material
@@ -3461,6 +3465,155 @@ func _on_journal_closed(_was_first_read: bool) -> void:
 
 
 # =============================================================================
+# FIREPLACE
+# =============================================================================
+
+var _fireplace_lit: bool = false
+var _fire_mesh: Node3D = null
+var _fire_light: OmniLight3D = null
+var _fire_audio: AudioStreamPlayer3D = null
+
+
+func _build_fireplace_fire() -> void:
+	# Firebox center: X=0.25, Y=0.45, Z=2.5
+	# Fire sits on the hearth floor (Y=0.08) inside the firebox
+
+	# Fire mesh container (3 layered flame boxes, like wilderness fire pit)
+	_fire_mesh = Node3D.new()
+	_fire_mesh.name = "FireMesh"
+	_fire_mesh.visible = false
+	add_child(_fire_mesh)
+
+	# Base flame — deep orange
+	var base_mat: StandardMaterial3D = StandardMaterial3D.new()
+	base_mat.albedo_color = Color(1.0, 0.35, 0.0)
+	base_mat.emission_enabled = true
+	base_mat.emission = Color(0.95, 0.3, 0.0)
+	base_mat.emission_energy_multiplier = 2.5
+	var base_mesh: MeshInstance3D = MeshInstance3D.new()
+	var base_box: BoxMesh = BoxMesh.new()
+	base_box.size = Vector3(0.22, 0.18, 0.20)
+	base_mesh.mesh = base_box
+	base_mesh.material_override = base_mat
+	base_mesh.position = Vector3(0.25, 0.17, 2.5)
+	_fire_mesh.add_child(base_mesh)
+
+	# Mid flame — bright orange
+	var mid_mat: StandardMaterial3D = StandardMaterial3D.new()
+	mid_mat.albedo_color = Color(1.0, 0.55, 0.05)
+	mid_mat.emission_enabled = true
+	mid_mat.emission = Color(1.0, 0.5, 0.0)
+	mid_mat.emission_energy_multiplier = 3.0
+	var mid_mesh: MeshInstance3D = MeshInstance3D.new()
+	var mid_box: BoxMesh = BoxMesh.new()
+	mid_box.size = Vector3(0.14, 0.15, 0.13)
+	mid_mesh.mesh = mid_box
+	mid_mesh.material_override = mid_mat
+	mid_mesh.position = Vector3(0.25, 0.32, 2.5)
+	_fire_mesh.add_child(mid_mesh)
+
+	# Tip flame — yellow
+	var tip_mat: StandardMaterial3D = StandardMaterial3D.new()
+	tip_mat.albedo_color = Color(1.0, 0.82, 0.25)
+	tip_mat.emission_enabled = true
+	tip_mat.emission = Color(1.0, 0.75, 0.15)
+	tip_mat.emission_energy_multiplier = 3.5
+	var tip_mesh: MeshInstance3D = MeshInstance3D.new()
+	var tip_box: BoxMesh = BoxMesh.new()
+	tip_box.size = Vector3(0.08, 0.10, 0.06)
+	tip_mesh.mesh = tip_box
+	tip_mesh.material_override = tip_mat
+	tip_mesh.position = Vector3(0.25, 0.44, 2.5)
+	_fire_mesh.add_child(tip_mesh)
+
+	# Fire light (brighter than the ambient glow, replaces it when lit)
+	_fire_light = OmniLight3D.new()
+	_fire_light.name = "FireLight"
+	_fire_light.position = Vector3(0.5, 0.5, 2.5)
+	_fire_light.light_color = Color(1.0, 0.75, 0.3)
+	_fire_light.light_energy = 1.8
+	_fire_light.omni_range = 6.0
+	_fire_light.omni_attenuation = 1.5
+	_fire_light.shadow_enabled = false
+	_fire_light.visible = false
+	add_child(_fire_light)
+
+	# Crackling audio (looping procedural noise)
+	_fire_audio = AudioStreamPlayer3D.new()
+	_fire_audio.name = "FireCrackle"
+	_fire_audio.position = Vector3(0.3, 0.3, 2.5)
+	_fire_audio.max_distance = 8.0
+	_fire_audio.unit_size = 2.0
+	_fire_audio.stream = _generate_fire_crackle_stream()
+	_fire_audio.autoplay = false
+	add_child(_fire_audio)
+
+
+func _generate_fire_crackle_stream() -> AudioStreamWAV:
+	## Generate a looping fire crackling sound (procedural white noise with random pops).
+	var sample_rate: int = 22050
+	var duration: float = 3.0  # 3 second loop
+	var num_samples: int = int(sample_rate * duration)
+	var data: PackedByteArray = PackedByteArray()
+	data.resize(num_samples * 2)  # 16-bit = 2 bytes per sample
+
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 42
+
+	for i: int in range(num_samples):
+		var t: float = float(i) / float(sample_rate)
+		# Low base crackle (filtered noise)
+		var noise: float = rng.randf_range(-1.0, 1.0) * 0.08
+		# Random pops/snaps
+		if rng.randf() < 0.003:
+			noise += rng.randf_range(-0.4, 0.4)
+		# Gentle low-frequency rumble
+		noise += sin(t * 40.0) * 0.02 * rng.randf_range(0.5, 1.0)
+		# Fade loop edges for seamless looping
+		var fade: float = 1.0
+		if i < 2000:
+			fade = float(i) / 2000.0
+		elif i > num_samples - 2000:
+			fade = float(num_samples - i) / 2000.0
+		noise *= fade
+		# Clamp and write 16-bit sample
+		var sample: int = clampi(int(noise * 32767.0), -32768, 32767)
+		data[i * 2] = sample & 0xFF
+		data[i * 2 + 1] = (sample >> 8) & 0xFF
+
+	var stream: AudioStreamWAV = AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = sample_rate
+	stream.stereo = false
+	stream.data = data
+	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	stream.loop_begin = 0
+	stream.loop_end = num_samples
+	return stream
+
+
+func toggle_fireplace() -> void:
+	_fireplace_lit = not _fireplace_lit
+	if _fire_mesh:
+		_fire_mesh.visible = _fireplace_lit
+	if _fire_light:
+		_fire_light.visible = _fireplace_lit
+	# Dim the ambient fireplace glow when fire is lit (the fire light takes over)
+	var ambient_glow: Node = find_child("FireplaceGlow")
+	if ambient_glow:
+		ambient_glow.visible = not _fireplace_lit
+	if _fire_audio:
+		if _fireplace_lit:
+			_fire_audio.play()
+		else:
+			_fire_audio.stop()
+
+
+func is_fireplace_lit() -> bool:
+	return _fireplace_lit
+
+
+# =============================================================================
 # BED REST
 # =============================================================================
 
@@ -3898,6 +4051,13 @@ func interact(player: Node) -> bool:
 		"explorers_journal":
 			if house.has_method("open_journal"):
 				house.open_journal(player)
+		"fireplace":
+			if house.has_method("toggle_fireplace"):
+				house.toggle_fireplace()
+				if house.has_method("is_fireplace_lit") and house.is_fireplace_lit():
+					_interaction_text = "Put Out Fire"
+				else:
+					_interaction_text = "Light Fireplace"
 	return true
 """ % [interaction_label, object_type]
 
