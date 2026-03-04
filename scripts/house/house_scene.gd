@@ -2989,6 +2989,10 @@ func _build_tree_pictures() -> void:
 	# Sunset painting on east wall above dresser, between windows
 	_build_sunset_painting(Vector3(ex, 1.6, 14.0), "east")
 
+	# Large ponderosa pine on east face of center divider (dining room side)
+	var divider_x: float = LIVING_ROOM_WIDTH + WALL_THICKNESS + 0.03
+	_build_tree_picture(Vector3(divider_x, 1.6, 3.4), "west", "ponderosa_pine", mats, "tree_painting_ponderosa", 1.2)
+
 
 func _make_mat(color: Color) -> StandardMaterial3D:
 	var m: StandardMaterial3D = StandardMaterial3D.new()
@@ -2997,9 +3001,11 @@ func _make_mat(color: Color) -> StandardMaterial3D:
 	return m
 
 
-func _build_tree_picture(pos: Vector3, wall: String, tree_type: String, mats: Dictionary, object_type: String = "") -> void:
+func _build_tree_picture(pos: Vector3, wall: String, tree_type: String, mats: Dictionary, object_type: String = "", frame_size: float = 0.7) -> void:
 	## Build a framed tree painting at pos on the given wall.
 	var p: Node3D
+	var fs: float = frame_size
+	var inner: float = fs - 0.06  # Inner background slightly smaller than frame
 	if object_type != "":
 		var body: StaticBody3D = StaticBody3D.new()
 		body.name = tree_type.capitalize().replace(" ", "") + "Picture"
@@ -3010,9 +3016,9 @@ func _build_tree_picture(pos: Vector3, wall: String, tree_type: String, mats: Di
 		var shape: BoxShape3D = BoxShape3D.new()
 		var is_ew_c: bool = (wall == "east" or wall == "west")
 		if is_ew_c:
-			shape.size = Vector3(0.1, 0.7, 0.7)
+			shape.size = Vector3(0.1, fs, fs)
 		else:
-			shape.size = Vector3(0.7, 0.7, 0.1)
+			shape.size = Vector3(fs, fs, 0.1)
 		col.shape = shape
 		col.position = pos
 		body.add_child(col)
@@ -3023,15 +3029,16 @@ func _build_tree_picture(pos: Vector3, wall: String, tree_type: String, mats: Di
 
 	var is_ew: bool = (wall == "east" or wall == "west")
 	var dir: float = 1.0 if (wall == "west" or wall == "south") else -1.0
+	var scale: float = fs / 0.7  # Scale factor relative to default 0.7
 
-	# Frame & background (0.7 x 0.7 square)
+	# Frame & background
 	if is_ew:
-		_box(p, Vector3(0.03, 0.7, 0.7), pos, _mat_portrait_frame)
-		_box(p, Vector3(0.02, 0.64, 0.64),
+		_box(p, Vector3(0.03, fs, fs), pos, _mat_portrait_frame)
+		_box(p, Vector3(0.02, inner, inner),
 			Vector3(pos.x + dir * 0.01, pos.y, pos.z), _mat_portrait_bg)
 	else:
-		_box(p, Vector3(0.7, 0.7, 0.03), pos, _mat_portrait_frame)
-		_box(p, Vector3(0.64, 0.64, 0.02),
+		_box(p, Vector3(fs, fs, 0.03), pos, _mat_portrait_frame)
+		_box(p, Vector3(inner, inner, 0.02),
 			Vector3(pos.x, pos.y, pos.z + dir * 0.01), _mat_portrait_bg)
 
 	# Get tree art description and place pieces
@@ -3044,30 +3051,26 @@ func _build_tree_picture(pos: Vector3, wall: String, tree_type: String, mats: Di
 		var v_sz: float = piece[3]
 		var mat: StandardMaterial3D = piece[4]
 		if is_ew:
-			_box(p, Vector3(thin, v_sz * 0.8, h_sz * 0.8),
-				Vector3(pos.x + dir * 0.02, pos.y + v_off * 0.8, pos.z + h_off * 0.8), mat)
+			_box(p, Vector3(thin, v_sz * 0.8 * scale, h_sz * 0.8 * scale),
+				Vector3(pos.x + dir * 0.02, pos.y + v_off * 0.8 * scale, pos.z + h_off * 0.8 * scale), mat)
 		else:
-			_box(p, Vector3(h_sz * 0.8, v_sz * 0.8, thin),
-				Vector3(pos.x + h_off * 0.8, pos.y + v_off * 0.8, pos.z + dir * 0.02), mat)
+			_box(p, Vector3(h_sz * 0.8 * scale, v_sz * 0.8 * scale, thin),
+				Vector3(pos.x + h_off * 0.8 * scale, pos.y + v_off * 0.8 * scale, pos.z + dir * 0.02), mat)
 
 	# Nameplate below painting (small brass plate on dark wood backing)
 	var mat_brass: StandardMaterial3D = StandardMaterial3D.new()
 	mat_brass.albedo_color = Color(0.7, 0.6, 0.35)
 	mat_brass.roughness = 0.4
 	mat_brass.metallic = 0.5
-	var np_y: float = pos.y - 0.4
+	var np_y: float = pos.y - fs / 2.0 - 0.08
 	if is_ew:
-		# Dark wood backing
 		_box(p, Vector3(0.025, 0.06, 0.25),
 			Vector3(pos.x + dir * 0.015, np_y, pos.z), _mat_furniture_wood)
-		# Brass plate
 		_box(p, Vector3(0.028, 0.04, 0.2),
 			Vector3(pos.x + dir * 0.02, np_y, pos.z), mat_brass)
 	else:
-		# Dark wood backing
 		_box(p, Vector3(0.25, 0.06, 0.025),
 			Vector3(pos.x, np_y, pos.z + dir * 0.015), _mat_furniture_wood)
-		# Brass plate
 		_box(p, Vector3(0.2, 0.04, 0.028),
 			Vector3(pos.x, np_y, pos.z + dir * 0.02), mat_brass)
 
@@ -3841,6 +3844,9 @@ func interact(player: Node) -> bool:
 		"tree_painting_cactus":
 			if house.has_method("show_text_overlay"):
 				house.show_text_overlay("Coastal live oak and desert cactus", 3.0)
+		"tree_painting_ponderosa":
+			if house.has_method("show_text_overlay"):
+				house.show_text_overlay("Ponderosa pine", 2.0)
 		"map_hidden_lake":
 			if house.has_method("show_text_overlay"):
 				house.show_text_overlay("Hidden Lake -- deep water, cold as ice.", 3.0)
