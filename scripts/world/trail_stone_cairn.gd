@@ -386,7 +386,9 @@ func _show_overlay(player_node: Node) -> void:
 			var my_pos: Vector2 = Vector2(global_position.x, global_position.z)
 			var dist: int = int(my_pos.distance_to(sign_pos))
 			dir_name = _cardinal_direction(my_pos, sign_pos)
-			nav_text = "The old signpost lies %s, about %d paces. Aim for X = %d, Z = %d" % [dir_name, dist, int(sign_pos.x), int(sign_pos.y)]
+			var sign_ew: String = "East" if sign_pos.x >= 0 else "West"
+			var sign_ns: String = "North" if sign_pos.y >= 0 else "South"
+			nav_text = "The old signpost lies %s, about %d paces. Aim for %d %s, %d %s" % [dir_name, dist, int(absf(sign_pos.x)), sign_ew, int(absf(sign_pos.y)), sign_ns]
 		_body_label.text = "A carefully balanced stack of stones, placed here with intention. Each rock chosen and fitted by someone who understood the wilderness.\n\nScratched into the base rock:\n\n'%s.'\n\n\u2014 M.W.C." % [nav_text]
 
 	# Scale fonts to current viewport size

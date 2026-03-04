@@ -691,7 +691,9 @@ func _update_coordinates_display() -> void:
 
 	if show_coordinates and player:
 		var pos: Vector3 = player.global_position
-		coordinates_label.text = "X: %.1f  Y: %.1f  Z: %.1f" % [pos.x, pos.y, pos.z]
+		var ew: String = "E" if pos.x >= 0 else "W"
+		var ns: String = "N" if pos.z >= 0 else "S"
+		coordinates_label.text = "%.1f %s  %.1f %s  Elev: %.1f" % [absf(pos.x), ew, absf(pos.z), ns, pos.y]
 
 
 func _process(delta: float) -> void:

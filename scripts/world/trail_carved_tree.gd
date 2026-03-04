@@ -343,7 +343,8 @@ func _show_overlay(player_node: Node) -> void:
 			var my_pos: Vector2 = Vector2(global_position.x, global_position.z)
 			var dist: int = int(my_pos.distance_to(cairn_pos))
 			dir_name = _cardinal_direction(my_pos, cairn_pos)
-			nav_text = "Follow the ridge %s to the stone cairn about %d paces. Stay on the Z = %d line" % [dir_name, dist, int(cairn_pos.y)]
+			var cairn_ns: String = "North" if cairn_pos.y >= 0 else "South"
+			nav_text = "Follow the ridge %s to the stone cairn about %d paces. Stay on the %d %s line" % [dir_name, dist, int(absf(cairn_pos.y)), cairn_ns]
 		_body_label.text = "Carved deep into the bark, the letters M.W.C. are still sharp after all these years. Below the initials, an arrow points %s.\n\nScratched in smaller letters beneath:\n\n'%s.'\n\n\u2014 M.W. Carlston's trail marker" % [dir_name, nav_text]
 
 	# Scale fonts to current viewport size

@@ -179,7 +179,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.75, 0.75, 0.75, 1)
 theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 32
-text = "X: 0  Y: 0  Z: 0"
+text = "0.0 E  0.0 N  Elev: 0.0"
 
 [node name="TimePanel" type="PanelContainer" parent="."]
 anchors_preset = 1
