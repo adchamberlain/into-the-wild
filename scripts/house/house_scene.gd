@@ -2501,13 +2501,14 @@ func _build_chandelier(pos: Vector3) -> void:
 # =============================================================================
 
 func _build_cat_portraits() -> void:
-	# On the center divider wall (X=6), facing -X into the living room, behind the couch
-	var wall_x: float = LIVING_ROOM_WIDTH - 0.03  # Slightly off center divider wall
+	# On the center divider wall (X=6), facing -X into the living room, behind the couch.
+	# Wall face (living room side) is at X=5.925. Frame is 0.03 thick, so center at 5.91.
+	var wall_x: float = LIVING_ROOM_WIDTH - 0.09  # Flush against wall face
 	var d: float = -1.0  # Direction: -X (facing into living room)
 
-	# Tuxedo cat (Melvin) on the left (lower Z), Black cat (Webster) on the right (higher Z)
-	_build_cat_portrait_tuxedo(Vector3(wall_x, 1.6, 2.9), d, "Melvin")
-	_build_cat_portrait_black(Vector3(wall_x, 1.6, 3.9), d, "Webster")
+	# Tuxedo cat (Melvin) on the left, Black cat (Webster) on the right — centered over couch
+	_build_cat_portrait_tuxedo(Vector3(wall_x, 1.6, 2.0), d, "Melvin")
+	_build_cat_portrait_black(Vector3(wall_x, 1.6, 3.0), d, "Webster")
 
 
 func _build_cat_portrait_black(pos: Vector3, dir: float, cat_name: String) -> void:
