@@ -2595,6 +2595,10 @@ func _spawn_trail_carved_tree() -> void:
 	node.name = "TrailCarvedTree"
 	var terrain_y: float = get_height_at(carved_tree_position.x, carved_tree_position.y)
 	node.position = Vector3(carved_tree_position.x, terrain_y, carved_tree_position.y)
+	# Rotate so the arrow (local +X) points toward the stone cairn
+	var dx: float = stone_cairn_position.x - carved_tree_position.x
+	var dz: float = stone_cairn_position.y - carved_tree_position.y
+	node.rotation.y = atan2(-dz, dx)
 	add_child(node)
 	carved_tree_spawned = true
 	print("[ChunkManager] Spawned trail carved tree at (%.0f, %.0f)" % [carved_tree_position.x, carved_tree_position.y])

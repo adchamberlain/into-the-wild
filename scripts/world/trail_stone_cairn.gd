@@ -331,6 +331,18 @@ func _can_interact() -> bool:
 	return false
 
 
+## Convert a direction vector between two XZ points into a cardinal direction name.
+static func _cardinal_direction(from: Vector2, to: Vector2) -> String:
+	var dx: float = to.x - from.x   # +X = east
+	var dz: float = to.y - from.y   # -Z = south in Godot
+	var angle: float = atan2(dx, -dz)  # 0 = south, PI/2 = east
+	if angle < 0:
+		angle += TAU
+	var sector: int = int((angle + PI / 8.0) / (PI / 4.0)) % 8
+	var names: Array[String] = ["south", "southeast", "east", "northeast", "north", "northwest", "west", "southwest"]
+	return names[sector]
+
+
 ## Get the text to show in interaction prompt.
 func get_interaction_text() -> String:
 	if is_overlay_visible:
@@ -364,16 +376,18 @@ func _show_overlay(player_node: Node) -> void:
 	overlay_layer.visible = true
 	_player_ref = player_node
 
-	# Compute distance and Z-line to the signpost for the clue text
+	# Compute direction, distance, and Z-line to the signpost for the clue text
 	if _body_label:
+		var dir_name: String = "southeast"
 		var nav_text: String = "not far southeast"
 		var cm: Node = get_tree().get_first_node_in_group("chunk_manager")
 		if cm and "trail_signpost_position" in cm:
 			var sign_pos: Vector2 = cm.trail_signpost_position
 			var my_pos: Vector2 = Vector2(global_position.x, global_position.z)
 			var dist: int = int(my_pos.distance_to(sign_pos))
-			nav_text = "Go southeast about %d units. Stay on the Z: %d line" % [dist, int(sign_pos.y)]
-		_body_label.text = "A carefully balanced stack of stones, placed here with intention. Each rock chosen and fitted by someone who understood the wilderness.\n\nScratched into the base rock:\n\n'The old signpost lies southeast. %s.'\n\n\u2014 M.W.C." % nav_text
+			dir_name = _cardinal_direction(my_pos, sign_pos)
+			nav_text = "Go %s about %d units. Stay on the Z: %d line" % [dir_name, dist, int(sign_pos.y)]
+		_body_label.text = "A carefully balanced stack of stones, placed here with intention. Each rock chosen and fitted by someone who understood the wilderness.\n\nScratched into the base rock:\n\n'The old signpost lies %s. %s.'\n\n\u2014 M.W.C." % [dir_name, nav_text]
 
 	# Scale fonts to current viewport size
 	_scale_fonts()

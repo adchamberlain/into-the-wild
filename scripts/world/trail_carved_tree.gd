@@ -284,6 +284,20 @@ func _scale_fonts() -> void:
 		_content_vbox.add_theme_constant_override("separation", int(16 * sf))
 
 
+## Convert a direction vector between two XZ points into a cardinal direction name.
+static func _cardinal_direction(from: Vector2, to: Vector2) -> String:
+	var dx: float = to.x - from.x   # +X = east
+	var dz: float = to.y - from.y   # -Z = south in Godot
+	var angle: float = atan2(dx, -dz)  # 0 = south, PI/2 = east
+	# Normalize to 0..TAU
+	if angle < 0:
+		angle += TAU
+	# 8 sectors of 45 degrees each, starting from south
+	var sector: int = int((angle + PI / 8.0) / (PI / 4.0)) % 8
+	var names: Array[String] = ["south", "southeast", "east", "northeast", "north", "northwest", "west", "southwest"]
+	return names[sector]
+
+
 ## Get the text to show in interaction prompt.
 func get_interaction_text() -> String:
 	if is_overlay_visible:
@@ -319,16 +333,18 @@ func _show_overlay(player_node: Node) -> void:
 	has_been_read = true
 	overlay_layer.visible = true
 
-	# Compute distance and Z-line to the stone cairn for the clue text
+	# Compute direction, distance, and Z-line to the stone cairn for the clue text
 	if _body_label:
+		var dir_name: String = "east"
 		var nav_text: String = "a long walk east"
 		var cm: Node = get_tree().get_first_node_in_group("chunk_manager")
 		if cm and "stone_cairn_position" in cm:
 			var cairn_pos: Vector2 = cm.stone_cairn_position
 			var my_pos: Vector2 = Vector2(global_position.x, global_position.z)
-			var dist: int = int(abs(cairn_pos.x - my_pos.x))
-			nav_text = "Go east about %d units. Stay on the Z: %d line" % [dist, int(cairn_pos.y)]
-		_body_label.text = "Carved deep into the bark, the letters M.W.C. are still sharp after all these years. Below the initials, an arrow points east.\n\nScratched in smaller letters beneath:\n\n'Follow the ridge east to the stone cairn. %s.'\n\n\u2014 M.W. Carlston's trail marker" % nav_text
+			var dist: int = int(my_pos.distance_to(cairn_pos))
+			dir_name = _cardinal_direction(my_pos, cairn_pos)
+			nav_text = "Go %s about %d units. Stay on the Z: %d line" % [dir_name, dist, int(cairn_pos.y)]
+		_body_label.text = "Carved deep into the bark, the letters M.W.C. are still sharp after all these years. Below the initials, an arrow points %s.\n\nScratched in smaller letters beneath:\n\n'Follow the ridge %s to the stone cairn. %s.'\n\n\u2014 M.W. Carlston's trail marker" % [dir_name, dir_name, nav_text]
 
 	# Scale fonts to current viewport size
 	_scale_fonts()
