@@ -17,6 +17,7 @@ static var _materials_initialized: bool = false
 var overlay_layer: CanvasLayer
 var is_overlay_visible: bool = false
 var close_hint_label: Label
+var _body_label: Label
 
 # Labels and containers for dynamic scaling
 var _scaled_labels: Array[Dictionary] = []  # [{label, base_size}]
@@ -277,11 +278,9 @@ func _build_overlay() -> void:
 	spacer_top.custom_minimum_size = Vector2(0, 12)
 	vbox.add_child(spacer_top)
 
-	# Body text
-	var body: Label = _make_label(vbox,
-		"A carefully balanced stack of stones, placed here with intention. Each rock chosen and fitted by someone who understood the wilderness.\n\nScratched into the base rock:\n\n'Head southeast from here. Not far now — the old signpost stands where the mountains meet the deep valley.'\n\n\u2014 M.W.C.",
-		36, text_color)
-	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# Body text (distance filled in dynamically in _show_overlay)
+	_body_label = _make_label(vbox, "", 36, text_color)
+	_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
 	# Expanding spacer to push hint to bottom
 	var spacer_bottom: Control = Control.new()
@@ -364,6 +363,17 @@ func _show_overlay(player_node: Node) -> void:
 	has_been_read = true
 	overlay_layer.visible = true
 	_player_ref = player_node
+
+	# Compute distance to the signpost for the clue text
+	if _body_label:
+		var dist_text: String = "not far"
+		var cm: Node = get_tree().get_first_node_in_group("chunk_manager")
+		if cm and "trail_signpost_position" in cm:
+			var sign_pos: Vector2 = cm.trail_signpost_position
+			var my_pos: Vector2 = Vector2(global_position.x, global_position.z)
+			var dist: int = int(my_pos.distance_to(sign_pos))
+			dist_text = "about %dm" % dist
+		_body_label.text = "A carefully balanced stack of stones, placed here with intention. Each rock chosen and fitted by someone who understood the wilderness.\n\nScratched into the base rock:\n\n'Head southeast — %s to the old signpost where the mountains meet the deep valley.'\n\n\u2014 M.W.C." % dist_text
 
 	# Scale fonts to current viewport size
 	_scale_fonts()

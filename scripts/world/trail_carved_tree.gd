@@ -20,6 +20,7 @@ static var _materials_initialized: bool = false
 var overlay_layer: CanvasLayer
 var is_overlay_visible: bool = false
 var close_hint_label: Label
+var _body_label: Label
 
 # Labels and containers for dynamic scaling
 var _scaled_labels: Array[Dictionary] = []  # [{label, base_size}]
@@ -240,11 +241,9 @@ func _build_overlay() -> void:
 	spacer_top.custom_minimum_size = Vector2(0, 12)
 	vbox.add_child(spacer_top)
 
-	# Body text
-	var body: Label = _make_label(vbox,
-		"Carved deep into the bark, the letters M.W.C. are still sharp after all these years. Below the initials, an arrow points east.\n\nScratched in smaller letters beneath:\n\n'Follow the ridge east to the stone cairn. A long walk — keep going past the rocky hills.'\n\n\u2014 M.W. Carlston's trail marker",
-		36, text_color)
-	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# Body text (distance filled in dynamically in _show_overlay)
+	_body_label = _make_label(vbox, "", 36, text_color)
+	_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
 	# Expanding spacer to push hint to bottom
 	var spacer_bottom: Control = Control.new()
@@ -319,6 +318,17 @@ func _show_overlay(player_node: Node) -> void:
 	is_overlay_visible = true
 	has_been_read = true
 	overlay_layer.visible = true
+
+	# Compute distance to the stone cairn for the clue text
+	if _body_label:
+		var dist_text: String = "a long walk"
+		var cm: Node = get_tree().get_first_node_in_group("chunk_manager")
+		if cm and "stone_cairn_position" in cm:
+			var cairn_pos: Vector2 = cm.stone_cairn_position
+			var my_pos: Vector2 = Vector2(global_position.x, global_position.z)
+			var dist: int = int(my_pos.distance_to(cairn_pos))
+			dist_text = "about %dm" % dist
+		_body_label.text = "Carved deep into the bark, the letters M.W.C. are still sharp after all these years. Below the initials, an arrow points east.\n\nScratched in smaller letters beneath:\n\n'Follow the ridge east to the stone cairn — %s.'\n\n\u2014 M.W. Carlston's trail marker" % dist_text
 
 	# Scale fonts to current viewport size
 	_scale_fonts()
