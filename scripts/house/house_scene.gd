@@ -3542,44 +3542,66 @@ func _build_fireplace_fire() -> void:
 	_fire_audio = AudioStreamPlayer3D.new()
 	_fire_audio.name = "FireCrackle"
 	_fire_audio.position = Vector3(0.3, 0.3, 2.5)
-	_fire_audio.max_distance = 8.0
-	_fire_audio.unit_size = 2.0
+	_fire_audio.max_distance = 6.0
+	_fire_audio.unit_size = 1.0
 	_fire_audio.stream = _generate_fire_crackle_stream()
 	_fire_audio.autoplay = false
 	add_child(_fire_audio)
 
 
 func _generate_fire_crackle_stream() -> AudioStreamWAV:
-	## Generate a looping fire crackling sound (procedural white noise with random pops).
+	## Generate a looping fire crackling sound — sparse pops and snaps over soft warmth.
 	var sample_rate: int = 22050
-	var duration: float = 3.0  # 3 second loop
+	var duration: float = 4.0
 	var num_samples: int = int(sample_rate * duration)
 	var data: PackedByteArray = PackedByteArray()
-	data.resize(num_samples * 2)  # 16-bit = 2 bytes per sample
+	data.resize(num_samples * 2)
 
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
-	rng.seed = 42
+	rng.seed = 77
+
+	# Pre-generate random crackle events (short bursts of decaying noise)
+	var crackle_events: Array[int] = []
+	for _e: int in range(25):
+		crackle_events.append(rng.randi_range(1000, num_samples - 3000))
+	crackle_events.sort()
+
+	var prev_sample: float = 0.0  # For simple low-pass filter
 
 	for i: int in range(num_samples):
+		var output: float = 0.0
+
+		# Check if we're inside any crackle event (each lasts ~400-1200 samples)
+		for event_start: int in crackle_events:
+			var offset: int = i - event_start
+			if offset >= 0 and offset < 1200:
+				# Sharp attack, exponential decay
+				var env: float = exp(-float(offset) / 150.0)
+				# Each crackle is a short burst of filtered noise
+				var click: float = rng.randf_range(-1.0, 1.0) * env * 0.12
+				output += click
+			elif offset >= 1200:
+				break  # Past this event, but array is sorted so keep checking
+
+		# Very subtle low rumble (barely audible warmth)
 		var t: float = float(i) / float(sample_rate)
-		# Low base crackle (filtered noise)
-		var noise: float = rng.randf_range(-1.0, 1.0) * 0.08
-		# Random pops/snaps
-		if rng.randf() < 0.003:
-			noise += rng.randf_range(-0.4, 0.4)
-		# Gentle low-frequency rumble
-		noise += sin(t * 40.0) * 0.02 * rng.randf_range(0.5, 1.0)
-		# Fade loop edges for seamless looping
+		output += sin(t * 25.0 + sin(t * 7.0) * 0.5) * 0.008
+
+		# Simple low-pass filter to soften harsh frequencies
+		output = prev_sample * 0.6 + output * 0.4
+		prev_sample = output
+
+		# Fade loop edges
 		var fade: float = 1.0
-		if i < 2000:
-			fade = float(i) / 2000.0
-		elif i > num_samples - 2000:
-			fade = float(num_samples - i) / 2000.0
-		noise *= fade
-		# Clamp and write 16-bit sample
-		var sample: int = clampi(int(noise * 32767.0), -32768, 32767)
-		data[i * 2] = sample & 0xFF
-		data[i * 2 + 1] = (sample >> 8) & 0xFF
+		if i < 3000:
+			fade = float(i) / 3000.0
+		elif i > num_samples - 3000:
+			fade = float(num_samples - i) / 3000.0
+		output *= fade
+
+		var sample_val: int = clampi(int(output * 32767.0), -32768, 32767)
+		data[i * 2] = sample_val & 0xFF
+		data[i * 2 + 1] = (sample_val >> 8) & 0xFF
 
 	var stream: AudioStreamWAV = AudioStreamWAV.new()
 	stream.format = AudioStreamWAV.FORMAT_16_BITS
