@@ -573,8 +573,15 @@ func _navigate_slot_buttons(direction: int) -> void:
 	SFXManager.play_sfx("select")
 
 
-## Activate the focused slot button.
+## Activate the focused slot button (or delete button if it has focus).
 func _activate_focused_slot_button() -> void:
+	# Check if a delete button currently has native focus
+	var focused_control: Control = get_viewport().gui_get_focus_owner()
+	if focused_control is Button and delete_buttons.has(focused_control):
+		if focused_control.visible and not focused_control.disabled:
+			focused_control.pressed.emit()
+		return
+
 	if slot_buttons.is_empty():
 		return
 

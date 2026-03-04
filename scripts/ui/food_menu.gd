@@ -60,11 +60,7 @@ func _build_ui() -> void:
 	panel_style.content_margin_bottom = 16
 	main_panel.add_theme_stylebox_override("panel", panel_style)
 
-	# Center the panel on screen
-	main_panel.anchors_preset = Control.PRESET_CENTER
 	main_panel.custom_minimum_size = Vector2(500, 0)
-	main_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	main_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
 
 	# Vertical layout inside panel
 	var vbox: VBoxContainer = VBoxContainer.new()
@@ -127,7 +123,12 @@ func _build_ui() -> void:
 	hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(hint_label)
 
-	add_child(main_panel)
+	# Full-screen CenterContainer ensures the panel is centered
+	var center: CenterContainer = CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	center.add_child(main_panel)
+	add_child(center)
 	main_panel.visible = false
 
 
