@@ -364,7 +364,7 @@ func _show_overlay(player_node: Node) -> void:
 	overlay_layer.visible = true
 	_player_ref = player_node
 
-	# Compute distance and coordinates to the signpost for the clue text
+	# Compute distance and Z-line to the signpost for the clue text
 	if _body_label:
 		var nav_text: String = "not far southeast"
 		var cm: Node = get_tree().get_first_node_in_group("chunk_manager")
@@ -372,8 +372,8 @@ func _show_overlay(player_node: Node) -> void:
 			var sign_pos: Vector2 = cm.trail_signpost_position
 			var my_pos: Vector2 = Vector2(global_position.x, global_position.z)
 			var dist: int = int(my_pos.distance_to(sign_pos))
-			nav_text = "about %dm southeast. Head to X: %d, Z: %d" % [dist, int(sign_pos.x), int(sign_pos.y)]
-		_body_label.text = "A carefully balanced stack of stones, placed here with intention. Each rock chosen and fitted by someone who understood the wilderness.\n\nScratched into the base rock:\n\n'The old signpost — %s.'\n\n\u2014 M.W.C." % nav_text
+			nav_text = "Go southeast about %d units. Stay on the Z: %d line" % [dist, int(sign_pos.y)]
+		_body_label.text = "A carefully balanced stack of stones, placed here with intention. Each rock chosen and fitted by someone who understood the wilderness.\n\nScratched into the base rock:\n\n'The old signpost lies southeast. %s.'\n\n\u2014 M.W.C." % nav_text
 
 	# Scale fonts to current viewport size
 	_scale_fonts()
