@@ -692,7 +692,7 @@ func _update_coordinates_display() -> void:
 	if show_coordinates and player:
 		var pos: Vector3 = player.global_position
 		var ew: String = "E" if pos.x >= 0 else "W"
-		var ns: String = "N" if pos.z >= 0 else "S"
+		var ns: String = "S" if pos.z >= 0 else "N"
 		coordinates_label.text = "%.1f %s  %.1f %s  Elev: %.1f" % [absf(pos.x), ew, absf(pos.z), ns, pos.y]
 
 
