@@ -1475,31 +1475,34 @@ func _build_kitchen_furniture() -> void:
 	# Counter base
 	_box(self, Vector3(2.5, 0.85, 0.6),
 		Vector3(counter_x, 0.425, counter_z), _mat_cabinet_face)
-	# Cabinet doors (4 sections with crown molding)
-	var cab_dw: float = 0.53   # Door width
-	var cab_dh: float = 0.65   # Door height
-	var cab_dy: float = 0.4    # Door center Y
-	var cab_door_z: float = counter_z + 0.31
-	var cab_trim_z: float = cab_door_z + 0.02  # Molding in front of door
-	var cab_tw: float = 0.025  # Trim width
-	var cab_td: float = 0.015  # Trim depth
-	for cx: float in [-0.94, -0.31, 0.31, 0.94]:
-		var dx: float = counter_x + cx
-		# Door panel
-		_box(self, Vector3(cab_dw, cab_dh, 0.02),
+	# Cabinet doors — 6 doors with colonial raised-panel molding
+	# 6 × 0.38m + 5 × 0.03 gaps + 2 × 0.035 margins = 2.50m (fills 2.5m counter exactly)
+	var face_z: float = counter_z + 0.30       # Front face of cabinet body
+	var cab_door_z: float = face_z + 0.010     # Door panel center (2cm proud of face)
+	var cab_trim_z: float = face_z + 0.030     # Molding trim center (just ahead of door panel)
+	var cab_dw: float = 0.38                   # Door width
+	var cab_dh: float = 0.72                   # Door height
+	var cab_dy: float = 0.425                  # Door center Y
+	var cab_tw: float = 0.030                  # Molding trim rail width
+	var cab_td: float = 0.018                  # Molding trim depth
+	# Door centers: symmetric ±1.025, ±0.615, ±0.205 from counter_x
+	for cab_cx: float in [-1.025, -0.615, -0.205, 0.205, 0.615, 1.025]:
+		var dx: float = counter_x + cab_cx
+		# Door panel (slightly proud of cabinet body — same white, shadow reveals the gap)
+		_box(self, Vector3(cab_dw, cab_dh, 0.020),
 			Vector3(dx, cab_dy, cab_door_z), _mat_cabinet_face)
-		# Handle
-		_box(self, Vector3(0.08, 0.02, 0.03),
-			Vector3(dx, cab_dy + 0.1, cab_door_z + 0.02), _mat_handle)
-		# Crown molding trim (left, right, top, bottom)
-		_box(self, Vector3(cab_tw, cab_dh + cab_tw, cab_td),
+		# Colonial raised-panel molding border — left, right, top, bottom
+		_box(self, Vector3(cab_tw, cab_dh + cab_tw * 2.0, cab_td),
 			Vector3(dx - cab_dw / 2.0 - cab_tw / 2.0, cab_dy, cab_trim_z), _mat_molding)
-		_box(self, Vector3(cab_tw, cab_dh + cab_tw, cab_td),
+		_box(self, Vector3(cab_tw, cab_dh + cab_tw * 2.0, cab_td),
 			Vector3(dx + cab_dw / 2.0 + cab_tw / 2.0, cab_dy, cab_trim_z), _mat_molding)
 		_box(self, Vector3(cab_dw + cab_tw * 2.0, cab_tw, cab_td),
 			Vector3(dx, cab_dy + cab_dh / 2.0 + cab_tw / 2.0, cab_trim_z), _mat_molding)
 		_box(self, Vector3(cab_dw + cab_tw * 2.0, cab_tw, cab_td),
 			Vector3(dx, cab_dy - cab_dh / 2.0 - cab_tw / 2.0, cab_trim_z), _mat_molding)
+		# Door handle (small vertical bar, upper half of door)
+		_box(self, Vector3(0.018, 0.060, 0.018),
+			Vector3(dx, cab_dy + 0.15, cab_trim_z + cab_td / 2.0 + 0.010), _mat_handle)
 	# Counter + sink collision (single box covering the full counter run)
 	var counter_body: StaticBody3D = StaticBody3D.new()
 	counter_body.name = "CounterCollision"
@@ -1549,30 +1552,33 @@ func _build_kitchen_furniture() -> void:
 	# --- Upper Cabinets (above counter, avoiding sink area) ---
 	_box(self, Vector3(0.8, 0.6, 0.35),
 		Vector3(1.6, 1.85, counter_z), _mat_cabinet_face)
-	# Two upper cabinet doors with crown molding
-	var uc_door_z: float = counter_z + 0.18
-	var uc_trim_z: float = uc_door_z + 0.02
+	# Two upper cabinet doors — same colonial raised-panel style as lower
+	# 2 × 0.35m + 1 × 0.03 gap + 2 × 0.035 margins = 0.80m (fills 0.8m upper cabinet)
+	var uc_face_z: float = counter_z + 0.175  # Front face of upper cabinet body
+	var uc_door_z: float = uc_face_z + 0.010  # Door panel center
+	var uc_trim_z: float = uc_face_z + 0.030  # Molding trim center
 	var uc_dw: float = 0.35   # Door width
-	var uc_dh: float = 0.5    # Door height
+	var uc_dh: float = 0.50   # Door height
 	var uc_dy: float = 1.85   # Door center Y
-	var uc_tw: float = 0.02   # Trim width
-	var uc_td: float = 0.012  # Trim depth
-	for uc_x: float in [1.45, 1.75]:
+	var uc_tw: float = 0.025  # Molding trim rail width
+	var uc_td: float = 0.015  # Molding trim depth
+	# Door centers at X=1.41 and X=1.79 (0.035m margins, 0.03m gap between doors)
+	for uc_x: float in [1.41, 1.79]:
 		# Door panel
-		_box(self, Vector3(uc_dw, uc_dh, 0.02),
+		_box(self, Vector3(uc_dw, uc_dh, 0.020),
 			Vector3(uc_x, uc_dy, uc_door_z), _mat_cabinet_face)
-		# Small handle
-		_box(self, Vector3(0.06, 0.02, 0.03),
-			Vector3(uc_x, uc_dy - 0.1, uc_door_z + 0.02), _mat_handle)
-		# Crown molding trim (left, right, top, bottom)
-		_box(self, Vector3(uc_tw, uc_dh + uc_tw, uc_td),
+		# Colonial raised-panel molding border — left, right, top, bottom
+		_box(self, Vector3(uc_tw, uc_dh + uc_tw * 2.0, uc_td),
 			Vector3(uc_x - uc_dw / 2.0 - uc_tw / 2.0, uc_dy, uc_trim_z), _mat_molding)
-		_box(self, Vector3(uc_tw, uc_dh + uc_tw, uc_td),
+		_box(self, Vector3(uc_tw, uc_dh + uc_tw * 2.0, uc_td),
 			Vector3(uc_x + uc_dw / 2.0 + uc_tw / 2.0, uc_dy, uc_trim_z), _mat_molding)
 		_box(self, Vector3(uc_dw + uc_tw * 2.0, uc_tw, uc_td),
 			Vector3(uc_x, uc_dy + uc_dh / 2.0 + uc_tw / 2.0, uc_trim_z), _mat_molding)
 		_box(self, Vector3(uc_dw + uc_tw * 2.0, uc_tw, uc_td),
 			Vector3(uc_x, uc_dy - uc_dh / 2.0 - uc_tw / 2.0, uc_trim_z), _mat_molding)
+		# Door handle (small vertical bar, lower half of door for reach)
+		_box(self, Vector3(0.016, 0.050, 0.016),
+			Vector3(uc_x, uc_dy - 0.12, uc_trim_z + uc_td / 2.0 + 0.010), _mat_handle)
 	# Range hood above stove
 	_box(self, Vector3(0.65, 0.06, 0.45),
 		Vector3(4.0, 1.35, counter_z), _mat_stove)
