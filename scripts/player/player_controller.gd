@@ -1060,6 +1060,25 @@ func consume_item(item_type: String) -> void:
 
 	var hud: Node = get_tree().get_first_node_in_group("hud")
 
+	# Block consumption if the item would have no effect
+	var is_food: bool = FOOD_VALUES.has(item_type)
+	var is_healing: bool = HEALING_ITEMS.has(item_type)
+	var hunger_full: bool = stats.hunger >= stats.max_hunger
+	var health_full: bool = stats.health >= stats.get_max_health()
+
+	if is_food and not is_healing and hunger_full and item_type != "coca_leaf":
+		if hud and hud.has_method("show_notification"):
+			hud.show_notification("Already full!", Color(1, 0.85, 0.3, 1))
+		return
+	if is_healing and not is_food and health_full:
+		if hud and hud.has_method("show_notification"):
+			hud.show_notification("Already at full health!", Color(1, 0.85, 0.3, 1))
+		return
+	if is_food and is_healing and hunger_full and health_full:
+		if hud and hud.has_method("show_notification"):
+			hud.show_notification("Already full!", Color(1, 0.85, 0.3, 1))
+		return
+
 	# Remove 1 from inventory
 	var removed: bool = inventory.remove_item(item_type, 1)
 	if not removed:
