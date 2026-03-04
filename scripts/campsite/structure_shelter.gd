@@ -183,13 +183,13 @@ func _exit_rest_mode(player: Node) -> void:
 	is_player_resting = false
 	_is_sleeping = false
 
-	# Move player back outside (to the open/front side of shelter - positive local Z is the door)
-	var exit_offset: Vector3 = Vector3(0, 0, 2.5).rotated(Vector3.UP, rotation.y)
+	# Move player back outside — subclasses can override _get_exit_offset() for different door sides
+	var exit_offset: Vector3 = _get_exit_offset().rotated(Vector3.UP, rotation.y)
 	player.global_position = global_position + exit_offset
 	player.global_position.y = global_position.y + 1.0  # Stand height
 
-	# Face the player toward the shelter (looking back at it from the open end)
-	player.rotation.y = rotation.y
+	# Face the player away from the shelter (looking outward from exit)
+	player.rotation.y = rotation.y + _get_exit_facing_offset()
 
 	# Restore camera rotation
 	if player.has_node("Camera3D"):
@@ -203,6 +203,16 @@ func _exit_rest_mode(player: Node) -> void:
 	resting_player = null
 	resting_ended.emit(player)
 	print("[Shelter] You get up from resting")
+
+
+func _get_exit_offset() -> Vector3:
+	## Override in subclasses if the door is on a different side.
+	return Vector3(0, 0, -2.5)
+
+
+func _get_exit_facing_offset() -> float:
+	## Override in subclasses. Returns additional Y rotation for exit facing.
+	return PI
 
 
 func get_interaction_text() -> String:

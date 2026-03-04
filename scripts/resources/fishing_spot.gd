@@ -442,7 +442,7 @@ func _create_fish_mesh() -> Node3D:
 	for i: int in range(3):
 		var spot := MeshInstance3D.new()
 		var sp_mesh := BoxMesh.new()
-		sp_mesh.size = Vector3(0.02, 0.02, 0.062)
+		sp_mesh.size = Vector3(0.02, 0.02, 0.07)
 		spot.mesh = sp_mesh
 		spot.position = Vector3(-0.05 + i * 0.06, 0.01, 0)
 		spot.material_override = spot_mat
@@ -481,8 +481,8 @@ func _update_fish_swimming(delta: float) -> void:
 			direction = direction.normalized()
 			fish.position += direction * delta * 0.3  # Slow swimming
 
-			# Face movement direction
-			fish.rotation.y = atan2(direction.x, direction.z)
+			# Face movement direction (fish mesh faces +X, so offset by -PI/2)
+			fish.rotation.y = atan2(direction.x, direction.z) - PI / 2.0
 
 		# Subtle bobbing
 		var bob: float = sin(Time.get_ticks_msec() * 0.003 + i * 2.0) * 0.005

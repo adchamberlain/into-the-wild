@@ -42,6 +42,15 @@ func _skip_to_dawn(player: Node, time_manager: Node) -> void:
 	print("[CanvasTent] You wake at dawn, fully rested (+100% health, +50 hunger)")
 
 
+func _get_exit_offset() -> Vector3:
+	# Canvas tent door is at +Z
+	return Vector3(0, 0, 2.5)
+
+
+func _get_exit_facing_offset() -> float:
+	return 0.0
+
+
 func get_interaction_text() -> String:
 	if is_player_resting:
 		return "Get Up"

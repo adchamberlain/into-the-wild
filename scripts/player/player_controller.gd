@@ -1483,9 +1483,8 @@ func _close_all_menus() -> void:
 	for node in get_tree().get_nodes_in_group("food_menu"):
 		if "is_open" in node and node.is_open and node.has_method("close_menu"):
 			node.close_menu()
-	for node in get_tree().get_nodes_in_group("map_ui"):
-		if is_instance_valid(node) and node.has_method("close_map"):
-			node.close_map()
+	# Note: map_ui is intentionally NOT closed here — it persists until
+	# the player explicitly un-uses the map from the Equipment menu.
 	# Ensure mouse is recaptured for gameplay
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
