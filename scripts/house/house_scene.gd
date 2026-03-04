@@ -112,6 +112,13 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# Get out of bed on cancel or interact
+	if _is_in_bed:
+		if event.is_action_pressed("ui_cancel") or event.is_action_pressed("interact"):
+			_get_out_of_bed()
+			get_viewport().set_input_as_handled()
+			return
+
 	# Dismiss text overlay on any key/button press
 	if _text_overlay_active:
 		if event is InputEventKey or event is InputEventMouseButton or event is InputEventJoypadButton:
@@ -3567,14 +3574,6 @@ func _get_out_of_bed() -> void:
 
 func is_player_in_bed() -> bool:
 	return _is_in_bed
-
-
-func _input(event: InputEvent) -> void:
-	if not _is_in_bed:
-		return
-	if event.is_action_pressed("ui_cancel") or event.is_action_pressed("interact"):
-		_get_out_of_bed()
-		get_viewport().set_input_as_handled()
 
 
 # =============================================================================
