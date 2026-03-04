@@ -21,9 +21,9 @@ var trail_carved_tree_found: bool = false
 var trail_stone_cairn_found: bool = false
 var trail_signpost_found: bool = false
 # TESTING: set to true to bypass trail progression requirements
-var trail_testing_mode: bool = true
+var trail_testing_mode: bool = false
 # TESTING: set to a landmark name to spawn there ("carved_tree", "stone_cairn", "signpost", or "" for normal)
-var debug_spawn_at_landmark: String = "carved_tree"
+var debug_spawn_at_landmark: String = ""
 
 # UI scale factor (persisted to user://display_config.cfg)
 var ui_scale: float = 1.0
