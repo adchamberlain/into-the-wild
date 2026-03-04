@@ -109,11 +109,14 @@ func _process(delta: float) -> void:
 		_text_overlay_timer -= delta
 		if _text_overlay_timer <= 0.0:
 			_hide_text_overlay()
+	# Tick bed cooldown
+	if _bed_cooldown > 0.0:
+		_bed_cooldown -= delta
 
 
 func _input(event: InputEvent) -> void:
-	# Get out of bed on cancel or interact
-	if _is_in_bed:
+	# Get out of bed on cancel or interact (after cooldown)
+	if _is_in_bed and _bed_cooldown <= 0.0:
 		if event.is_action_pressed("ui_cancel") or event.is_action_pressed("interact"):
 			_get_out_of_bed()
 			get_viewport().set_input_as_handled()
@@ -3464,6 +3467,7 @@ func _on_journal_closed(_was_first_read: bool) -> void:
 var _is_in_bed: bool = false
 var _bed_player_ref: Node = null
 var _bed_dim_overlay: CanvasLayer = null
+var _bed_cooldown: float = 0.0
 
 func rest_in_bed(player: Node) -> void:
 	if _is_in_bed:
@@ -3471,6 +3475,7 @@ func rest_in_bed(player: Node) -> void:
 		return
 
 	_is_in_bed = true
+	_bed_cooldown = 0.5
 	_bed_player_ref = player
 
 	# Bed center is at X=3.0, Z=16.0; pillows at +Z end (Z=16.75)
