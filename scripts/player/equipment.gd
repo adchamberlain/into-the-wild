@@ -472,8 +472,8 @@ func equip(item_type: String) -> bool:
 	elif item_type == "rope":
 		_create_rope_model()
 
-	# Show placeable kit models (skip items with custom held models like lantern)
-	if item_data.get("placeable", false) and item_type != "lantern":
+	# Show placeable kit models (skip items with custom held models)
+	if item_data.get("placeable", false) and item_type not in ["lantern", "torch"]:
 		_create_kit_model(item_type)
 
 	# Show tool models

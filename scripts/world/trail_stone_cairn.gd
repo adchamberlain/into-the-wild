@@ -181,16 +181,25 @@ func _build_visuals() -> void:
 	add_child(stone7)
 	y_cursor += 0.45
 
-	# ===== LIGHT =====
-	# Strong warm glow visible from a distance
+	# ===== GLOW =====
+	# Warm mystical glow visible from a distance — marks this as a special landmark
 	var light: OmniLight3D = OmniLight3D.new()
 	light.name = "CairnGlow"
-	light.light_color = Color(0.95, 0.85, 0.6)
-	light.light_energy = 1.2
-	light.omni_range = 10.0
+	light.light_color = Color(1.0, 0.85, 0.5)
+	light.light_energy = 3.0
+	light.omni_range = 18.0
 	light.shadow_enabled = false
-	light.position = Vector3(0.0, y_cursor * 0.6, 0.0)
+	light.position = Vector3(0.0, y_cursor * 0.5, 0.0)
 	add_child(light)
+
+	# Add emission to top capstone for a visible glow effect
+	var glow_mat: StandardMaterial3D = StandardMaterial3D.new()
+	glow_mat.albedo_color = Color(0.58, 0.55, 0.52)
+	glow_mat.roughness = 0.9
+	glow_mat.emission_enabled = true
+	glow_mat.emission = Color(1.0, 0.8, 0.4)
+	glow_mat.emission_energy_multiplier = 2.0
+	stone7.material_override = glow_mat
 
 	# ===== COLLISION =====
 	var collision: CollisionShape3D = CollisionShape3D.new()
@@ -334,12 +343,12 @@ func _can_interact() -> bool:
 ## Convert a direction vector between two XZ points into a cardinal direction name.
 static func _cardinal_direction(from: Vector2, to: Vector2) -> String:
 	var dx: float = to.x - from.x   # +X = east
-	var dz: float = to.y - from.y   # -Z = south in Godot
-	var angle: float = atan2(dx, -dz)  # 0 = south, PI/2 = east
+	var dz: float = to.y - from.y   # +Z world = south, -Z world = north
+	var angle: float = atan2(dx, -dz)  # 0 = north (toward -Z), PI/2 = east
 	if angle < 0:
 		angle += TAU
 	var sector: int = int((angle + PI / 8.0) / (PI / 4.0)) % 8
-	var names: Array[String] = ["south", "southeast", "east", "northeast", "north", "northwest", "west", "southwest"]
+	var names: Array[String] = ["north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest"]
 	return names[sector]
 
 

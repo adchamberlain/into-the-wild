@@ -1030,8 +1030,8 @@ func _generate_desert_sinkhole() -> void:
 		roundf((-300.0 + trail_rng.randf_range(-15, 15)) / cell_size) * cell_size
 	)
 	stone_cairn_position = Vector2(
-		roundf((280.0 + trail_rng.randf_range(-20, 20)) / cell_size) * cell_size,
-		roundf((-280.0 + trail_rng.randf_range(-15, 15)) / cell_size) * cell_size
+		roundf((280.0 + trail_rng.randf_range(-20, 20)) / cell_size) * cell_size + cell_size / 2.0,
+		roundf((-280.0 + trail_rng.randf_range(-15, 15)) / cell_size) * cell_size + cell_size / 2.0
 	)
 	trail_signpost_position = Vector2(
 		roundf((350.0 + trail_rng.randf_range(-15, 15)) / cell_size) * cell_size,

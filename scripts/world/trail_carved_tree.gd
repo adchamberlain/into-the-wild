@@ -287,14 +287,14 @@ func _scale_fonts() -> void:
 ## Convert a direction vector between two XZ points into a cardinal direction name.
 static func _cardinal_direction(from: Vector2, to: Vector2) -> String:
 	var dx: float = to.x - from.x   # +X = east
-	var dz: float = to.y - from.y   # -Z = south in Godot
-	var angle: float = atan2(dx, -dz)  # 0 = south, PI/2 = east
+	var dz: float = to.y - from.y   # +Z world = south, -Z world = north
+	var angle: float = atan2(dx, -dz)  # 0 = north (toward -Z), PI/2 = east
 	# Normalize to 0..TAU
 	if angle < 0:
 		angle += TAU
-	# 8 sectors of 45 degrees each, starting from south
+	# 8 sectors of 45 degrees each, starting from north
 	var sector: int = int((angle + PI / 8.0) / (PI / 4.0)) % 8
-	var names: Array[String] = ["south", "southeast", "east", "northeast", "north", "northwest", "west", "southwest"]
+	var names: Array[String] = ["north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest"]
 	return names[sector]
 
 
