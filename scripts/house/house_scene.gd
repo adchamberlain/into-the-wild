@@ -3380,7 +3380,116 @@ func open_journal(player: Node) -> void:
 	_journal_ui.set_script(script)
 	_journal_ui.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(_journal_ui)
+	_journal_ui.journal_closed.connect(_on_journal_closed)
 	_journal_ui.open_journal(false)  # Not first read
+
+
+func _on_journal_closed(_was_first_read: bool) -> void:
+	if _journal_ui and is_instance_valid(_journal_ui):
+		_journal_ui.queue_free()
+	_journal_ui = null
+
+
+# =============================================================================
+# BED REST
+# =============================================================================
+
+var _is_in_bed: bool = false
+var _bed_player_ref: Node = null
+var _bed_dim_overlay: CanvasLayer = null
+
+func rest_in_bed(player: Node) -> void:
+	if _is_in_bed:
+		_get_out_of_bed()
+		return
+
+	_is_in_bed = true
+	_bed_player_ref = player
+
+	# Bed center is at X=3.0, Z=16.0; pillows at +Z end (Z=16.75)
+	# Lie player down at pillow end, head toward +Z (headboard)
+	player.global_position = Vector3(3.0, 0.65, 16.3)
+
+	# Face player toward +Z (headboard) so camera looks along the bed
+	player.rotation = Vector3(0, PI, 0)
+
+	# Tilt camera to look straight up at the ceiling
+	if player.has_node("Camera3D"):
+		var camera: Node3D = player.get_node("Camera3D")
+		camera.rotation = Vector3(deg_to_rad(80), 0, 0)
+
+	# Freeze player movement
+	if player.has_method("set_resting"):
+		player.set_resting(true, self)
+
+	# Show persistent dim overlay with resting text
+	_show_bed_overlay()
+
+
+func _show_bed_overlay() -> void:
+	if _bed_dim_overlay:
+		return
+	_bed_dim_overlay = CanvasLayer.new()
+	_bed_dim_overlay.layer = 90
+
+	# Dim screen
+	var dim: ColorRect = ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.4)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bed_dim_overlay.add_child(dim)
+
+	# Resting text centered on screen
+	var label: Label = Label.new()
+	label.text = "You rest peacefully..."
+	label.add_theme_font_override("font", preload("res://resources/hud_font.tres"))
+	label.add_theme_font_size_override("font_size", 40)
+	label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8, 0.7))
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bed_dim_overlay.add_child(label)
+
+	add_child(_bed_dim_overlay)
+
+
+func _remove_bed_overlay() -> void:
+	if _bed_dim_overlay and is_instance_valid(_bed_dim_overlay):
+		_bed_dim_overlay.queue_free()
+	_bed_dim_overlay = null
+
+
+func _get_out_of_bed() -> void:
+	_remove_bed_overlay()
+
+	if not _bed_player_ref or not is_instance_valid(_bed_player_ref):
+		_is_in_bed = false
+		return
+
+	var player: Node = _bed_player_ref
+
+	# Stand player next to bed (right side, +X)
+	player.global_position = Vector3(4.2, 0.0, 16.0)
+
+	# Face away from bed
+	player.rotation = Vector3(0, -PI / 2.0, 0)
+
+	# Reset camera
+	if player.has_node("Camera3D"):
+		var camera: Node3D = player.get_node("Camera3D")
+		camera.rotation = Vector3(0, 0, 0)
+
+	# Unfreeze player
+	if player.has_method("set_resting"):
+		player.set_resting(false)
+
+	_is_in_bed = false
+	_bed_player_ref = null
+
+
+func is_player_in_bed() -> bool:
+	return _is_in_bed
 
 
 # =============================================================================
@@ -3670,8 +3779,12 @@ func interact(player: Node) -> bool:
 			if house.has_method("show_text_overlay"):
 				house.show_text_overlay("Webster", 2.0)
 		"bed_rest":
-			if house.has_method("show_text_overlay"):
-				house.show_text_overlay("You rest peacefully...", 2.0)
+			if house.has_method("rest_in_bed"):
+				house.rest_in_bed(player)
+				if house.has_method("is_player_in_bed") and house.is_player_in_bed():
+					_interaction_text = "Get Out of Bed"
+				else:
+					_interaction_text = "Rest in Bed"
 		"explorers_journal":
 			if house.has_method("open_journal"):
 				house.open_journal(player)

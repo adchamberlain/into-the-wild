@@ -7,9 +7,12 @@ const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 
 var is_open: bool = false
 var _player_ref: Node = null
+var _scroll_container: ScrollContainer = null
 
 # Input manager for dynamic button prompts
 var _input_manager: Node
+
+const SCROLL_SPEED: float = 400.0
 
 
 func _ready() -> void:
@@ -39,8 +42,18 @@ func close() -> void:
 	_player_ref = null
 
 	# Clean up UI children
+	_scroll_container = null
 	for child: Node in get_children():
 		child.queue_free()
+
+
+func _process(delta: float) -> void:
+	if not is_open or not _scroll_container:
+		return
+	# Controller right stick or D-pad scrolling
+	var scroll_input: float = Input.get_axis("ui_up", "ui_down")
+	if abs(scroll_input) > 0.1:
+		_scroll_container.scroll_vertical += int(scroll_input * SCROLL_SPEED * delta)
 
 
 func _input(event: InputEvent) -> void:
@@ -141,6 +154,7 @@ func _build_ui() -> void:
 		var scroll: ScrollContainer = ScrollContainer.new()
 		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		_scroll_container = scroll
 		vbox.add_child(scroll)
 
 		var item_vbox: VBoxContainer = VBoxContainer.new()
@@ -166,9 +180,8 @@ func _build_ui() -> void:
 			var item: Dictionary = sorted_items[i]
 			_add_item_row(item_vbox, item["name"] as String, item["count"] as int, i % 2 == 1)
 
-	# Expanding spacer before close hint
+	# Small spacer before close hint
 	var spacer: Control = Control.new()
-	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	spacer.custom_minimum_size = Vector2(0, 8)
 	vbox.add_child(spacer)
 
