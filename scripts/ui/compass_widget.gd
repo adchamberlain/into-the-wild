@@ -24,11 +24,12 @@ const CENTER_COLOR: Color = Color(0.9, 0.9, 0.9, 0.9)
 const CHEVRON_COLOR: Color = Color(1.0, 0.85, 0.3, 1.0)
 
 # Cardinal directions: name, base angle (world space, N = -Z = 0)
+# Clockwise from 12 o'clock: N(0), E(PI/2), S(PI), W(-PI/2)
 const CARDINALS: Array = [
 	{"label": "N", "angle": 0.0},
-	{"label": "E", "angle": -PI / 2.0},
+	{"label": "E", "angle": PI / 2.0},
 	{"label": "S", "angle": PI},
-	{"label": "W", "angle": PI / 2.0},
+	{"label": "W", "angle": -PI / 2.0},
 ]
 
 # Intercardinal base angles
