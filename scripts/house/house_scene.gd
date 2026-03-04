@@ -1648,24 +1648,51 @@ func _build_kitchen_furniture() -> void:
 			_box(self, Vector3(0.12, 0.02, 0.12),
 				Vector3(stove_x + bx, 0.91, stove_z + bz), _mat_handle)
 
-	# --- Kettle (on stove) ---
+	# --- Kettle (on stove) — traditional silver tea kettle ---
 	var kettle_body: StaticBody3D = StaticBody3D.new()
 	kettle_body.name = "Kettle"
-	kettle_body.set_script(_create_interactable_script(
-		"Make Tea",
-		"kettle"
-	))
-	_box(kettle_body, Vector3(0.15, 0.2, 0.1),
-		Vector3(stove_x + 0.1, 1.02, stove_z - 0.1), _mat_kettle)
-	_box(kettle_body, Vector3(0.08, 0.02, 0.06),
-		Vector3(stove_x + 0.1, 1.13, stove_z - 0.1), _mat_handle)
-	_box(kettle_body, Vector3(0.03, 0.04, 0.06),
-		Vector3(stove_x + 0.1 + 0.08, 1.08, stove_z - 0.1), _mat_kettle)
+	kettle_body.set_script(_create_interactable_script("Make Tea", "kettle"))
+	var kx: float = stove_x + 0.1
+	var kz: float = stove_z - 0.1
+	var ky: float = 0.920  # Base of kettle, sitting on stove burner grate
+	# Polished silver (brighter, more reflective than generic _mat_kettle)
+	var mat_silver: StandardMaterial3D = StandardMaterial3D.new()
+	mat_silver.albedo_color = Color(0.82, 0.82, 0.86)
+	mat_silver.roughness = 0.10
+	mat_silver.metallic = 0.92
+	# Slightly darker silver for base ring, decorative band, lid dome, knob
+	var mat_silver_dark: StandardMaterial3D = StandardMaterial3D.new()
+	mat_silver_dark.albedo_color = Color(0.60, 0.60, 0.64)
+	mat_silver_dark.roughness = 0.22
+	mat_silver_dark.metallic = 0.88
+	# --- Body: stacked slabs that taper to approximate a rounded belly ---
+	_box(kettle_body, Vector3(0.120, 0.020, 0.100), Vector3(kx, ky + 0.010, kz), mat_silver_dark) # Base ring
+	_box(kettle_body, Vector3(0.150, 0.038, 0.130), Vector3(kx, ky + 0.039, kz), mat_silver)      # Lower body
+	_box(kettle_body, Vector3(0.175, 0.055, 0.150), Vector3(kx, ky + 0.085, kz), mat_silver)      # Belly (widest)
+	_box(kettle_body, Vector3(0.165, 0.040, 0.142), Vector3(kx, ky + 0.130, kz), mat_silver)      # Upper belly
+	_box(kettle_body, Vector3(0.130, 0.040, 0.112), Vector3(kx, ky + 0.168, kz), mat_silver)      # Shoulder
+	_box(kettle_body, Vector3(0.095, 0.030, 0.082), Vector3(kx, ky + 0.198, kz), mat_silver)      # Neck
+	# Decorative engraved band at belly equator
+	_box(kettle_body, Vector3(0.178, 0.010, 0.153), Vector3(kx, ky + 0.073, kz), mat_silver_dark)
+	# --- Lid: two layers for slight dome, topped with a knob ---
+	_box(kettle_body, Vector3(0.108, 0.020, 0.090), Vector3(kx, ky + 0.223, kz), mat_silver)      # Lid rim
+	_box(kettle_body, Vector3(0.082, 0.018, 0.068), Vector3(kx, ky + 0.242, kz), mat_silver_dark) # Lid dome
+	_box(kettle_body, Vector3(0.032, 0.022, 0.032), Vector3(kx, ky + 0.261, kz), mat_silver)      # Knob base
+	_box(kettle_body, Vector3(0.020, 0.016, 0.020), Vector3(kx, ky + 0.277, kz), mat_silver_dark) # Knob cap
+	# --- Spout: three sections curving upward from right side (+X) ---
+	_box(kettle_body, Vector3(0.055, 0.030, 0.032), Vector3(kx + 0.115, ky + 0.068, kz - 0.004), mat_silver) # Spout base
+	_box(kettle_body, Vector3(0.035, 0.048, 0.026), Vector3(kx + 0.150, ky + 0.098, kz - 0.008), mat_silver) # Spout mid
+	_box(kettle_body, Vector3(0.025, 0.038, 0.020), Vector3(kx + 0.172, ky + 0.135, kz - 0.012), mat_silver) # Spout tip
+	# --- Handle: C-shape on left side (-X), dark for grip contrast ---
+	_box(kettle_body, Vector3(0.048, 0.025, 0.030), Vector3(kx - 0.112, ky + 0.048, kz), _mat_handle) # Lower arm
+	_box(kettle_body, Vector3(0.026, 0.130, 0.030), Vector3(kx - 0.152, ky + 0.120, kz), _mat_handle) # Outer grip
+	_box(kettle_body, Vector3(0.048, 0.025, 0.030), Vector3(kx - 0.112, ky + 0.168, kz), _mat_handle) # Upper arm
+	# Collision
 	var kettle_col: CollisionShape3D = CollisionShape3D.new()
 	var kettle_shape: BoxShape3D = BoxShape3D.new()
-	kettle_shape.size = Vector3(0.2, 0.25, 0.15)
+	kettle_shape.size = Vector3(0.25, 0.32, 0.20)
 	kettle_col.shape = kettle_shape
-	kettle_col.position = Vector3(stove_x + 0.1, 1.05, stove_z - 0.1)
+	kettle_col.position = Vector3(kx, ky + 0.150, kz)
 	kettle_body.add_child(kettle_col)
 	add_child(kettle_body)
 	# Stove collision
