@@ -6754,6 +6754,60 @@ Added an always-visible graphical compass widget to the HUD. Overhauled all trai
 
 ---
 
+## Session 45 — UI Fixes, Drying Rack, Food Consumption Guards, Shelter Exit
+
+**Date**: 2026-03-04
+
+### Summary
+
+Fixed multiple UI and gameplay bugs: food menu positioning and sizing, save slot delete button on controller, drying rack not clearing food visuals on collection, food consumption when hunger is full, and shelter rest exit placement.
+
+### Changes
+
+#### Food Menu Centering Fix (`scripts/ui/food_menu.gd`)
+- **Bug**: Food menu appeared at the top-left of the screen instead of centered
+- **Root cause**: `anchors_preset = PRESET_CENTER` doesn't work when the panel is a direct child of a CanvasLayer (no parent Control providing a reference rect)
+- **Fix**: Wrapped the main panel in a full-screen `CenterContainer` with `PRESET_FULL_RECT` anchors
+
+#### Food Menu Sizing (`scripts/ui/food_menu.gd`)
+- **Bug**: Menu was too narrow (cutting off text) and too short (only showing 3-4 items)
+- **Fix**: Increased panel width from 500px to 700px, increased row height to 56px, menu now shows up to 8 rows before scrolling
+
+#### Save Slot Delete Button on Controller (`scripts/ui/pause_menu.gd`)
+- **Bug**: Navigating to the "Del" button with a controller and pressing accept would load the save slot instead of deleting it
+- **Root cause**: `_activate_focused_slot_button()` always used the tracked `focused_slot_index` into `slot_buttons`, ignoring Godot's native focus which had moved to the delete button via D-pad right
+- **Fix**: `_activate_focused_slot_button()` now checks `gui_get_focus_owner()` first — if a delete button has native focus, it activates that instead
+
+#### Drying Rack Visual Cleanup (`scripts/core/save_load.gd`)
+- **Bug**: Food visuals remained on the drying rack after collecting dried food
+- **Root cause**: `save_load.gd`'s `_create_drying_rack()` added permanent decorative food meshes (meat strips, herb bundles) that weren't tracked by `StructureDryingRack.food_meshes`, so `_update_food_visuals()` never hid them
+- **Fix**: Removed the static decorative food from the save/load rack builder — the script's `_create_food_visuals()` handles dynamic food display based on drying state
+
+#### Food Consumption Guard (`scripts/player/player_controller.gd`)
+- **Bug**: Player could consume food when hunger was already full, wasting items and showing "+0 hunger"
+- **Fix**: Added guards in `consume_item()` that block consumption and show "Already full!" when:
+  - Food-only items: blocked when hunger is within 0.5 of max
+  - Healing-only items: blocked when health is within 0.5 of max
+  - Dual food+healing items: blocked only when both stats are maxed
+  - Coca leaf: exempt (primary benefit is breath buff, not hunger)
+- Uses 0.5 tolerance to handle float precision (hunger 99.7 displays as 100/100)
+
+#### Shelter Rest Exit Position (`scripts/campsite/structure_shelter.gd`)
+- **Bug**: After resting, player was placed at the back of the shelter (closed end near the tarp)
+- **Fix**: Flipped exit offset from `+Z` to `-Z` and rotated player facing by 180° so they exit at the open front end
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/ui/food_menu.gd` | Modified | CenterContainer wrapping, width 500→700, row height 56px, scroll sizing |
+| `scripts/ui/pause_menu.gd` | Modified | Delete button focus check in `_activate_focused_slot_button()` |
+| `scripts/core/save_load.gd` | Modified | Removed static decorative food from drying rack builder |
+| `scripts/player/player_controller.gd` | Modified | Hunger/health full guards in `consume_item()` |
+| `scripts/campsite/structure_shelter.gd` | Modified | Flipped exit offset and facing for shelter rest |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
