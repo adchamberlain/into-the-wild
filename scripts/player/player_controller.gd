@@ -1063,8 +1063,8 @@ func consume_item(item_type: String) -> void:
 	# Block consumption if the item would have no effect
 	var is_food: bool = FOOD_VALUES.has(item_type)
 	var is_healing: bool = HEALING_ITEMS.has(item_type)
-	var hunger_full: bool = stats.hunger >= stats.max_hunger
-	var health_full: bool = stats.health >= stats.get_max_health()
+	var hunger_full: bool = stats.hunger >= stats.max_hunger - 0.5
+	var health_full: bool = stats.health >= stats.get_max_health() - 0.5
 
 	if is_food and not is_healing and hunger_full and item_type != "coca_leaf":
 		if hud and hud.has_method("show_notification"):
