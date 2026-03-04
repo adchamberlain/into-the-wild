@@ -35,10 +35,16 @@ var _input_manager: Node
 # Confirm pulse animation state
 var _pulse_time: float = 0.0
 
+# Grid layout info for column navigation
+var _rows_per_col: int = 1
+var _num_columns: int = 1
+
 # Confirmation dialog state
 var _showing_confirmation: bool = false
 var _confirm_dialog: PanelContainer = null
 var _confirm_cursor: int = 0  # 0 = Cancel, 1 = Confirm
+var _cancel_btn: Label = null
+var _depart_btn: Label = null
 
 
 func _ready() -> void:
@@ -102,6 +108,12 @@ func _input(event: InputEvent) -> void:
 		_handle_input()
 	elif event.is_action_pressed("ui_down"):
 		_move_cursor(1)
+		_handle_input()
+	elif event.is_action_pressed("ui_left"):
+		_move_cursor_horizontal(-1)
+		_handle_input()
+	elif event.is_action_pressed("ui_right"):
+		_move_cursor_horizontal(1)
 		_handle_input()
 	elif event.is_action_pressed("ui_accept"):
 		if _on_confirm:
@@ -319,6 +331,8 @@ func _rebuild_item_rows() -> void:
 	if num_columns < 1:
 		num_columns = 1
 	var rows_per_col: int = ceili(float(item_count) / float(num_columns))
+	_rows_per_col = rows_per_col
+	_num_columns = num_columns
 
 	# Centered columns container (shrinks to content width, centers in parent)
 	var columns_hbox: HBoxContainer = HBoxContainer.new()
@@ -433,6 +447,34 @@ func _move_cursor(direction: int) -> void:
 
 	_refresh_list()
 	SFXManager.play_sfx("select")
+
+
+## Move cursor left/right between columns in the grid.
+func _move_cursor_horizontal(direction: int) -> void:
+	if _on_confirm or _available_items.is_empty():
+		return
+
+	var item_count: int = _available_items.size()
+	# Current column and row based on column-major layout
+	var current_col: int = _cursor_index / _rows_per_col
+	var current_row: int = _cursor_index % _rows_per_col
+
+	# Move to adjacent column
+	var new_col: int = current_col + direction
+	if new_col < 0 or new_col >= _num_columns:
+		return  # Don't wrap horizontally
+
+	# Target index in the new column, clamped to valid range
+	var new_index: int = new_col * _rows_per_col + current_row
+	if new_index >= item_count:
+		# Row doesn't exist in this column — jump to last item in that column
+		new_index = item_count - 1
+
+	if new_index != _cursor_index:
+		_cursor_index = new_index
+		_on_confirm = false
+		_refresh_list()
+		SFXManager.play_sfx("select")
 
 
 ## Toggle selection of the item at the current cursor.
@@ -558,22 +600,22 @@ func _show_confirmation() -> void:
 	vbox.add_child(buttons_hbox)
 
 	# Cancel button
-	var cancel_label: Label = Label.new()
-	cancel_label.name = "CancelBtn"
-	cancel_label.text = "[ Stay Home ]"
-	cancel_label.add_theme_font_override("font", HUD_FONT)
-	cancel_label.add_theme_font_size_override("font_size", 32)
-	cancel_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	buttons_hbox.add_child(cancel_label)
+	_cancel_btn = Label.new()
+	_cancel_btn.name = "CancelBtn"
+	_cancel_btn.text = "[ Stay Home ]"
+	_cancel_btn.add_theme_font_override("font", HUD_FONT)
+	_cancel_btn.add_theme_font_size_override("font_size", 32)
+	_cancel_btn.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	buttons_hbox.add_child(_cancel_btn)
 
 	# Depart button
-	var depart_label: Label = Label.new()
-	depart_label.name = "DepartBtn"
-	depart_label.text = "[ Depart ]"
-	depart_label.add_theme_font_override("font", HUD_FONT)
-	depart_label.add_theme_font_size_override("font_size", 32)
-	depart_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	buttons_hbox.add_child(depart_label)
+	_depart_btn = Label.new()
+	_depart_btn.name = "DepartBtn"
+	_depart_btn.text = "[ Depart ]"
+	_depart_btn.add_theme_font_override("font", HUD_FONT)
+	_depart_btn.add_theme_font_size_override("font_size", 32)
+	_depart_btn.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	buttons_hbox.add_child(_depart_btn)
 
 	_update_confirmation_display()
 	SFXManager.play_sfx("menu_open")
@@ -581,23 +623,20 @@ func _show_confirmation() -> void:
 
 ## Update the visual highlight on confirmation buttons.
 func _update_confirmation_display() -> void:
-	if not is_instance_valid(_confirm_dialog):
-		return
-	var buttons: HBoxContainer = _confirm_dialog.find_child("ButtonsHBox") as HBoxContainer
-	if not buttons:
-		return
-	var cancel_btn: Label = buttons.find_child("CancelBtn") as Label
-	var depart_btn: Label = buttons.find_child("DepartBtn") as Label
-	if cancel_btn:
+	if is_instance_valid(_cancel_btn):
 		if _confirm_cursor == 0:
-			cancel_btn.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
+			_cancel_btn.text = "> [ Stay Home ]"
+			_cancel_btn.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
 		else:
-			cancel_btn.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5, 1))
-	if depart_btn:
+			_cancel_btn.text = "  [ Stay Home ]"
+			_cancel_btn.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5, 1))
+	if is_instance_valid(_depart_btn):
 		if _confirm_cursor == 1:
-			depart_btn.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
+			_depart_btn.text = "> [ Depart ]"
+			_depart_btn.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
 		else:
-			depart_btn.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5, 1))
+			_depart_btn.text = "  [ Depart ]"
+			_depart_btn.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5, 1))
 
 
 ## Dismiss the confirmation dialog and return to item selection.
@@ -606,6 +645,8 @@ func _dismiss_confirmation() -> void:
 	if is_instance_valid(_confirm_dialog):
 		_confirm_dialog.queue_free()
 	_confirm_dialog = null
+	_cancel_btn = null
+	_depart_btn = null
 	SFXManager.play_sfx("menu_close")
 
 
@@ -669,17 +710,17 @@ func _update_hint_label() -> void:
 	if not is_instance_valid(_hint_label):
 		return
 
-	var up_prompt: String = "Up/Down"
+	var nav_prompt: String = "Arrows"
 	var accept_prompt: String = "Enter"
 	var cancel_prompt: String = "Esc"
 
 	if _input_manager and "using_controller" in _input_manager and _input_manager.using_controller:
 		if _input_manager.has_method("get_prompt"):
-			up_prompt = "D-pad"
+			nav_prompt = "D-pad"
 			accept_prompt = _input_manager.get_prompt("ui_accept")
 			cancel_prompt = _input_manager.get_prompt("ui_cancel")
 
-	_hint_label.text = "[%s] Navigate  [%s] Toggle  [%s] Cancel" % [up_prompt, accept_prompt, cancel_prompt]
+	_hint_label.text = "[%s] Navigate  [%s] Toggle  [%s] Cancel" % [nav_prompt, accept_prompt, cancel_prompt]
 
 
 ## Handle input device changes while the UI is open.
