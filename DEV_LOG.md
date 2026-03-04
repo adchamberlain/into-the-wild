@@ -6808,6 +6808,82 @@ Fixed multiple UI and gameplay bugs: food menu positioning and sizing, save slot
 
 ---
 
+---
+
+## Session 46 — Compass Coordinates, Direction Fixes, Home Scene Improvements
+
+**Date**: 2026-03-04
+
+### Summary
+
+Major coordinate system overhaul replacing X/Y/Z with compass directions (E/W, N/S, Elevation). Fixed numerous direction bugs, shelter exit positions, smithing station ingot loss, and added home scene improvements including bed rest experience and journal/inventory fixes.
+
+### Changes
+
+#### Coordinate System Overhaul
+- **HUD**: Changed from "X: 5.2 Y: 3.1 Z: 12.0" to "5.2 E  12.0 N  Elev: 3.1"
+- **Trail clues**: Stone cairn and carved tree now show compass directions instead of X/Z
+- **Convention**: -Z = north, +X = east, Y = elevation (Godot standard)
+
+#### N/S Direction Fixes
+- **HUD**: Walking north showed "S" — fixed conditional in `hud.gd`
+- **Cardinal direction in clues**: `_cardinal_direction()` names array started with "south" at angle 0, but angle 0 = -Z = north — fixed in both trail scripts
+- **Carved tree arrow**: Arrow pointed west but clue said east — mirrored X positions and swapped arrowhead angles
+
+#### Shelter Exit Architecture (`structure_shelter.gd`, `structure_canvas_tent.gd`)
+- Added virtual methods `_get_exit_offset()` and `_get_exit_facing_offset()` to base class
+- Canvas tent exits at +Z (door side), basic shelter exits at -Z (open front)
+
+#### Smithing Station Ingot Loss (`structure_smithing_station.gd`)
+- **Bug**: Smelting multiple ore only produced 1 ingot (no count tracking)
+- **Fix**: Added `pending_output_count`, auto-smelt chaining, batch collection, save/load persistence
+
+#### Fish & Visual Fixes
+- Fish swimming sideways: added `-PI/2` rotation offset (mesh faces +X)
+- Z-fighting on fish spots: increased spot Z-size 0.062 → 0.07
+- Compass rose: scaled 1.5x with transparency
+- Stone cairn: cell-centered with `+ cell_size/2.0`, boosted glow
+- Torch kit box: added "torch" to equipment kit model exclusion
+- Cactus fruit: reduced spawn rate 10% → 4%
+
+#### Map Persistence Through Death (`player_controller.gd`)
+- Removed map_ui from `_close_all_menus()` so map stays visible
+
+#### Journal Re-open Fix (`house_scene.gd`)
+- **Bug**: L2 stopped working after closing journal once (node not freed)
+- **Fix**: Connected `journal_closed` signal to `queue_free()` and clear reference
+
+#### Wilderness Inventory Scroll (`journey_inventory_ui.gd`)
+- **Bug**: Item list cut off, no controller scroll
+- **Fix**: Removed expand flag from spacer, added D-pad/stick scrolling in `_process()`
+
+#### Bed Rest Experience (`house_scene.gd`)
+- Player positioned at pillow end, camera tilted 80° up toward ceiling
+- Dim overlay (alpha 0.4) with centered "You rest peacefully..." text
+- Toggle: "Rest in Bed" / "Get Out of Bed" with same controller command
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/ui/hud.gd` | Modified | Compass coordinate display, N/S fix |
+| `scenes/ui/hud.tscn` | Modified | Default coordinate label text |
+| `scripts/world/trail_stone_cairn.gd` | Modified | Compass coords, cardinal direction fix, glow |
+| `scripts/world/trail_carved_tree.gd` | Modified | Compass coords, cardinal direction fix, arrow mirror |
+| `scripts/world/chunk_manager.gd` | Modified | Stone cairn cell centering |
+| `scripts/world/terrain_chunk.gd` | Modified | Cactus fruit rarity 10%→4% |
+| `scripts/campsite/structure_shelter.gd` | Modified | Virtual exit methods |
+| `scripts/campsite/structure_canvas_tent.gd` | Modified | Override exit to +Z door side |
+| `scripts/campsite/structure_smithing_station.gd` | Modified | Ingot count tracking, auto-smelt |
+| `scripts/resources/fishing_spot.gd` | Modified | Fish rotation fix, z-fighting fix |
+| `scripts/player/player_controller.gd` | Modified | Map persistence through death |
+| `scripts/player/equipment.gd` | Modified | Torch kit box exclusion |
+| `scripts/ui/compass_widget.gd` | Modified | 1.5x scale, transparency |
+| `scripts/house/house_scene.gd` | Modified | Journal fix, bed rest system |
+| `scripts/house/journey_inventory_ui.gd` | Modified | Scroll fix, controller support |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
