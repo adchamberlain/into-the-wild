@@ -599,12 +599,12 @@ func _build_crown_molding() -> void:
 	# West
 	_box(self, Vector3(upper_d, upper_h, ld), Vector3(WALL_THICKNESS + upper_d / 2.0, y_upper, lz), _mat_molding)
 	_box(self, Vector3(lower_d, lower_h, ld), Vector3(WALL_THICKNESS + lower_d / 2.0, y_lower, lz), _mat_molding)
-	# North (kitchen divider)
-	_box(self, Vector3(lw, upper_h, upper_d), Vector3(lx, y_upper, ld - upper_d / 2.0), _mat_molding)
-	_box(self, Vector3(lw, lower_h, lower_d), Vector3(lx, y_lower, ld - lower_d / 2.0), _mat_molding)
-	# East (center divider)
-	_box(self, Vector3(upper_d, upper_h, ld), Vector3(LIVING_ROOM_WIDTH - upper_d / 2.0, y_upper, lz), _mat_molding)
-	_box(self, Vector3(lower_d, lower_h, ld), Vector3(LIVING_ROOM_WIDTH - lower_d / 2.0, y_lower, lz), _mat_molding)
+	# North (kitchen divider, LR side — offset to wall inner face)
+	_box(self, Vector3(lw, upper_h, upper_d), Vector3(lx, y_upper, LIVING_ROOM_DEPTH - WALL_THICKNESS / 2.0 - upper_d / 2.0), _mat_molding)
+	_box(self, Vector3(lw, lower_h, lower_d), Vector3(lx, y_lower, LIVING_ROOM_DEPTH - WALL_THICKNESS / 2.0 - lower_d / 2.0), _mat_molding)
+	# East (center divider, LR side — offset to wall inner face)
+	_box(self, Vector3(upper_d, upper_h, ld), Vector3(LIVING_ROOM_WIDTH - WALL_THICKNESS / 2.0 - upper_d / 2.0, y_upper, lz), _mat_molding)
+	_box(self, Vector3(lower_d, lower_h, ld), Vector3(LIVING_ROOM_WIDTH - WALL_THICKNESS / 2.0 - lower_d / 2.0, y_lower, lz), _mat_molding)
 
 	# --- Kitchen (X: WALL to LIVING_ROOM_WIDTH, Z: LIVING_ROOM_DEPTH to HOUSE_DEPTH-WALL) ---
 	var kd: float = KITCHEN_DEPTH - WALL_THICKNESS
@@ -615,9 +615,12 @@ func _build_crown_molding() -> void:
 	# North
 	_box(self, Vector3(lw, upper_h, upper_d), Vector3(lx, y_upper, HOUSE_DEPTH - WALL_THICKNESS - upper_d / 2.0), _mat_molding)
 	_box(self, Vector3(lw, lower_h, lower_d), Vector3(lx, y_lower, HOUSE_DEPTH - WALL_THICKNESS - lower_d / 2.0), _mat_molding)
-	# East (center divider, kitchen side)
-	_box(self, Vector3(upper_d, upper_h, kd), Vector3(LIVING_ROOM_WIDTH - upper_d / 2.0, y_upper, kz), _mat_molding)
-	_box(self, Vector3(lower_d, lower_h, kd), Vector3(LIVING_ROOM_WIDTH - lower_d / 2.0, y_lower, kz), _mat_molding)
+	# East (center divider, kitchen side — offset to wall inner face)
+	_box(self, Vector3(upper_d, upper_h, kd), Vector3(LIVING_ROOM_WIDTH - WALL_THICKNESS / 2.0 - upper_d / 2.0, y_upper, kz), _mat_molding)
+	_box(self, Vector3(lower_d, lower_h, kd), Vector3(LIVING_ROOM_WIDTH - WALL_THICKNESS / 2.0 - lower_d / 2.0, y_lower, kz), _mat_molding)
+	# South (kitchen divider, kitchen side — offset to wall inner face; crown runs full width, no doorway gap)
+	_box(self, Vector3(lw, upper_h, upper_d), Vector3(lx, y_upper, LIVING_ROOM_DEPTH + WALL_THICKNESS / 2.0 + upper_d / 2.0), _mat_molding)
+	_box(self, Vector3(lw, lower_h, lower_d), Vector3(lx, y_lower, LIVING_ROOM_DEPTH + WALL_THICKNESS / 2.0 + lower_d / 2.0), _mat_molding)
 
 	# --- Dining room (X: LIVING_ROOM_WIDTH to HOUSE_WIDTH-WALL, Z: WALL to HOUSE_DEPTH-WALL) ---
 	var dw: float = DINING_ROOM_WIDTH - WALL_THICKNESS
@@ -633,9 +636,9 @@ func _build_crown_molding() -> void:
 	# North
 	_box(self, Vector3(dw, upper_h, upper_d), Vector3(dx, y_upper, HOUSE_DEPTH - WALL_THICKNESS - upper_d / 2.0), _mat_molding)
 	_box(self, Vector3(dw, lower_h, lower_d), Vector3(dx, y_lower, HOUSE_DEPTH - WALL_THICKNESS - lower_d / 2.0), _mat_molding)
-	# West (center divider, dining side)
-	_box(self, Vector3(upper_d, upper_h, dd), Vector3(LIVING_ROOM_WIDTH + upper_d / 2.0, y_upper, dz), _mat_molding)
-	_box(self, Vector3(lower_d, lower_h, dd), Vector3(LIVING_ROOM_WIDTH + lower_d / 2.0, y_lower, dz), _mat_molding)
+	# West (center divider, dining side — offset to wall inner face)
+	_box(self, Vector3(upper_d, upper_h, dd), Vector3(LIVING_ROOM_WIDTH + WALL_THICKNESS / 2.0 + upper_d / 2.0, y_upper, dz), _mat_molding)
+	_box(self, Vector3(lower_d, lower_h, dd), Vector3(LIVING_ROOM_WIDTH + WALL_THICKNESS / 2.0 + lower_d / 2.0, y_lower, dz), _mat_molding)
 
 	# --- Baseboards (all rooms, floor level, split around doorways) ---
 	var bb_h: float = 0.10
@@ -651,16 +654,23 @@ func _build_crown_molding() -> void:
 	# Living room
 	_box(self, Vector3(lw, bb_h, bb_d), Vector3(lx, bb_y, WALL_THICKNESS + bb_d / 2.0), _mat_molding)  # South
 	_box(self, Vector3(bb_d, bb_h, ld), Vector3(WALL_THICKNESS + bb_d / 2.0, bb_y, lz), _mat_molding)  # West
-	# North (kitchen divider) — split around doorway at X=2..4
+	# North (kitchen divider, LR side) — split around doorway at X=2..4; offset to wall inner face
 	var lr_bb_left_w: float = lr_door_l - WALL_THICKNESS
 	_box(self, Vector3(lr_bb_left_w, bb_h, bb_d),
-		Vector3(WALL_THICKNESS + lr_bb_left_w / 2.0, bb_y, ld - bb_d / 2.0), _mat_molding)
+		Vector3(WALL_THICKNESS + lr_bb_left_w / 2.0, bb_y, LIVING_ROOM_DEPTH - WALL_THICKNESS / 2.0 - bb_d / 2.0), _mat_molding)
 	var lr_bb_right_w: float = LIVING_ROOM_WIDTH - lr_door_r
 	_box(self, Vector3(lr_bb_right_w, bb_h, bb_d),
-		Vector3(lr_door_r + lr_bb_right_w / 2.0, bb_y, ld - bb_d / 2.0), _mat_molding)
-	_box(self, Vector3(bb_d, bb_h, ld), Vector3(LIVING_ROOM_WIDTH - bb_d / 2.0, bb_y, lz), _mat_molding)  # East
+		Vector3(lr_door_r + lr_bb_right_w / 2.0, bb_y, LIVING_ROOM_DEPTH - WALL_THICKNESS / 2.0 - bb_d / 2.0), _mat_molding)
+	_box(self, Vector3(bb_d, bb_h, ld), Vector3(LIVING_ROOM_WIDTH - WALL_THICKNESS / 2.0 - bb_d / 2.0, bb_y, lz), _mat_molding)  # East (center divider, LR side)
 	# Kitchen
 	_box(self, Vector3(bb_d, bb_h, kd), Vector3(WALL_THICKNESS + bb_d / 2.0, bb_y, kz), _mat_molding)  # West
+	# South (kitchen divider, kitchen side) — split around doorway at X=2..4; offset to wall inner face
+	var ks_bb_z: float = LIVING_ROOM_DEPTH + WALL_THICKNESS / 2.0 + bb_d / 2.0
+	_box(self, Vector3(lr_bb_left_w, bb_h, bb_d),
+		Vector3(WALL_THICKNESS + lr_bb_left_w / 2.0, bb_y, ks_bb_z), _mat_molding)
+	var ks_right_w: float = LIVING_ROOM_WIDTH - lr_door_r
+	_box(self, Vector3(ks_right_w, bb_h, bb_d),
+		Vector3(lr_door_r + ks_right_w / 2.0, bb_y, ks_bb_z), _mat_molding)
 	# North (bedroom wall) — split around bedroom doorway at X=4.5..5.5
 	var kn_left_w: float = bd_bb_l - WALL_THICKNESS
 	_box(self, Vector3(kn_left_w, bb_h, bb_d),
@@ -669,24 +679,24 @@ func _build_crown_molding() -> void:
 	if kn_right_w > 0:
 		_box(self, Vector3(kn_right_w, bb_h, bb_d),
 			Vector3(bd_bb_r + kn_right_w / 2.0, bb_y, HOUSE_DEPTH - WALL_THICKNESS - bb_d / 2.0), _mat_molding)
-	# East (center divider) — split around doorway at Z=6.75..8.25
+	# East (center divider, kitchen side) — split around doorway at Z=6.75..8.25; offset to wall inner face
 	var ke_south_len: float = cd_bb_dl - LIVING_ROOM_DEPTH
 	_box(self, Vector3(bb_d, bb_h, ke_south_len),
-		Vector3(LIVING_ROOM_WIDTH - bb_d / 2.0, bb_y, LIVING_ROOM_DEPTH + ke_south_len / 2.0), _mat_molding)
+		Vector3(LIVING_ROOM_WIDTH - WALL_THICKNESS / 2.0 - bb_d / 2.0, bb_y, LIVING_ROOM_DEPTH + ke_south_len / 2.0), _mat_molding)
 	var ke_north_len: float = (HOUSE_DEPTH - WALL_THICKNESS) - cd_bb_dr
 	_box(self, Vector3(bb_d, bb_h, ke_north_len),
-		Vector3(LIVING_ROOM_WIDTH - bb_d / 2.0, bb_y, cd_bb_dr + ke_north_len / 2.0), _mat_molding)
+		Vector3(LIVING_ROOM_WIDTH - WALL_THICKNESS / 2.0 - bb_d / 2.0, bb_y, cd_bb_dr + ke_north_len / 2.0), _mat_molding)
 	# Dining room
 	_box(self, Vector3(dw, bb_h, bb_d), Vector3(dx, bb_y, WALL_THICKNESS + bb_d / 2.0), _mat_molding)  # South
 	_box(self, Vector3(bb_d, bb_h, dd), Vector3(HOUSE_WIDTH - WALL_THICKNESS - bb_d / 2.0, bb_y, dz), _mat_molding)  # East
 	_box(self, Vector3(dw, bb_h, bb_d), Vector3(dx, bb_y, HOUSE_DEPTH - WALL_THICKNESS - bb_d / 2.0), _mat_molding)  # North
-	# West (center divider, dining side) — split around doorway at Z=6.75..8.25
+	# West (center divider, dining side) — split around doorway at Z=6.75..8.25; offset to wall inner face
 	var dw_south_len: float = cd_bb_dl - WALL_THICKNESS
 	_box(self, Vector3(bb_d, bb_h, dw_south_len),
-		Vector3(LIVING_ROOM_WIDTH + bb_d / 2.0, bb_y, WALL_THICKNESS + dw_south_len / 2.0), _mat_molding)
+		Vector3(LIVING_ROOM_WIDTH + WALL_THICKNESS / 2.0 + bb_d / 2.0, bb_y, WALL_THICKNESS + dw_south_len / 2.0), _mat_molding)
 	var dw_north_len: float = (HOUSE_DEPTH - WALL_THICKNESS) - cd_bb_dr
 	_box(self, Vector3(bb_d, bb_h, dw_north_len),
-		Vector3(LIVING_ROOM_WIDTH + bb_d / 2.0, bb_y, cd_bb_dr + dw_north_len / 2.0), _mat_molding)
+		Vector3(LIVING_ROOM_WIDTH + WALL_THICKNESS / 2.0 + bb_d / 2.0, bb_y, cd_bb_dr + dw_north_len / 2.0), _mat_molding)
 
 
 # =============================================================================
@@ -704,8 +714,8 @@ func _build_doorway_molding() -> void:
 	var cd_w: float = 1.5
 	var cd_dl: float = cd_z - cd_w / 2.0  # 6.75
 	var cd_dr: float = cd_z + cd_w / 2.0  # 8.25
-	# Kitchen side (-X face)
-	var cd_kx: float = LIVING_ROOM_WIDTH - trim_d / 2.0
+	# Kitchen side (-X face) — offset to wall inner face
+	var cd_kx: float = LIVING_ROOM_WIDTH - WALL_THICKNESS / 2.0 - trim_d / 2.0
 	# Left casing
 	_box(self, Vector3(trim_d, door_h, trim_w),
 		Vector3(cd_kx, door_h / 2.0, cd_dl - trim_w / 2.0), _mat_molding)
@@ -718,8 +728,8 @@ func _build_doorway_molding() -> void:
 	# Crown piece
 	_box(self, Vector3(trim_d + 0.01, 0.04, cd_w + trim_w * 2.0 + 0.04),
 		Vector3(cd_kx, door_h + trim_w + 0.02, cd_z), _mat_molding)
-	# Dining side (+X face)
-	var cd_dx: float = LIVING_ROOM_WIDTH + trim_d / 2.0
+	# Dining side (+X face) — offset to wall inner face
+	var cd_dx: float = LIVING_ROOM_WIDTH + WALL_THICKNESS / 2.0 + trim_d / 2.0
 	_box(self, Vector3(trim_d, door_h, trim_w),
 		Vector3(cd_dx, door_h / 2.0, cd_dl - trim_w / 2.0), _mat_molding)
 	_box(self, Vector3(trim_d, door_h, trim_w),
@@ -734,8 +744,8 @@ func _build_doorway_molding() -> void:
 	var kl_w: float = 2.0
 	var kl_dl: float = kl_x - kl_w / 2.0  # 2.0
 	var kl_dr: float = kl_x + kl_w / 2.0  # 4.0
-	# Living room side (-Z face)
-	var kl_lz: float = LIVING_ROOM_DEPTH - trim_d / 2.0
+	# Living room side (-Z face) — offset to wall inner face
+	var kl_lz: float = LIVING_ROOM_DEPTH - WALL_THICKNESS / 2.0 - trim_d / 2.0
 	_box(self, Vector3(trim_w, door_h, trim_d),
 		Vector3(kl_dl - trim_w / 2.0, door_h / 2.0, kl_lz), _mat_molding)
 	_box(self, Vector3(trim_w, door_h, trim_d),
@@ -744,8 +754,8 @@ func _build_doorway_molding() -> void:
 		Vector3(kl_x, door_h + trim_w / 2.0, kl_lz), _mat_molding)
 	_box(self, Vector3(kl_w + trim_w * 2.0 + 0.04, 0.04, trim_d + 0.01),
 		Vector3(kl_x, door_h + trim_w + 0.02, kl_lz), _mat_molding)
-	# Kitchen side (+Z face)
-	var kl_kz: float = LIVING_ROOM_DEPTH + trim_d / 2.0
+	# Kitchen side (+Z face) — offset to wall inner face
+	var kl_kz: float = LIVING_ROOM_DEPTH + WALL_THICKNESS / 2.0 + trim_d / 2.0
 	_box(self, Vector3(trim_w, door_h, trim_d),
 		Vector3(kl_dl - trim_w / 2.0, door_h / 2.0, kl_kz), _mat_molding)
 	_box(self, Vector3(trim_w, door_h, trim_d),
@@ -760,8 +770,8 @@ func _build_doorway_molding() -> void:
 	var bd_w: float = BEDROOM_DOOR_WIDTH  # 1.0
 	var bd_dl: float = bd_x - bd_w / 2.0  # 4.5
 	var bd_dr: float = bd_x + bd_w / 2.0  # 5.5
-	# Kitchen side (-Z face)
-	var bd_kz: float = HOUSE_DEPTH - trim_d / 2.0
+	# Kitchen side (-Z face) — north wall center is at HOUSE_DEPTH-WALL_THICKNESS/2, so inner face is at HOUSE_DEPTH-WALL_THICKNESS
+	var bd_kz: float = HOUSE_DEPTH - WALL_THICKNESS - trim_d / 2.0
 	_box(self, Vector3(trim_w, door_h, trim_d),
 		Vector3(bd_dl - trim_w / 2.0, door_h / 2.0, bd_kz), _mat_molding)
 	_box(self, Vector3(trim_w, door_h, trim_d),
@@ -3511,7 +3521,8 @@ func _build_sunset_painting(pos: Vector3, wall: String) -> void:
 	var mat_cloud_lit: StandardMaterial3D = _make_mat(Color(0.85, 0.55, 0.3))
 
 	var thin: float = 0.012
-	var cx: float = pos.x + dir * 0.03  # Offset from wall (clear of background to prevent Z-fighting)
+	var cx: float = pos.x + dir * 0.03    # Base layer (sky/ocean strips)
+	var cx2: float = pos.x + dir * 0.036  # Detail layer (sun, clouds, reflections) — 6mm in front to prevent Z-fighting
 	var cy: float = pos.y
 	var cz: float = pos.z
 	var pw: float = 0.04  # Pixel width for blocky look
@@ -3528,17 +3539,17 @@ func _build_sunset_painting(pos: Vector3, wall: String) -> void:
 	_box(body, Vector3(thin, pw, 0.60), Vector3(cx, cy + 0.00, cz), mat_warm_orange)
 	_box(body, Vector3(thin, pw, 0.60), Vector3(cx, cy - 0.04, cz), mat_golden)
 
-	# Sun (centered at horizon)
-	_box(body, Vector3(thin, 0.08, 0.08), Vector3(cx, cy - 0.02, cz), mat_sun_core)
-	_box(body, Vector3(thin, pw, 0.12), Vector3(cx, cy + 0.03, cz), mat_sun_glow)
-	_box(body, Vector3(thin, 0.04, pw), Vector3(cx, cy - 0.01, cz - 0.06), mat_sun_glow)
-	_box(body, Vector3(thin, 0.04, pw), Vector3(cx, cy - 0.01, cz + 0.06), mat_sun_glow)
+	# Sun (centered at horizon) — on detail layer to avoid Z-fighting with sky/ocean strips
+	_box(body, Vector3(thin, 0.08, 0.08), Vector3(cx2, cy - 0.02, cz), mat_sun_core)
+	_box(body, Vector3(thin, pw, 0.12), Vector3(cx2, cy + 0.03, cz), mat_sun_glow)
+	_box(body, Vector3(thin, 0.04, pw), Vector3(cx2, cy - 0.01, cz - 0.06), mat_sun_glow)
+	_box(body, Vector3(thin, 0.04, pw), Vector3(cx2, cy - 0.01, cz + 0.06), mat_sun_glow)
 
-	# Clouds
-	_box(body, Vector3(thin, pw, 0.10), Vector3(cx, cy + 0.14, cz - 0.18), mat_cloud_lit)
-	_box(body, Vector3(thin, pw, 0.06), Vector3(cx, cy + 0.18, cz - 0.14), mat_cloud_dark)
-	_box(body, Vector3(thin, pw, 0.08), Vector3(cx, cy + 0.10, cz + 0.20), mat_cloud_lit)
-	_box(body, Vector3(thin, pw, 0.12), Vector3(cx, cy + 0.06, cz + 0.16), mat_cloud_dark)
+	# Clouds — on detail layer to avoid Z-fighting with sky strips
+	_box(body, Vector3(thin, pw, 0.10), Vector3(cx2, cy + 0.14, cz - 0.18), mat_cloud_lit)
+	_box(body, Vector3(thin, pw, 0.06), Vector3(cx2, cy + 0.18, cz - 0.14), mat_cloud_dark)
+	_box(body, Vector3(thin, pw, 0.08), Vector3(cx2, cy + 0.10, cz + 0.20), mat_cloud_lit)
+	_box(body, Vector3(thin, pw, 0.12), Vector3(cx2, cy + 0.06, cz + 0.16), mat_cloud_dark)
 
 	# Ocean (bottom half)
 	_box(body, Vector3(thin, pw, 0.60), Vector3(cx, cy - 0.08, cz), mat_ocean)
@@ -3548,13 +3559,13 @@ func _build_sunset_painting(pos: Vector3, wall: String) -> void:
 	_box(body, Vector3(thin, pw, 0.60), Vector3(cx, cy - 0.24, cz), mat_deep_ocean)
 	_box(body, Vector3(thin, pw, 0.60), Vector3(cx, cy - 0.28, cz), mat_deep_ocean)
 
-	# Sun reflection on water
-	_box(body, Vector3(thin, pw, 0.06), Vector3(cx, cy - 0.08, cz), mat_ocean_shimmer)
-	_box(body, Vector3(thin, pw, pw), Vector3(cx, cy - 0.12, cz - 0.02), mat_ocean_reflect)
-	_box(body, Vector3(thin, pw, pw), Vector3(cx, cy - 0.12, cz + 0.02), mat_ocean_reflect)
-	_box(body, Vector3(thin, pw, 0.06), Vector3(cx, cy - 0.16, cz), mat_ocean_reflect)
-	_box(body, Vector3(thin, pw, pw), Vector3(cx, cy - 0.20, cz - 0.01), mat_ocean_reflect)
-	_box(body, Vector3(thin, pw, pw), Vector3(cx, cy - 0.24, cz + 0.01), mat_ocean_reflect)
+	# Sun reflection on water — on detail layer to avoid Z-fighting with ocean strips
+	_box(body, Vector3(thin, pw, 0.06), Vector3(cx2, cy - 0.08, cz), mat_ocean_shimmer)
+	_box(body, Vector3(thin, pw, pw), Vector3(cx2, cy - 0.12, cz - 0.02), mat_ocean_reflect)
+	_box(body, Vector3(thin, pw, pw), Vector3(cx2, cy - 0.12, cz + 0.02), mat_ocean_reflect)
+	_box(body, Vector3(thin, pw, 0.06), Vector3(cx2, cy - 0.16, cz), mat_ocean_reflect)
+	_box(body, Vector3(thin, pw, pw), Vector3(cx2, cy - 0.20, cz - 0.01), mat_ocean_reflect)
+	_box(body, Vector3(thin, pw, pw), Vector3(cx2, cy - 0.24, cz + 0.01), mat_ocean_reflect)
 
 	# Nameplate
 	var mat_brass: StandardMaterial3D = StandardMaterial3D.new()
