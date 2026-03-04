@@ -6884,6 +6884,71 @@ Major coordinate system overhaul replacing X/Y/Z with compass directions (E/W, N
 
 ---
 
+---
+
+## Session 47 — Home Scene Polish: Placards, Fireplace, NG+ Fixes, Bed Rest
+
+**Date**: 2026-03-04
+
+### Summary
+
+Major home scene improvements: added name placards and interactions to all wall art (maps and paintings), interactive fireplace with fire toggle and crackling sound, fixed bed rest exit, fixed journey inventory persistence across save/load, fixed New Game+ item selection (D-pad nav, confirmation dialog, no default starter gear).
+
+### Changes
+
+#### Map Placards and Interactions (`house_scene.gd`)
+- All 4 dining room terrain maps now have brass nameplates and interactable text overlays
+- Map names: "Hidden Lake", "Deep Canyon", "Ice Cold River", "My Favorite Fishing Spot"
+- Maps converted from plain Node3D to StaticBody3D with collision and interactable scripts
+
+#### Tree Painting Placards (`house_scene.gd`)
+- Oak and cactus bedroom paintings now interactable: "Coastal live oak and desert cactus"
+- `_build_tree_picture()` updated to accept optional `object_type` and `frame_size` params
+- Collision shapes scale with frame size
+
+#### Ponderosa Pine Painting (`house_scene.gd`)
+- Large 1.2x1.2 framed ponderosa pine on east face of center divider wall (dining room)
+- Interactable with "Ponderosa pine" text overlay and brass nameplate
+
+#### Interactive Fireplace (`house_scene.gd`)
+- Player can light or extinguish the fire via interaction
+- When lit: 3-layer procedural flame meshes (base orange, mid bright, tip yellow) with emission
+- Warm OmniLight3D (energy 1.8, range 6.0) replaces ambient glow when fire is active
+- Looping procedural crackling sound: 25 discrete pop/snap events with exponential decay, low-pass filtered
+- Interaction text toggles: "Light Fireplace" / "Put Out Fire"
+
+#### Bed Rest Exit Fix (`house_scene.gd`)
+- **Bug**: Player was stuck in bed with no way to exit
+- **Fix**: Added `_input` handler for ui_cancel/interact to call `_get_out_of_bed()`
+- Added hint text on dim overlay showing button prompt (e.g., "[B] Get out of bed")
+- Fixed duplicate `_input` function parser error by merging into existing handler
+- Added 0.5s cooldown to prevent interact button from immediately bouncing player out
+
+#### Journey Inventory Save/Load Fix (`house_pause_menu.gd`, `save_load.gd`)
+- **Bug**: Saving in house and reloading lost all wilderness inventory
+- **Root cause**: `_collect_house_save_data()` never serialized `journey_inventory`
+- **Fix**: Save now includes `journey_inventory`, load restores it
+
+#### New Game+ Item Selection Fixes (`new_game_plus_ui.gd`, `player_controller.gd`)
+- Added D-pad left/right navigation between columns in item grid
+- Fixed confirmation dialog button highlighting (replaced `find_child` with direct refs, added `>` cursor)
+- Explorer's Journal excluded from selectable items
+- **Bug**: Default bow/arrows/map still given in NG+
+- **Root cause**: `consume_new_game_plus_items()` cleared `is_new_game_plus` before the check
+- **Fix**: Capture NG+ flag before consuming items
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/house/house_scene.gd` | Modified | Map/painting placards, fireplace fire+sound, bed rest fixes |
+| `scripts/house/new_game_plus_ui.gd` | Modified | D-pad left/right nav, confirmation highlighting, journal exclusion |
+| `scripts/house/house_pause_menu.gd` | Modified | Save journey_inventory in house saves |
+| `scripts/core/save_load.gd` | Modified | Restore journey_inventory on house load |
+| `scripts/player/player_controller.gd` | Modified | Skip default items in NG+, fix flag timing |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
