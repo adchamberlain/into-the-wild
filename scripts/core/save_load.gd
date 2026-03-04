@@ -211,6 +211,9 @@ func load_game_slot(slot: int) -> bool:
 				game_state.trail_carved_tree_found = trail.get("carved_tree_found", false)
 				game_state.trail_stone_cairn_found = trail.get("stone_cairn_found", false)
 				game_state.trail_signpost_found = trail.get("signpost_found", false)
+			# Restore journey inventory (items from the wilderness)
+			if save_data.has("journey_inventory"):
+				game_state.journey_inventory = (save_data["journey_inventory"] as Dictionary).duplicate()
 		get_tree().paused = false
 		# Don't emit game_loaded before scene change — the HUD listener would
 		# call get_tree().create_timer() after the scene is freed, causing a crash.

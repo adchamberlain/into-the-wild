@@ -387,7 +387,7 @@ func _collect_house_save_data() -> Dictionary:
 		"journey_completed": true,
 	}
 
-	# Preserve trail progression state from GameState
+	# Preserve trail progression state and journey inventory from GameState
 	var game_state: Node = get_node_or_null("/root/GameState")
 	if game_state:
 		data["trail"] = {
@@ -395,6 +395,8 @@ func _collect_house_save_data() -> Dictionary:
 			"stone_cairn_found": game_state.trail_stone_cairn_found,
 			"signpost_found": game_state.trail_signpost_found,
 		}
+		if game_state.journey_inventory.size() > 0:
+			data["journey_inventory"] = game_state.journey_inventory.duplicate()
 
 	return data
 
