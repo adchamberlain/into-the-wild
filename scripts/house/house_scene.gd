@@ -2877,17 +2877,6 @@ func _build_bedroom_furniture() -> void:
 	_box(ct, Vector3(0.07, 0.01, 0.07),
 		Vector3(ct_x, 0.84, ct_z), mat_console_vase)
 
-	# --- Framed photo on west wall in transition zone ---
-	var fp_node: Node3D = Node3D.new()
-	fp_node.name = "HallwayPhoto"
-	add_child(fp_node)
-	var fp_wall_x: float = WALL_THICKNESS + 0.03
-	var fp_z: float = 10.8
-	# Frame (west wall, facing +X)
-	_box(fp_node, Vector3(0.03, 0.4, 0.35), Vector3(fp_wall_x, 1.5, fp_z), _mat_portrait_frame)
-	# Background
-	_box(fp_node, Vector3(0.02, 0.34, 0.29),
-		Vector3(fp_wall_x + 0.01, 1.5, fp_z), _mat_portrait_bg)
 
 
 # =============================================================================
