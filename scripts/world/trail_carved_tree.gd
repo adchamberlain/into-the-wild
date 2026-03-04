@@ -88,14 +88,14 @@ func _build_visuals() -> void:
 	add_child(carved_face)
 
 	# ===== ARROW CARVING =====
-	# Arrow made of thin dark strips on the carved face, pointing right (east)
+	# Arrow made of thin dark strips on the carved face, pointing left in local space (east in world)
 	# Horizontal shaft
 	var arrow_shaft: MeshInstance3D = MeshInstance3D.new()
 	var shaft_mesh: BoxMesh = BoxMesh.new()
 	shaft_mesh.size = Vector3(0.35, 0.03, 0.01)
 	arrow_shaft.mesh = shaft_mesh
 	arrow_shaft.material_override = _arrow_mat
-	arrow_shaft.position = Vector3(-0.02, 1.45, 0.425)
+	arrow_shaft.position = Vector3(0.02, 1.45, 0.425)
 	add_child(arrow_shaft)
 
 	# Upper arrowhead line (angled strip)
@@ -104,8 +104,8 @@ func _build_visuals() -> void:
 	upper_mesh.size = Vector3(0.15, 0.03, 0.01)
 	arrow_upper.mesh = upper_mesh
 	arrow_upper.material_override = _arrow_mat
-	arrow_upper.position = Vector3(0.13, 1.49, 0.425)
-	arrow_upper.rotation_degrees = Vector3(0, 0, 40)
+	arrow_upper.position = Vector3(-0.13, 1.49, 0.425)
+	arrow_upper.rotation_degrees = Vector3(0, 0, -40)
 	add_child(arrow_upper)
 
 	# Lower arrowhead line (angled strip)
@@ -114,8 +114,8 @@ func _build_visuals() -> void:
 	lower_mesh.size = Vector3(0.15, 0.03, 0.01)
 	arrow_lower.mesh = lower_mesh
 	arrow_lower.material_override = _arrow_mat
-	arrow_lower.position = Vector3(0.13, 1.41, 0.425)
-	arrow_lower.rotation_degrees = Vector3(0, 0, -40)
+	arrow_lower.position = Vector3(-0.13, 1.41, 0.425)
+	arrow_lower.rotation_degrees = Vector3(0, 0, 40)
 	add_child(arrow_lower)
 
 	# ===== CANOPY =====
