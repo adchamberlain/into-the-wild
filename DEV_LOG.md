@@ -6696,13 +6696,13 @@ Fixed cabinet doors not appearing in the kitchen, added pickup SFX to sandwich i
 
 ---
 
-## Session 44 — Compass Widget for HUD
+## Session 44 — Compass Widget, Trail Clue Overhaul, Stone Cairn & Cat Portraits
 
 **Date**: 2026-03-03
 
 ### Summary
 
-Added an always-visible graphical compass widget at the top-center of the HUD. The compass ring rotates based on the player's facing direction — whatever direction you face points "up" (12 o'clock). Helps players follow cardinal direction clues from trail landmarks.
+Added an always-visible graphical compass widget to the HUD. Overhauled all trail landmark clues to include cardinal directions, distances in meters, and target coordinates computed dynamically from seed-based positions. Made the stone cairn dramatically larger as a proper landmark. Fixed cat portraits that were hidden inside a wall.
 
 ### Changes
 
@@ -6713,30 +6713,53 @@ Added an always-visible graphical compass widget at the top-center of the HUD. T
 - N/E/S/W labels at rotated positions — N highlighted in gold, others white
 - Center dot and fixed gold chevron at 12 o'clock (direction indicator, does NOT rotate)
 - Updates via `queue_redraw()` every frame for smooth rotation
-- Player reference passed from HUD, null-checked each frame
+- Fixed E/W swap bug (base angles were backwards)
 
 #### HUD Integration (`scripts/ui/hud.gd`)
 - Added `compass_widget` variable and `_create_compass_widget()` function
-- Widget preloaded and instantiated in `_ready()` after `_create_compass_panel()`
-- Anchored to top-center (0.5, 0.0) at y=15, sits in the gap between StatsPanel and TimePanel
-- Added to `set_overlay_mode()` panels array so it hides during overlays (signs, pause menu, etc.)
+- Anchored to top-center (0.5, 0.0) at y=15, between StatsPanel and TimePanel
+- Hides during overlays via `set_overlay_mode()`
+
+#### Trail Clue Overhaul
+- **Carved tree**: Clue now dynamically computes cardinal direction, distance in meters, and Z-line to the stone cairn. E.g. "Go east about 280 units. Stay on the Z: -280 line."
+- **Stone cairn**: Clue shows direction, distance, and target X/Z coordinates to the signpost. E.g. "Go southeast about 100 units to X: 350, Z: -350."
+- Both landmarks use a `_cardinal_direction()` helper that computes the actual 8-way direction from seed-based positions
+- Body text is now set dynamically in `_show_overlay()` instead of hardcoded in `_build_overlay()`
+
+#### Carved Tree Arrow Direction
+- Tree node now rotates at spawn time (`chunk_manager.gd`) so the carved arrow physically points toward the stone cairn's actual position
+- Uses `atan2(-dz, dx)` to compute the correct Y rotation from tree to cairn
+
+#### Stone Cairn Scale-Up
+- Total height increased from ~1.1 to ~4.2 units (~3.5x scale)
+- Added 7th capstone layer on top
+- Added ring of 8 scattered rubble stones around base for wider footprint
+- Glow light energy tripled (0.4 → 1.2) and range tripled (3.5 → 10.0)
+
+#### Cat Portraits Fix (`scripts/house/house_scene.gd`)
+- **Bug**: Portraits were at X=5.97, inside the center divider wall (wall face at X=5.925)
+- **Fix**: Moved to X=5.91 so frames sit flush against the wall surface
+- Centered both paintings symmetrically over the couch at Z=2.0 (Melvin) and Z=3.0 (Webster)
 
 ### Files Changed
 
 | File | Status | Changes |
 |------|--------|---------|
-| `scripts/ui/compass_widget.gd` | New | Graphical rotating compass widget using `_draw()` |
-| `scripts/ui/hud.gd` | Modified | Added compass_widget variable, creation function, overlay integration |
+| `scripts/ui/compass_widget.gd` | New | Graphical rotating compass widget, E/W fix |
+| `scripts/ui/hud.gd` | Modified | Compass widget variable, creation function, overlay integration |
+| `scripts/world/trail_carved_tree.gd` | Modified | Dynamic clue text with direction/distance/Z-line, `_cardinal_direction()` helper |
+| `scripts/world/trail_stone_cairn.gd` | Modified | 3.5x larger cairn, dynamic clue with direction/distance/target coords, `_cardinal_direction()` helper |
+| `scripts/world/chunk_manager.gd` | Modified | Rotate carved tree at spawn to point arrow toward cairn |
+| `scripts/house/house_scene.gd` | Modified | Cat portrait X position fix, centered over couch |
 
 ---
 
 ## Next Session
 
 ### Planned Tasks
-1. Continue play-testing house scene and NG+ flow
-2. Verify cabinet doors are visible in-game
-3. When testing is done: set `trail_testing_mode = false` in `scripts/core/game_state.gd:24`
-4. When testing is done: revert player spawn in `scenes/main.tscn` from (345, 25, -345) to (0, 5, 0)
+1. Continue play-testing end-of-game trail sequence with new clues and compass
+2. When testing is done: set `trail_testing_mode = false` in `scripts/core/game_state.gd:24`
+3. When testing is done: revert player spawn in `scenes/main.tscn` from (345, 25, -345) to (0, 5, 0)
 
 ### Known Issues
 - Player spawn in main.tscn is at (345, 25, -345) for testing — needs revert to (0, 5, 0)
