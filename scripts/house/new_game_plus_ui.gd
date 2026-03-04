@@ -141,10 +141,12 @@ func open(player: Node) -> void:
 	_on_confirm = false
 	_pulse_time = 0.0
 
-	# Build available items list from journey inventory
+	# Build available items list from journey inventory (exclude non-carryable items)
 	var inventory: Dictionary = _get_journey_inventory()
 	_available_items.clear()
 	for item_type: String in inventory.keys():
+		if item_type == "explorers_journal":
+			continue  # Journal stays in the house
 		_available_items.append(item_type)
 	_available_items.sort()
 

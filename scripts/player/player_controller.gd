@@ -239,8 +239,9 @@ func _ready() -> void:
 	if dev_mode:
 		call_deferred("_dev_populate_inventory")
 
-	# Starting equipment based on config
-	if inventory:
+	# Starting equipment based on config (skip for New Game+ — player chose their items)
+	var is_ng_plus: bool = game_state and "is_new_game_plus" in game_state and game_state.is_new_game_plus
+	if inventory and not is_ng_plus:
 		var config_node: Node = get_tree().get_first_node_in_group("config_menu")
 		var give_bow_map: bool = true
 		if config_node and "start_with_bow_map" in config_node:
