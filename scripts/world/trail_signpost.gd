@@ -29,6 +29,12 @@ var _yes_label: Label
 var _no_label: Label
 var _hint_label: Label
 
+# Labels and containers for dynamic scaling
+var _scaled_labels: Array[Dictionary] = []  # [{label, base_size}]
+var _inner_style: StyleBoxFlat
+var _content_vbox: VBoxContainer
+const REFERENCE_HEIGHT: float = 1080.0
+
 # Colors for selection highlighting (park-sign style)
 const COLOR_SELECTED: Color = Color(0.15, 0.10, 0.02)  # Dark brown, bold
 const COLOR_UNSELECTED: Color = Color(0.50, 0.45, 0.35)  # Faded brown
@@ -190,10 +196,10 @@ func _build_overlay() -> void:
 	outer_style.content_margin_top = 30.0
 	outer_style.content_margin_bottom = 30.0
 	outer_panel.add_theme_stylebox_override("panel", outer_style)
-	outer_panel.anchor_left = 0.15
-	outer_panel.anchor_right = 0.85
-	outer_panel.anchor_top = 0.08
-	outer_panel.anchor_bottom = 0.92
+	outer_panel.anchor_left = 0.1
+	outer_panel.anchor_right = 0.9
+	outer_panel.anchor_top = 0.05
+	outer_panel.anchor_bottom = 0.95
 	outer_panel.offset_left = 0.0
 	outer_panel.offset_right = 0.0
 	outer_panel.offset_top = 0.0
@@ -202,17 +208,17 @@ func _build_overlay() -> void:
 
 	# Inner panel - tan/cream (matching wilderness sign)
 	var inner_panel: PanelContainer = PanelContainer.new()
-	var inner_style: StyleBoxFlat = StyleBoxFlat.new()
-	inner_style.bg_color = Color(0.72, 0.68, 0.55)
-	inner_style.corner_radius_top_left = 8
-	inner_style.corner_radius_top_right = 8
-	inner_style.corner_radius_bottom_left = 8
-	inner_style.corner_radius_bottom_right = 8
-	inner_style.content_margin_left = 40.0
-	inner_style.content_margin_right = 40.0
-	inner_style.content_margin_top = 30.0
-	inner_style.content_margin_bottom = 30.0
-	inner_panel.add_theme_stylebox_override("panel", inner_style)
+	_inner_style = StyleBoxFlat.new()
+	_inner_style.bg_color = Color(0.72, 0.68, 0.55)
+	_inner_style.corner_radius_top_left = 8
+	_inner_style.corner_radius_top_right = 8
+	_inner_style.corner_radius_bottom_left = 8
+	_inner_style.corner_radius_bottom_right = 8
+	_inner_style.content_margin_left = 40.0
+	_inner_style.content_margin_right = 40.0
+	_inner_style.content_margin_top = 30.0
+	_inner_style.content_margin_bottom = 30.0
+	inner_panel.add_theme_stylebox_override("panel", _inner_style)
 	outer_panel.add_child(inner_panel)
 
 	# Dark brown text color (matching wilderness sign)
@@ -220,18 +226,13 @@ func _build_overlay() -> void:
 	var hint_color: Color = Color(0.45, 0.40, 0.30)
 
 	# Content VBox
-	var vbox: VBoxContainer = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 24)
-	inner_panel.add_child(vbox)
+	_content_vbox = VBoxContainer.new()
+	_content_vbox.add_theme_constant_override("separation", 16)
+	inner_panel.add_child(_content_vbox)
+	var vbox: VBoxContainer = _content_vbox
 
 	# Title: "TRAILHEAD"
-	var title: Label = Label.new()
-	title.text = "TRAILHEAD"
-	title.add_theme_font_override("font", HUD_FONT)
-	title.add_theme_font_size_override("font_size", 120)
-	title.add_theme_color_override("font_color", text_color)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(title)
+	_make_label(vbox, "TRAILHEAD", 56, text_color, HORIZONTAL_ALIGNMENT_CENTER)
 
 	# Separator
 	var sep1: HSeparator = HSeparator.new()
@@ -248,23 +249,13 @@ func _build_overlay() -> void:
 	vbox.add_child(spacer_top)
 
 	# Direction line 1: wilderness (backward)
-	var dir1: Label = Label.new()
-	dir1.text = "\u2190  Carlston Wilderness"
-	dir1.add_theme_font_override("font", HUD_FONT)
-	dir1.add_theme_font_size_override("font_size", 64)
-	dir1.add_theme_color_override("font_color", text_color)
-	dir1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(dir1)
+	_make_label(vbox, "\u2190  Carlston Wilderness", 40, text_color, HORIZONTAL_ALIGNMENT_CENTER)
 
 	# Direction line 2: Oakland (forward)
-	var dir2: Label = Label.new()
-	dir2.text = "Longridge Road, Oakland, California \u2014 225 miles  \u2192"
-	dir2.add_theme_font_override("font", HUD_FONT)
-	dir2.add_theme_font_size_override("font_size", 64)
-	dir2.add_theme_color_override("font_color", text_color)
-	dir2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var dir2: Label = _make_label(vbox,
+		"Longridge Road, Oakland, California \u2014 225 miles  \u2192",
+		40, text_color, HORIZONTAL_ALIGNMENT_CENTER)
 	dir2.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	vbox.add_child(dir2)
 
 	# Spacer
 	var spacer_dirs: Control = Control.new()
@@ -285,15 +276,11 @@ func _build_overlay() -> void:
 	spacer_body_top.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(spacer_body_top)
 
-	# Body text — centered, larger
-	var body: Label = Label.new()
-	body.text = "The wood is weathered but the letters are still clear. Someone carved this sign a long time ago. This is the way home."
-	body.add_theme_font_override("font", HUD_FONT)
-	body.add_theme_font_size_override("font_size", 64)
-	body.add_theme_color_override("font_color", text_color)
-	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# Body text
+	var body: Label = _make_label(vbox,
+		"The wood is weathered but the letters are still clear. Someone carved this sign a long time ago. This is the way home.",
+		36, text_color, HORIZONTAL_ALIGNMENT_CENTER)
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	vbox.add_child(body)
 
 	# Expanding spacer below body text
 	var spacer_mid: Control = Control.new()
@@ -301,22 +288,10 @@ func _build_overlay() -> void:
 	vbox.add_child(spacer_mid)
 
 	# Choice: "Yes, head home"
-	_yes_label = Label.new()
-	_yes_label.text = "\u25b6  Yes, head home"
-	_yes_label.add_theme_font_override("font", HUD_FONT)
-	_yes_label.add_theme_font_size_override("font_size", 64)
-	_yes_label.add_theme_color_override("font_color", COLOR_SELECTED)
-	_yes_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(_yes_label)
+	_yes_label = _make_label(vbox, "\u25b6  Yes, head home", 40, COLOR_SELECTED, HORIZONTAL_ALIGNMENT_CENTER)
 
 	# Choice: "Not yet"
-	_no_label = Label.new()
-	_no_label.text = "   Not yet"
-	_no_label.add_theme_font_override("font", HUD_FONT)
-	_no_label.add_theme_font_size_override("font_size", 64)
-	_no_label.add_theme_color_override("font_color", COLOR_UNSELECTED)
-	_no_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(_no_label)
+	_no_label = _make_label(vbox, "   Not yet", 40, COLOR_UNSELECTED, HORIZONTAL_ALIGNMENT_CENTER)
 
 	# Spacer before hint
 	var spacer_bottom: Control = Control.new()
@@ -324,13 +299,38 @@ func _build_overlay() -> void:
 	vbox.add_child(spacer_bottom)
 
 	# Navigation hint (updated dynamically for controller/keyboard)
-	_hint_label = Label.new()
-	_hint_label.add_theme_font_override("font", HUD_FONT)
-	_hint_label.add_theme_font_size_override("font_size", 48)
-	_hint_label.add_theme_color_override("font_color", hint_color)
-	_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(_hint_label)
+	_hint_label = _make_label(vbox, "", 28, hint_color, HORIZONTAL_ALIGNMENT_CENTER)
 	_update_hint_text()
+
+
+func _make_label(parent: Node, text: String, base_size: int, color: Color,
+		alignment: HorizontalAlignment = HORIZONTAL_ALIGNMENT_LEFT) -> Label:
+	var label: Label = Label.new()
+	label.text = text
+	label.add_theme_font_override("font", HUD_FONT)
+	label.add_theme_font_size_override("font_size", base_size)
+	label.add_theme_color_override("font_color", color)
+	label.horizontal_alignment = alignment
+	parent.add_child(label)
+	_scaled_labels.append({"label": label, "base_size": base_size})
+	return label
+
+
+func _scale_fonts() -> void:
+	var viewport_height: float = get_viewport().get_visible_rect().size.y
+	var sf: float = viewport_height / REFERENCE_HEIGHT
+	for entry: Dictionary in _scaled_labels:
+		var label: Label = entry["label"] as Label
+		var base_size: int = entry["base_size"] as int
+		if is_instance_valid(label):
+			label.add_theme_font_size_override("font_size", int(base_size * sf))
+	if _inner_style:
+		_inner_style.content_margin_left = 40.0 * sf
+		_inner_style.content_margin_right = 40.0 * sf
+		_inner_style.content_margin_top = 30.0 * sf
+		_inner_style.content_margin_bottom = 30.0 * sf
+	if _content_vbox:
+		_content_vbox.add_theme_constant_override("separation", int(16 * sf))
 
 
 func _update_selection_visuals() -> void:
@@ -436,6 +436,14 @@ func _show_overlay(player_node: Node) -> void:
 	_selected_index = 0
 	_update_selection_visuals()
 	overlay_layer.visible = true
+
+	# Scale fonts to current viewport size
+	_scale_fonts()
+
+	# Play magical discovery sound
+	var sfx: Node = get_node_or_null("/root/SFXManager")
+	if sfx and sfx.has_method("play_sfx"):
+		sfx.play_sfx("coca_leaf")
 
 	# Mark as found in global state for trail progression
 	var game_state: Node = get_node_or_null("/root/GameState")

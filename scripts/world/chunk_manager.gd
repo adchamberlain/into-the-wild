@@ -267,6 +267,20 @@ func _ready() -> void:
 		player = get_parent().get_node_or_null("Player")
 
 	if player:
+		# Debug: teleport player to a trail landmark for testing
+		var game_state: Node = get_node_or_null("/root/GameState")
+		if game_state and game_state.get("debug_spawn_at_landmark") != null:
+			var landmark: String = game_state.debug_spawn_at_landmark
+			var target_pos: Vector2 = Vector2.ZERO
+			if landmark == "carved_tree" and carved_tree_position != Vector2.ZERO:
+				target_pos = carved_tree_position
+			elif landmark == "stone_cairn" and stone_cairn_position != Vector2.ZERO:
+				target_pos = stone_cairn_position
+			elif landmark == "signpost" and trail_signpost_position != Vector2.ZERO:
+				target_pos = trail_signpost_position
+			if target_pos != Vector2.ZERO:
+				player.global_position = Vector3(target_pos.x, 25.0, target_pos.y)
+				print("[ChunkManager] Debug: spawned player at '%s' (%.0f, %.0f)" % [landmark, target_pos.x, target_pos.y])
 		# Initial chunk loading around player
 		_update_chunks_around_player()
 	else:

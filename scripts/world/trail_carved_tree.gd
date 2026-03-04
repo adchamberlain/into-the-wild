@@ -21,6 +21,12 @@ var overlay_layer: CanvasLayer
 var is_overlay_visible: bool = false
 var close_hint_label: Label
 
+# Labels and containers for dynamic scaling
+var _scaled_labels: Array[Dictionary] = []  # [{label, base_size}]
+var _inner_style: StyleBoxFlat
+var _content_vbox: VBoxContainer
+const REFERENCE_HEIGHT: float = 1080.0
+
 
 func _ready() -> void:
 	add_to_group("interactable")
@@ -163,63 +169,82 @@ func _build_overlay() -> void:
 	overlay_layer.visible = false
 	add_child(overlay_layer)
 
-	# Semi-transparent dark background
+	# Semi-transparent dark green background (matching wilderness sign)
 	var bg: ColorRect = ColorRect.new()
-	bg.color = Color(0.05, 0.05, 0.08, 0.75)
+	bg.color = Color(0.05, 0.10, 0.04, 0.65)
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	overlay_layer.add_child(bg)
 
-	# Centered panel
-	var panel: PanelContainer = PanelContainer.new()
-	var panel_style: StyleBoxFlat = StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.1, 0.1, 0.12, 0.8)
-	panel_style.corner_radius_top_left = 10
-	panel_style.corner_radius_top_right = 10
-	panel_style.corner_radius_bottom_left = 10
-	panel_style.corner_radius_bottom_right = 10
-	panel_style.content_margin_left = 20.0
-	panel_style.content_margin_right = 20.0
-	panel_style.content_margin_top = 20.0
-	panel_style.content_margin_bottom = 20.0
-	panel.add_theme_stylebox_override("panel", panel_style)
-	# Center the panel on screen
-	panel.anchor_left = 0.2
-	panel.anchor_right = 0.8
-	panel.anchor_top = 0.15
-	panel.anchor_bottom = 0.85
-	panel.offset_left = 0.0
-	panel.offset_right = 0.0
-	panel.offset_top = 0.0
-	panel.offset_bottom = 0.0
-	overlay_layer.add_child(panel)
+	# Outer panel - forest green (matching wilderness sign)
+	var outer_panel: PanelContainer = PanelContainer.new()
+	var outer_style: StyleBoxFlat = StyleBoxFlat.new()
+	outer_style.bg_color = Color(0.15, 0.22, 0.12)
+	outer_style.corner_radius_top_left = 12
+	outer_style.corner_radius_top_right = 12
+	outer_style.corner_radius_bottom_left = 12
+	outer_style.corner_radius_bottom_right = 12
+	outer_style.content_margin_left = 40.0
+	outer_style.content_margin_right = 40.0
+	outer_style.content_margin_top = 30.0
+	outer_style.content_margin_bottom = 30.0
+	outer_panel.add_theme_stylebox_override("panel", outer_style)
+	outer_panel.anchor_left = 0.1
+	outer_panel.anchor_right = 0.9
+	outer_panel.anchor_top = 0.05
+	outer_panel.anchor_bottom = 0.95
+	outer_panel.offset_left = 0.0
+	outer_panel.offset_right = 0.0
+	outer_panel.offset_top = 0.0
+	outer_panel.offset_bottom = 0.0
+	overlay_layer.add_child(outer_panel)
+
+	# Inner panel - tan/cream (matching wilderness sign)
+	var inner_panel: PanelContainer = PanelContainer.new()
+	_inner_style = StyleBoxFlat.new()
+	_inner_style.bg_color = Color(0.72, 0.68, 0.55)
+	_inner_style.corner_radius_top_left = 8
+	_inner_style.corner_radius_top_right = 8
+	_inner_style.corner_radius_bottom_left = 8
+	_inner_style.corner_radius_bottom_right = 8
+	_inner_style.content_margin_left = 40.0
+	_inner_style.content_margin_right = 40.0
+	_inner_style.content_margin_top = 30.0
+	_inner_style.content_margin_bottom = 30.0
+	inner_panel.add_theme_stylebox_override("panel", _inner_style)
+	outer_panel.add_child(inner_panel)
+
+	# Dark brown text color (matching wilderness sign)
+	var text_color: Color = Color(0.30, 0.18, 0.05)
+	var hint_color: Color = Color(0.45, 0.40, 0.30)
 
 	# Content VBox
-	var vbox: VBoxContainer = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 16)
-	panel.add_child(vbox)
+	_content_vbox = VBoxContainer.new()
+	_content_vbox.add_theme_constant_override("separation", 16)
+	inner_panel.add_child(_content_vbox)
+	var vbox: VBoxContainer = _content_vbox
 
 	# Title
-	var title: Label = Label.new()
-	title.text = "The Carved Tree"
-	title.add_theme_font_override("font", HUD_FONT)
-	title.add_theme_font_size_override("font_size", 48)
-	title.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(title)
+	_make_label(vbox, "THE CARVED TREE", 56, text_color, HORIZONTAL_ALIGNMENT_CENTER)
 
-	# Spacer between title and body
+	# Separator
+	var sep: HSeparator = HSeparator.new()
+	var sep_style: StyleBoxFlat = StyleBoxFlat.new()
+	sep_style.bg_color = Color(0.30, 0.18, 0.05, 0.5)
+	sep_style.content_margin_top = 2.0
+	sep_style.content_margin_bottom = 2.0
+	sep.add_theme_stylebox_override("separator", sep_style)
+	vbox.add_child(sep)
+
+	# Spacer
 	var spacer_top: Control = Control.new()
 	spacer_top.custom_minimum_size = Vector2(0, 12)
 	vbox.add_child(spacer_top)
 
 	# Body text
-	var body: Label = Label.new()
-	body.text = "Carved deep into the bark, the letters M.W.C. are still sharp after all these years. Below the initials, an arrow points east.\n\nScratched in smaller letters beneath:\n\n'Follow the ridge east to the stone cairn.'\n\n— M.W. Carlston's trail marker"
-	body.add_theme_font_override("font", HUD_FONT)
-	body.add_theme_font_size_override("font_size", 32)
-	body.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9, 1))
+	var body: Label = _make_label(vbox,
+		"Carved deep into the bark, the letters M.W.C. are still sharp after all these years. Below the initials, an arrow points east.\n\nScratched in smaller letters beneath:\n\n'Follow the ridge east to the stone cairn.'\n\n\u2014 M.W. Carlston's trail marker",
+		36, text_color)
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	vbox.add_child(body)
 
 	# Expanding spacer to push hint to bottom
 	var spacer_bottom: Control = Control.new()
@@ -227,13 +252,37 @@ func _build_overlay() -> void:
 	vbox.add_child(spacer_bottom)
 
 	# Close hint (text updated dynamically in _show_overlay)
-	close_hint_label = Label.new()
-	close_hint_label.text = "[E] Close"
-	close_hint_label.add_theme_font_override("font", HUD_FONT)
-	close_hint_label.add_theme_font_size_override("font_size", 28)
-	close_hint_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6, 1))
-	close_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(close_hint_label)
+	close_hint_label = _make_label(vbox, "", 28, hint_color, HORIZONTAL_ALIGNMENT_CENTER)
+
+
+func _make_label(parent: Node, text: String, base_size: int, color: Color,
+		alignment: HorizontalAlignment = HORIZONTAL_ALIGNMENT_LEFT) -> Label:
+	var label: Label = Label.new()
+	label.text = text
+	label.add_theme_font_override("font", HUD_FONT)
+	label.add_theme_font_size_override("font_size", base_size)
+	label.add_theme_color_override("font_color", color)
+	label.horizontal_alignment = alignment
+	parent.add_child(label)
+	_scaled_labels.append({"label": label, "base_size": base_size})
+	return label
+
+
+func _scale_fonts() -> void:
+	var viewport_height: float = get_viewport().get_visible_rect().size.y
+	var sf: float = viewport_height / REFERENCE_HEIGHT
+	for entry: Dictionary in _scaled_labels:
+		var label: Label = entry["label"] as Label
+		var base_size: int = entry["base_size"] as int
+		if is_instance_valid(label):
+			label.add_theme_font_size_override("font_size", int(base_size * sf))
+	if _inner_style:
+		_inner_style.content_margin_left = 40.0 * sf
+		_inner_style.content_margin_right = 40.0 * sf
+		_inner_style.content_margin_top = 30.0 * sf
+		_inner_style.content_margin_bottom = 30.0 * sf
+	if _content_vbox:
+		_content_vbox.add_theme_constant_override("separation", int(16 * sf))
 
 
 ## Get the text to show in interaction prompt.
@@ -270,6 +319,14 @@ func _show_overlay(player_node: Node) -> void:
 	is_overlay_visible = true
 	has_been_read = true
 	overlay_layer.visible = true
+
+	# Scale fonts to current viewport size
+	_scale_fonts()
+
+	# Play magical discovery sound
+	var sfx: Node = get_node_or_null("/root/SFXManager")
+	if sfx and sfx.has_method("play_sfx"):
+		sfx.play_sfx("coca_leaf")
 
 	# Mark as found in global state for trail progression
 	var game_state: Node = get_node_or_null("/root/GameState")
