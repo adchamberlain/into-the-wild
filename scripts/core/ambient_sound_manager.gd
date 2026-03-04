@@ -47,7 +47,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	if not sounds_loaded or not chunk_manager:
+	if not sounds_loaded or not is_instance_valid(chunk_manager):
 		return
 
 	# Throttle updates

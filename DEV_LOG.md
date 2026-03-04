@@ -6655,12 +6655,54 @@ Bug fixes, UI polish, and new house details.
 
 ---
 
+## Session 43 — House Polish & Save/Load Crash Fix
+
+**Date**: 2026-03-03
+
+### Summary
+
+Fixed cabinet doors not appearing in the kitchen, added pickup SFX to sandwich interactions, and resolved a crash when loading a house save from the wilderness pause menu.
+
+### Changes
+
+#### Kitchen Cabinet Doors Fix
+- **Root cause**: Cabinet door geometry was positioned on the wrong side (wall-facing instead of kitchen-facing) AND offsets pushed doors into the cabinet body instead of protruding outward
+- Fixed `face_z` from `counter_z + 0.30` to `counter_z - 0.30` (lower) and `counter_z + 0.175` to `counter_z - 0.175` (upper) — puts doors on the south/kitchen-facing side
+- Flipped door panel, molding trim, and handle Z offsets from `+` to `-` so geometry protrudes into the kitchen rather than disappearing into the cabinet body
+- All 6 lower doors and 2 upper doors now visible with colonial raised-panel molding and handles
+
+#### Sandwich Pickup Sound
+- Added `SFXManager.play_sfx("pickup")` to both "sandwich" and "dining_sandwich" interactions in the interactable script factory, matching the tea kettle pattern
+
+#### Save/Load Crash Fix
+- **Bug**: Loading a house save slot from the wilderness pause menu crashed with "Cannot call method 'get_first_node_in_group' on a null value"
+- **Root cause**: During scene teardown (`change_scene_to_file`), trail landmark nodes' `_exit_tree()` called `_hide_overlay()` which used `get_tree()` — but `get_tree()` returns null for nodes being freed during scene change
+- **Fix 1**: Added `if not is_inside_tree(): return` guard in `_hide_overlay()` for all 4 trail scripts (trail_carved_tree, wilderness_sign, trail_stone_cairn, trail_signpost)
+- **Fix 2**: Added `if not is_inside_tree(): return` after `await` in pause_menu's load handler — prevents calling `resume_game()` on a freed PauseMenu after scene change
+- **Fix 3**: Added `is_inside_tree()` guards to house_scene's `show_text_overlay()` and `_hide_text_overlay()`
+- **Fix 4**: Changed `not chunk_manager` to `not is_instance_valid(chunk_manager)` in AmbientSoundManager — catches stale freed reference after scene change
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/house/house_scene.gd` | Modified | Cabinet door Z-positioning fix (lower + upper), sandwich pickup SFX, text overlay guards |
+| `scripts/ui/pause_menu.gd` | Modified | Guard after await in load handler for scene change safety |
+| `scripts/world/trail_carved_tree.gd` | Modified | `is_inside_tree()` guard in `_hide_overlay()` |
+| `scripts/world/wilderness_sign.gd` | Modified | `is_inside_tree()` guard in `_hide_overlay()` |
+| `scripts/world/trail_stone_cairn.gd` | Modified | `is_inside_tree()` guard in `_hide_overlay()` |
+| `scripts/world/trail_signpost.gd` | Modified | `is_inside_tree()` guard in `_hide_overlay()` |
+| `scripts/core/ambient_sound_manager.gd` | Modified | `is_instance_valid()` check for stale chunk_manager |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
 1. Continue play-testing house scene and NG+ flow
-2. When testing is done: set `trail_testing_mode = false` in `scripts/core/game_state.gd:24`
-3. When testing is done: revert player spawn in `scenes/main.tscn` from (345, 25, -345) to (0, 5, 0)
+2. Verify cabinet doors are visible in-game
+3. When testing is done: set `trail_testing_mode = false` in `scripts/core/game_state.gd:24`
+4. When testing is done: revert player spawn in `scenes/main.tscn` from (345, 25, -345) to (0, 5, 0)
 
 ### Known Issues
 - Player spawn in main.tscn is at (345, 25, -345) for testing — needs revert to (0, 5, 0)

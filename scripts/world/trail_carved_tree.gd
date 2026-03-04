@@ -299,6 +299,9 @@ func _hide_overlay() -> void:
 	if not is_overlay_visible:
 		return
 	is_overlay_visible = false
+	# During scene teardown get_tree() may be null — just clear flag and bail
+	if not is_inside_tree():
+		return
 	overlay_layer.visible = false
 
 	# Unfreeze player

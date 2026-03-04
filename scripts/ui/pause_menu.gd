@@ -544,6 +544,9 @@ func _on_slot_button_pressed(slot: int) -> void:
 			# Close menu and load - resume AFTER load so game stays paused if load fails
 			_hide_slot_panel()
 			var success: bool = await save_load.load_game_slot(slot)
+			# Scene may have changed (e.g. loading house save) — bail if freed
+			if not is_inside_tree():
+				return
 			if success:
 				resume_game()
 			else:

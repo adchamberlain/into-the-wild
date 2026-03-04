@@ -1477,9 +1477,9 @@ func _build_kitchen_furniture() -> void:
 		Vector3(counter_x, 0.425, counter_z), _mat_cabinet_face)
 	# Cabinet doors — 6 doors with colonial raised-panel molding
 	# 6 × 0.38m + 5 × 0.03 gaps + 2 × 0.035 margins = 2.50m (fills 2.5m counter exactly)
-	var face_z: float = counter_z + 0.30       # Front face of cabinet body
-	var cab_door_z: float = face_z + 0.010     # Door panel center (2cm proud of face)
-	var cab_trim_z: float = face_z + 0.030     # Molding trim center (just ahead of door panel)
+	var face_z: float = counter_z - 0.30       # Front face of cabinet body (kitchen-facing / south side)
+	var cab_door_z: float = face_z - 0.010     # Door panel center (protruding south into kitchen)
+	var cab_trim_z: float = face_z - 0.030     # Molding trim center (further south, ahead of door panel)
 	var cab_dw: float = 0.38                   # Door width
 	var cab_dh: float = 0.72                   # Door height
 	var cab_dy: float = 0.425                  # Door center Y
@@ -1502,7 +1502,7 @@ func _build_kitchen_furniture() -> void:
 			Vector3(dx, cab_dy - cab_dh / 2.0 - cab_tw / 2.0, cab_trim_z), _mat_molding)
 		# Door handle (small vertical bar, upper half of door)
 		_box(self, Vector3(0.018, 0.060, 0.018),
-			Vector3(dx, cab_dy + 0.15, cab_trim_z + cab_td / 2.0 + 0.010), _mat_handle)
+			Vector3(dx, cab_dy + 0.15, cab_trim_z - cab_td / 2.0 - 0.010), _mat_handle)
 	# Counter + sink collision (single box covering the full counter run)
 	var counter_body: StaticBody3D = StaticBody3D.new()
 	counter_body.name = "CounterCollision"
@@ -1554,9 +1554,9 @@ func _build_kitchen_furniture() -> void:
 		Vector3(1.6, 1.85, counter_z), _mat_cabinet_face)
 	# Two upper cabinet doors — same colonial raised-panel style as lower
 	# 2 × 0.35m + 1 × 0.03 gap + 2 × 0.035 margins = 0.80m (fills 0.8m upper cabinet)
-	var uc_face_z: float = counter_z + 0.175  # Front face of upper cabinet body
-	var uc_door_z: float = uc_face_z + 0.010  # Door panel center
-	var uc_trim_z: float = uc_face_z + 0.030  # Molding trim center
+	var uc_face_z: float = counter_z - 0.175  # Front face of upper cabinet body (kitchen-facing / south side)
+	var uc_door_z: float = uc_face_z - 0.010  # Door panel center (protruding south into kitchen)
+	var uc_trim_z: float = uc_face_z - 0.030  # Molding trim center (further south)
 	var uc_dw: float = 0.35   # Door width
 	var uc_dh: float = 0.50   # Door height
 	var uc_dy: float = 1.85   # Door center Y
@@ -1578,7 +1578,7 @@ func _build_kitchen_furniture() -> void:
 			Vector3(uc_x, uc_dy - uc_dh / 2.0 - uc_tw / 2.0, uc_trim_z), _mat_molding)
 		# Door handle (small vertical bar, lower half of door for reach)
 		_box(self, Vector3(0.016, 0.050, 0.016),
-			Vector3(uc_x, uc_dy - 0.12, uc_trim_z + uc_td / 2.0 + 0.010), _mat_handle)
+			Vector3(uc_x, uc_dy - 0.12, uc_trim_z - uc_td / 2.0 - 0.010), _mat_handle)
 	# Range hood above stove
 	_box(self, Vector3(0.65, 0.06, 0.45),
 		Vector3(4.0, 1.35, counter_z), _mat_stove)
@@ -3290,6 +3290,8 @@ func _build_text_overlay() -> void:
 
 
 func show_text_overlay(text: String, duration: float = 2.0) -> void:
+	if not is_inside_tree():
+		return
 	_text_overlay_label.text = text
 	_text_overlay_canvas.visible = true
 	_text_overlay_timer = duration
@@ -3302,6 +3304,8 @@ func show_text_overlay(text: String, duration: float = 2.0) -> void:
 
 
 func _hide_text_overlay() -> void:
+	if not is_inside_tree():
+		return
 	_text_overlay_canvas.visible = false
 	_text_overlay_active = false
 
@@ -3634,9 +3638,15 @@ func interact(player: Node) -> bool:
 		"sandwich":
 			if house.has_method("show_text_overlay"):
 				house.show_text_overlay("A good sandwich.", 2.0)
+			var sfx2: Node = player.get_node_or_null("/root/SFXManager")
+			if sfx2 and sfx2.has_method("play_sfx"):
+				sfx2.play_sfx("pickup")
 		"dining_sandwich":
 			if house.has_method("show_text_overlay"):
 				house.show_text_overlay("Pastrami on rye -- my favorite.", 3.0)
+			var sfx3: Node = player.get_node_or_null("/root/SFXManager")
+			if sfx3 and sfx3.has_method("play_sfx"):
+				sfx3.play_sfx("pickup")
 		"bookshelves":
 			if house.has_method("show_text_overlay"):
 				house.show_text_overlay("Your old field guides.", 2.0)
