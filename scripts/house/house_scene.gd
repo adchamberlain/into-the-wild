@@ -2975,7 +2975,7 @@ func _build_tree_pictures() -> void:
 	# West wall interior face (between windows at Z=12.5 and Z=15.5)
 	# Wall gaps: Z=10-11.9, Z=13.1-14.9, Z=16.1-17
 	var wx: float = WALL_THICKNESS + 0.03
-	_build_tree_picture(Vector3(wx, 1.6, 14.0), "west", "oak", mats)
+	_build_tree_picture(Vector3(wx, 1.6, 14.0), "west", "oak", mats, "tree_painting_oak")
 
 	# North wall interior face (above headboard, between windows at X=1.5 and X=4.5)
 	var nz: float = BEDROOM_Z_END - WALL_THICKNESS - 0.03
@@ -2984,7 +2984,7 @@ func _build_tree_pictures() -> void:
 	# East wall interior face
 	var ex: float = LIVING_ROOM_WIDTH - WALL_THICKNESS - 0.03
 	# Cactus on west wall between windows
-	_build_tree_picture(Vector3(wx, 1.6, 13.5), "west", "cactus", mats)
+	_build_tree_picture(Vector3(wx, 1.6, 13.5), "west", "cactus", mats, "tree_painting_cactus")
 	# (Palm painting removed from east wall near armoire)
 	# Sunset painting on east wall above dresser, between windows
 	_build_sunset_painting(Vector3(ex, 1.6, 14.0), "east")
@@ -2997,11 +2997,29 @@ func _make_mat(color: Color) -> StandardMaterial3D:
 	return m
 
 
-func _build_tree_picture(pos: Vector3, wall: String, tree_type: String, mats: Dictionary) -> void:
+func _build_tree_picture(pos: Vector3, wall: String, tree_type: String, mats: Dictionary, object_type: String = "") -> void:
 	## Build a framed tree painting at pos on the given wall.
-	var p: Node3D = Node3D.new()
-	p.name = tree_type.capitalize().replace(" ", "") + "Picture"
-	add_child(p)
+	var p: Node3D
+	if object_type != "":
+		var body: StaticBody3D = StaticBody3D.new()
+		body.name = tree_type.capitalize().replace(" ", "") + "Picture"
+		body.set_script(_create_interactable_script("View Painting", object_type))
+		add_child(body)
+		p = body
+		var col: CollisionShape3D = CollisionShape3D.new()
+		var shape: BoxShape3D = BoxShape3D.new()
+		var is_ew_c: bool = (wall == "east" or wall == "west")
+		if is_ew_c:
+			shape.size = Vector3(0.1, 0.7, 0.7)
+		else:
+			shape.size = Vector3(0.7, 0.7, 0.1)
+		col.shape = shape
+		col.position = pos
+		body.add_child(col)
+	else:
+		p = Node3D.new()
+		p.name = tree_type.capitalize().replace(" ", "") + "Picture"
+		add_child(p)
 
 	var is_ew: bool = (wall == "east" or wall == "west")
 	var dir: float = 1.0 if (wall == "west" or wall == "south") else -1.0
@@ -3817,6 +3835,12 @@ func interact(player: Node) -> bool:
 		"cat_portrait_webster":
 			if house.has_method("show_text_overlay"):
 				house.show_text_overlay("Webster", 2.0)
+		"tree_painting_oak":
+			if house.has_method("show_text_overlay"):
+				house.show_text_overlay("Coastal live oak and desert cactus", 3.0)
+		"tree_painting_cactus":
+			if house.has_method("show_text_overlay"):
+				house.show_text_overlay("Coastal live oak and desert cactus", 3.0)
 		"map_hidden_lake":
 			if house.has_method("show_text_overlay"):
 				house.show_text_overlay("Hidden Lake -- deep water, cold as ice.", 3.0)
