@@ -207,12 +207,10 @@ func _refresh_item_list() -> void:
 		focused_index = clampi(focused_index, 0, item_panels.size() - 1)
 		_update_focus_highlight()
 
-	# Limit scroll container height when there are many items
+	# Set scroll container height based on item count
 	var max_visible_rows: int = 8
-	if item_panels.size() > max_visible_rows:
-		scroll_container.custom_minimum_size.y = max_visible_rows * 48.0
-	else:
-		scroll_container.custom_minimum_size.y = 0  # Auto-size for fewer items
+	var row_count: int = mini(item_panels.size(), max_visible_rows)
+	scroll_container.custom_minimum_size.y = row_count * 48.0 if row_count > 0 else 60
 
 
 func _add_item_row(item_type: String) -> void:
