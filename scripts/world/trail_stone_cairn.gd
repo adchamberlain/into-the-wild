@@ -376,7 +376,7 @@ func _show_overlay(player_node: Node) -> void:
 	overlay_layer.visible = true
 	_player_ref = player_node
 
-	# Compute direction, distance, and Z-line to the signpost for the clue text
+	# Compute direction and target coordinates for the signpost clue text
 	if _body_label:
 		var dir_name: String = "southeast"
 		var nav_text: String = "not far southeast"
@@ -386,7 +386,7 @@ func _show_overlay(player_node: Node) -> void:
 			var my_pos: Vector2 = Vector2(global_position.x, global_position.z)
 			var dist: int = int(my_pos.distance_to(sign_pos))
 			dir_name = _cardinal_direction(my_pos, sign_pos)
-			nav_text = "Go %s about %d units. Stay on the Z: %d line" % [dir_name, dist, int(sign_pos.y)]
+			nav_text = "Go %s about %d units to X: %d, Z: %d" % [dir_name, dist, int(sign_pos.x), int(sign_pos.y)]
 		_body_label.text = "A carefully balanced stack of stones, placed here with intention. Each rock chosen and fitted by someone who understood the wilderness.\n\nScratched into the base rock:\n\n'The old signpost lies %s. %s.'\n\n\u2014 M.W.C." % [dir_name, nav_text]
 
 	# Scale fonts to current viewport size
