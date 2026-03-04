@@ -3511,6 +3511,23 @@ func _show_bed_overlay() -> void:
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_bed_dim_overlay.add_child(label)
 
+	# Hint to get out of bed
+	var hint: Label = Label.new()
+	var input_mgr: Node = get_node_or_null("/root/InputManager")
+	var cancel_prompt: String = "Esc"
+	if input_mgr and input_mgr.has_method("get_prompt"):
+		cancel_prompt = input_mgr.get_prompt("ui_cancel")
+	hint.text = "[%s] Get out of bed" % cancel_prompt
+	hint.add_theme_font_override("font", preload("res://resources/hud_font.tres"))
+	hint.add_theme_font_size_override("font_size", 28)
+	hint.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6, 0.6))
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	hint.set_anchors_preset(Control.PRESET_FULL_RECT)
+	hint.offset_bottom = -40.0
+	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bed_dim_overlay.add_child(hint)
+
 	add_child(_bed_dim_overlay)
 
 
@@ -3550,6 +3567,14 @@ func _get_out_of_bed() -> void:
 
 func is_player_in_bed() -> bool:
 	return _is_in_bed
+
+
+func _input(event: InputEvent) -> void:
+	if not _is_in_bed:
+		return
+	if event.is_action_pressed("ui_cancel") or event.is_action_pressed("interact"):
+		_get_out_of_bed()
+		get_viewport().set_input_as_handled()
 
 
 # =============================================================================
