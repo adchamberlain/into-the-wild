@@ -279,7 +279,7 @@ func _build_overlay() -> void:
 
 	# Body text
 	var body: Label = _make_label(vbox,
-		"A carefully balanced stack of stones, placed here with intention. Each rock chosen and fitted by someone who understood the wilderness.\n\nScratched into the base rock:\n\n'Head southeast from here. The old signpost stands where the mountains meet the deep valley.'\n\n\u2014 M.W.C.",
+		"A carefully balanced stack of stones, placed here with intention. Each rock chosen and fitted by someone who understood the wilderness.\n\nScratched into the base rock:\n\n'Head southeast from here. Not far now — the old signpost stands where the mountains meet the deep valley.'\n\n\u2014 M.W.C.",
 		36, text_color)
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 

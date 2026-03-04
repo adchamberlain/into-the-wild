@@ -242,7 +242,7 @@ func _build_overlay() -> void:
 
 	# Body text
 	var body: Label = _make_label(vbox,
-		"Carved deep into the bark, the letters M.W.C. are still sharp after all these years. Below the initials, an arrow points east.\n\nScratched in smaller letters beneath:\n\n'Follow the ridge east to the stone cairn.'\n\n\u2014 M.W. Carlston's trail marker",
+		"Carved deep into the bark, the letters M.W.C. are still sharp after all these years. Below the initials, an arrow points east.\n\nScratched in smaller letters beneath:\n\n'Follow the ridge east to the stone cairn. A long walk — keep going past the rocky hills.'\n\n\u2014 M.W. Carlston's trail marker",
 		36, text_color)
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
