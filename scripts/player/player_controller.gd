@@ -226,8 +226,9 @@ func _ready() -> void:
 		inventory.enforce_limits = true
 		inventory.item_add_refused.connect(_on_item_add_refused)
 
-	# Check for New Game+ starting items
+	# Check for New Game+ starting items (capture flag before consume clears it)
 	var game_state: Node = get_node_or_null("/root/GameState")
+	var is_ng_plus: bool = game_state and "is_new_game_plus" in game_state and game_state.is_new_game_plus
 	if game_state and game_state.has_method("consume_new_game_plus_items"):
 		var ng_plus_items: Array[String] = game_state.consume_new_game_plus_items()
 		if ng_plus_items.size() > 0:
@@ -240,7 +241,6 @@ func _ready() -> void:
 		call_deferred("_dev_populate_inventory")
 
 	# Starting equipment based on config (skip for New Game+ — player chose their items)
-	var is_ng_plus: bool = game_state and "is_new_game_plus" in game_state and game_state.is_new_game_plus
 	if inventory and not is_ng_plus:
 		var config_node: Node = get_tree().get_first_node_in_group("config_menu")
 		var give_bow_map: bool = true
