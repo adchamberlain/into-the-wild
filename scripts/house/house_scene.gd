@@ -2013,22 +2013,42 @@ func _build_wall_maps() -> void:
 
 	# Smaller map on south section of east wall
 	var wall_x: float = HOUSE_WIDTH - WALL_THICKNESS - 0.03
-	_build_terrain_map(Vector3(wall_x, 1.6, 1.5), "east", 0.7, 0.5, 17)
+	_build_terrain_map(Vector3(wall_x, 1.6, 1.5), "east", 0.7, 0.5, 17, "map_hidden_lake", "Hidden Lake")
 
 	# Two maps on north wall of dining room, centered (large + small)
 	var north_z: float = HOUSE_DEPTH - WALL_THICKNESS - 0.03
-	_build_terrain_map(Vector3(8.0, 1.6, north_z), "north", 1.2, 0.9, 42)
-	_build_terrain_map(Vector3(10.0, 1.6, north_z), "north", 1.2, 0.9, 89)
+	_build_terrain_map(Vector3(8.0, 1.6, north_z), "north", 1.2, 0.9, 42, "map_deep_canyon", "Deep Canyon")
+	_build_terrain_map(Vector3(10.0, 1.6, north_z), "north", 1.2, 0.9, 89, "map_ice_river", "Ice Cold River")
 
 	# Map on south wall of dining room (left of window)
-	_build_terrain_map(Vector3(7.0, 1.6, WALL_THICKNESS + 0.03), "south", 0.9, 0.7, 55)
+	_build_terrain_map(Vector3(7.0, 1.6, WALL_THICKNESS + 0.03), "south", 0.9, 0.7, 55, "map_fishing_spot", "My Favorite Fishing Spot")
 
 
-func _build_terrain_map(pos: Vector3, wall: String, map_w: float, map_h: float, seed_val: int) -> void:
+func _build_terrain_map(pos: Vector3, wall: String, map_w: float, map_h: float, seed_val: int, object_type: String = "", map_title: String = "") -> void:
 	## Builds a framed terrain map on a wall. Uses colored grid to mimic game terrain.
-	var map_node: Node3D = Node3D.new()
-	map_node.name = "TerrainMap"
-	add_child(map_node)
+	## If object_type is provided, the map becomes interactable with a nameplate.
+	var map_node: Node3D
+	if object_type != "":
+		var body: StaticBody3D = StaticBody3D.new()
+		body.name = "TerrainMap_" + object_type
+		body.set_script(_create_interactable_script("View Map", object_type))
+		add_child(body)
+		map_node = body
+		# Collision shape covering the map
+		var col: CollisionShape3D = CollisionShape3D.new()
+		var shape: BoxShape3D = BoxShape3D.new()
+		var is_ew_col: bool = (wall == "east" or wall == "west")
+		if is_ew_col:
+			shape.size = Vector3(0.1, map_h, map_w)
+		else:
+			shape.size = Vector3(map_w, map_h, 0.1)
+		col.shape = shape
+		col.position = pos
+		body.add_child(col)
+	else:
+		map_node = Node3D.new()
+		map_node.name = "TerrainMap"
+		add_child(map_node)
 
 	var is_ew: bool = (wall == "east" or wall == "west")
 	var frame_t: float = 0.04  # Frame border thickness
@@ -2196,6 +2216,25 @@ func _build_terrain_map(pos: Vector3, wall: String, map_w: float, map_h: float, 
 				var cell_off_z: float = -0.01 if wall == "north" else 0.01
 				_box(map_node, Vector3(cell_w * 0.9, cell_h * 0.9, 0.012),
 					Vector3(pos.x + cx, pos.y + cy, pos.z + cell_off_z), mat)
+
+	# Nameplate below map (brass plate on dark wood backing)
+	if object_type != "":
+		var mat_brass: StandardMaterial3D = StandardMaterial3D.new()
+		mat_brass.albedo_color = Color(0.7, 0.6, 0.35)
+		mat_brass.roughness = 0.4
+		mat_brass.metallic = 0.5
+		var np_y: float = pos.y - map_h / 2.0 - 0.08
+		var dir: float = -1.0 if (wall == "east" or wall == "north") else 1.0
+		if is_ew:
+			_box(map_node, Vector3(0.025, 0.06, 0.25),
+				Vector3(pos.x + dir * 0.015, np_y, pos.z), _mat_furniture_wood)
+			_box(map_node, Vector3(0.028, 0.04, 0.2),
+				Vector3(pos.x + dir * 0.02, np_y, pos.z), mat_brass)
+		else:
+			_box(map_node, Vector3(0.25, 0.06, 0.025),
+				Vector3(pos.x, np_y, pos.z + dir * 0.015), _mat_furniture_wood)
+			_box(map_node, Vector3(0.2, 0.04, 0.028),
+				Vector3(pos.x, np_y, pos.z + dir * 0.02), mat_brass)
 
 
 # =============================================================================
@@ -3778,6 +3817,18 @@ func interact(player: Node) -> bool:
 		"cat_portrait_webster":
 			if house.has_method("show_text_overlay"):
 				house.show_text_overlay("Webster", 2.0)
+		"map_hidden_lake":
+			if house.has_method("show_text_overlay"):
+				house.show_text_overlay("Hidden Lake -- deep water, cold as ice.", 3.0)
+		"map_deep_canyon":
+			if house.has_method("show_text_overlay"):
+				house.show_text_overlay("Deep Canyon -- watch your step.", 3.0)
+		"map_ice_river":
+			if house.has_method("show_text_overlay"):
+				house.show_text_overlay("Ice Cold River -- best trout in the range.", 3.0)
+		"map_fishing_spot":
+			if house.has_method("show_text_overlay"):
+				house.show_text_overlay("My favorite fishing spot.", 3.0)
 		"bed_rest":
 			if house.has_method("rest_in_bed"):
 				house.rest_in_bed(player)
