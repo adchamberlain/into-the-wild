@@ -75,95 +75,128 @@ static func _ensure_shared_materials() -> void:
 
 
 func _build_visuals() -> void:
-	# ===== STACKED STONES =====
-	# Each stone is slightly smaller and offset with slight rotation for a natural look.
-	# Y positions stack upward from ground level.
+	# ===== SCATTERED BASE RUBBLE =====
+	# Ring of loose stones around the base for a wider footprint and natural look.
+	var rubble_data: Array = [
+		{"pos": Vector3(1.6, 0.15, 0.8), "size": Vector3(0.7, 0.3, 0.55), "rot": Vector3(5, 20, 8), "mat": _stone_mat_3},
+		{"pos": Vector3(-1.4, 0.12, 1.0), "size": Vector3(0.6, 0.25, 0.5), "rot": Vector3(-3, -35, 6), "mat": _stone_mat_4},
+		{"pos": Vector3(0.9, 0.10, -1.5), "size": Vector3(0.5, 0.2, 0.6), "rot": Vector3(4, 50, -5), "mat": _stone_mat_2},
+		{"pos": Vector3(-1.0, 0.13, -1.2), "size": Vector3(0.55, 0.26, 0.45), "rot": Vector3(-6, 15, 10), "mat": _stone_mat_5},
+		{"pos": Vector3(1.8, 0.08, -0.5), "size": Vector3(0.4, 0.16, 0.5), "rot": Vector3(8, -25, -4), "mat": _stone_mat_1},
+		{"pos": Vector3(-1.7, 0.10, -0.2), "size": Vector3(0.5, 0.2, 0.4), "rot": Vector3(-4, 40, 7), "mat": _stone_mat_3},
+		{"pos": Vector3(0.3, 0.09, 1.8), "size": Vector3(0.45, 0.18, 0.55), "rot": Vector3(3, -60, 5), "mat": _stone_mat_6},
+		{"pos": Vector3(-0.5, 0.11, 1.5), "size": Vector3(0.6, 0.22, 0.4), "rot": Vector3(-5, 70, -3), "mat": _stone_mat_2},
+	]
+	for rd: Dictionary in rubble_data:
+		var rubble: MeshInstance3D = MeshInstance3D.new()
+		var rmesh: BoxMesh = BoxMesh.new()
+		rmesh.size = rd["size"] as Vector3
+		rubble.mesh = rmesh
+		rubble.material_override = rd["mat"] as StandardMaterial3D
+		rubble.position = rd["pos"] as Vector3
+		rubble.rotation_degrees = rd["rot"] as Vector3
+		add_child(rubble)
+
+	# ===== MAIN STACKED STONES =====
+	# Tall pyramid of stones — each layer smaller and slightly offset/rotated.
+	# Total height ~4.2 units (visible from far away).
 
 	var y_cursor: float = 0.0
 
-	# Stone 1 (base): largest
+	# Stone 1 (base): massive foundation slab
 	var stone1: MeshInstance3D = MeshInstance3D.new()
 	var mesh1: BoxMesh = BoxMesh.new()
-	mesh1.size = Vector3(0.6, 0.25, 0.6)
+	mesh1.size = Vector3(2.2, 0.7, 2.2)
 	stone1.mesh = mesh1
 	stone1.material_override = _stone_mat_1
-	stone1.position = Vector3(0.0, y_cursor + 0.125, 0.0)
-	stone1.rotation_degrees = Vector3(0.0, 8.0, 2.0)
+	stone1.position = Vector3(0.0, y_cursor + 0.35, 0.0)
+	stone1.rotation_degrees = Vector3(0.0, 8.0, 1.5)
 	add_child(stone1)
-	y_cursor += 0.25
+	y_cursor += 0.7
 
-	# Stone 2
+	# Stone 2: wide base layer
 	var stone2: MeshInstance3D = MeshInstance3D.new()
 	var mesh2: BoxMesh = BoxMesh.new()
-	mesh2.size = Vector3(0.5, 0.22, 0.5)
+	mesh2.size = Vector3(1.8, 0.65, 1.7)
 	stone2.mesh = mesh2
 	stone2.material_override = _stone_mat_2
-	stone2.position = Vector3(0.02, y_cursor + 0.11, -0.01)
-	stone2.rotation_degrees = Vector3(-3.0, -12.0, 1.5)
+	stone2.position = Vector3(0.06, y_cursor + 0.325, -0.04)
+	stone2.rotation_degrees = Vector3(-2.0, -12.0, 1.0)
 	add_child(stone2)
-	y_cursor += 0.22
+	y_cursor += 0.65
 
 	# Stone 3
 	var stone3: MeshInstance3D = MeshInstance3D.new()
 	var mesh3: BoxMesh = BoxMesh.new()
-	mesh3.size = Vector3(0.4, 0.20, 0.45)
+	mesh3.size = Vector3(1.5, 0.6, 1.5)
 	stone3.mesh = mesh3
 	stone3.material_override = _stone_mat_3
-	stone3.position = Vector3(-0.03, y_cursor + 0.10, 0.02)
-	stone3.rotation_degrees = Vector3(2.0, 15.0, -3.0)
+	stone3.position = Vector3(-0.08, y_cursor + 0.3, 0.06)
+	stone3.rotation_degrees = Vector3(1.5, 15.0, -2.0)
 	add_child(stone3)
-	y_cursor += 0.20
+	y_cursor += 0.6
 
 	# Stone 4
 	var stone4: MeshInstance3D = MeshInstance3D.new()
 	var mesh4: BoxMesh = BoxMesh.new()
-	mesh4.size = Vector3(0.35, 0.18, 0.35)
+	mesh4.size = Vector3(1.2, 0.55, 1.3)
 	stone4.mesh = mesh4
 	stone4.material_override = _stone_mat_4
-	stone4.position = Vector3(0.01, y_cursor + 0.09, -0.02)
-	stone4.rotation_degrees = Vector3(-1.5, -7.0, 5.0)
+	stone4.position = Vector3(0.05, y_cursor + 0.275, -0.05)
+	stone4.rotation_degrees = Vector3(-1.0, -7.0, 3.0)
 	add_child(stone4)
-	y_cursor += 0.18
+	y_cursor += 0.55
 
 	# Stone 5
 	var stone5: MeshInstance3D = MeshInstance3D.new()
 	var mesh5: BoxMesh = BoxMesh.new()
-	mesh5.size = Vector3(0.25, 0.15, 0.25)
+	mesh5.size = Vector3(0.9, 0.5, 1.0)
 	stone5.mesh = mesh5
 	stone5.material_override = _stone_mat_5
-	stone5.position = Vector3(-0.02, y_cursor + 0.075, 0.01)
-	stone5.rotation_degrees = Vector3(3.0, 10.0, -2.0)
+	stone5.position = Vector3(-0.04, y_cursor + 0.25, 0.03)
+	stone5.rotation_degrees = Vector3(2.0, 10.0, -1.5)
 	add_child(stone5)
-	y_cursor += 0.15
+	y_cursor += 0.5
 
-	# Stone 6 (top): smallest
+	# Stone 6 (cap): smaller but still substantial
 	var stone6: MeshInstance3D = MeshInstance3D.new()
 	var mesh6: BoxMesh = BoxMesh.new()
-	mesh6.size = Vector3(0.15, 0.12, 0.15)
+	mesh6.size = Vector3(0.65, 0.4, 0.7)
 	stone6.mesh = mesh6
 	stone6.material_override = _stone_mat_6
-	stone6.position = Vector3(0.01, y_cursor + 0.06, -0.01)
-	stone6.rotation_degrees = Vector3(-2.0, 14.0, 4.0)
+	stone6.position = Vector3(0.03, y_cursor + 0.2, -0.02)
+	stone6.rotation_degrees = Vector3(-1.5, 14.0, 2.5)
 	add_child(stone6)
-	y_cursor += 0.12
+	y_cursor += 0.4
+
+	# Stone 7 (top): pointed capstone
+	var stone7: MeshInstance3D = MeshInstance3D.new()
+	var mesh7: BoxMesh = BoxMesh.new()
+	mesh7.size = Vector3(0.35, 0.45, 0.35)
+	stone7.mesh = mesh7
+	stone7.material_override = _stone_mat_2
+	stone7.position = Vector3(0.0, y_cursor + 0.225, 0.0)
+	stone7.rotation_degrees = Vector3(-2.0, 22.0, 4.0)
+	add_child(stone7)
+	y_cursor += 0.45
 
 	# ===== LIGHT =====
-	# Faint warm glow to help player spot the cairn
+	# Strong warm glow visible from a distance
 	var light: OmniLight3D = OmniLight3D.new()
 	light.name = "CairnGlow"
 	light.light_color = Color(0.95, 0.85, 0.6)
-	light.light_energy = 0.4
-	light.omni_range = 3.5
+	light.light_energy = 1.2
+	light.omni_range = 10.0
 	light.shadow_enabled = false
-	light.position = Vector3(0.0, y_cursor * 0.5, 0.0)
+	light.position = Vector3(0.0, y_cursor * 0.6, 0.0)
 	add_child(light)
 
 	# ===== COLLISION =====
 	var collision: CollisionShape3D = CollisionShape3D.new()
 	var shape: BoxShape3D = BoxShape3D.new()
-	shape.size = Vector3(0.7, y_cursor + 0.1, 0.7)
+	shape.size = Vector3(2.5, y_cursor + 0.2, 2.5)
 	collision.shape = shape
-	collision.position = Vector3(0.0, (y_cursor + 0.1) * 0.5, 0.0)
+	collision.position = Vector3(0.0, (y_cursor + 0.2) * 0.5, 0.0)
 	add_child(collision)
 
 
