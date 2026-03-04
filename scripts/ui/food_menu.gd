@@ -60,7 +60,7 @@ func _build_ui() -> void:
 	panel_style.content_margin_bottom = 16
 	main_panel.add_theme_stylebox_override("panel", panel_style)
 
-	main_panel.custom_minimum_size = Vector2(500, 0)
+	main_panel.custom_minimum_size = Vector2(700, 0)
 
 	# Vertical layout inside panel
 	var vbox: VBoxContainer = VBoxContainer.new()
@@ -210,7 +210,7 @@ func _refresh_item_list() -> void:
 	# Set scroll container height — show up to 8 rows, scrollable beyond that
 	var max_visible_rows: int = 8
 	var row_count: int = mini(item_panels.size(), max_visible_rows)
-	scroll_container.custom_minimum_size.y = row_count * 52.0 if row_count > 0 else 60
+	scroll_container.custom_minimum_size.y = row_count * 56.0 if row_count > 0 else 60
 
 
 func _add_item_row(item_type: String) -> void:
