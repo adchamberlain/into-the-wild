@@ -20,6 +20,7 @@ var smelt_progress: float = 0.0
 var has_fuel: bool = false
 var player_inventory: Node = null
 var pending_output: String = ""  # Product awaiting player pickup
+var pending_output_count: int = 0  # How many products awaiting pickup
 
 # Visual references (found in _ready from placement_system children)
 var fire_mesh: MeshInstance3D
@@ -85,15 +86,16 @@ func interact(player: Node) -> bool:
 		player_inventory = player.get_inventory()
 
 	# Deliver pending output first
-	if pending_output != "" and player_inventory:
-		if player_inventory.has_method("can_add_item") and not player_inventory.can_add_item(pending_output, 1):
+	if pending_output != "" and pending_output_count > 0 and player_inventory:
+		if player_inventory.has_method("can_add_item") and not player_inventory.can_add_item(pending_output, pending_output_count):
 			var hud: Node = get_tree().get_first_node_in_group("hud")
 			if hud and hud.has_method("show_notification"):
 				hud.show_notification("Can't carry more %s. Store items first." % pending_output.capitalize().replace("_", " "), Color(1.0, 0.5, 0.5))
 			return true
-		player_inventory.add_item(pending_output, 1)
-		print("[SmithingStation] Collected: +1 %s" % pending_output)
+		player_inventory.add_item(pending_output, pending_output_count)
+		print("[SmithingStation] Collected: +%d %s" % [pending_output_count, pending_output])
 		pending_output = ""
+		pending_output_count = 0
 		interaction_text = "Use Smithing Station"
 		_update_forge_visuals()
 		return true
@@ -145,12 +147,26 @@ func _start_smelting(ore_type: String) -> void:
 	print("[SmithingStation] Started smelting %s (using %d wood)" % [ore_type, FUEL_REQUIRED])
 
 
+func _try_auto_smelt() -> bool:
+	## Try to automatically start smelting the next ore if player has materials.
+	if not player_inventory:
+		return false
+	if not player_inventory.has_item("wood", FUEL_REQUIRED):
+		return false
+	for ore_type: String in SMELT_RECIPES:
+		if player_inventory.has_item(ore_type):
+			_start_smelting(ore_type)
+			return true
+	return false
+
+
 func _complete_smelting() -> void:
 	var output_type: String = SMELT_RECIPES.get(current_ore, "metal_ingot")
 
-	# Store for player pickup (matching smoker/drying rack pattern)
+	# Accumulate for player pickup (supports multiple smelts before collection)
 	pending_output = output_type
-	print("[SmithingStation] Smelting complete! %s ready for pickup" % output_type)
+	pending_output_count += 1
+	print("[SmithingStation] Smelting complete! %d %s ready for pickup" % [pending_output_count, output_type])
 
 	smelting_complete.emit(output_type, 1)
 
@@ -159,13 +175,18 @@ func _complete_smelting() -> void:
 	has_fuel = false
 	current_ore = ""
 	smelt_progress = 0.0
-	interaction_text = "Collect Ingot"
-	_update_forge_visuals()
 
 	# Notify player via HUD
 	var hud: Node = get_tree().get_first_node_in_group("hud")
 	if hud and hud.has_method("show_notification"):
-		hud.show_notification("Smelting complete! Collect your ingot.", Color(1, 0.85, 0.3, 1))
+		hud.show_notification("Smelting complete! %d ingot%s ready." % [pending_output_count, "s" if pending_output_count > 1 else ""], Color(1, 0.85, 0.3, 1))
+
+	# Auto-start next smelt if player has ore and fuel
+	if player_inventory and _try_auto_smelt():
+		return
+
+	interaction_text = "Collect %d Ingot%s" % [pending_output_count, "s" if pending_output_count > 1 else ""]
+	_update_forge_visuals()
 
 
 ## Update visuals based on current state (idle, smelting, or output ready).
@@ -235,6 +256,7 @@ func get_save_data() -> Dictionary:
 	data["smelt_progress"] = smelt_progress
 	data["has_fuel"] = has_fuel
 	data["pending_output"] = pending_output
+	data["pending_output_count"] = pending_output_count
 	return data
 
 
@@ -245,16 +267,17 @@ func load_save_data(data: Dictionary) -> void:
 	smelt_progress = data.get("smelt_progress", 0.0)
 	has_fuel = data.get("has_fuel", false)
 	pending_output = data.get("pending_output", "")
-	if pending_output != "":
-		interaction_text = "Collect Ingot"
+	pending_output_count = data.get("pending_output_count", 1 if pending_output != "" else 0)
+	if pending_output != "" and pending_output_count > 0:
+		interaction_text = "Collect %d Ingot%s" % [pending_output_count, "s" if pending_output_count > 1 else ""]
 	elif is_smelting:
 		interaction_text = "Check Smelting Progress"
 	call_deferred("_update_forge_visuals")
 
 
 func get_interaction_text() -> String:
-	if pending_output != "":
-		return "Collect Ingot"
+	if pending_output != "" and pending_output_count > 0:
+		return "Collect %d Ingot%s" % [pending_output_count, "s" if pending_output_count > 1 else ""]
 	if is_smelting:
 		var percent: int = int((smelt_progress / SMELT_TIME) * 100)
 		return "Smelting %s (%d%%)" % [current_ore.capitalize().replace("_", " "), percent]
