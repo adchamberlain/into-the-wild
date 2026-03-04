@@ -6696,6 +6696,40 @@ Fixed cabinet doors not appearing in the kitchen, added pickup SFX to sandwich i
 
 ---
 
+## Session 44 — Compass Widget for HUD
+
+**Date**: 2026-03-03
+
+### Summary
+
+Added an always-visible graphical compass widget at the top-center of the HUD. The compass ring rotates based on the player's facing direction — whatever direction you face points "up" (12 o'clock). Helps players follow cardinal direction clues from trail landmarks.
+
+### Changes
+
+#### Compass Widget (`scripts/ui/compass_widget.gd`)
+- New self-contained `Control` using `_draw()` for custom rendering (same pattern as `bark_map_ui.gd`)
+- 45px radius circle with dark semi-transparent background disc
+- Outer ring with 8 tick marks (4 cardinal longer, 4 intercardinal shorter), all rotating with player yaw
+- N/E/S/W labels at rotated positions — N highlighted in gold, others white
+- Center dot and fixed gold chevron at 12 o'clock (direction indicator, does NOT rotate)
+- Updates via `queue_redraw()` every frame for smooth rotation
+- Player reference passed from HUD, null-checked each frame
+
+#### HUD Integration (`scripts/ui/hud.gd`)
+- Added `compass_widget` variable and `_create_compass_widget()` function
+- Widget preloaded and instantiated in `_ready()` after `_create_compass_panel()`
+- Anchored to top-center (0.5, 0.0) at y=15, sits in the gap between StatsPanel and TimePanel
+- Added to `set_overlay_mode()` panels array so it hides during overlays (signs, pause menu, etc.)
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/ui/compass_widget.gd` | New | Graphical rotating compass widget using `_draw()` |
+| `scripts/ui/hud.gd` | Modified | Added compass_widget variable, creation function, overlay integration |
+
+---
+
 ## Next Session
 
 ### Planned Tasks

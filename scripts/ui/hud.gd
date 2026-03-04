@@ -79,6 +79,9 @@ var compass_panel: PanelContainer
 var compass_label: Label
 var camera: Camera3D
 
+# Compass widget (graphical rotating compass)
+var compass_widget: Control
+
 # Map marker POI cycling (unlocked by Explorer's Journal)
 var _poi_entries: Array[Dictionary] = []  # [{label: String, position: Vector2}]
 var _poi_index: int = 0
@@ -271,6 +274,9 @@ func _ready() -> void:
 
 	# Create compass panel programmatically
 	_create_compass_panel()
+
+	# Create graphical compass widget (always visible)
+	_create_compass_widget()
 
 	# Create desert heat indicator (hidden by default)
 	_create_heat_indicator()
@@ -1136,6 +1142,24 @@ func _create_compass_panel() -> void:
 	compass_panel.visible = false
 
 
+func _create_compass_widget() -> void:
+	var CompassWidgetScript: GDScript = preload("res://scripts/ui/compass_widget.gd")
+	compass_widget = CompassWidgetScript.new()
+	compass_widget.name = "CompassWidget"
+	# Pass player reference
+	compass_widget.player = player
+	# Anchor top-center
+	compass_widget.anchor_left = 0.5
+	compass_widget.anchor_right = 0.5
+	compass_widget.anchor_top = 0.0
+	compass_widget.anchor_bottom = 0.0
+	compass_widget.offset_left = -55.0
+	compass_widget.offset_right = 55.0
+	compass_widget.offset_top = 15.0
+	compass_widget.offset_bottom = 125.0
+	add_child(compass_widget)
+
+
 ## Update coca leaf buff timer display. Called via group by player_controller.
 func update_coca_leaf_timer(remaining: float) -> void:
 	if remaining <= 0.0:
@@ -1388,6 +1412,8 @@ func set_overlay_mode(enabled: bool) -> void:
 	var compass: Control = get_node_or_null("CompassPanel")
 	if compass:
 		panels.append(compass)
+	if compass_widget:
+		panels.append(compass_widget)
 	for panel: Control in panels:
 		if panel:
 			# Respect inventory toggle when exiting overlay
