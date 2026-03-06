@@ -200,6 +200,7 @@ func interact(player: Node) -> bool:
 	# Check capacity before gathering
 	var inventory: Inventory = _get_player_inventory(player)
 	if inventory and not inventory.can_add_item(resource_type, resource_amount):
+		_show_full_notification(inventory, resource_type)
 		return false
 
 	# Crystals are hand-gatherable - no tool check needed

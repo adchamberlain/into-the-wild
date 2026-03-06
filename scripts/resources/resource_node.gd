@@ -132,6 +132,7 @@ func interact(player: Node) -> bool:
 	# Check if player can carry the resource before gathering
 	var inventory: Inventory = _get_player_inventory(player)
 	if inventory and not inventory.can_add_item(resource_type, resource_amount):
+		_show_full_notification(inventory, resource_type)
 		return false
 
 	# Play gather animation
@@ -200,6 +201,7 @@ func _complete_harvest(player: Node) -> void:
 	# Check if player can carry the primary resource before depleting
 	var inventory: Inventory = _get_player_inventory(player)
 	if inventory and not inventory.can_add_item(resource_type, resource_amount):
+		_show_full_notification(inventory, resource_type)
 		# Reset chop progress so player can try again after making space
 		chop_progress = 0
 		chop_progress_float = 0.0
@@ -270,6 +272,15 @@ func _get_player_equipment(player: Node) -> Equipment:
 	if player.has_method("get_equipment"):
 		return player.get_equipment()
 	return null
+
+
+func _show_full_notification(inventory: Inventory, res_type: String) -> void:
+	var display_name: String = res_type.capitalize().replace("_", " ")
+	var current: int = inventory.get_item_count(res_type)
+	var limit: int = inventory.get_stack_limit(res_type)
+	var hud: Node = get_tree().get_first_node_in_group("hud")
+	if hud and hud.has_method("show_notification"):
+		hud.show_notification("Can't carry more %s (%d/%d)" % [display_name, current, limit], Color(1.0, 0.5, 0.5))
 
 
 func _play_chop_animation() -> void:

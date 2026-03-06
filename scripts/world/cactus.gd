@@ -256,6 +256,11 @@ func interact(player: Node) -> bool:
 
 	# Check capacity before harvesting
 	if inventory and inventory.has_method("can_add_item") and not inventory.can_add_item("cactus_fruit", 1):
+		var hud_node: Node = get_tree().get_first_node_in_group("hud")
+		if hud_node and hud_node.has_method("show_notification"):
+			var current: int = inventory.get_item_count("cactus_fruit") if inventory.has_method("get_item_count") else 0
+			var limit: int = inventory.get_stack_limit("cactus_fruit") if inventory.has_method("get_stack_limit") else 0
+			hud_node.show_notification("Can't carry more Cactus Fruit (%d/%d)" % [current, limit], Color(1.0, 0.5, 0.5))
 		return false
 
 	if inventory and inventory.has_method("add_item"):
