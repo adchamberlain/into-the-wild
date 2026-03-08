@@ -14,6 +14,7 @@ mono_crash.*.json
 
 # IDE / Editor specific
 .idea/
+.claude/
 *.swp
 *.swo
 *~
@@ -37,6 +38,9 @@ Thumbs.db
 
 # Distribution / notarization
 /dist/
+IntoTheWild.app
+IntoTheWild.exe
+IntoTheWild.pck
 scripts/notarize.py
 DEV_LOG.md
 CLAUDE.md
