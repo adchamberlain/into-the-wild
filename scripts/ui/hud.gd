@@ -462,7 +462,7 @@ func _update_control_hints() -> void:
 		equip_hint_label.text = "Share-Equip  Pad-Craft  D←-Inventory  Menu-Pause"
 	else:
 		# Keyboard prompts
-		equip_hint_label.text = "I-Equip C-Craft V-Inventory Tab-Config K-Save L-Load"
+		equip_hint_label.text = "I-Equip C-Craft V-Inventory Tab-Menu"
 
 
 ## Get button prompt for an action based on current input device.
