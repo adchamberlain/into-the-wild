@@ -1,5 +1,7 @@
 # Into the Wild
 
+> **Found a bug or have feedback?** [Report it here](https://github.com/adchamberlain/into-the-wild/issues/new/choose)
+
 A solo camping adventure game built in Godot 4.5. Explore an infinite procedural wilderness, gather resources, craft tools, build your campsite, and uncover hidden secrets deep in the desert.
 
 **Visual Style:** Blocky, retro aesthetic reminiscent of early 3D games like Minecraft. All visuals are procedurally generated using layered BoxMesh primitives — no imported 3D models.
