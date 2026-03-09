@@ -7021,13 +7021,55 @@ Fixed misleading HUD save/load hints, established a fully automated release pipe
 
 ---
 
+## Session 50 — Promotional Website for intothewild.dev (2026-03-08)
+
+### Summary
+Built a promotional website for the game at intothewild.dev. Static HTML/CSS site with dark forest theme, screenshot showcase, feature grid, download links, and responsive layout. Registered domain on Cloudflare, ready for drag-and-drop deployment.
+
+### Changes
+
+#### Website (website/)
+- Created `index.html`, `style.css`, `script.js` — same architecture as storyanalytics.ai
+- Dark forest color palette: deep green/black background (`#0a0f0d`), green accent (`#6BCB77`), amber CTA buttons (`#e8a940`)
+- Sections: Nav → Hero ("Survive. Build. Explore.") → Download (macOS + Windows) → 3 value prop cards → 4 screenshot showcase blocks → 9-card feature grid → 4-image gallery → CTA → Footer
+- Download links point to GitHub Release v1.0 assets
+- Footer links to GitHub, Play Guide, and bug reporting
+
+#### Screenshots
+- Took 10 in-game screenshots, selected 8 best for the site
+- Programmatically cropped all screenshots from ultrawide (2560x1080) to game viewport only (1520x1022), removing IDE sidebar and Finder
+- Placed across hero, 4 showcase blocks, and 4-image gallery grid
+- Skipped bunnies.png and tortoise.png (too small/dark for web)
+
+#### Domain & Hosting
+- Registered intothewild.dev on Cloudflare
+- Website files are gitignored (`/website/` in .gitignore) — not in the public repo
+- Deploy via Cloudflare Pages drag-and-drop of the `website/` folder
+
+#### README Update
+- Added website link (intothewild.dev) to top of README alongside bug report link
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `website/index.html` | Created | Full landing page (gitignored) |
+| `website/style.css` | Created | Dark forest theme (gitignored) |
+| `website/script.js` | Created | Smooth scroll (gitignored) |
+| `website/images/*.png` | Created | 8 cropped game screenshots (gitignored) |
+| `.gitignore` | Modified | Added `/website/` |
+| `README.md` | Modified | Added website link |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Continue play-testing end-of-game trail sequence with new clues and compass
-2. When testing is done: set `trail_testing_mode = false` in `scripts/core/game_state.gd:24`
-3. When testing is done: revert player spawn in `scenes/main.tscn` from (345, 25, -345) to (0, 5, 0)
-4. Review and fix any bugs filed via GitHub Issues
+1. Deploy website to Cloudflare Pages at intothewild.dev
+2. Continue play-testing end-of-game trail sequence with new clues and compass
+3. When testing is done: set `trail_testing_mode = false` in `scripts/core/game_state.gd:24`
+4. When testing is done: revert player spawn in `scenes/main.tscn` from (345, 25, -345) to (0, 5, 0)
+5. Review and fix any bugs filed via GitHub Issues
 
 ### Known Issues
 - Player spawn in main.tscn is at (345, 25, -345) for testing — needs revert to (0, 5, 0)
