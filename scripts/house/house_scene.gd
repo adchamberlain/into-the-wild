@@ -75,6 +75,8 @@ var _text_overlay_active: bool = false
 
 
 func _ready() -> void:
+	# Clean up any lingering wilderness HUD elements (e.g., map) added to root
+	_cleanup_wilderness_hud()
 	# Set clear color to black immediately to prevent blue flash during scene transition
 	RenderingServer.set_default_clear_color(Color(0, 0, 0, 1))
 	_init_materials()
@@ -101,6 +103,13 @@ func _ready() -> void:
 	_build_pause_menu()
 	_build_text_overlay()
 	_start_fade_in()
+
+
+func _cleanup_wilderness_hud() -> void:
+	## Remove wilderness HUD elements that were added to root and survive scene changes.
+	## The MapUI CanvasLayer is added to tree root (not the scene) so it persists.
+	for node: Node in get_tree().get_nodes_in_group("map_ui"):
+		node.queue_free()
 
 
 func _process(delta: float) -> void:
