@@ -38,6 +38,7 @@ Thumbs.db
 
 # Distribution / notarization
 /dist/
+/website/
 IntoTheWild.app
 IntoTheWild.exe
 IntoTheWild.pck
