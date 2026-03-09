@@ -7062,6 +7062,19 @@ Built a promotional website for the game at intothewild.dev. Static HTML/CSS sit
 
 ---
 
+## Session 51 — Fix blank map HUD in house scene (2026-03-09)
+
+### Summary
+Fixed a bug where the map HUD persisted as a blank panel in the house scene after completing the game. The MapUI CanvasLayer is added to `get_tree().root` (not the scene tree), so it survived `change_scene_to_file()` calls. Added cleanup in `house_scene._ready()` to free any lingering map_ui nodes.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/house/house_scene.gd` | Modified | Added `_cleanup_wilderness_hud()` to remove lingering MapUI on house scene load |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
