@@ -144,6 +144,9 @@ func open_journal(is_first_read: bool) -> void:
 	_build_ui()
 	SFXManager.play_sfx("menu_open")
 
+	if OS.get_name() == "iOS":
+		_apply_mobile_menu_style()
+
 	# Pause the game tree
 	get_tree().paused = true
 
@@ -847,6 +850,33 @@ func _input(event: InputEvent) -> void:
 	# Consume all other input events while journal is open
 	if vp:
 		vp.set_input_as_handled()
+
+
+func _apply_mobile_menu_style() -> void:
+	# Add close button to the leather cover panel (built in _build_ui())
+	if not is_instance_valid(panel):
+		return
+	var close_btn: Button = Button.new()
+	close_btn.text = "✕"
+	close_btn.add_theme_font_size_override("font_size", 32)
+	close_btn.custom_minimum_size = Vector2(48, 48)
+	close_btn.anchors_preset = Control.PRESET_TOP_RIGHT
+	close_btn.position = Vector2(-60, 12)
+	close_btn.pressed.connect(_close_journal)
+	panel.add_child(close_btn)
+
+	# Enforce minimum button sizes for touch
+	_enforce_min_button_size(panel, 44)
+
+
+static func _enforce_min_button_size(node: Node, min_size: int) -> void:
+	for child: Node in node.get_children():
+		if child is Button:
+			if child.custom_minimum_size.x < min_size:
+				child.custom_minimum_size.x = min_size
+			if child.custom_minimum_size.y < min_size:
+				child.custom_minimum_size.y = min_size
+		_enforce_min_button_size(child, min_size)
 
 
 func _close_journal() -> void:

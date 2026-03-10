@@ -44,6 +44,9 @@ func _ready() -> void:
 
 	_build_ui()
 
+	if OS.get_name() == "iOS":
+		_apply_mobile_menu_style()
+
 
 func _build_ui() -> void:
 	# Main panel container (centered on screen)
@@ -377,21 +380,22 @@ func _input(event: InputEvent) -> void:
 		_handle_input()
 		return
 
-	# Navigation
-	if event.is_action_pressed("ui_down"):
-		_navigate_items(1)
-		_handle_input()
-		return
-	if event.is_action_pressed("ui_up"):
-		_navigate_items(-1)
-		_handle_input()
-		return
+	# Navigation (not used on iOS — touch handles selection)
+	if not OS.get_name() == "iOS":
+		if event.is_action_pressed("ui_down"):
+			_navigate_items(1)
+			_handle_input()
+			return
+		if event.is_action_pressed("ui_up"):
+			_navigate_items(-1)
+			_handle_input()
+			return
 
-	# Consume with accept (Circle / Enter)
-	if event.is_action_pressed("ui_accept"):
-		_consume_focused_item()
-		_handle_input()
-		return
+		# Consume with accept (Circle / Enter)
+		if event.is_action_pressed("ui_accept"):
+			_consume_focused_item()
+			_handle_input()
+			return
 
 	# Also consume jump to prevent it from leaking through
 	if event.is_action_pressed("jump"):
@@ -419,3 +423,28 @@ func _update_button_prompts() -> void:
 func _on_input_device_changed(_is_controller: bool) -> void:
 	if is_open:
 		_update_button_prompts()
+
+
+func _apply_mobile_menu_style() -> void:
+	# Add close button to the main_panel (built in code)
+	var close_btn: Button = Button.new()
+	close_btn.text = "✕"
+	close_btn.add_theme_font_size_override("font_size", 32)
+	close_btn.custom_minimum_size = Vector2(48, 48)
+	close_btn.anchors_preset = Control.PRESET_TOP_RIGHT
+	close_btn.position = Vector2(-60, 12)
+	close_btn.pressed.connect(close_menu)
+	main_panel.add_child(close_btn)
+
+	# Enforce minimum button sizes for touch
+	_enforce_min_button_size(main_panel, 44)
+
+
+static func _enforce_min_button_size(node: Node, min_size: int) -> void:
+	for child: Node in node.get_children():
+		if child is Button:
+			if child.custom_minimum_size.x < min_size:
+				child.custom_minimum_size.x = min_size
+			if child.custom_minimum_size.y < min_size:
+				child.custom_minimum_size.y = min_size
+		_enforce_min_button_size(child, min_size)

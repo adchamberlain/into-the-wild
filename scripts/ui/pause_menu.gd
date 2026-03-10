@@ -74,6 +74,9 @@ func _ready() -> void:
 	_create_slot_panel()
 	_create_confirm_panel()
 
+	if OS.get_name() == "iOS":
+		_apply_mobile_menu_style()
+
 
 func _enter_tree() -> void:
 	# Re-resolve references when re-added to the tree (e.g., after cave transitions
@@ -128,52 +131,54 @@ func _input(event: InputEvent) -> void:
 		_handle_input()
 		return
 
-	# D-pad navigation for confirmation dialog
-	if is_paused and showing_confirm:
-		if event.is_action_pressed("ui_down"):
-			_navigate_confirm_buttons(1)
-			_handle_input()
+	# D-pad navigation (not used on iOS — touch handles selection)
+	if not OS.get_name() == "iOS":
+		# D-pad navigation for confirmation dialog
+		if is_paused and showing_confirm:
+			if event.is_action_pressed("ui_down"):
+				_navigate_confirm_buttons(1)
+				_handle_input()
+				return
+			if event.is_action_pressed("ui_up"):
+				_navigate_confirm_buttons(-1)
+				_handle_input()
+				return
+			if event.is_action_pressed("ui_accept"):
+				_activate_focused_confirm_button()
+				_handle_input()
+				return
 			return
-		if event.is_action_pressed("ui_up"):
-			_navigate_confirm_buttons(-1)
-			_handle_input()
-			return
-		if event.is_action_pressed("ui_accept"):
-			_activate_focused_confirm_button()
-			_handle_input()
-			return
-		return
 
-	# D-pad navigation for slot panel
-	if is_paused and showing_slots:
-		if event.is_action_pressed("ui_down"):
-			_navigate_slot_buttons(1)
-			_handle_input()
+		# D-pad navigation for slot panel
+		if is_paused and showing_slots:
+			if event.is_action_pressed("ui_down"):
+				_navigate_slot_buttons(1)
+				_handle_input()
+				return
+			if event.is_action_pressed("ui_up"):
+				_navigate_slot_buttons(-1)
+				_handle_input()
+				return
+			if event.is_action_pressed("ui_accept"):
+				_activate_focused_slot_button()
+				_handle_input()
+				return
 			return
-		if event.is_action_pressed("ui_up"):
-			_navigate_slot_buttons(-1)
-			_handle_input()
-			return
-		if event.is_action_pressed("ui_accept"):
-			_activate_focused_slot_button()
-			_handle_input()
-			return
-		return
 
-	# D-pad navigation when paused (only when pause panel is visible, not when settings open)
-	if is_paused and not showing_credits and not showing_slots and panel.visible:
-		if event.is_action_pressed("ui_down"):
-			_navigate_buttons(1)
-			_handle_input()
-			return
-		if event.is_action_pressed("ui_up"):
-			_navigate_buttons(-1)
-			_handle_input()
-			return
-		if event.is_action_pressed("ui_accept"):
-			_activate_focused_button()
-			_handle_input()
-			return
+		# D-pad navigation when paused (only when pause panel is visible, not when settings open)
+		if is_paused and not showing_credits and not showing_slots and panel.visible:
+			if event.is_action_pressed("ui_down"):
+				_navigate_buttons(1)
+				_handle_input()
+				return
+			if event.is_action_pressed("ui_up"):
+				_navigate_buttons(-1)
+				_handle_input()
+				return
+			if event.is_action_pressed("ui_accept"):
+				_activate_focused_button()
+				_handle_input()
+				return
 
 
 func _handle_input() -> void:
@@ -737,6 +742,31 @@ func _on_confirm_yes() -> void:
 ## Handle confirm "No" press.
 func _on_confirm_no() -> void:
 	_hide_confirm_panel()
+
+
+func _apply_mobile_menu_style() -> void:
+	# Add close button to the main pause panel (CanvasLayer child)
+	var close_btn: Button = Button.new()
+	close_btn.text = "✕"
+	close_btn.add_theme_font_size_override("font_size", 32)
+	close_btn.custom_minimum_size = Vector2(48, 48)
+	close_btn.anchors_preset = Control.PRESET_TOP_RIGHT
+	close_btn.position = Vector2(-60, 12)
+	close_btn.pressed.connect(resume_game)
+	panel.add_child(close_btn)
+
+	# Enforce minimum button sizes for touch
+	_enforce_min_button_size(panel, 44)
+
+
+static func _enforce_min_button_size(node: Node, min_size: int) -> void:
+	for child: Node in node.get_children():
+		if child is Button:
+			if child.custom_minimum_size.x < min_size:
+				child.custom_minimum_size.x = min_size
+			if child.custom_minimum_size.y < min_size:
+				child.custom_minimum_size.y = min_size
+		_enforce_min_button_size(child, min_size)
 
 
 ## Navigate confirm buttons with D-pad.

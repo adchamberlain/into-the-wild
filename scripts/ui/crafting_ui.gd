@@ -58,6 +58,9 @@ func _ready() -> void:
 	if not campsite_manager and player:
 		campsite_manager = player.get_parent().get_node_or_null("CampsiteManager")
 
+	if OS.get_name() == "iOS":
+		_apply_mobile_menu_style()
+
 
 func _input(event: InputEvent) -> void:
 	# Don't process input if not in tree (prevents null viewport errors during scene transitions)
@@ -82,21 +85,22 @@ func _input(event: InputEvent) -> void:
 		_handle_input()
 		return
 
-	# D-pad navigation
-	if event.is_action_pressed("ui_down"):
-		_navigate_recipes(1)
-		_handle_input()
-		return
-	if event.is_action_pressed("ui_up"):
-		_navigate_recipes(-1)
-		_handle_input()
-		return
+	# D-pad navigation (not used on iOS — touch handles selection)
+	if not OS.get_name() == "iOS":
+		if event.is_action_pressed("ui_down"):
+			_navigate_recipes(1)
+			_handle_input()
+			return
+		if event.is_action_pressed("ui_up"):
+			_navigate_recipes(-1)
+			_handle_input()
+			return
 
-	# Cross button (ui_accept) to craft focused recipe
-	if event.is_action_pressed("ui_accept"):
-		_craft_focused_recipe()
-		_handle_input()
-		return
+		# Cross button (ui_accept) to craft focused recipe
+		if event.is_action_pressed("ui_accept"):
+			_craft_focused_recipe()
+			_handle_input()
+			return
 
 
 func _handle_input() -> void:
@@ -379,3 +383,28 @@ func _update_hint_label() -> void:
 ## Get the internal CraftingSystem for signal connections.
 func get_crafting_system() -> CraftingSystem:
 	return crafting_system
+
+
+func _apply_mobile_menu_style() -> void:
+	# Add close button to the panel (CanvasLayer child)
+	var close_btn: Button = Button.new()
+	close_btn.text = "✕"
+	close_btn.add_theme_font_size_override("font_size", 32)
+	close_btn.custom_minimum_size = Vector2(48, 48)
+	close_btn.anchors_preset = Control.PRESET_TOP_RIGHT
+	close_btn.position = Vector2(-60, 12)
+	close_btn.pressed.connect(func() -> void: toggle_crafting_menu(false))
+	panel.add_child(close_btn)
+
+	# Enforce minimum button sizes for touch
+	_enforce_min_button_size(panel, 44)
+
+
+static func _enforce_min_button_size(node: Node, min_size: int) -> void:
+	for child: Node in node.get_children():
+		if child is Button:
+			if child.custom_minimum_size.x < min_size:
+				child.custom_minimum_size.x = min_size
+			if child.custom_minimum_size.y < min_size:
+				child.custom_minimum_size.y = min_size
+		_enforce_min_button_size(child, min_size)

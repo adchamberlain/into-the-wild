@@ -80,6 +80,9 @@ func _ready() -> void:
 	panel.visible = false
 	is_visible = false
 
+	if OS.get_name() == "iOS":
+		_apply_mobile_menu_style()
+
 
 func _build_slot_list() -> void:
 	# Clear existing children except template
@@ -192,21 +195,22 @@ func _input(event: InputEvent) -> void:
 		_handle_input()
 		return
 
-	# D-pad navigation
-	if event.is_action_pressed("ui_down"):
-		_navigate_slots(1)
-		_handle_input()
-		return
-	if event.is_action_pressed("ui_up"):
-		_navigate_slots(-1)
-		_handle_input()
-		return
+	# D-pad navigation (not used on iOS — touch handles selection)
+	if not OS.get_name() == "iOS":
+		if event.is_action_pressed("ui_down"):
+			_navigate_slots(1)
+			_handle_input()
+			return
+		if event.is_action_pressed("ui_up"):
+			_navigate_slots(-1)
+			_handle_input()
+			return
 
-	# Cross button (ui_accept) to equip focused item
-	if event.is_action_pressed("ui_accept"):
-		_equip_focused_slot()
-		_handle_input()
-		return
+		# Cross button (ui_accept) to equip focused item
+		if event.is_action_pressed("ui_accept"):
+			_equip_focused_slot()
+			_handle_input()
+			return
 
 
 func _handle_input() -> void:
@@ -285,6 +289,31 @@ func _update_focus_highlight() -> void:
 		else:
 			style.bg_color = Color(0, 0, 0, 0)  # Transparent
 		panel.add_theme_stylebox_override("panel", style)
+
+
+func _apply_mobile_menu_style() -> void:
+	# Add close button to the panel (CanvasLayer child)
+	var close_btn: Button = Button.new()
+	close_btn.text = "✕"
+	close_btn.add_theme_font_size_override("font_size", 32)
+	close_btn.custom_minimum_size = Vector2(48, 48)
+	close_btn.anchors_preset = Control.PRESET_TOP_RIGHT
+	close_btn.position = Vector2(-60, 12)
+	close_btn.pressed.connect(toggle_menu)
+	panel.add_child(close_btn)
+
+	# Enforce minimum button sizes for touch
+	_enforce_min_button_size(panel, 44)
+
+
+static func _enforce_min_button_size(node: Node, min_size: int) -> void:
+	for child: Node in node.get_children():
+		if child is Button:
+			if child.custom_minimum_size.x < min_size:
+				child.custom_minimum_size.x = min_size
+			if child.custom_minimum_size.y < min_size:
+				child.custom_minimum_size.y = min_size
+		_enforce_min_button_size(child, min_size)
 
 
 ## Equip the currently focused item.
