@@ -13,6 +13,7 @@ const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 # Time display
 @onready var time_label: Label = $TimePanel/TimeContainer/TimeLabel
 @onready var period_label: Label = $TimePanel/TimeContainer/PeriodLabel
+@onready var day_counter_label: Label = $TimePanel/TimeContainer/DayCounterLabel
 @onready var campsite_level_label: Label = $TimePanel/TimeContainer/CampsiteLevelLabel
 @onready var weather_label: Label = $TimePanel/TimeContainer/WeatherLabel
 @onready var protection_label: Label = $TimePanel/TimeContainer/ProtectionLabel
@@ -187,6 +188,8 @@ func _ready() -> void:
 			if time_manager.has_signal("day_changed"):
 				time_manager.day_changed.connect(_on_day_changed)
 			_update_time_display()
+			if day_counter_label:
+				day_counter_label.text = "Day %d" % time_manager.current_day
 
 	# Connect to player for interaction prompts, inventory, stats, and equipment
 	if player_path:
@@ -320,9 +323,11 @@ func _on_period_changed(period: String) -> void:
 	period_label.text = period
 
 
-func _on_day_changed(_day: int) -> void:
+func _on_day_changed(day: int) -> void:
 	# Defer update so campsite_manager processes the day change first
 	call_deferred("_update_campsite_level_display")
+	if day_counter_label:
+		day_counter_label.text = "Day %d" % day
 
 
 func _on_interaction_target_changed(target: Node, interaction_text: String) -> void:

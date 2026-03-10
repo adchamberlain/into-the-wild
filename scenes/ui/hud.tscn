@@ -211,6 +211,14 @@ theme_override_font_sizes/font_size = 40
 text = "Morning"
 horizontal_alignment = 2
 
+[node name="DayCounterLabel" type="Label" parent="TimePanel/TimeContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 32
+text = "Day 1"
+horizontal_alignment = 2
+
 [node name="CampsiteLevelLabel" type="Label" parent="TimePanel/TimeContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.6, 0.95, 0.6, 1)
