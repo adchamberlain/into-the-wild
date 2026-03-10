@@ -373,7 +373,7 @@ func _update_hint_label() -> void:
 	if input_mgr and input_mgr.is_using_controller():
 		hint_label.text = "Touchpad or ○ to close"
 	else:
-		hint_label.text = "Press C to close"
+		hint_label.text = "Press X to close"
 
 
 ## Get the internal CraftingSystem for signal connections.
