@@ -45,6 +45,30 @@ var lake_depth: float = 3.0
 var lake_min_spacing: float = 80.0  # Min distance between lakes
 var lake_pond_spacing: float = 40.0  # Min distance from ponds
 
+# Procedural water cell grid (80x80 units per cell)
+const WATER_CELL_SIZE: float = 80.0
+var evaluated_water_cells: Dictionary = {}  # Vector2i -> bool (true if evaluated)
+
+# Spatial hash for efficient water body lookups in get_height_at()
+# Keyed by Vector2i bucket coords (bucket_size = WATER_CELL_SIZE = 80 units)
+var water_body_spatial_hash: Dictionary = {}  # Vector2i -> Array[int] (indices into water_bodies)
+
+# Biome-based water feature probabilities {RegionType -> {pond_chance, lake_chance}}
+var water_cell_probabilities: Dictionary = {
+	RegionType.MEADOW: {"pond": 0.40, "lake": 0.15},
+	RegionType.FOREST: {"pond": 0.35, "lake": 0.0},
+	RegionType.HILLS: {"pond": 0.25, "lake": 0.0},
+	RegionType.ROCKY: {"pond": 0.25, "lake": 0.0},
+	RegionType.MOUNTAIN: {"pond": 0.20, "lake": 0.10},
+	RegionType.DESERT: {"pond": 0.0, "lake": 0.0},
+}
+
+# Procedural river cell grid (200x200 units per cell)
+const RIVER_CELL_SIZE: float = 200.0
+const RIVER_CELL_PROBABILITY: float = 0.25  # 25% chance per valid cell
+const PROCEDURAL_RIVER_MAX_SEGMENTS: int = 12  # Shorter than startup rivers
+var evaluated_river_cells: Dictionary = {}  # Vector2i -> bool
+
 # River settings
 var river_count: int = 2  # Target number of rivers
 var river_base_width: float = 5.0
@@ -394,6 +418,12 @@ func _generate_water_bodies() -> void:
 	# Update legacy pond_locations for backward compatibility
 	_update_legacy_pond_locations()
 
+	# Build spatial hash for all startup water bodies
+	_rebuild_water_body_spatial_hash()
+
+	# Pre-mark water cells in the inner zone to prevent procedural duplicates
+	_mark_inner_zone_water_cells()
+
 	print("[ChunkManager] Water features generated: %d ponds, %d lakes (incl. alpine), %d rivers" % [
 		_count_water_bodies(WaterBodyType.POND),
 		_count_water_bodies(WaterBodyType.LAKE),
@@ -581,6 +611,247 @@ func _generate_alpine_lakes() -> void:
 		print("[ChunkManager] Generated alpine lake at (%.1f, %.1f) radius=%.1f" % [
 			candidate.x, candidate.y, alpine_radius
 		])
+
+
+func _evaluate_water_cell(cell_coord: Vector2i) -> void:
+	## Evaluate a single water cell and potentially add a pond or lake.
+	## Deterministic from (cell_coord, noise_seed).
+	if evaluated_water_cells.has(cell_coord):
+		return
+	evaluated_water_cells[cell_coord] = true
+
+	# Deterministic RNG from cell coordinates and world seed
+	var cell_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	cell_rng.seed = noise_seed + cell_coord.x * 73856093 + cell_coord.y * 19349663
+
+	# Cell center in world coordinates
+	var cell_center_x: float = (cell_coord.x + 0.5) * WATER_CELL_SIZE
+	var cell_center_z: float = (cell_coord.y + 0.5) * WATER_CELL_SIZE
+
+	# Check biome at cell center
+	var region: RegionType = get_region_at(cell_center_x, cell_center_z)
+	var probs: Dictionary = water_cell_probabilities.get(region, {"pond": 0.0, "lake": 0.0})
+
+	# Roll for feature type
+	var roll: float = cell_rng.randf()
+	var feature_type: String = ""
+	if roll < probs["lake"]:
+		feature_type = "lake"
+	elif roll < probs["lake"] + probs["pond"]:
+		feature_type = "pond"
+	else:
+		return  # No water feature in this cell
+
+	# Jitter position within cell (+/- 30 units from center)
+	var jitter_x: float = cell_rng.randf_range(-30.0, 30.0)
+	var jitter_z: float = cell_rng.randf_range(-30.0, 30.0)
+	var feature_x: float = cell_center_x + jitter_x
+	var feature_z: float = cell_center_z + jitter_z
+
+	# Re-check biome at jittered position
+	var jittered_region: RegionType = get_region_at(feature_x, feature_z)
+	if jittered_region == RegionType.DESERT:
+		return  # Landed in desert after jitter
+
+	# Don't place in spawn-safe zone
+	if Vector2(feature_x, feature_z).length() < 60.0:
+		return
+
+	# Alpine lake check: must be in MOUNTAIN with sufficient elevation
+	if feature_type == "lake" and jittered_region == RegionType.MOUNTAIN:
+		var elevation: float = _get_base_terrain_height(feature_x, feature_z)
+		if elevation < alpine_lake_min_elevation:
+			feature_type = "pond"  # Downgrade to pond if not high enough
+
+	# Lake only in MEADOW (or MOUNTAIN for alpine)
+	if feature_type == "lake" and jittered_region != RegionType.MEADOW and jittered_region != RegionType.MOUNTAIN:
+		feature_type = "pond"  # Downgrade to pond
+
+	# Get region-appropriate parameters
+	var params: Dictionary = region_pond_params.get(jittered_region, region_pond_params[RegionType.FOREST])
+
+	var feature_radius: float
+	var feature_depth: float
+	var wb_type: WaterBodyType
+
+	if feature_type == "lake":
+		feature_radius = cell_rng.randf_range(lake_min_radius, lake_max_radius)
+		feature_depth = lake_depth
+		wb_type = WaterBodyType.LAKE
+		if jittered_region == RegionType.MOUNTAIN:
+			feature_radius = cell_rng.randf_range(alpine_lake_min_radius, alpine_lake_max_radius)
+			feature_depth = alpine_lake_depth
+	else:
+		feature_radius = cell_rng.randf_range(params["radius_min"], params["radius_max"])
+		feature_depth = params["depth"]
+		wb_type = WaterBodyType.POND
+
+	water_bodies.append({
+		"type": wb_type,
+		"center": Vector2(feature_x, feature_z),
+		"radius": feature_radius,
+		"depth": feature_depth
+	})
+	_register_water_body_in_hash(water_bodies.size() - 1)
+
+
+func _mark_inner_zone_water_cells() -> void:
+	## Mark all water cells within the startup generation bounds as evaluated,
+	## so the procedural system doesn't duplicate features in the inner zone.
+	## Pond/lake extent: 150 units, alpine lake extent: 180 units.
+	var mark_extent: float = 180.0  # Covers the largest startup extent (alpine lakes)
+	var cell_min: int = int(floor(-mark_extent / WATER_CELL_SIZE))
+	var cell_max: int = int(ceil(mark_extent / WATER_CELL_SIZE))
+
+	for cx: int in range(cell_min, cell_max + 1):
+		for cz: int in range(cell_min, cell_max + 1):
+			var cell_center_x: float = (cx + 0.5) * WATER_CELL_SIZE
+			var cell_center_z: float = (cz + 0.5) * WATER_CELL_SIZE
+			if Vector2(cell_center_x, cell_center_z).length() <= mark_extent:
+				evaluated_water_cells[Vector2i(cx, cz)] = true
+
+	# Also mark river cells in the inner zone (river source extent: 120 units)
+	var river_mark_extent: float = 120.0
+	var river_cell_min: int = int(floor(-river_mark_extent / RIVER_CELL_SIZE))
+	var river_cell_max: int = int(ceil(river_mark_extent / RIVER_CELL_SIZE))
+
+	for cx: int in range(river_cell_min, river_cell_max + 1):
+		for cz: int in range(river_cell_min, river_cell_max + 1):
+			var cell_center_x: float = (cx + 0.5) * RIVER_CELL_SIZE
+			var cell_center_z: float = (cz + 0.5) * RIVER_CELL_SIZE
+			if Vector2(cell_center_x, cell_center_z).length() <= river_mark_extent:
+				evaluated_river_cells[Vector2i(cx, cz)] = true
+
+	print("[ChunkManager] Pre-marked %d inner zone water cells, %d inner zone river cells" % [evaluated_water_cells.size(), evaluated_river_cells.size()])
+
+
+func _evaluate_water_cells_for_chunk(chunk_coord: Vector2i) -> void:
+	## Find all water cells that overlap with this chunk and evaluate them.
+	var chunk_world_size: float = chunk_size_cells * cell_size  # 48.0
+	var chunk_min_x: float = chunk_coord.x * chunk_world_size
+	var chunk_max_x: float = chunk_min_x + chunk_world_size
+	var chunk_min_z: float = chunk_coord.y * chunk_world_size
+	var chunk_max_z: float = chunk_min_z + chunk_world_size
+
+	# Find water cell range that overlaps this chunk
+	var cell_min_x: int = int(floor(chunk_min_x / WATER_CELL_SIZE))
+	var cell_max_x: int = int(floor(chunk_max_x / WATER_CELL_SIZE))
+	var cell_min_z: int = int(floor(chunk_min_z / WATER_CELL_SIZE))
+	var cell_max_z: int = int(floor(chunk_max_z / WATER_CELL_SIZE))
+
+	for cx: int in range(cell_min_x, cell_max_x + 1):
+		for cz: int in range(cell_min_z, cell_max_z + 1):
+			_evaluate_water_cell(Vector2i(cx, cz))
+
+	# Also evaluate river cells (larger grid: 200x200)
+	var river_cell_min_x: int = int(floor(chunk_min_x / RIVER_CELL_SIZE))
+	var river_cell_max_x: int = int(floor(chunk_max_x / RIVER_CELL_SIZE))
+	var river_cell_min_z: int = int(floor(chunk_min_z / RIVER_CELL_SIZE))
+	var river_cell_max_z: int = int(floor(chunk_max_z / RIVER_CELL_SIZE))
+
+	for cx: int in range(river_cell_min_x, river_cell_max_x + 1):
+		for cz: int in range(river_cell_min_z, river_cell_max_z + 1):
+			_evaluate_river_cell(Vector2i(cx, cz))
+
+
+func _evaluate_river_cell(cell_coord: Vector2i) -> void:
+	## Evaluate a single river cell and potentially generate a river.
+	## Deterministic from (cell_coord, noise_seed).
+	if evaluated_river_cells.has(cell_coord):
+		return
+	evaluated_river_cells[cell_coord] = true
+
+	# Deterministic RNG from cell coordinates and world seed
+	var cell_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	cell_rng.seed = noise_seed + 7000 + cell_coord.x * 48611 + cell_coord.y * 29423
+
+	# Roll probability
+	if cell_rng.randf() > RIVER_CELL_PROBABILITY:
+		return
+
+	# Candidate source position (jittered within cell)
+	var cell_center_x: float = (cell_coord.x + 0.5) * RIVER_CELL_SIZE
+	var cell_center_z: float = (cell_coord.y + 0.5) * RIVER_CELL_SIZE
+	var source_x: float = cell_center_x + cell_rng.randf_range(-80.0, 80.0)
+	var source_z: float = cell_center_z + cell_rng.randf_range(-80.0, 80.0)
+
+	# Must be in HILLS or ROCKY biome
+	var region: RegionType = get_region_at(source_x, source_z)
+	if region != RegionType.HILLS and region != RegionType.ROCKY:
+		return
+
+	# Don't place in spawn-safe zone
+	if Vector2(source_x, source_z).length() < 60.0:
+		return
+
+	# Check distance from existing rivers
+	var source: Vector2 = Vector2(source_x, source_z)
+	for existing_river: Dictionary in rivers:
+		if existing_river["path"].size() > 0:
+			if source.distance_to(existing_river["path"][0]) < 60.0:
+				return
+
+	# Generate river path (shorter than startup rivers)
+	var river_path: Array[Vector2] = _generate_river_path(source, cell_rng)
+
+	# Filter to max length from source
+	var capped_path: Array[Vector2] = [river_path[0]]
+	for i: int in range(1, river_path.size()):
+		if river_path[i].distance_to(source) > 200.0:
+			break
+		capped_path.append(river_path[i])
+		if capped_path.size() >= PROCEDURAL_RIVER_MAX_SEGMENTS:
+			break
+
+	if capped_path.size() < 4:
+		return  # Too short
+
+	# Smooth and add fishing pools
+	capped_path = _smooth_river_path(capped_path)
+	var fishing_pools: Array[Vector2] = _place_fishing_pools(capped_path)
+
+	rivers.append({
+		"path": capped_path,
+		"width": river_base_width,
+		"fishing_pools": fishing_pools
+	})
+
+
+func _register_water_body_in_hash(body_index: int) -> void:
+	## Add a water body to the spatial hash buckets it overlaps.
+	var body: Dictionary = water_bodies[body_index]
+	var center: Vector2 = body["center"]
+	var radius: float = body["radius"]
+
+	# Find all buckets this body overlaps (center +/- radius)
+	var min_bx: int = int(floor((center.x - radius) / WATER_CELL_SIZE))
+	var max_bx: int = int(floor((center.x + radius) / WATER_CELL_SIZE))
+	var min_bz: int = int(floor((center.y - radius) / WATER_CELL_SIZE))
+	var max_bz: int = int(floor((center.y + radius) / WATER_CELL_SIZE))
+
+	for bx: int in range(min_bx, max_bx + 1):
+		for bz: int in range(min_bz, max_bz + 1):
+			var key: Vector2i = Vector2i(bx, bz)
+			if not water_body_spatial_hash.has(key):
+				water_body_spatial_hash[key] = []
+			water_body_spatial_hash[key].append(body_index)
+
+
+func _rebuild_water_body_spatial_hash() -> void:
+	## Rebuild spatial hash from scratch for all current water bodies.
+	water_body_spatial_hash.clear()
+	for i: int in range(water_bodies.size()):
+		_register_water_body_in_hash(i)
+
+
+func _get_nearby_water_bodies(x: float, z: float) -> Array:
+	## Return indices of water bodies that could affect the given position.
+	var bx: int = int(floor(x / WATER_CELL_SIZE))
+	var bz: int = int(floor(z / WATER_CELL_SIZE))
+	var key: Vector2i = Vector2i(bx, bz)
+	if water_body_spatial_hash.has(key):
+		return water_body_spatial_hash[key]
+	return []
 
 
 func _generate_rivers() -> void:
@@ -1624,8 +1895,10 @@ func get_height_at(x: float, z: float, skip_pit_check: bool = false) -> float:
 			# Flat rim at water level - player can stand here after exiting water
 			return 0.0
 
-	# Check all water bodies (ponds and lakes) for terrain depression
-	for body in water_bodies:
+	# Check nearby water bodies (ponds and lakes) for terrain depression
+	var nearby_body_indices: Array = _get_nearby_water_bodies(snapped_x, snapped_z)
+	for body_idx: int in nearby_body_indices:
+		var body: Dictionary = water_bodies[body_idx]
 		var body_center: Vector2 = body["center"]
 		var body_radius: float = body["radius"]
 		var body_depth: float = body["depth"]
@@ -2001,6 +2274,11 @@ func _load_chunk(chunk_coord: Vector2i) -> void:
 	chunk.setup(chunk_coord, self)
 	chunk.name = "Chunk_%d_%d" % [chunk_coord.x, chunk_coord.y]
 	add_child(chunk)
+
+	# Evaluate procedural water cells overlapping this chunk BEFORE terrain generation
+	# so that water body depressions are carved into the height cache correctly.
+	_evaluate_water_cells_for_chunk(chunk_coord)
+
 	chunk.generate(is_player_chunk)
 
 	loaded_chunks[chunk_coord] = chunk
