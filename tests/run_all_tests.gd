@@ -26,6 +26,7 @@ func _init() -> void:
 		"res://tests/test_bug_regressions.gd",
 		"res://tests/test_hint_manager.gd",
 		"res://tests/test_input_manager_touch.gd",
+		"res://tests/test_touch_controls.gd",
 	]
 
 	for test_path in test_files:
