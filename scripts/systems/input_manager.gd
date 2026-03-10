@@ -6,6 +6,7 @@ signal input_device_changed(is_controller: bool)
 
 # Current input device state
 var using_controller: bool = false
+var using_touch: bool = false
 
 # Button prompt mappings for keyboard
 const KEYBOARD_PROMPTS: Dictionary = {
@@ -23,6 +24,24 @@ const KEYBOARD_PROMPTS: Dictionary = {
 	"move_structure": "M",
 	"crouch": "C",
 	"cycle_ammo": "T",
+}
+
+# Button prompt mappings for touch devices (iOS/Android)
+const TOUCH_PROMPTS: Dictionary = {
+	"interact": "Tap ACT",
+	"jump": "Tap JUMP",
+	"sprint": "Tap SPRINT",
+	"eat": "Tap EAT",
+	"use_equipped": "Tap USE",
+	"open_crafting": "Tap ⚒️",
+	"open_inventory": "Tap 🎒",
+	"pause": "Tap ⏸️",
+	"crouch": "Tap CROUCH",
+	"move_structure": "Tap MOVE",
+	"cycle_ammo": "Tap AMMO",
+	"next_slot": "Tap ▶",
+	"prev_slot": "Tap ◀",
+	"unequip": "Tap UNEQUIP",
 }
 
 # Button prompt mappings for PlayStation controller (DualSense)
@@ -52,9 +71,20 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	# Process input to detect device changes
 	set_process_input(true)
+	# Auto-detect iOS and default to touch mode
+	if OS.get_name() == "iOS":
+		using_touch = true
+		using_controller = false
 
 
 func _input(event: InputEvent) -> void:
+	# Detect touch input first (highest priority)
+	if event is InputEventScreenTouch or event is InputEventScreenDrag:
+		using_touch = true
+		using_controller = false
+		input_device_changed.emit(false)
+		return
+
 	var was_using_controller: bool = using_controller
 
 	# Detect controller input
@@ -78,7 +108,9 @@ func _input(event: InputEvent) -> void:
 
 ## Get the button prompt text for an action based on current input device.
 func get_prompt(action: String) -> String:
-	if using_controller:
+	if using_touch:
+		return TOUCH_PROMPTS.get(action, "?")
+	elif using_controller:
 		return CONTROLLER_PROMPTS.get(action, "?")
 	else:
 		return KEYBOARD_PROMPTS.get(action, "?")
@@ -92,6 +124,11 @@ func get_formatted_prompt(action: String, label: String) -> String:
 ## Check if currently using controller.
 func is_using_controller() -> bool:
 	return using_controller
+
+
+## Check if currently using touch input.
+func is_using_touch() -> bool:
+	return using_touch
 
 
 ## Get all connected joypads.
