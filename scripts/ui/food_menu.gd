@@ -407,11 +407,11 @@ func _handle_input() -> void:
 
 func _update_button_prompts() -> void:
 	var consume_prompt: String = "Enter"
-	var close_prompt: String = "Esc"
+	var close_prompt: String = "F"
 
 	if input_manager and input_manager.has_method("get_prompt"):
 		consume_prompt = input_manager.get_prompt("ui_accept")
-		close_prompt = input_manager.get_prompt("ui_cancel")
+		close_prompt = input_manager.get_prompt("eat")
 
 	hint_label.text = "[%s] Consume   [%s] Close" % [consume_prompt, close_prompt]
 
