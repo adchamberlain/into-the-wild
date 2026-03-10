@@ -129,7 +129,7 @@ New HUD feature added to all platforms during this work:
 - Orientation: landscape-only
 - Device family: iPad only (family 2)
 - Deployment target: iOS 14.0
-- Bundle ID: `com.andrewchamberlain.IntoTheWild`
+- Bundle ID: `com.andrewchamberlain.IntoTheWildGame`
 - Automatic signing (same as Sky Checker)
 - App icon: 1024x1024 universal
 - Launch storyboard for iPad

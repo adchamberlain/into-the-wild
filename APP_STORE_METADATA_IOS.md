@@ -2,7 +2,7 @@
 
 ## App Information
 - **App Name:** Into the Wild
-- **Bundle ID:** com.andrewchamberlain.IntoTheWild
+- **Bundle ID:** com.andrewchamberlain.IntoTheWildGame
 - **Category (Primary):** Games - Adventure
 - **Category (Secondary):** Games - Simulation
 - **Content Rating:** 4+ (No objectionable content)
