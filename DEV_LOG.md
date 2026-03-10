@@ -7097,14 +7097,53 @@ Fixed 4 UI bugs reported by a player on Windows (GitHub issue #12): wrong key hi
 
 ---
 
+## Session 53 — Procedural Water Generation, Desert Expansion & Biome Scaling (2026-03-09)
+
+### Summary
+Major world generation overhaul: moved the desert boundary from 150 to 300 units, doubled biome sizes, fixed diamond arrow recovery bug, and implemented infinite procedural water generation so ponds, lakes, and rivers spawn at any distance as the player explores.
+
+### Changes
+
+1. **Diamond arrow fix**: Arrows were lost on animal hit because the projectile wasn't frozen at the impact point before becoming pickable. Added `freeze = true` and `linear_velocity = Vector3.ZERO` before `_become_pickable()`. Also added "Arrow inventory full!" HUD notification.
+
+2. **Default brightness**: Changed from 170% to 110% in config_menu.gd.
+
+3. **Desert boundary expansion**: Moved desert ring from 150-230 to 300-360 units from origin. Moved pocket desert from (-350, 0) to (-600, 0). Updated oasis distance to 330 units. Pushed trail landmarks outward (carved tree ~430, cairn ~410, signpost ~480). Updated journal clue text.
+
+4. **Doubled biome size**: Changed region noise frequency from 0.008 to 0.004 so biomes cover more area and feel more expansive.
+
+5. **Procedural water generation**: Grid-based deterministic system that spawns water features as chunks load:
+   - **Water cells** (80x80 grid): Each cell hashes coordinates + world seed to decide pond/lake placement. Biome-specific probabilities (40% pond in meadow, 35% in forest, etc.). Lakes only in meadow/mountain.
+   - **River cells** (200x200 grid): 25% chance per cell in hills/rocky biomes. Generates short rivers (12 segments max) with smoothing and fishing pools.
+   - **Spatial hash**: O(1) water body lookups in `get_height_at()` replacing O(n) linear scan over all water bodies.
+   - **Inner zone protection**: Pre-marks cells within startup generation bounds to prevent duplicates.
+   - **Chunk integration**: Water cells evaluated synchronously in `_load_chunk()` before `chunk.generate()` so terrain depressions are carved correctly.
+
+6. **Testing re-enabled**: Removed SUSPENDED status from CLAUDE.md testing rules.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/player/diamond_arrow_projectile.gd` | Modified | Freeze arrow on animal hit, HUD notification on full inventory |
+| `scripts/ui/config_menu.gd` | Modified | Default brightness 1.7 → 1.1 |
+| `scripts/world/chunk_manager.gd` | Modified | Desert ring 300-360, pocket desert (-600,0), biome freq 0.004, procedural water grid + spatial hash + river cells |
+| `scripts/ui/journal_ui.gd` | Modified | Updated trail clue distances |
+| `CLAUDE.md` | Modified | Re-enabled testing rules |
+| `docs/superpowers/specs/2026-03-09-procedural-water-generation-design.md` | Created | Design spec for procedural water |
+| `docs/superpowers/plans/2026-03-09-procedural-water-generation.md` | Created | Implementation plan |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Deploy website to Cloudflare Pages at intothewild.dev
-2. Continue play-testing end-of-game trail sequence with new clues and compass
-3. When testing is done: set `trail_testing_mode = false` in `scripts/core/game_state.gd:24`
-4. When testing is done: revert player spawn in `scenes/main.tscn` from (345, 25, -345) to (0, 5, 0)
-5. Review and fix any bugs filed via GitHub Issues
+1. Play-test procedural water generation — verify ponds/lakes/rivers appear beyond 300 units in non-desert biomes
+2. Deploy website to Cloudflare Pages at intothewild.dev
+3. Continue play-testing end-of-game trail sequence with new clues and compass
+4. When testing is done: set `trail_testing_mode = false` in `scripts/core/game_state.gd:24`
+5. When testing is done: revert player spawn in `scenes/main.tscn` from (345, 25, -345) to (0, 5, 0)
+6. Review and fix any bugs filed via GitHub Issues
 
 ### Known Issues
 - Player spawn in main.tscn is at (345, 25, -345) for testing — needs revert to (0, 5, 0)
