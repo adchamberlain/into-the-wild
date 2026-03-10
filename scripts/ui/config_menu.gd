@@ -35,6 +35,7 @@ var music_enabled: bool = true
 var music_volume: float = 90.0  # 0-100
 var dev_mode_enabled: bool = false
 var screen_brightness: float = 1.1  # 0.5 to 2.0 (1.1 = default, 110%)
+var hints_enabled: bool = true
 
 # UI References
 @onready var panel: PanelContainer = $Panel
@@ -73,6 +74,9 @@ var ui_scale_label: Label
 # Screen Brightness
 var brightness_slider: HSlider
 var brightness_label: Label
+
+# Show Hints toggle
+var hints_toggle: CheckButton = null
 
 # Controller navigation
 var focused_control_index: int = 0
@@ -118,6 +122,9 @@ func _ready() -> void:
 
 	# Create brightness control
 	_create_brightness_control()
+
+	# Create hints toggle
+	_create_hints_toggle()
 
 	# Create slot selection panel
 	_create_slot_panel()
@@ -330,6 +337,60 @@ func _on_brightness_changed(value: float) -> void:
 	if brightness_label:
 		brightness_label.text = "%.0f%%" % (value * 100)
 	_apply_brightness()
+
+
+## Create the Show Hints toggle programmatically and insert it before the hint label.
+func _create_hints_toggle() -> void:
+	var vbox: VBoxContainer = panel.get_node("VBoxContainer")
+	var font: Font = load("res://resources/hud_font.tres")
+
+	# Separator before Show Hints
+	var sep := HSeparator.new()
+	sep.name = "HintsToggleSeparator"
+
+	# Container
+	var container := HBoxContainer.new()
+	container.name = "HintsToggleContainer"
+	container.add_theme_constant_override("separation", 10)
+
+	# Name label
+	var name_label := Label.new()
+	name_label.text = "Show Hints"
+	name_label.add_theme_font_override("font", font)
+	name_label.add_theme_font_size_override("font_size", 32)
+	name_label.custom_minimum_size.x = 200
+	container.add_child(name_label)
+
+	# CheckButton
+	hints_toggle = CheckButton.new()
+	hints_toggle.button_pressed = hints_enabled
+	container.add_child(hints_toggle)
+
+	# Insert before the hint separator
+	var hint_sep: Node = vbox.get_node_or_null("HSeparator4")
+	var insert_idx: int
+	if hint_sep:
+		insert_idx = hint_sep.get_index()
+	else:
+		insert_idx = vbox.get_child_count()
+	vbox.add_child(sep)
+	vbox.move_child(sep, insert_idx)
+	vbox.add_child(container)
+	vbox.move_child(container, insert_idx + 1)
+
+	# Connect
+	hints_toggle.toggled.connect(_on_hints_toggled)
+
+	# Rebuild focusable controls
+	_build_focusable_controls()
+
+
+func _on_hints_toggled(pressed: bool) -> void:
+	hints_enabled = pressed
+	var hint_manager: Node = get_node_or_null("/root/HintManager")
+	if hint_manager and hint_manager.has_method("set_hints_enabled"):
+		hint_manager.set_hints_enabled(pressed)
+	print("[ConfigMenu] Show hints: %s" % ("ON" if pressed else "OFF"))
 
 
 ## Create the slot selection panel programmatically.
@@ -738,7 +799,8 @@ func get_config() -> Dictionary:
 		"music_enabled": music_enabled,
 		"music_volume": music_volume,
 		"dev_mode_enabled": dev_mode_enabled,
-		"screen_brightness": screen_brightness
+		"screen_brightness": screen_brightness,
+		"hints_enabled": hints_enabled
 	}
 
 
@@ -757,6 +819,7 @@ func apply_config(data: Dictionary) -> void:
 	music_volume = data.get("music_volume", 90.0)
 	dev_mode_enabled = data.get("dev_mode_enabled", false)
 	screen_brightness = data.get("screen_brightness", 1.1)
+	hints_enabled = data.get("hints_enabled", true)
 	# Update UI sliders/toggles
 	if hunger_toggle:
 		hunger_toggle.button_pressed = hunger_enabled
@@ -792,6 +855,11 @@ func apply_config(data: Dictionary) -> void:
 		brightness_slider.value = screen_brightness
 	if brightness_label:
 		brightness_label.text = "%.0f%%" % (screen_brightness * 100)
+	if hints_toggle:
+		hints_toggle.button_pressed = hints_enabled
+	var hint_manager: Node = get_node_or_null("/root/HintManager")
+	if hint_manager and hint_manager.has_method("set_hints_enabled"):
+		hint_manager.set_hints_enabled(hints_enabled)
 	_apply_config()
 
 
@@ -945,6 +1013,8 @@ func _build_focusable_controls() -> void:
 		focusable_controls.append(ui_scale_slider)
 	if brightness_slider:
 		focusable_controls.append(brightness_slider)
+	if hints_toggle:
+		focusable_controls.append(hints_toggle)
 
 
 ## Navigate through controls with D-pad.

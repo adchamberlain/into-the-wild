@@ -473,6 +473,11 @@ func _collect_player_data() -> Dictionary:
 	if "coca_leaf_timer" in player:
 		data["coca_leaf_timer"] = player.coca_leaf_timer
 
+	# Tutorial hints seen state
+	var hint_manager: Node = get_node_or_null("/root/HintManager")
+	if hint_manager and hint_manager.has_method("get_seen_hints"):
+		data["seen_hints"] = hint_manager.get_seen_hints()
+
 	return data
 
 
@@ -567,6 +572,11 @@ func _apply_save_data(data: Dictionary) -> void:
 		player != null, time_manager != null, weather_manager != null, campsite_manager != null, chunk_manager != null
 	])
 
+	# Set loading guard on HintManager to suppress hints during restoration
+	var hint_manager: Node = get_node_or_null("/root/HintManager")
+	if hint_manager and hint_manager.has_method("set_loading"):
+		hint_manager.set_loading(true)
+
 	# Apply in reverse order of dependencies
 
 	# Time first (weather depends on it)
@@ -630,6 +640,12 @@ func _apply_save_data(data: Dictionary) -> void:
 		var config_menu: Node = get_tree().root.get_node_or_null("Main/ConfigMenu")
 		if config_menu and config_menu.has_method("apply_config"):
 			config_menu.apply_config(data["config"])
+
+	# Restore tutorial hint state and clear loading guard
+	if hint_manager and hint_manager.has_method("set_seen_hints"):
+		hint_manager.set_seen_hints(data.get("seen_hints", []))
+	if hint_manager and hint_manager.has_method("set_loading"):
+		hint_manager.set_loading(false)
 
 	# Post-load: Verify crafting flags based on inventory (for backward compatibility)
 	_verify_crafting_flags_from_inventory()
