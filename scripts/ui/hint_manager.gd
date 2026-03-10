@@ -6,10 +6,10 @@ const HINTS: Dictionary = {
 		"message": "You gathered your first resource! Look for [color=#ffda4d]sticks[/color] and [color=#ffda4d]stones[/color] nearby — you'll need them to craft tools."
 	},
 	"first_craft": {
-		"message": "Nice work! Open the [color=#ffda4d]Crafting Menu (C)[/color] anytime to see what else you can build."
+		"message": "Nice work! Open the [color=#ffda4d]Crafting Menu ({open_crafting})[/color] anytime to see what else you can build."
 	},
 	"hunger_low": {
-		"message": "Your hunger is getting low. [color=#ffda4d]Fish[/color] at a pond, gather [color=#ffda4d]berries[/color], or [color=#ffda4d]cook meat[/color] at a fire pit to eat."
+		"message": "Your hunger is getting low. [color=#ffda4d]Fish[/color] at a pond, gather [color=#ffda4d]berries[/color], or [color=#ffda4d]cook meat[/color] at a fire pit. Press [color=#ffda4d]{eat}[/color] to eat food."
 	},
 	"first_fire_pit": {
 		"message": "Your fire pit is ready! You can [color=#ffda4d]cook food[/color] here. Next up: build a [color=#ffda4d]Shelter[/color] to protect yourself from storms."
@@ -48,7 +48,7 @@ const HINTS: Dictionary = {
 		"message": "Machete ready! Use it to [color=#ffda4d]cut through thick vegetation[/color] and access areas you couldn't reach before."
 	},
 	"first_hang_glider": {
-		"message": "Hang glider equipped! [color=#ffda4d]Jump from high ground[/color] and hold jump to glide. Use [color=#ffda4d]sprint[/color] mid-air for a speed boost."
+		"message": "Hang glider equipped! [color=#ffda4d]Jump ({jump}) from high ground[/color] and hold to glide. Use [color=#ffda4d]sprint ({sprint})[/color] mid-air for a speed boost."
 	},
 	"first_cabin": {
 		"message": "Your cabin is complete! Sleep in the [color=#ffda4d]bed[/color] to skip to morning, and use the [color=#ffda4d]kitchen[/color] for advanced recipes."
@@ -110,11 +110,32 @@ func _process_queue() -> void:
 func _display_hint(message: String) -> void:
 	if not is_inside_tree():
 		return
+	var resolved: String = _resolve_prompts(message)
 	var hud_nodes: Array[Node] = get_tree().get_nodes_in_group("hud")
 	if hud_nodes.size() > 0:
 		var hud: Node = hud_nodes[0]
 		if hud.has_method("show_hint"):
-			hud.show_hint(message)
+			hud.show_hint(resolved)
+
+
+## Replace {action_name} placeholders with current input prompts.
+func _resolve_prompts(message: String) -> String:
+	var input_mgr: Node = get_node_or_null("/root/InputManager")
+	if not input_mgr or not input_mgr.has_method("get_prompt"):
+		# Fallback: strip placeholders to just show the action name
+		return message
+	var result: String = message
+	# Find all {action} placeholders and replace with current prompt
+	var start: int = result.find("{")
+	while start != -1:
+		var end: int = result.find("}", start)
+		if end == -1:
+			break
+		var action: String = result.substr(start + 1, end - start - 1)
+		var prompt: String = input_mgr.get_prompt(action)
+		result = result.substr(0, start) + prompt + result.substr(end + 1)
+		start = result.find("{", start + prompt.length())
+	return result
 
 
 func has_seen(hint_id: String) -> bool:
