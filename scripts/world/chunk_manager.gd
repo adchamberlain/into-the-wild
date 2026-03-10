@@ -61,8 +61,8 @@ var cave_spawn_min_distance: float = 85.0  # Min distance from spawn
 
 # Desert oasis settings
 var desert_oases: Array[Dictionary] = []  # {center: Vector2, gem_type: String, gem_count: int, radius: float, depth: float}
-var desert_inner_radius: float = 170.0
-var desert_outer_radius: float = 230.0
+var desert_inner_radius: float = 300.0
+var desert_outer_radius: float = 360.0
 var spawned_oasis_indices: Array[int] = []  # Track which oases have been spawned
 
 # Desert sinkhole (hidden easter egg in pocket desert west of spawn)
@@ -72,7 +72,7 @@ var sinkhole_book_collected: bool = false
 var sinkhole_book_script: GDScript = null  # Loaded later when script exists
 
 # Pocket desert biome (hidden area containing sinkhole, west of spawn)
-var pocket_desert_center: Vector2 = Vector2(-350.0, 0.0)
+var pocket_desert_center: Vector2 = Vector2(-600.0, 0.0)
 var pocket_desert_radius: float = 50.0
 var pocket_desert_blend: float = 15.0  # Transition zone width
 var rock_spire_spawned: bool = false
@@ -878,7 +878,7 @@ func _generate_desert_oases() -> void:
 	## Place 3 oases ~120 degrees apart in the desert ring (~200 units from spawn)
 	desert_oases.clear()
 
-	var oasis_distance: float = 200.0  # Distance from spawn
+	var oasis_distance: float = 330.0  # Distance from spawn (centered in desert ring)
 	var oasis_configs: Array[Dictionary] = [
 		{"angle_deg": 0.0, "gem_type": "diamond", "gem_count": 3},
 		{"angle_deg": 120.0, "gem_type": "diamond", "gem_count": 2},
@@ -1027,15 +1027,15 @@ func _generate_desert_sinkhole() -> void:
 
 	carved_tree_position = Vector2(
 		roundf((trail_rng.randf_range(-20, 20)) / cell_size) * cell_size,
-		roundf((-300.0 + trail_rng.randf_range(-15, 15)) / cell_size) * cell_size
+		roundf((-430.0 + trail_rng.randf_range(-15, 15)) / cell_size) * cell_size
 	)
 	stone_cairn_position = Vector2(
-		roundf((280.0 + trail_rng.randf_range(-20, 20)) / cell_size) * cell_size + cell_size / 2.0,
-		roundf((-280.0 + trail_rng.randf_range(-15, 15)) / cell_size) * cell_size + cell_size / 2.0
+		roundf((410.0 + trail_rng.randf_range(-20, 20)) / cell_size) * cell_size + cell_size / 2.0,
+		roundf((-410.0 + trail_rng.randf_range(-15, 15)) / cell_size) * cell_size + cell_size / 2.0
 	)
 	trail_signpost_position = Vector2(
-		roundf((350.0 + trail_rng.randf_range(-15, 15)) / cell_size) * cell_size,
-		roundf((-350.0 + trail_rng.randf_range(-15, 15)) / cell_size) * cell_size
+		roundf((480.0 + trail_rng.randf_range(-15, 15)) / cell_size) * cell_size,
+		roundf((-480.0 + trail_rng.randf_range(-15, 15)) / cell_size) * cell_size
 	)
 
 	print("[ChunkManager] Trail landmarks: tree=(%.0f,%.0f) cairn=(%.0f,%.0f) signpost=(%.0f,%.0f)" % [
@@ -1505,8 +1505,8 @@ func get_region_at(x: float, z: float) -> RegionType:
 	var desert_angle: float = atan2(z, x)
 	var inner_offset: float = _desert_boundary_offset(desert_angle)
 	var outer_offset: float = _desert_boundary_offset(desert_angle + 1.0)
-	var desert_inner: float = 170.0 + inner_offset
-	var desert_outer: float = 230.0 + outer_offset
+	var desert_inner: float = 300.0 + inner_offset
+	var desert_outer: float = 360.0 + outer_offset
 	if spawn_distance >= desert_inner and spawn_distance <= desert_outer:
 		return RegionType.DESERT
 
@@ -1537,8 +1537,8 @@ func _desert_boundary_offset(angle: float) -> float:
 ## Used by terrain_chunk.gd for transition blending.
 func get_desert_boundaries(x: float, z: float) -> Vector2:
 	var angle: float = atan2(z, x)
-	var inner: float = 170.0 + _desert_boundary_offset(angle)
-	var outer: float = 230.0 + _desert_boundary_offset(angle + 1.0)
+	var inner: float = 300.0 + _desert_boundary_offset(angle)
+	var outer: float = 360.0 + _desert_boundary_offset(angle + 1.0)
 	return Vector2(inner, outer)
 
 
