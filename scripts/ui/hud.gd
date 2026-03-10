@@ -856,7 +856,7 @@ func _create_hint_panel() -> void:
 	hint_panel = PanelContainer.new()
 	hint_panel.name = "HintPanel"
 	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = Color(0.1, 0.1, 0.12, 0.85)
+	style.bg_color = Color(0.1, 0.1, 0.12, 0.70)
 	style.corner_radius_top_left = 10
 	style.corner_radius_top_right = 10
 	style.corner_radius_bottom_left = 10
