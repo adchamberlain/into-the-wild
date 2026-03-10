@@ -877,7 +877,7 @@ func _create_hint_panel() -> void:
 	hint_panel.anchor_left = 0.5
 	hint_panel.anchor_right = 0.5
 	hint_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	hint_panel.offset_top = 120
+	hint_panel.offset_top = 220
 	hint_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	var vbox: VBoxContainer = VBoxContainer.new()
@@ -892,7 +892,7 @@ func _create_hint_panel() -> void:
 	header.text = "SURVIVAL TIP"
 	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	header.add_theme_font_override("font", hud_font)
-	header.add_theme_font_size_override("font_size", 32)
+	header.add_theme_font_size_override("font_size", 44)
 	header.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
 	header.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(header)
@@ -902,9 +902,9 @@ func _create_hint_panel() -> void:
 	hint_label.bbcode_enabled = true
 	hint_label.fit_content = true
 	hint_label.scroll_active = false
-	hint_label.custom_minimum_size.x = 500
+	hint_label.custom_minimum_size.x = 600
 	hint_label.add_theme_font_override("normal_font", hud_font)
-	hint_label.add_theme_font_size_override("normal_font_size", 28)
+	hint_label.add_theme_font_size_override("normal_font_size", 40)
 	hint_label.add_theme_color_override("default_color", Color(0.9, 0.9, 0.9, 1))
 	hint_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(hint_label)
