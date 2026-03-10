@@ -2040,27 +2040,31 @@ func _create_canvas_tent() -> StaticBody3D:
 		fp.material_override = wood_mat
 		tent.add_child(fp)
 
-	# Guy ropes (angled lines from ridge to ground)
+	# Guy ropes — thin lines from near the ridge pole down to ground stakes
 	var guy_mesh: BoxMesh = BoxMesh.new()
-	guy_mesh.size = Vector3(0.02, 1.2, 0.02)
-	for side_x: float in [-1.8, 1.8]:
-		var guy: MeshInstance3D = MeshInstance3D.new()
-		guy.mesh = guy_mesh
-		guy.position = Vector3(side_x * 0.6, 1.0, 0)
-		guy.rotation.z = 0.6 if side_x < 0 else -0.6
-		guy.material_override = rope_mat
-		tent.add_child(guy)
+	guy_mesh.size = Vector3(0.015, 2.0, 0.015)
+	# Front-left, front-right, back-left, back-right
+	for gz: float in [-0.7, 0.7]:
+		for side: float in [-1.0, 1.0]:
+			var guy: MeshInstance3D = MeshInstance3D.new()
+			guy.mesh = guy_mesh
+			# Midpoint between ridge (y=1.8) and ground stake (y=0, x=±1.8)
+			guy.position = Vector3(side * 0.9, 0.9, gz)
+			guy.rotation.z = (0.75 if side < 0 else -0.75)
+			guy.material_override = rope_mat
+			tent.add_child(guy)
 
-	# Tent stakes
+	# Tent stakes — small pegs at guy rope anchor points
 	var stake_mesh: BoxMesh = BoxMesh.new()
-	stake_mesh.size = Vector3(0.04, 0.2, 0.04)
-	for sx: float in [-1.6, 1.6]:
-		var stake: MeshInstance3D = MeshInstance3D.new()
-		stake.mesh = stake_mesh
-		stake.position = Vector3(sx, 0.08, 0)
-		stake.rotation.z = 0.3 if sx < 0 else -0.3
-		stake.material_override = wood_dark_mat
-		tent.add_child(stake)
+	stake_mesh.size = Vector3(0.03, 0.15, 0.03)
+	for sz: float in [-0.7, 0.7]:
+		for sx: float in [-1.7, 1.7]:
+			var stake: MeshInstance3D = MeshInstance3D.new()
+			stake.mesh = stake_mesh
+			stake.position = Vector3(sx, 0.06, sz)
+			stake.rotation.z = 0.25 if sx < 0 else -0.25
+			stake.material_override = wood_dark_mat
+			tent.add_child(stake)
 
 	# Ground cloth visible at entrance
 	var ground_mat: StandardMaterial3D = StandardMaterial3D.new()
