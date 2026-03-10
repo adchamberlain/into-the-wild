@@ -33,9 +33,9 @@ var player_controller: Node = null
 var action_buttons: Array = []
 
 # Context button references
-var use_button: Control = null
-var eat_button: Control = null
-var crouch_button: Control = null
+var use_button: TouchScreenButton = null
+var eat_button: TouchScreenButton = null
+var crouch_button: TouchScreenButton = null
 
 var safe_margin: Dictionary = {"left": 0, "top": 0, "right": 0, "bottom": 0}
 

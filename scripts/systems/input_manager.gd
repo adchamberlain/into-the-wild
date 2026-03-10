@@ -80,12 +80,14 @@ func _ready() -> void:
 func _input(event: InputEvent) -> void:
 	# Detect touch input first (highest priority)
 	if event is InputEventScreenTouch or event is InputEventScreenDrag:
-		using_touch = true
-		using_controller = false
-		input_device_changed.emit(false)
+		if not using_touch:
+			using_touch = true
+			using_controller = false
+			input_device_changed.emit(false)
 		return
 
 	var was_using_controller: bool = using_controller
+	var was_using_touch: bool = using_touch
 
 	# Detect controller input
 	if event is InputEventJoypadButton or event is InputEventJoypadMotion:
@@ -94,15 +96,18 @@ func _input(event: InputEvent) -> void:
 			var motion_event: InputEventJoypadMotion = event as InputEventJoypadMotion
 			if abs(motion_event.axis_value) > 0.2:
 				using_controller = true
+				using_touch = false
 		else:
 			using_controller = true
+			using_touch = false
 
 	# Detect keyboard/mouse input
 	elif event is InputEventKey or event is InputEventMouseButton or event is InputEventMouseMotion:
 		using_controller = false
+		using_touch = false
 
 	# Emit signal if device changed
-	if was_using_controller != using_controller:
+	if was_using_controller != using_controller or was_using_touch != using_touch:
 		input_device_changed.emit(using_controller)
 
 

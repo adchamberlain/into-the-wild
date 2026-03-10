@@ -425,8 +425,12 @@ func _apply_mobile_menu_style() -> void:
 	close_btn.text = "✕"
 	close_btn.add_theme_font_size_override("font_size", 32)
 	close_btn.custom_minimum_size = Vector2(48, 48)
-	close_btn.anchors_preset = Control.PRESET_TOP_RIGHT
-	close_btn.position = Vector2(-60, 12)
+	close_btn.anchor_left = 1.0
+	close_btn.anchor_right = 1.0
+	close_btn.offset_left = -60
+	close_btn.offset_top = 12
+	close_btn.offset_right = -12
+	close_btn.offset_bottom = 60
 	close_btn.pressed.connect(close_menu)
 	panel.add_child(close_btn)
 
