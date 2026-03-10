@@ -46,9 +46,21 @@ func _ready() -> void:
 	_setup_joystick()
 	_setup_action_buttons()
 	_setup_menu_buttons()
-	# Find player controller for touch look
+	# Find player controller for touch look and context signals
 	await get_tree().process_frame
 	player_controller = get_tree().get_first_node_in_group("player")
+	# Connect to equipment and inventory signals via player controller children
+	if player_controller:
+		var equipment: Node = player_controller.get_node_or_null("Equipment")
+		if equipment:
+			if equipment.has_signal("item_equipped"):
+				equipment.item_equipped.connect(_on_item_equipped)
+			if equipment.has_signal("item_unequipped"):
+				equipment.item_unequipped.connect(_on_item_unequipped)
+		var inventory: Node = player_controller.get_node_or_null("Inventory")
+		if inventory:
+			if inventory.has_signal("inventory_changed"):
+				inventory.inventory_changed.connect(_on_inventory_changed)
 
 
 func _calculate_safe_area() -> void:
@@ -98,6 +110,39 @@ func _setup_action_buttons() -> void:
 			false
 		)
 		action_buttons.append({"node": btn, "action": btn_data["action"]})
+
+	# Context-sensitive buttons
+	var screen_size_ctx: Vector2 = get_viewport().get_visible_rect().size
+
+	# USE — below equipped item panel (top-right)
+	use_button = _create_action_button(
+		"USE",
+		Vector2(screen_size_ctx.x - 70 - safe_margin["right"], 110 + safe_margin["top"]),
+		Color(0.4, 1, 0.4),  # Green
+		"use_equipped",
+		true  # Dashed border
+	)
+	use_button.visible = false
+
+	# EAT — beside health/hunger bars (top-left)
+	eat_button = _create_action_button(
+		"EAT",
+		Vector2(190 + safe_margin["left"], 55 + safe_margin["top"]),
+		Color(1, 0.6, 0.2),  # Orange
+		"eat",
+		true
+	)
+	eat_button.visible = false
+
+	# CROUCH — near core buttons, above JUMP
+	crouch_button = _create_action_button(
+		"CROUCH",
+		Vector2(right_x, bottom_y - 204),
+		Color(0.7, 0.7, 0.7),  # Grey
+		"crouch",
+		true
+	)
+	crouch_button.visible = false
 
 
 func _setup_menu_buttons() -> void:
@@ -287,6 +332,28 @@ func _is_on_button(pos: Vector2) -> bool:
 		if pos.distance_to(btn_center) <= BUTTON_RADIUS * 1.2:
 			return true
 	return false
+
+
+func _process(_delta: float) -> void:
+	if crouch_button and player_controller:
+		if player_controller.has_method("is_near_cliff_edge"):
+			crouch_button.visible = player_controller.is_near_cliff_edge()
+
+
+func _on_item_equipped(item_type: String) -> void:
+	if use_button:
+		use_button.visible = (item_type != "")
+
+
+func _on_item_unequipped(_item_type: String) -> void:
+	if use_button:
+		use_button.visible = false
+
+
+func _on_inventory_changed() -> void:
+	if eat_button and player_controller:
+		if player_controller.has_method("has_consumable"):
+			eat_button.visible = player_controller.has_consumable()
 
 
 ## Show/hide context-sensitive buttons based on game state
