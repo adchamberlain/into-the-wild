@@ -59,6 +59,11 @@ const BUBBLE_BLINK_RATE: float = 0.35  # seconds per toggle
 @onready var notification_panel: PanelContainer = $NotificationPanel
 @onready var notification_label: Label = $NotificationPanel/NotificationLabel
 
+# Tutorial hint panel (built programmatically)
+var hint_panel: PanelContainer = null
+var hint_label: RichTextLabel = null
+var _hint_timer: SceneTreeTimer = null
+
 # Screen fade overlay
 @onready var fade_overlay: ColorRect = $FadeOverlay
 
@@ -267,6 +272,9 @@ func _ready() -> void:
 	# Hide notification panel initially
 	if notification_panel:
 		notification_panel.visible = false
+
+	# Create tutorial hint panel
+	_create_hint_panel()
 
 	# Cache camera reference
 	if player:
@@ -842,6 +850,95 @@ func show_notification(message: String, color: Color = Color.WHITE, override_dur
 func _hide_notification() -> void:
 	if notification_panel:
 		notification_panel.visible = false
+
+
+func _create_hint_panel() -> void:
+	hint_panel = PanelContainer.new()
+	hint_panel.name = "HintPanel"
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color(0.1, 0.1, 0.12, 0.85)
+	style.corner_radius_top_left = 10
+	style.corner_radius_top_right = 10
+	style.corner_radius_bottom_left = 10
+	style.corner_radius_bottom_right = 10
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_color = Color(1, 0.85, 0.3, 0.3)
+	style.content_margin_left = 20
+	style.content_margin_right = 20
+	style.content_margin_top = 16
+	style.content_margin_bottom = 16
+	hint_panel.add_theme_stylebox_override("panel", style)
+
+	# Position: center-top, below notification area
+	hint_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	hint_panel.anchor_left = 0.5
+	hint_panel.anchor_right = 0.5
+	hint_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	hint_panel.offset_top = 120
+	hint_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var vbox: VBoxContainer = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 6)
+	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hint_panel.add_child(vbox)
+
+	var hud_font: Font = load("res://resources/hud_font.tres")
+
+	# Header label
+	var header: Label = Label.new()
+	header.text = "SURVIVAL TIP"
+	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	header.add_theme_font_override("font", hud_font)
+	header.add_theme_font_size_override("font_size", 32)
+	header.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
+	header.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(header)
+
+	# Body RichTextLabel
+	hint_label = RichTextLabel.new()
+	hint_label.bbcode_enabled = true
+	hint_label.fit_content = true
+	hint_label.scroll_active = false
+	hint_label.custom_minimum_size.x = 500
+	hint_label.add_theme_font_override("normal_font", hud_font)
+	hint_label.add_theme_font_size_override("normal_font_size", 28)
+	hint_label.add_theme_color_override("default_color", Color(0.9, 0.9, 0.9, 1))
+	hint_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(hint_label)
+
+	hint_panel.visible = false
+	add_child(hint_panel)
+
+
+## Show a tutorial hint with gold "SURVIVAL TIP" header. Uses BBCode for highlighting.
+func show_hint(message: String) -> void:
+	if not is_inside_tree():
+		return
+	if hint_panel and hint_label:
+		hint_label.text = message
+		hint_panel.visible = true
+		hint_panel.modulate.a = 0.0
+		# Fade in
+		var tween: Tween = create_tween()
+		tween.tween_property(hint_panel, "modulate:a", 1.0, 0.3)
+		# Cancel previous hint timer
+		if _hint_timer and _hint_timer.time_left > 0 and _hint_timer.timeout.is_connected(_hide_hint):
+			_hint_timer.timeout.disconnect(_hide_hint)
+		# Duration: 8s base + 1s per line
+		var line_count: int = message.count("\n") + 1
+		var duration: float = 8.0 + max(0, line_count - 1) * 1.0
+		_hint_timer = get_tree().create_timer(duration)
+		_hint_timer.timeout.connect(_hide_hint)
+
+
+func _hide_hint() -> void:
+	if hint_panel:
+		var tween: Tween = create_tween()
+		tween.tween_property(hint_panel, "modulate:a", 0.0, 0.5)
+		tween.tween_callback(func() -> void: hint_panel.visible = false)
 
 
 func _on_game_saved(_filepath: String, slot: int) -> void:
