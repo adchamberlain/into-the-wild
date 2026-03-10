@@ -111,23 +111,23 @@ Build up your camp through three levels:
 - **Mouse** - Look around
 - **Space** - Jump / Swim up
 - **Shift** - Sprint
-- **Escape** - Pause menu
+- **C** - Crouch (prevents falling off edges)
 
 #### Interaction
 - **E** - Interact with objects
-- **T** - Eat food / Use healing items
+- **F** - Eat food / Use healing items
 - **R** - Use equipped tool / Place structure
 - **Right-click (hold)** - Draw bow (when equipped), release to fire
 - **Q** - Unequip current item
 - **M** - Move placed structure
-- **1-9** - Equip item in slot
+- **1-9, 0, -, =, [, ], \\** - Quick equip items
 
 #### Menus
-- **C** - Crafting menu
+- **X** - Crafting menu
 - **I** - Equipment menu
-- **Tab** - Config menu
-- **K** - Save game (3 slots)
-- **L** - Load game (3 slots)
+- **V** - Toggle inventory panel (HUD overlay)
+- **Tab** - Config menu (save/load via K/L within this menu)
+- **Escape** - Pause menu
 
 ### PlayStation DualSense Controller
 
@@ -150,6 +150,7 @@ Full controller support with PlayStation button prompts.
 #### Menus
 - **Touchpad** - Crafting menu
 - **Create** - Equipment menu
+- **D-Pad Left** - Toggle inventory panel
 - **Options** - Pause menu
 
 ## Crafting Recipes
