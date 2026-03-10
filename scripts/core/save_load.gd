@@ -643,7 +643,9 @@ func _apply_save_data(data: Dictionary) -> void:
 
 	# Restore tutorial hint state and clear loading guard
 	if hint_manager and hint_manager.has_method("set_seen_hints"):
-		hint_manager.set_seen_hints(data.get("seen_hints", []))
+		var player_data: Dictionary = data.get("player", {})
+		var saved_hints: Array = player_data.get("seen_hints", [])
+		hint_manager.set_seen_hints(saved_hints)
 	if hint_manager and hint_manager.has_method("set_loading"):
 		hint_manager.set_loading(false)
 
