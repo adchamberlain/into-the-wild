@@ -88,6 +88,9 @@ func _on_area_body_entered(body: Node) -> void:
 
 	if target:
 		has_hit = true
+		# Freeze immediately at the impact point so the arrow doesn't fly off
+		freeze = true
+		linear_velocity = Vector3.ZERO
 		target.take_hit(ARROW_DAMAGE)
 		var sfx: Node = get_node_or_null("/root/SFXManager")
 		if sfx and sfx.has_method("play_sfx"):
@@ -153,6 +156,9 @@ func interact(player_node: Node) -> bool:
 
 	# Check capacity - leave arrow in world if player can't carry it
 	if inv.has_method("can_add_item") and not inv.can_add_item("diamond_arrows", 1):
+		var hud: Node = get_tree().get_first_node_in_group("hud")
+		if hud and hud.has_method("show_notification"):
+			hud.show_notification("Arrow inventory full!", Color(1.0, 0.5, 0.5, 1))
 		return false
 
 	inv.add_item("diamond_arrows", 1)
