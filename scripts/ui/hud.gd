@@ -654,9 +654,12 @@ func _update_inventory_display() -> void:
 			target_col.add_child(label)
 			item_labels[item_type] = label
 
-	# Widen the panel when using two columns
+	# Widen the panel when using two columns, but cap to avoid overlapping EquippedPanel
 	if inventory_panel:
-		inventory_panel.offset_right = 780.0 if use_two_columns else 400.0
+		var target_width: float = 780.0 if use_two_columns else 400.0
+		var viewport_width: float = get_viewport().get_visible_rect().size.x
+		var max_right: float = viewport_width - 480.0  # EquippedPanel (460px from right) + 20px gap
+		inventory_panel.offset_right = min(target_width, max_right)
 
 
 func _on_campsite_level_changed(new_level: int) -> void:
