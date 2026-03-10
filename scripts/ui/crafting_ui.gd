@@ -64,7 +64,7 @@ func _input(event: InputEvent) -> void:
 	if not is_inside_tree():
 		return
 
-	# Handle crafting menu toggle (C key or Touchpad button)
+	# Handle crafting menu toggle (X key or Touchpad button)
 	if event.is_action_pressed("open_crafting"):
 		# Don't open if another menu is already open (unless closing this one)
 		if not is_open and _is_other_menu_open():

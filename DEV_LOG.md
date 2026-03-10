@@ -7075,6 +7075,28 @@ Fixed a bug where the map HUD persisted as a blank panel in the house scene afte
 
 ---
 
+## Session 52 — Fix UI hint bugs and inventory overlap (issue #12) (2026-03-09)
+
+### Summary
+Fixed 4 UI bugs reported by a player on Windows (GitHub issue #12): wrong key hints in the food menu, HUD, and crafting UI, plus inventory panel overlapping the equipped panel on smaller screens.
+
+### Changes
+1. **Food menu close hint**: Changed from `[Esc] Close` to `[F] Close` — ESC opens the pause menu, F actually toggles the food menu. This also resolves the "can't consume food" report, which was caused by hint confusion preventing users from discovering Enter to consume.
+2. **HUD control hints**: Changed keyboard hints from `"C-Craft"` to `"X-Craft C-Crouch"` — C is crouch, X is craft. Added crouch hint for keyboard only (not controller).
+3. **Crafting UI close hint**: Changed from `"Press C to close"` to `"Press X to close"`.
+4. **Inventory panel width cap**: Clamped inventory panel's `offset_right` to `viewport_width - 480` so it can't overlap the EquippedPanel on narrow screens.
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/ui/food_menu.gd` | Modified | Close prompt uses `"eat"` action (F) instead of `"ui_cancel"` (ESC) |
+| `scripts/ui/hud.gd` | Modified | Keyboard hints: X-Craft C-Crouch; inventory width capped to prevent overlap |
+| `scenes/ui/hud.tscn` | Modified | Default hint text updated to match runtime hints |
+| `scripts/ui/crafting_ui.gd` | Modified | Close hint says X instead of C; fixed stale comment |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
