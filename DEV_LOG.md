@@ -7230,10 +7230,28 @@ Added a minimal, ambient tutorial hint system inspired by Breath of the Wild. 18
 
 ---
 
+## Session - iPad Port Implementation (2026-03-10)
+
+**iPad Support**: Added complete iPad touch controls and mobile HUD system, targeting App Store distribution as a free app. Single codebase with platform detection (`OS.get_name() == "iOS"`).
+
+**Day Counter (All Platforms)**: Added persistent "Day X" counter to the HUD time panel in gold text, using existing `time_manager.current_day`.
+
+**Touch Controls** (`scripts/ui/touch_controls.gd`): Virtual joystick (bottom-left), swipe-to-look (right side), action buttons (JUMP/SPRINT/ACT), context buttons (USE/EAT/CROUCH), menu icons. All 56px, highly transparent, safe-area aware.
+
+**Mobile HUD**: Explicit font tiers (Title 38px, Primary 28px, Secondary 22px, Hint 20px), inventory hidden, ◀ ▶ cycle arrows, safe area insets on all panels.
+
+**Menu Adaptation**: All 8 menus get close ✕ button, 44x44 min touch targets, D-pad disabled on iOS.
+
+**iOS Export**: Bundle ID `com.andrewchamberlain.IntoTheWild`, iPad-only landscape, iOS 14+, App Store metadata, privacy manifest.
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Continue play-testing tutorial hint system — verify all 18 hints trigger correctly
+1. Test iPad build on actual iPad hardware via TestFlight
+2. Tune touch sensitivity and joystick dead zones based on real device testing
+3. Continue play-testing tutorial hint system — verify all 18 hints trigger correctly
 2. Play-test procedural water generation — verify ponds/lakes/rivers appear beyond 300 units in non-desert biomes
 3. Deploy website to Cloudflare Pages at intothewild.dev
 4. Continue play-testing end-of-game trail sequence with new clues and compass
