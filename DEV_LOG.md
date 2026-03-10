@@ -7135,10 +7135,76 @@ Major world generation overhaul: moved the desert boundary from 150 to 300 units
 
 ---
 
+## Session 54 — Tutorial Hint System (2026-03-10)
+
+### Summary
+Added a minimal, ambient tutorial hint system inspired by Breath of the Wild. 18 contextual one-time hints teach new players as they play — hints fire once at the right moment, then never again. Includes a "SURVIVAL TIP" gold-bordered HUD panel, per-save-slot persistence, queue system with 4-second spacing, loading guard to prevent false triggers during save restoration, and a "Show Hints" config toggle.
+
+### Changes
+
+1. **HintManager autoload** (`scripts/ui/hint_manager.gd`): New autoload owning all hint definitions (18 hints), seen-state tracking, FIFO queue with 4s spacing, loading guard, and config integration. Game systems call `HintManager.try_show("hint_id")` at trigger points.
+
+2. **HUD hint display** (`scripts/ui/hud.gd`): New `show_hint()` method with programmatically-built gold-bordered "SURVIVAL TIP" panel using RichTextLabel for BBCode highlighting. Fade in/out animations, 8s+ display duration.
+
+3. **Save/load integration** (`scripts/core/save_load.gd`): `seen_hints` array persisted per save slot. Loading guard prevents hints from firing during inventory/crafting restoration.
+
+4. **Config toggle** (`scripts/ui/config_menu.gd`): "Show Hints" CheckButton, on by default. When off, hints are suppressed but not marked as seen — turning hints back on mid-game still shows relevant hints.
+
+5. **Early game triggers**: First resource gathered, first craft, hunger below 40%, fire pit/shelter/cabin placement, first fish caught.
+
+6. **Mid/late game triggers**: First non-clear weather, camp level 2 hint and level-up, bow/machete/hang glider acquisition, rare resource collection, desert entry, water entry, fall damage, deep well/sinkhole discovery.
+
+### Hint Catalog (18 hints)
+| ID | Trigger |
+|---|---|
+| `first_gather` | First resource gathered |
+| `first_craft` | First recipe crafted |
+| `hunger_low` | Hunger below 40% |
+| `first_fire_pit` | Fire pit placed |
+| `first_shelter` | Shelter placed |
+| `first_weather` | First non-clear weather |
+| `first_fish` | First fish caught |
+| `camp_level_2_hint` | 2+ structures at camp level 1 |
+| `camp_level_2_up` | Camp reaches level 2 |
+| `first_bow` | Bow added to inventory |
+| `swim_warning` | Player enters water |
+| `fall_warning` | First fall damage |
+| `desert_entry` | Player enters desert |
+| `first_rare_resource` | First rare resource collected |
+| `first_machete` | Machete added to inventory |
+| `first_hang_glider` | Hang glider added to inventory |
+| `first_cabin` | Cabin placed |
+| `deep_well_discovery` | Player enters sinkhole water |
+
+### Files Changed
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/ui/hint_manager.gd` | Created | HintManager autoload with 18 hints, queue, loading guard |
+| `scripts/ui/hud.gd` | Modified | Added show_hint(), _hide_hint(), _create_hint_panel() |
+| `scripts/core/save_load.gd` | Modified | Save/load seen_hints, loading guard |
+| `scripts/ui/config_menu.gd` | Modified | Show Hints toggle, get/apply config |
+| `scripts/resources/resource_node.gd` | Modified | first_gather trigger |
+| `scripts/crafting/crafting_system.gd` | Modified | first_craft trigger |
+| `scripts/player/player_stats.gd` | Modified | hunger_low trigger |
+| `scripts/campsite/placement_system.gd` | Modified | fire_pit, shelter, cabin triggers |
+| `scripts/resources/fishing_spot.gd` | Modified | first_fish trigger |
+| `scripts/world/weather_manager.gd` | Modified | first_weather trigger |
+| `scripts/campsite/campsite_manager.gd` | Modified | camp_level_2_hint, camp_level_2_up triggers |
+| `scripts/player/inventory.gd` | Modified | bow, machete, hang_glider, rare resource triggers |
+| `scripts/player/player_controller.gd` | Modified | desert_entry, swim_warning, fall_warning triggers |
+| `scripts/world/chunk_manager.gd` | Modified | deep_well_discovery trigger |
+| `project.godot` | Modified | HintManager autoload registration |
+| `tests/test_hint_manager.gd` | Created | 10 tests, 17 assertions |
+| `tests/run_all_tests.gd` | Modified | Registered test_hint_manager.gd |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test procedural water generation — verify ponds/lakes/rivers appear beyond 300 units in non-desert biomes
+1. Play-test tutorial hint system — verify hints trigger at correct moments and display properly
+2. Play-test procedural water generation — verify ponds/lakes/rivers appear beyond 300 units in non-desert biomes
 2. Deploy website to Cloudflare Pages at intothewild.dev
 3. Continue play-testing end-of-game trail sequence with new clues and compass
 4. When testing is done: set `trail_testing_mode = false` in `scripts/core/game_state.gd:24`
