@@ -3,7 +3,7 @@ class_name StructurePlacedTorch
 ## A torch placed on the ground that provides light. Can be reclaimed.
 
 # Light properties
-@export var light_energy: float = 8.0
+@export var light_energy: float = 6.4
 @export var light_range: float = 15.0
 @export var light_color: Color = Color(1.0, 0.8, 0.4)
 

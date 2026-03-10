@@ -15,7 +15,7 @@ const EQUIPPABLE_ITEMS: Dictionary = {
 		"slot": 1,
 		"has_light": true,
 		"light_color": Color(1.0, 0.8, 0.4),
-		"light_energy": 8.0,
+		"light_energy": 6.4,
 		"light_range": 15.0,
 		"placeable": true
 	},
@@ -135,7 +135,7 @@ const EQUIPPABLE_ITEMS: Dictionary = {
 		"slot": 21,
 		"has_light": true,
 		"light_color": Color(0.9, 0.95, 1.0),
-		"light_energy": 16.0,
+		"light_energy": 12.8,
 		"light_range": 30.0,
 		"placeable": true
 	},
