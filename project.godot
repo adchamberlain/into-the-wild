@@ -27,6 +27,7 @@ AmbientSoundManager="*res://scripts/core/ambient_sound_manager.gd"
 SFXManager="*res://scripts/core/sfx_manager.gd"
 GameState="*res://scripts/core/game_state.gd"
 CaveTransition="*res://scripts/core/cave_transition.gd"
+HintManager="*res://scripts/ui/hint_manager.gd"
 
 [display]
 
