@@ -440,6 +440,9 @@ func craft(recipe_id: String, at_bench: bool = false, campsite_level: int = 1) -
 
 	print("[Crafting] Crafted %s x%d" % [output_type, output_amount])
 	recipe_crafted.emit(recipe_id, output_type, output_amount)
+	var hint_mgr: Node = get_node_or_null("/root/HintManager") if is_inside_tree() else null
+	if hint_mgr and hint_mgr.has_method("try_show"):
+		hint_mgr.try_show("first_craft")
 
 	return true
 

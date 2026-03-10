@@ -82,6 +82,9 @@ func _update_hunger(delta: float) -> void:
 
 	if hunger != old_hunger:
 		hunger_changed.emit(hunger, max_hunger)
+		# Tutorial hint when hunger drops below 40%
+		if hunger < max_hunger * 0.4:
+			HintManager.try_show("hunger_low")
 
 
 func _update_health(delta: float) -> void:

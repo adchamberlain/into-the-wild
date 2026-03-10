@@ -146,6 +146,7 @@ func interact(player: Node) -> bool:
 
 	# Emit signal for any listeners
 	gathered.emit(resource_type, resource_amount)
+	HintManager.try_show("first_gather")
 
 	# Add to player inventory if they have one
 	if inventory:
@@ -218,6 +219,7 @@ func _complete_harvest(player: Node) -> void:
 
 	# Emit signal for any listeners
 	gathered.emit(resource_type, resource_amount)
+	HintManager.try_show("first_gather")
 
 	# Add to player inventory if they have one
 	if inventory:

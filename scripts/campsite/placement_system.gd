@@ -860,6 +860,14 @@ func _confirm_placement() -> void:
 		if player and player.has_method("_update_respawn_from_structures"):
 			player._update_respawn_from_structures()
 
+	# Tutorial hints for specific structures
+	if current_structure_type == "fire_pit":
+		HintManager.try_show("first_fire_pit")
+	elif current_structure_type == "basic_shelter" or current_structure_type == "canvas_tent":
+		HintManager.try_show("first_shelter")
+	elif current_structure_type == "cabin":
+		HintManager.try_show("first_cabin")
+
 	# Emit signal
 	placement_confirmed.emit(current_structure_type, place_pos)
 	print("[PlacementSystem] Placed %s at %s" % [current_structure_type, place_pos])

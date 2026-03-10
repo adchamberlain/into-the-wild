@@ -594,6 +594,7 @@ func _attempt_catch() -> void:
 
 	_deplete()
 	fish_caught.emit(fish_type, 1)
+	HintManager.try_show("first_fish")
 
 
 func _fail_catch() -> void:
