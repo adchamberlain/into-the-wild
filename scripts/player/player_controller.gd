@@ -13,6 +13,7 @@ var _pre_dev_inventory: Dictionary = {}  # Snapshot of inventory before dev mode
 @export var sprint_speed: float = 8.0
 @export var jump_velocity: float = 5.5  # Allows comfortable 1-block jumps (~1.5 blocks max height)
 @export var mouse_sensitivity: float = 0.002
+@export var touch_sensitivity: float = 0.003
 
 # Step-up: automatically walk over tiny terrain height differences (campsite transitions, cave ramps)
 const STEP_HEIGHT: float = 0.4  # Max step-up height (fractional differences only, not full blocks)
@@ -404,6 +405,16 @@ func _handle_mouse_look(event: InputEventMouseMotion) -> void:
 		deg_to_rad(camera_pitch_max)
 	)
 	camera.rotation.z = 0.0  # Prevent roll drift from local rotation
+
+
+func apply_touch_look(delta_x: float, delta_y: float) -> void:
+	# Called by touch_controls.gd for swipe-to-look
+	if _is_ui_blocking_input():
+		return
+	rotate_y(-delta_x * touch_sensitivity)
+	if camera:
+		camera.rotate_x(-delta_y * touch_sensitivity)
+		camera.rotation.x = clamp(camera.rotation.x, deg_to_rad(camera_pitch_min), deg_to_rad(camera_pitch_max))
 
 
 func _physics_process(delta: float) -> void:
