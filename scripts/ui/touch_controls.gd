@@ -46,6 +46,8 @@ func _ready() -> void:
 	_setup_joystick()
 	_setup_action_buttons()
 	_setup_menu_buttons()
+	# Hide/show touch controls when input device changes
+	InputManager.input_device_changed.connect(_on_input_device_changed)
 	# Find player controller for touch look and context signals
 	await get_tree().process_frame
 	player_controller = get_tree().get_first_node_in_group("player")
@@ -364,3 +366,13 @@ func update_context_buttons(has_equipped: bool, has_food: bool, near_cliff: bool
 		eat_button.visible = has_food
 	if crouch_button:
 		crouch_button.visible = near_cliff
+
+
+## Hide touch controls when a controller is connected, show when returning to touch
+func _on_input_device_changed(_is_controller: bool) -> void:
+	var show_touch: bool = InputManager.is_using_touch()
+	visible = show_touch
+	# Reset joystick state when hiding to prevent stuck movement
+	if not show_touch and joystick_touch_index != -1:
+		joystick_touch_index = -1
+		_reset_joystick()

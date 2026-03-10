@@ -380,8 +380,8 @@ func _input(event: InputEvent) -> void:
 		_handle_input()
 		return
 
-	# Navigation (not used on iOS — touch handles selection)
-	if not OS.get_name() == "iOS":
+	# D-pad navigation (disabled when using touch — touch handles selection)
+	if not InputManager.is_using_touch():
 		if event.is_action_pressed("ui_down"):
 			_navigate_items(1)
 			_handle_input()

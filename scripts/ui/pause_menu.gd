@@ -131,8 +131,8 @@ func _input(event: InputEvent) -> void:
 		_handle_input()
 		return
 
-	# D-pad navigation (not used on iOS — touch handles selection)
-	if not OS.get_name() == "iOS":
+	# D-pad navigation (disabled when using touch — touch handles selection)
+	if not InputManager.is_using_touch():
 		# D-pad navigation for confirmation dialog
 		if is_paused and showing_confirm:
 			if event.is_action_pressed("ui_down"):
