@@ -157,6 +157,10 @@ func register_structure(structure: Node, structure_type: String) -> void:
 	structure_added.emit(structure, structure_type)
 	print("[CampsiteManager] Registered %s (total: %d structures)" % [structure_type, placed_structures.size()])
 
+	# Hint about camp level requirements after placing 2+ structures
+	if placed_structures.size() >= 2 and campsite_level == 1:
+		HintManager.try_show("camp_level_2_hint")
+
 	# Check for level up
 	_check_level_progression()
 
@@ -252,6 +256,8 @@ func _check_level_progression() -> void:
 		var old_level: int = campsite_level
 		campsite_level = next_level
 		campsite_level_changed.emit(campsite_level)
+		if campsite_level == 2:
+			HintManager.try_show("camp_level_2_up")
 		print("[CampsiteManager] *** LEVEL UP! Now at level %d: %s ***" % [campsite_level, get_level_description()])
 
 		# Start tracking days at level 2

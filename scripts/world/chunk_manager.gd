@@ -1521,6 +1521,7 @@ func _on_sinkhole_water_entered(body: Node3D) -> void:
 			body.water_surface_y = get_height_at(sink_center.x + desert_sinkhole["radius"] + 4.0, sink_center.y)
 		if body.has_method("set_in_water"):
 			body.set_in_water(true)
+		HintManager.try_show("deep_well_discovery")
 		print("[ChunkManager] Player entered sinkhole water")
 
 

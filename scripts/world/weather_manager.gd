@@ -296,6 +296,10 @@ func _set_weather(weather: Weather) -> void:
 
 	# Emit signal
 	weather_changed.emit(get_weather_name())
+	if current_weather != Weather.CLEAR:
+		var _hint_mgr: Node = get_node_or_null("/root/HintManager") if is_inside_tree() else null
+		if _hint_mgr and _hint_mgr.has_method("try_show"):
+			_hint_mgr.try_show("first_weather")
 
 	# Calculate hours for logging
 	var duration_hours: float = 0.0

@@ -912,6 +912,9 @@ func set_in_water(in_water: bool) -> void:
 	var was_in_water: bool = is_in_water
 	is_in_water = _water_area_count > 0
 
+	if is_in_water and not was_in_water:
+		HintManager.try_show("swim_warning")
+
 	# Update underwater visual effect
 	if is_in_water and not was_in_water:
 		_show_underwater_effect()
@@ -1229,6 +1232,7 @@ func _apply_fall_damage() -> void:
 
 	if stats:
 		stats.take_damage(damage)
+		HintManager.try_show("fall_warning")
 		SFXManager.play_sfx("fall_hurt")
 		# Show damage notification via HUD
 		var hud: Node = get_tree().get_first_node_in_group("hud")
@@ -1497,6 +1501,8 @@ func _check_desert_status() -> void:
 		return
 	var region: int = chunk_mgr.get_region_at(global_position.x, global_position.z)
 	_is_in_desert = (region == ChunkManager.RegionType.DESERT)
+	if _is_in_desert:
+		HintManager.try_show("desert_entry")
 
 	# Update hunger multiplier on PlayerStats
 	if stats:
