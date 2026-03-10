@@ -4,6 +4,14 @@ extends CanvasLayer
 # Preload the HUD font
 const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 
+var is_mobile: bool = false
+
+# Mobile font size tiers
+const MOBILE_TITLE_FONT: int = 38
+const MOBILE_PRIMARY_FONT: int = 28
+const MOBILE_SECONDARY_FONT: int = 22
+const MOBILE_HINT_FONT: int = 20
+
 @export var time_manager_path: NodePath
 @export var player_path: NodePath
 @export var campsite_manager_path: NodePath
@@ -177,6 +185,7 @@ var hud_update_timer: float = 0.0
 
 
 func _ready() -> void:
+	is_mobile = OS.get_name() == "iOS"
 	add_to_group("hud")
 
 	# Connect to time manager
@@ -315,6 +324,94 @@ func _ready() -> void:
 		# Hide mouse cursor on iOS
 		Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
 
+	# Hide inventory on mobile (touch UI replaces it)
+	if is_mobile and inventory_panel:
+		inventory_panel.visible = false
+
+	# Apply safe area insets for notch/home indicator avoidance
+	_apply_safe_area_insets()
+
+	# Add touch slot cycle buttons on mobile
+	if is_mobile:
+		_create_touch_slot_arrows()
+
+
+## Returns the appropriate font size for the current platform.
+## On mobile, maps desktop sizes to smaller mobile tiers.
+func _get_font_size(desktop_size: int) -> int:
+	if not is_mobile:
+		return desktop_size
+	if desktop_size >= 56:
+		return MOBILE_TITLE_FONT
+	elif desktop_size >= 40:
+		return MOBILE_PRIMARY_FONT
+	elif desktop_size >= 32:
+		return MOBILE_SECONDARY_FONT
+	else:
+		return MOBILE_HINT_FONT
+
+
+## Apply iOS safe area insets so HUD panels avoid the notch and home indicator.
+func _apply_safe_area_insets() -> void:
+	if not is_mobile:
+		return
+	var screen_size: Vector2i = DisplayServer.screen_get_size()
+	var safe_area: Rect2i = DisplayServer.get_display_safe_area()
+	var margin_left: int = safe_area.position.x
+	var margin_top: int = safe_area.position.y
+	var margin_right: int = screen_size.x - (safe_area.position.x + safe_area.size.x)
+	var margin_bottom: int = screen_size.y - (safe_area.position.y + safe_area.size.y)
+	var stats_panel: Control = get_node_or_null("StatsPanel")
+	var time_panel: Control = get_node_or_null("TimePanel")
+	var equipped_panel: Control = get_node_or_null("EquippedPanel")
+	if stats_panel:
+		stats_panel.position.x += margin_left
+		stats_panel.position.y += margin_top
+	if time_panel:
+		time_panel.position.y += margin_top
+	if equipped_panel:
+		equipped_panel.position.x -= margin_right
+		equipped_panel.position.y += margin_top
+
+
+## Create ◀ ▶ touch buttons for cycling equipped item slots on mobile.
+func _create_touch_slot_arrows() -> void:
+	var container: HBoxContainer = HBoxContainer.new()
+	container.name = "TouchSlotArrows"
+	container.add_theme_constant_override("separation", 12)
+	# Anchor bottom-right near equipped panel
+	container.anchor_left = 1.0
+	container.anchor_right = 1.0
+	container.anchor_top = 1.0
+	container.anchor_bottom = 1.0
+	container.offset_left = -200
+	container.offset_right = -20
+	container.offset_top = -110
+	container.offset_bottom = -56
+
+	var style_btn: StyleBoxFlat = StyleBoxFlat.new()
+	style_btn.bg_color = Color(0.1, 0.1, 0.12, 0.85)
+	style_btn.corner_radius_top_left = 10
+	style_btn.corner_radius_top_right = 10
+	style_btn.corner_radius_bottom_left = 10
+	style_btn.corner_radius_bottom_right = 10
+
+	for arrow_data: Array in [["◀", "prev_slot"], ["▶", "next_slot"]]:
+		var btn: Button = Button.new()
+		btn.text = arrow_data[0]
+		btn.custom_minimum_size = Vector2(56, 56)
+		btn.add_theme_stylebox_override("normal", style_btn)
+		btn.add_theme_font_override("font", HUD_FONT)
+		btn.add_theme_font_size_override("font_size", _get_font_size(32))
+		btn.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9, 1))
+		var action: String = arrow_data[1]
+		btn.pressed.connect(func() -> void:
+			Input.action_press(action)
+			Input.action_release(action)
+		)
+		container.add_child(btn)
+
+	add_child(container)
 
 
 func _update_time_display() -> void:
@@ -646,7 +743,7 @@ func _update_inventory_display() -> void:
 			var cont_header: Label = Label.new()
 			cont_header.text = "-- %s --" % split_category
 			cont_header.add_theme_font_override("font", HUD_FONT)
-			cont_header.add_theme_font_size_override("font_size", 29)
+			cont_header.add_theme_font_size_override("font_size", _get_font_size(29))
 			cont_header.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
 			target_col.add_child(cont_header)
 
@@ -654,7 +751,7 @@ func _update_inventory_display() -> void:
 			var header: Label = Label.new()
 			header.text = "-- %s --" % entry["category"]
 			header.add_theme_font_override("font", HUD_FONT)
-			header.add_theme_font_size_override("font_size", 29)
+			header.add_theme_font_size_override("font_size", _get_font_size(29))
 			header.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
 			target_col.add_child(header)
 			_section_labels[entry["category"]] = header
@@ -670,7 +767,7 @@ func _update_inventory_display() -> void:
 			else:
 				label.text = "%s: %d" % [display_name, count]
 			label.add_theme_font_override("font", HUD_FONT)
-			label.add_theme_font_size_override("font_size", 36)
+			label.add_theme_font_size_override("font_size", _get_font_size(36))
 			label.add_theme_color_override("font_color", Color(1, 1, 1, 1))
 			target_col.add_child(label)
 			item_labels[item_type] = label
@@ -905,7 +1002,7 @@ func _create_hint_panel() -> void:
 	header.text = "SURVIVAL TIP"
 	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	header.add_theme_font_override("font", hud_font)
-	header.add_theme_font_size_override("font_size", 44)
+	header.add_theme_font_size_override("font_size", _get_font_size(44))
 	header.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
 	header.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(header)
@@ -917,7 +1014,7 @@ func _create_hint_panel() -> void:
 	hint_label.scroll_active = false
 	hint_label.custom_minimum_size.x = 600
 	hint_label.add_theme_font_override("normal_font", hud_font)
-	hint_label.add_theme_font_size_override("normal_font_size", 40)
+	hint_label.add_theme_font_size_override("normal_font_size", _get_font_size(40))
 	hint_label.add_theme_color_override("default_color", Color(0.9, 0.9, 0.9, 1))
 	hint_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(hint_label)
@@ -1203,7 +1300,7 @@ func _create_inventory_toggle_hint() -> void:
 	inventory_toggle_hint = Label.new()
 	inventory_toggle_hint.name = "ToggleHint"
 	inventory_toggle_hint.add_theme_font_override("font", HUD_FONT)
-	inventory_toggle_hint.add_theme_font_size_override("font_size", 26)
+	inventory_toggle_hint.add_theme_font_size_override("font_size", _get_font_size(26))
 	inventory_toggle_hint.add_theme_color_override("font_color", Color(0.55, 0.55, 0.55, 1))
 	_update_inventory_toggle_hint()
 	vbox.add_child(inventory_toggle_hint)
@@ -1248,7 +1345,7 @@ func _create_compass_panel() -> void:
 	compass_label = Label.new()
 	compass_label.name = "CompassLabel"
 	compass_label.add_theme_font_override("font", HUD_FONT)
-	compass_label.add_theme_font_size_override("font_size", 32)
+	compass_label.add_theme_font_size_override("font_size", _get_font_size(32))
 	compass_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3, 1))
 	compass_label.text = ""
 	compass_panel.add_child(compass_label)
@@ -1316,7 +1413,7 @@ func _create_coca_leaf_panel() -> void:
 
 	coca_leaf_label = Label.new()
 	coca_leaf_label.add_theme_font_override("font", HUD_FONT)
-	coca_leaf_label.add_theme_font_size_override("font_size", 28)
+	coca_leaf_label.add_theme_font_size_override("font_size", _get_font_size(28))
 	coca_leaf_label.add_theme_color_override("font_color", Color(0.6, 1.0, 0.6, 1))
 	coca_leaf_panel.add_child(coca_leaf_label)
 
@@ -1383,7 +1480,7 @@ func _create_bubble_container() -> void:
 		var lbl: Label = Label.new()
 		lbl.text = "●"
 		lbl.add_theme_font_override("font", HUD_FONT)
-		lbl.add_theme_font_size_override("font_size", 40)
+		lbl.add_theme_font_size_override("font_size", _get_font_size(40))
 		lbl.add_theme_color_override("font_color", Color(0.6, 0.85, 1.0, 1))
 		bubble_container.add_child(lbl)
 		bubble_labels.append(lbl)
@@ -1578,7 +1675,7 @@ func _create_heat_indicator() -> void:
 	heat_label = Label.new()
 	heat_label.name = "HeatLabel"
 	heat_label.add_theme_font_override("font", HUD_FONT)
-	heat_label.add_theme_font_size_override("font_size", 28)
+	heat_label.add_theme_font_size_override("font_size", _get_font_size(28))
 	heat_label.add_theme_color_override("font_color", Color(1.0, 0.5, 0.5, 1))
 	heat_label.text = "HEAT 1.5x"
 	heat_panel.add_child(heat_label)
@@ -1632,7 +1729,7 @@ func _create_gliding_indicator() -> void:
 	glide_lbl.text = "GLIDING"
 	glide_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	glide_lbl.add_theme_font_override("font", HUD_FONT)
-	glide_lbl.add_theme_font_size_override("font_size", 28)
+	glide_lbl.add_theme_font_size_override("font_size", _get_font_size(28))
 	glide_lbl.add_theme_color_override("font_color", Color(0.6, 1.0, 0.6, 1))
 	panel.add_child(glide_lbl)
 
