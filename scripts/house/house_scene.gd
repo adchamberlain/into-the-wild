@@ -2047,7 +2047,7 @@ func _build_wall_maps() -> void:
 	_build_terrain_map(Vector3(7.0, 1.6, WALL_THICKNESS + 0.03), "south", 0.9, 0.7, 55, "map_fishing_spot", "My Favorite Fishing Spot")
 
 
-func _build_terrain_map(pos: Vector3, wall: String, map_w: float, map_h: float, seed_val: int, object_type: String = "", map_title: String = "") -> void:
+func _build_terrain_map(pos: Vector3, wall: String, map_w: float, map_h: float, seed_val: int, object_type: String = "", _map_title: String = "") -> void:
 	## Builds a framed terrain map on a wall. Uses colored grid to mimic game terrain.
 	## If object_type is provided, the map becomes interactable with a nameplate.
 	var map_node: Node3D
@@ -3052,7 +3052,7 @@ func _build_tree_picture(pos: Vector3, wall: String, tree_type: String, mats: Di
 
 	var is_ew: bool = (wall == "east" or wall == "west")
 	var dir: float = 1.0 if (wall == "west" or wall == "south") else -1.0
-	var scale: float = fs / 0.7  # Scale factor relative to default 0.7
+	var text_scale: float = fs / 0.7  # Scale factor relative to default 0.7
 
 	# Frame & background
 	if is_ew:
@@ -3074,11 +3074,11 @@ func _build_tree_picture(pos: Vector3, wall: String, tree_type: String, mats: Di
 		var v_sz: float = piece[3]
 		var mat: StandardMaterial3D = piece[4]
 		if is_ew:
-			_box(p, Vector3(thin, v_sz * 0.8 * scale, h_sz * 0.8 * scale),
-				Vector3(pos.x + dir * 0.02, pos.y + v_off * 0.8 * scale, pos.z + h_off * 0.8 * scale), mat)
+			_box(p, Vector3(thin, v_sz * 0.8 * text_scale, h_sz * 0.8 * text_scale),
+				Vector3(pos.x + dir * 0.02, pos.y + v_off * 0.8 * text_scale, pos.z + h_off * 0.8 * text_scale), mat)
 		else:
-			_box(p, Vector3(h_sz * 0.8 * scale, v_sz * 0.8 * scale, thin),
-				Vector3(pos.x + h_off * 0.8 * scale, pos.y + v_off * 0.8 * scale, pos.z + dir * 0.02), mat)
+			_box(p, Vector3(h_sz * 0.8 * text_scale, v_sz * 0.8 * text_scale, thin),
+				Vector3(pos.x + h_off * 0.8 * text_scale, pos.y + v_off * 0.8 * text_scale, pos.z + dir * 0.02), mat)
 
 	# Nameplate below painting (small brass plate on dark wood backing)
 	var mat_brass: StandardMaterial3D = StandardMaterial3D.new()
@@ -3454,7 +3454,7 @@ func open_new_game_plus(player: Node) -> void:
 
 var _journal_ui: Node = null
 
-func open_journal(player: Node) -> void:
+func open_journal(_player: Node) -> void:
 	## Opens the Explorer's Journal for reading.
 	if _journal_ui and is_instance_valid(_journal_ui):
 		return  # Already open
