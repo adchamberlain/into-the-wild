@@ -307,6 +307,14 @@ func _ready() -> void:
 	_update_campsite_level_display()
 	_update_weather_display()
 
+	# Instantiate touch controls on iOS
+	if OS.get_name() == "iOS":
+		var touch_scene: PackedScene = preload("res://scenes/ui/touch_controls.tscn")
+		var touch_controls: CanvasLayer = touch_scene.instantiate()
+		get_tree().root.add_child(touch_controls)
+		# Hide mouse cursor on iOS
+		Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
+
 
 
 func _update_time_display() -> void:
