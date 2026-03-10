@@ -330,11 +330,11 @@ func _setup_noise() -> void:
 	forest_noise.frequency = 0.08
 	forest_noise.fractal_octaves = 2
 
-	# Region noise - very low frequency for large distinct regions (~125 units across)
+	# Region noise - very low frequency for large distinct regions (~250 units across)
 	region_noise = FastNoiseLite.new()
 	region_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
 	region_noise.seed = noise_seed + 1500
-	region_noise.frequency = 0.008
+	region_noise.frequency = 0.004
 	region_noise.fractal_octaves = 1
 
 	# Detail noise for hills - adds variety to dramatic terrain
