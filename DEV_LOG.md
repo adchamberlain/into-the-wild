@@ -7200,16 +7200,46 @@ Added a minimal, ambient tutorial hint system inspired by Breath of the Wild. 18
 
 ---
 
+## Session 54 - Tutorial Hints Polish, Home Scene Music, Canvas Tent Fixes (2026-03-10)
+
+**Tutorial Hint System Polish** (from play-testing):
+- Repositioned hint panel down (offset_top 120→220) to avoid compass collision
+- Increased font sizes (header 32→44px, body 28→40px, min width 500→600) for readability
+- Added light transparency to hint panel background (opacity 0.70)
+- Added `{action}` placeholder system for controller-aware prompts — `_resolve_prompts()` replaces placeholders with InputManager.get_prompt() at display time (supports keyboard and DualSense)
+- Fixed critical bug: seen_hints not restoring from saves — was reading from top-level `data` instead of `data["player"]` dict
+- Reduced torch brightness by 20% (8.0→6.4) for held and placed torches
+- Fixed 3 Godot warnings in house_scene.gd (shadowed variables)
+
+**Home Scene Music**:
+- Added 6 deep house/chill tracks from Pixabay to `assets/music/mp3/tracks/home-scene/`
+- House scene stops wilderness MusicManager and plays its own playlist
+- "The Mountain" plays first, remaining tracks shuffle randomly, permanent loop
+- Volume at -10 dB matching wilderness ambient level
+
+**Canvas Tent Visual Fixes**:
+- Fixed guy rope rotation — ropes were pointing upward instead of downward to ground stakes (swapped rotation.z signs)
+- Fixed A-frame panel corners protruding above ridge — repositioned panels so top edges align exactly at ridge line (0, 1.8), excess extends below ground and is hidden
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/house/house_scene.gd` | Modified | Home scene music player, track shuffling, MusicManager disable |
+| `scripts/campsite/placement_system.gd` | Modified | Canvas tent panel repositioning, guy rope rotation fix |
+| `scripts/core/save_load.gd` | Modified | Canvas tent panel repositioning, guy rope rotation fix |
+| `assets/music/mp3/tracks/home-scene/` | Created | 6 deep house/chill MP3 tracks |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Play-test tutorial hint system — verify hints trigger at correct moments and display properly
+1. Continue play-testing tutorial hint system — verify all 18 hints trigger correctly
 2. Play-test procedural water generation — verify ponds/lakes/rivers appear beyond 300 units in non-desert biomes
-2. Deploy website to Cloudflare Pages at intothewild.dev
-3. Continue play-testing end-of-game trail sequence with new clues and compass
-4. When testing is done: set `trail_testing_mode = false` in `scripts/core/game_state.gd:24`
-5. When testing is done: revert player spawn in `scenes/main.tscn` from (345, 25, -345) to (0, 5, 0)
-6. Review and fix any bugs filed via GitHub Issues
+3. Deploy website to Cloudflare Pages at intothewild.dev
+4. Continue play-testing end-of-game trail sequence with new clues and compass
+5. When testing is done: set `trail_testing_mode = false` in `scripts/core/game_state.gd:24`
+6. When testing is done: revert player spawn in `scenes/main.tscn` from (345, 25, -345) to (0, 5, 0)
+7. Review and fix any bugs filed via GitHub Issues
 
 ### Known Issues
 - Player spawn in main.tscn is at (345, 25, -345) for testing — needs revert to (0, 5, 0)

@@ -73,6 +73,21 @@ var _text_overlay_panel: PanelContainer
 var _text_overlay_timer: float = 0.0
 var _text_overlay_active: bool = false
 
+# Home scene music
+const HOME_MUSIC_PATH: String = "res://assets/music/mp3/tracks/home-scene/"
+const HOME_FIRST_TRACK: String = "the_mountain-deep-house-483808.mp3"
+const HOME_TRACKS: Array[String] = [
+	"34910776-for-her-chill-upbeat-summel-travel-vlog-and-ig-music-royalty-free-use-202298.mp3",
+	"9jackjack8-ember-classical-deep-house-463686.mp3",
+	"the_mountain-deep-house-483808.mp3",
+	"tunetank-deep-house-347239.mp3",
+	"tunetank-deep-house-lounge-music-349539.mp3",
+	"tunetank-soft-house-music-348510.mp3",
+]
+var _home_music_player: AudioStreamPlayer
+var _home_track_order: Array[int] = []
+var _home_track_index: int = -1
+
 
 func _ready() -> void:
 	# Clean up any lingering wilderness HUD elements (e.g., map) added to root
@@ -102,7 +117,67 @@ func _ready() -> void:
 	_create_player()
 	_build_pause_menu()
 	_build_text_overlay()
+	_setup_home_music()
 	_start_fade_in()
+
+
+func _setup_home_music() -> void:
+	# Stop wilderness music manager
+	var music_mgr: Node = get_node_or_null("/root/MusicManager")
+	if music_mgr and music_mgr.has_method("set_music_enabled"):
+		music_mgr.set_music_enabled(false)
+
+	# Create player
+	_home_music_player = AudioStreamPlayer.new()
+	_home_music_player.name = "HomeMusicPlayer"
+	_home_music_player.bus = "Music"
+	_home_music_player.volume_db = -10.0
+	_home_music_player.finished.connect(_on_home_track_finished)
+	add_child(_home_music_player)
+
+	# Build track order: first track fixed, rest shuffled
+	var first_idx: int = HOME_TRACKS.find(HOME_FIRST_TRACK)
+	_home_track_order.append(first_idx)
+	for i: int in range(HOME_TRACKS.size()):
+		if i != first_idx:
+			_home_track_order.append(i)
+	# Fisher-Yates shuffle on indices 1..end
+	for i: int in range(_home_track_order.size() - 1, 1, -1):
+		var j: int = 1 + randi() % i
+		var temp: int = _home_track_order[i]
+		_home_track_order[i] = _home_track_order[j]
+		_home_track_order[j] = temp
+
+	_play_next_home_track()
+
+
+func _play_next_home_track() -> void:
+	_home_track_index += 1
+	if _home_track_index >= _home_track_order.size():
+		# Reshuffle all tracks (no fixed first track on repeat cycles)
+		_home_track_order.clear()
+		for i: int in range(HOME_TRACKS.size()):
+			_home_track_order.append(i)
+		for i: int in range(_home_track_order.size() - 1, 0, -1):
+			var j: int = randi() % (i + 1)
+			var temp: int = _home_track_order[i]
+			_home_track_order[i] = _home_track_order[j]
+			_home_track_order[j] = temp
+		_home_track_index = 0
+
+	var track_name: String = HOME_TRACKS[_home_track_order[_home_track_index]]
+	var stream: AudioStream = load(HOME_MUSIC_PATH + track_name)
+	if stream:
+		_home_music_player.stream = stream
+		_home_music_player.play()
+	else:
+		# Skip broken track
+		if _home_track_index < _home_track_order.size() - 1:
+			_play_next_home_track.call_deferred()
+
+
+func _on_home_track_finished() -> void:
+	_play_next_home_track()
 
 
 func _cleanup_wilderness_hud() -> void:

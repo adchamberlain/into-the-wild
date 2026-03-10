@@ -1849,9 +1849,10 @@ func _create_canvas_tent() -> StaticBody3D:
 	panel_mesh.size = Vector3(3.0, 0.05, 2.0)
 
 	# Left panel (slightly darker - shadow side)
+	# Positioned so top edge aligns with ridge (0, 1.8) — excess below ground is hidden
 	var panel_left: MeshInstance3D = MeshInstance3D.new()
 	panel_left.mesh = panel_mesh
-	panel_left.position = Vector3(-0.7, 1.2, 0)
+	panel_left.position = Vector3(-1.06, 0.74, 0)
 	panel_left.rotation_degrees.z = 45
 	panel_left.material_override = canvas_shadow_mat
 	tent.add_child(panel_left)
@@ -1859,7 +1860,7 @@ func _create_canvas_tent() -> StaticBody3D:
 	# Right panel (lighter - catching light)
 	var panel_right: MeshInstance3D = MeshInstance3D.new()
 	panel_right.mesh = panel_mesh
-	panel_right.position = Vector3(0.7, 1.2, 0)
+	panel_right.position = Vector3(1.06, 0.74, 0)
 	panel_right.rotation_degrees.z = -45
 	panel_right.material_override = canvas_light_mat
 	tent.add_child(panel_right)
@@ -1871,14 +1872,14 @@ func _create_canvas_tent() -> StaticBody3D:
 		# Left panel seams
 		var seam_l: MeshInstance3D = MeshInstance3D.new()
 		seam_l.mesh = seam_mesh
-		seam_l.position = Vector3(-0.7, 1.22, -0.5 + i * 0.5)
+		seam_l.position = Vector3(-1.06, 0.76, -0.5 + i * 0.5)
 		seam_l.rotation_degrees.z = 45
 		seam_l.material_override = canvas_mat
 		tent.add_child(seam_l)
 		# Right panel seams
 		var seam_r: MeshInstance3D = MeshInstance3D.new()
 		seam_r.mesh = seam_mesh
-		seam_r.position = Vector3(0.7, 1.22, -0.5 + i * 0.5)
+		seam_r.position = Vector3(1.06, 0.76, -0.5 + i * 0.5)
 		seam_r.rotation_degrees.z = -45
 		seam_r.material_override = canvas_mat
 		tent.add_child(seam_r)
@@ -1957,7 +1958,7 @@ func _create_canvas_tent() -> StaticBody3D:
 			guy.mesh = guy_mesh
 			# Midpoint between ridge (y=1.8) and ground stake (y=0, x=±1.8)
 			guy.position = Vector3(side * 0.9, 0.9, gz)
-			guy.rotation.z = (0.75 if side < 0 else -0.75)
+			guy.rotation.z = (-0.75 if side < 0 else 0.75)
 			guy.material_override = rope_mat
 			tent.add_child(guy)
 
