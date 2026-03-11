@@ -7504,12 +7504,53 @@ Equipment list now sorts alphabetically on mobile (no keyboard hotkeys to preser
 
 ---
 
+## Session 40 - iOS Controller Bug Fixes (2026-03-11)
+
+Fixed multiple bugs discovered during iPad play-testing with a Sony PlayStation (DualSense) controller.
+
+### Controller Hints Overlapping Time Display
+
+Controller hint labels ("Share-Equip", "Pad-Craft", etc.) were children of the EquippedPanel at the top-right, causing them to overflow leftward over the time/day display. Created a new `ControllerHintsPanel` anchored to bottom-center of the screen for controller hints on mobile. Touch mode still hides hints entirely (touch buttons replace them).
+
+### Crafting Menu Inaccessible on iOS Controller
+
+The `open_crafting` action was mapped only to `JOY_BUTTON_TOUCHPAD` (button_index 20), which Apple's GCController framework doesn't expose for DualSense controllers on iOS. Added R3 (right stick click, button_index 8) as an additional mapping. Updated controller prompts from "Pad" to "R3".
+
+### Touch Controls Don't Return After Controller Disconnect
+
+The `InputManager` only detected device changes via input events, so powering off a controller left the system stuck in controller mode with invisible touch controls. Added `Input.joy_connection_changed` signal handler to auto-switch back to touch mode on iOS when a controller disconnects.
+
+### Equipped Panel Overlapping Slot Arrows
+
+The equipped panel had a fixed 80px height, causing overlap with the ◀ USE ▶ buttons when content had multiple lines (e.g., bow with arrow count + durability bar). Made the panel auto-size to content, and the slot arrows now dynamically reposition below the panel after each update.
+
+### Compact Equipped Text on Mobile Controller
+
+With controller connected, the equipped label showed verbose hints like "Equipped: Bow (10 regular arrows) [R-click aim, D-Dn switch, □ unequip]" which covered the time display. On mobile with controller, now shows only the item name and essential info (e.g., arrow count). Action hints are in the bottom controller hints panel.
+
+### Circle Button Triggering Bow Shot
+
+After shooting with R2, pressing Circle (jump) would also fire the bow. Root cause: the HUD's USE button (`Button` node) could receive Godot's controller focus, and Circle (mapped to `ui_accept`) would activate it. Set `focus_mode = FOCUS_NONE` on all HUD buttons (◀, USE, ▶, MOVE).
+
+### Stale Xcode Project Cleanup
+
+Removed old `Into_the_Wild.xcodeproj` (generated from project name "Into the Wild") that kept reappearing alongside the current `IntoTheWild.xcodeproj`. Enabled `delete_old_export_files_unconditionally` in iOS export preset.
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/ui/hud.gd` | Modified | Bottom controller hints panel, auto-sizing equipped panel, compact text on mobile controller, focus_mode=FOCUS_NONE on all HUD buttons |
+| `scripts/systems/input_manager.gd` | Modified | R3 prompt for crafting, joy_connection_changed handler for controller disconnect |
+| `project.godot` | Modified | Added R3 (button_index 8) to open_crafting action |
+| `export_presets.cfg` | Modified | delete_old_export_files_unconditionally=true |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
 1. Check Apple App Store review status — address any rejection feedback
-2. Continue iPad play-testing — verify all menus work with touch
-3. Tune touch sensitivity and joystick dead zones based on real device testing
+2. Submit update with controller bug fixes once v1.0.0 is approved
+3. Continue iPad play-testing with controller — verify all menus navigate correctly
 4. Deploy website to Cloudflare Pages at intothewild.dev
 5. Continue play-testing end-of-game trail sequence with new clues and compass
 6. Review and fix any bugs filed via GitHub Issues
@@ -7518,6 +7559,7 @@ Equipment list now sorts alphabetically on mobile (no keyboard hotkeys to preser
 - Tortoise materials are per-instance (minor, could be shared static)
 - Rock spire uses per-instance materials (minor, only one ever spawns)
 - Interactable script factory uses string formatting — fragile if labels contain special characters (current labels are all safe)
+- WeatherForecast test expects unequip maps to ✕ but prompt is □ (pre-existing test mismatch)
 
 ### Reference
 See `into-the-wild-game-spec.md` for full game specification.
