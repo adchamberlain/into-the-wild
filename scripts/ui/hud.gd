@@ -320,7 +320,7 @@ func _ready() -> void:
 	if OS.get_name() == "iOS":
 		var touch_scene: PackedScene = preload("res://scenes/ui/touch_controls.tscn")
 		var touch_controls: CanvasLayer = touch_scene.instantiate()
-		get_tree().root.add_child(touch_controls)
+		get_tree().root.add_child.call_deferred(touch_controls)
 		# Hide mouse cursor on iOS
 		Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
 
