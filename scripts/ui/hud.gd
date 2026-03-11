@@ -604,6 +604,7 @@ func _create_touch_slot_arrows() -> void:
 	var prev_btn: Button = Button.new()
 	prev_btn.text = "◀"
 	prev_btn.custom_minimum_size = Vector2(56, 88)
+	prev_btn.focus_mode = Control.FOCUS_NONE  # Prevent controller ui_accept from triggering
 	prev_btn.add_theme_stylebox_override("normal", style_btn)
 	prev_btn.add_theme_font_override("font", HUD_FONT)
 	prev_btn.add_theme_font_size_override("font_size", 28)
@@ -625,6 +626,7 @@ func _create_touch_slot_arrows() -> void:
 	use_btn.name = "UseButton"
 	use_btn.text = "USE"
 	use_btn.custom_minimum_size = Vector2(70, 88)
+	use_btn.focus_mode = Control.FOCUS_NONE  # Prevent controller ui_accept from triggering
 	use_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var use_style: StyleBoxFlat = StyleBoxFlat.new()
 	use_style.bg_color = Color(0.08, 0.18, 0.08, 0.9)
@@ -658,6 +660,7 @@ func _create_touch_slot_arrows() -> void:
 	var next_btn: Button = Button.new()
 	next_btn.text = "▶"
 	next_btn.custom_minimum_size = Vector2(56, 88)
+	next_btn.focus_mode = Control.FOCUS_NONE  # Prevent controller ui_accept from triggering
 	next_btn.add_theme_stylebox_override("normal", style_btn)
 	next_btn.add_theme_font_override("font", HUD_FONT)
 	next_btn.add_theme_font_size_override("font_size", 28)
@@ -1547,6 +1550,7 @@ func _show_mobile_move_button(show: bool) -> void:
 		move_btn = Button.new()
 		move_btn.name = "MobileMoveButton"
 		move_btn.text = "MOVE"
+		move_btn.focus_mode = Control.FOCUS_NONE  # Prevent controller ui_accept from triggering
 		move_btn.custom_minimum_size = Vector2(120, 50)
 		var move_style: StyleBoxFlat = StyleBoxFlat.new()
 		move_style.bg_color = Color(0.15, 0.12, 0.08, 0.9)
