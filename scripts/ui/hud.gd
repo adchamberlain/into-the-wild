@@ -468,6 +468,7 @@ func _apply_mobile_hud_layout() -> void:
 		protection_label.visible = false
 
 	# --- Equipped panel: compact, top-right with integrated ◀ ▶ cycle ---
+	# Uses auto-height so it grows when content has multiple lines (e.g. bow + arrow count)
 	var equipped_panel: PanelContainer = get_node_or_null("EquippedPanel")
 	if equipped_panel:
 		equipped_panel.anchor_left = 1.0
@@ -479,7 +480,8 @@ func _apply_mobile_hud_layout() -> void:
 		equipped_panel.offset_left = -220 - sr
 		equipped_panel.offset_top = 12 + st
 		equipped_panel.offset_right = -12 - sr
-		equipped_panel.offset_bottom = 80 + st
+		equipped_panel.offset_bottom = 0  # Let PanelContainer auto-size to content
+		equipped_panel.size.y = 0  # Reset so auto-sizing takes over
 		_scale_panel_margins(equipped_panel, 0.5)
 	if equipped_label:
 		equipped_label.add_theme_font_size_override("font_size", 26)
@@ -675,6 +677,20 @@ func _create_touch_slot_arrows() -> void:
 	add_child(container)
 
 
+## Reposition the ◀ USE ▶ slot arrows below the equipped panel's actual bottom.
+## Called after _update_equipped_display to handle variable-height panel content.
+func _reposition_slot_arrows() -> void:
+	var container: HBoxContainer = get_node_or_null("TouchSlotArrows") as HBoxContainer
+	var equipped_panel: PanelContainer = get_node_or_null("EquippedPanel")
+	if not container or not equipped_panel:
+		return
+	# Wait a frame for the panel to re-layout with new text content
+	await get_tree().process_frame
+	var panel_bottom: float = equipped_panel.offset_top + equipped_panel.size.y
+	container.offset_top = panel_bottom + 6
+	container.offset_bottom = panel_bottom + 96
+
+
 func _update_time_display() -> void:
 	if time_manager:
 		time_label.text = time_manager.get_time_string()
@@ -863,6 +879,9 @@ func _update_equipped_display() -> void:
 
 	# Update control hints based on input device
 	_update_control_hints()
+	# Reposition slot arrows below the equipped panel (which may have grown)
+	if is_mobile:
+		_reposition_slot_arrows()
 
 
 ## Update the control hints label based on current input device.
