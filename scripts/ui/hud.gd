@@ -140,6 +140,7 @@ var weather_manager: Node
 var save_load: Node
 var input_manager: Node
 var placement_system: Node
+var in_placement_touch_mode: bool = false
 
 # Resting state tracking
 var is_player_resting: bool = false
@@ -801,8 +802,8 @@ func _update_equipped_display() -> void:
 		# Hide durability bar when nothing equipped
 		if durability_bar:
 			durability_bar.visible = false
-		# Gray out mobile USE button when nothing equipped
-		if is_mobile:
+		# Gray out mobile USE button when nothing equipped (but not during placement mode)
+		if is_mobile and not in_placement_touch_mode:
 			var use_btn: Button = get_node_or_null("TouchSlotArrows/UseButton") as Button
 			if use_btn:
 				use_btn.disabled = true
@@ -1414,10 +1415,12 @@ func _enter_placement_touch_mode(is_move: bool) -> void:
 		use_btn.text = "PLACE" if not is_move else "MOVE"
 		use_btn.disabled = false
 		use_btn.modulate = Color(1, 1, 1, 1)
+	in_placement_touch_mode = true
 
 
 ## Restore ◀ USE ▶ buttons after placement/move mode ends on iOS.
 func _exit_placement_touch_mode() -> void:
+	in_placement_touch_mode = false
 	var container: HBoxContainer = get_node_or_null("TouchSlotArrows") as HBoxContainer
 	if not container:
 		return
