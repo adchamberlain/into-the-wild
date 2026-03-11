@@ -7449,22 +7449,72 @@ Added `_handle_input()` (set_input_as_handled) after toggling the crafting menu 
 
 ---
 
+## Session 39 - App Store Submission & iOS Bug Fixes (2026-03-11)
+
+Prepared the game for Apple App Store submission, fixed multiple iOS bugs discovered during iPad play-testing, and submitted v1.0.0 for review.
+
+### App Store Preparation
+
+- Generated all 15 iOS icon sizes from `icon.svg` using `rsvg-convert`, stored in `resources/ios-icons/`
+- Wired icons into `export_presets.cfg` (icon_1024x1024, app_store_1024x1024, ipad_167x167, etc.)
+- Updated bundle ID from `com.andrewchamberlain.IntoTheWildGame` to `com.andrewchamberlain.into-the-wild`
+- Set version to `1.0.0` in export presets
+- Expanded `APP_STORE_METADATA_IOS.md` with full feature list, promotional text, privacy policy URL, and support URL
+- Created `build/ExportOptions.plist` for App Store Connect upload
+- Resized iPad screenshots (2388x1668) to App Store dimensions (2732x2048) with black bar padding
+- Generated iPhone 6.5" screenshots (2778x1284) for App Store requirement
+- Verified release readiness: `trail_testing_mode = false`, player spawn at `(0, 25, 0)`
+
+### iOS Bug Fixes
+
+**Jump button stuck after release**: `TouchScreenButton.action` doesn't reliably fire action release on iOS. Replaced native action handling with explicit `pressed`/`released` signal handlers using `Input.parse_input_event()` for all touch buttons (JUMP, SPRINT, ACT, and menu buttons). Same pattern already used by the USE button in hud.gd.
+
+**Wrong signal names crashed all buttons**: `TouchScreenButton` extends `Node2D`, not `BaseButton` — uses `pressed`/`released` signals, not `button_down`/`button_up`. The wrong signal names caused runtime errors preventing all touch buttons and menus from rendering.
+
+**PLACE button grayed out during structure placement**: When entering placement mode, the item gets unequipped, triggering the equipment update callback to disable the USE/PLACE button. Added `in_placement_touch_mode` flag so the callback skips disabling the button while placement is active.
+
+**Hang glider missing from equipment menu**: Added `hang_glider` to `EQUIPMENT_SLOTS` array in `equipment_menu.gd`.
+
+**Hang glider hint incorrect**: Changed tip from "use sprint for speed boost" to "tap jump repeatedly for a boost".
+
+### Performance Optimizations
+
+**UI blocking check** (`_is_ui_blocking_input`): Replaced 6x `get_nodes_in_group()` calls per physics frame with a single `TouchControls.menu_open` static flag check. All menus already maintain this flag.
+
+**Grappling hook target detection**: Throttled from every frame to 10x/sec (`GRAPPLE_CHECK_INTERVAL = 0.1`). Saves 3 raycasts + terrain lookups ~50 times/sec.
+
+**Ambient animal movement**: Reduced terrain height samples from 5 to 1 per movement frame (single `get_height_at` instead of `_get_smoothed_terrain_height`). Throttled obstacle raycasts to every 5th movement frame.
+
+### Inventory Sorting
+
+Equipment list now sorts alphabetically on mobile (no keyboard hotkeys to preserve order for). Resources and food sections already sorted alphabetically.
+
+| File | Status | Changes |
+|------|--------|---------|
+| `export_presets.cfg` | Modified | iOS icons, bundle ID, version 1.0.0 |
+| `APP_STORE_METADATA_IOS.md` | Modified | Full rewrite with features, URLs |
+| `resources/ios-icons/*.png` | Created | 15 icon sizes from SVG |
+| `scripts/ui/touch_controls.gd` | Modified | Explicit pressed/released signals, removed btn.action |
+| `scripts/ui/hud.gd` | Modified | in_placement_touch_mode flag for PLACE button |
+| `scripts/ui/equipment_menu.gd` | Modified | Alphabetical sort on mobile, hang glider slot |
+| `scripts/ui/hint_manager.gd` | Modified | Hang glider hint text fix |
+| `scripts/player/player_controller.gd` | Modified | TouchControls.menu_open instead of group queries |
+| `scripts/player/grappling_hook.gd` | Modified | Throttled target detection |
+| `scripts/creatures/ambient_animal_base.gd` | Modified | Reduced height samples, throttled raycasts |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Continue iPad play-testing — verify all menus work with touch (save/load slots, storage, fire menu, settings)
-2. Tune touch sensitivity and joystick dead zones based on real device testing
-3. Continue play-testing tutorial hint system — verify all 18 hints trigger correctly
-4. Play-test procedural water generation — verify ponds/lakes/rivers appear beyond 300 units in non-desert biomes
-5. Deploy website to Cloudflare Pages at intothewild.dev
-6. Continue play-testing end-of-game trail sequence with new clues and compass
-7. When testing is done: set `trail_testing_mode = false` in `scripts/core/game_state.gd:24`
-8. When testing is done: revert player spawn in `scenes/main.tscn` from (345, 25, -345) to (0, 5, 0)
-9. Review and fix any bugs filed via GitHub Issues
+1. Check Apple App Store review status — address any rejection feedback
+2. Continue iPad play-testing — verify all menus work with touch
+3. Tune touch sensitivity and joystick dead zones based on real device testing
+4. Deploy website to Cloudflare Pages at intothewild.dev
+5. Continue play-testing end-of-game trail sequence with new clues and compass
+6. Review and fix any bugs filed via GitHub Issues
 
 ### Known Issues
-- Player spawn in main.tscn is at (345, 25, -345) for testing — needs revert to (0, 5, 0)
-- `trail_testing_mode = true` bypasses trail progression — needs to be set to false for release
 - Tortoise materials are per-instance (minor, could be shared static)
 - Rock spire uses per-instance materials (minor, only one ever spawns)
 - Interactable script factory uses string formatting — fragile if labels contain special characters (current labels are all safe)
