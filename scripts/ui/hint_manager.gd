@@ -48,7 +48,7 @@ const HINTS: Dictionary = {
 		"message": "Machete ready! Use it to [color=#ffda4d]cut through thick vegetation[/color] and access areas you couldn't reach before."
 	},
 	"first_hang_glider": {
-		"message": "Hang glider equipped! [color=#ffda4d]Jump ({jump}) from high ground[/color] and hold to glide. Use [color=#ffda4d]sprint ({sprint})[/color] mid-air for a speed boost."
+		"message": "Hang glider equipped! [color=#ffda4d]Jump ({jump}) from high ground[/color] and hold to glide. Tap [color=#ffda4d]jump ({jump})[/color] repeatedly mid-air for a boost."
 	},
 	"first_cabin": {
 		"message": "Your cabin is complete! Sleep in the [color=#ffda4d]bed[/color] to skip to morning, and use the [color=#ffda4d]kitchen[/color] for advanced recipes."
