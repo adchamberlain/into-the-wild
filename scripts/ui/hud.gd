@@ -333,9 +333,11 @@ func _ready() -> void:
 		# Hide control hints row (touch buttons replace keyboard hints)
 		if equip_hint_label:
 			equip_hint_label.visible = false
+		# Move equipped panel to top-right (below time panel) so it doesn't overlap action buttons
+		_reposition_equipped_panel_mobile()
 		# Apply safe area insets for notch/home indicator avoidance
 		_apply_safe_area_insets()
-		# Add touch slot cycle buttons
+		# Add touch slot cycle buttons near equipped panel (top-right)
 		_create_touch_slot_arrows()
 		# Scale scene-node font sizes for mobile
 		_apply_mobile_font_scaling()
@@ -354,6 +356,26 @@ func _get_font_size(desktop_size: int) -> int:
 		return MOBILE_SECONDARY_FONT
 	else:
 		return MOBILE_HINT_FONT
+
+
+## Move equipped panel from bottom-right (desktop) to top-right (mobile) below time panel.
+func _reposition_equipped_panel_mobile() -> void:
+	var equipped_panel: PanelContainer = get_node_or_null("EquippedPanel")
+	if not equipped_panel:
+		return
+	# Switch from bottom-right to top-right anchor
+	equipped_panel.anchors_preset = Control.PRESET_TOP_RIGHT
+	equipped_panel.anchor_left = 1.0
+	equipped_panel.anchor_top = 0.0
+	equipped_panel.anchor_right = 1.0
+	equipped_panel.anchor_bottom = 0.0
+	equipped_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	equipped_panel.grow_vertical = Control.GROW_DIRECTION_END
+	# Position below the time panel (approx 200px down)
+	equipped_panel.offset_left = -280
+	equipped_panel.offset_top = 200
+	equipped_panel.offset_right = -12
+	equipped_panel.offset_bottom = 280
 
 
 ## Apply iOS safe area insets so HUD panels avoid the notch and home indicator.
@@ -450,15 +472,15 @@ func _create_touch_slot_arrows() -> void:
 	var container: HBoxContainer = HBoxContainer.new()
 	container.name = "TouchSlotArrows"
 	container.add_theme_constant_override("separation", 12)
-	# Anchor bottom-right near equipped panel
+	# Anchor top-right near repositioned equipped panel
 	container.anchor_left = 1.0
 	container.anchor_right = 1.0
-	container.anchor_top = 1.0
-	container.anchor_bottom = 1.0
+	container.anchor_top = 0.0
+	container.anchor_bottom = 0.0
 	container.offset_left = -200
-	container.offset_right = -20
-	container.offset_top = -110
-	container.offset_bottom = -56
+	container.offset_right = -12
+	container.offset_top = 284
+	container.offset_bottom = 340
 
 	var style_btn: StyleBoxFlat = StyleBoxFlat.new()
 	style_btn.bg_color = Color(0.1, 0.1, 0.12, 0.85)

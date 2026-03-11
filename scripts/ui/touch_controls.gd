@@ -4,14 +4,14 @@ extends CanvasLayer
 ## Provides virtual joystick, swipe-to-look, and action buttons.
 
 # Joystick config
-const JOYSTICK_RADIUS: float = 65.0  # Outer radius
+const JOYSTICK_RADIUS: float = 75.0  # Outer radius (150px diameter)
 const JOYSTICK_DEADZONE: float = 0.15
 
 # Swipe look config
 const TOUCH_LOOK_SENSITIVITY: float = 0.003
 
 # Button config
-const BUTTON_RADIUS: float = 28.0  # 56px diameter
+const BUTTON_RADIUS: float = 36.0  # 72px diameter (larger for iPad touch targets)
 const BUTTON_ALPHA_BG: float = 0.25
 const BUTTON_ALPHA_BORDER: float = 0.45
 const BUTTON_ALPHA_TEXT: float = 0.7
@@ -108,14 +108,14 @@ func _create_circle_texture(diameter: int, fill_color: Color, border_color: Colo
 
 func _setup_action_buttons() -> void:
 	var screen_size: Vector2 = get_viewport().get_visible_rect().size
-	var right_x: float = screen_size.x - 48 - safe_margin["right"]
-	var bottom_y: float = screen_size.y - 64 - safe_margin["bottom"]
+	var right_x: float = screen_size.x - 60 - safe_margin["right"]
+	var bottom_y: float = screen_size.y - 60 - safe_margin["bottom"]
 
 	# Core buttons: JUMP, SPRINT, ACT (bottom-right, vertical stack)
 	var core_buttons: Array = [
 		{"name": "JUMP", "action": "jump", "color": Color(1, 1, 1), "y_offset": 0},
-		{"name": "SPRINT", "action": "sprint", "color": Color(0.4, 0.8, 1), "y_offset": 68},
-		{"name": "ACT", "action": "interact", "color": Color(1, 0.85, 0.3), "y_offset": 136},
+		{"name": "SPRINT", "action": "sprint", "color": Color(0.4, 0.8, 1), "y_offset": 84},
+		{"name": "ACT", "action": "interact", "color": Color(1, 0.85, 0.3), "y_offset": 168},
 	]
 
 	for btn_data in core_buttons:
@@ -150,10 +150,10 @@ func _setup_action_buttons() -> void:
 	)
 	eat_button.visible = false
 
-	# CROUCH — near core buttons, above JUMP
+	# CROUCH — near core buttons, above ACT
 	crouch_button = _create_action_button(
 		"CROUCH",
-		Vector2(right_x, bottom_y - 204),
+		Vector2(right_x, bottom_y - 252),
 		Color(0.7, 0.7, 0.7),  # Grey
 		"crouch",
 		true
@@ -170,11 +170,12 @@ func _setup_menu_buttons() -> void:
 		{"icon": "⏸️", "action": "pause"},
 	]
 
-	var start_x: float = center_x + 80
+	# Position right of center, below the compass widget
+	var start_x: float = center_x + 100
 	for i: int in range(menu_items.size()):
 		var _btn: TouchScreenButton = _create_menu_button(
 			menu_items[i]["icon"],
-			Vector2(start_x + i * 44, 36 + safe_margin["top"]),
+			Vector2(start_x + i * 56, 12 + safe_margin["top"]),
 			menu_items[i]["action"]
 		)
 
@@ -208,7 +209,7 @@ func _create_action_button(label_text: String, pos: Vector2, color: Color, actio
 	# Add label
 	var lbl: Label = Label.new()
 	lbl.text = label_text
-	lbl.add_theme_font_size_override("font_size", 16)
+	lbl.add_theme_font_size_override("font_size", 18)
 	lbl.add_theme_color_override("font_color", Color(color.r, color.g, color.b, BUTTON_ALPHA_TEXT))
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -225,8 +226,9 @@ func _create_menu_button(icon: String, pos: Vector2, action: String) -> TouchScr
 	btn.action = action
 	btn.passby_press = false
 
-	var img: Image = Image.create(44, 44, false, Image.FORMAT_RGBA8)
-	img.fill(Color(0.1, 0.1, 0.12, 0.6))
+	var size_px: int = 48
+	var img: Image = Image.create(size_px, size_px, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0.1, 0.1, 0.12, 0.75))
 	var tex: ImageTexture = ImageTexture.create_from_image(img)
 	btn.texture_normal = tex
 
@@ -235,10 +237,10 @@ func _create_menu_button(icon: String, pos: Vector2, action: String) -> TouchScr
 
 	var lbl: Label = Label.new()
 	lbl.text = icon
-	lbl.add_theme_font_size_override("font_size", 20)
+	lbl.add_theme_font_size_override("font_size", 24)
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	lbl.size = Vector2(44, 44)
+	lbl.size = Vector2(size_px, size_px)
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	btn.add_child(lbl)
 
