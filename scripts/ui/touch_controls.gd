@@ -12,9 +12,9 @@ const TOUCH_LOOK_SENSITIVITY: float = 0.003
 
 # Button config
 const BUTTON_RADIUS: float = 36.0  # 72px diameter (larger for iPad touch targets)
-const BUTTON_ALPHA_BG: float = 0.25
-const BUTTON_ALPHA_BORDER: float = 0.45
-const BUTTON_ALPHA_TEXT: float = 0.7
+const BUTTON_ALPHA_BG: float = 0.35
+const BUTTON_ALPHA_BORDER: float = 0.6
+const BUTTON_ALPHA_TEXT: float = 0.85
 
 # State
 var joystick_touch_index: int = -1
@@ -79,13 +79,13 @@ func _setup_joystick() -> void:
 
 	# Joystick background circle
 	joystick_bg = Sprite2D.new()
-	joystick_bg.texture = _create_circle_texture(int(JOYSTICK_RADIUS * 2), Color(1, 1, 1, 0.12), Color(1, 1, 1, 0.3))
+	joystick_bg.texture = _create_circle_texture(int(JOYSTICK_RADIUS * 2), Color(1, 1, 1, 0.2), Color(1, 1, 1, 0.45))
 	joystick_bg.position = joystick_center
 	add_child(joystick_bg)
 
 	# Joystick thumb (inner knob)
 	joystick_thumb = Sprite2D.new()
-	joystick_thumb.texture = _create_circle_texture(50, Color(1, 1, 1, 0.3), Color(1, 1, 1, 0.5))
+	joystick_thumb.texture = _create_circle_texture(56, Color(1, 1, 1, 0.4), Color(1, 1, 1, 0.65))
 	joystick_thumb.position = joystick_center
 	add_child(joystick_thumb)
 
