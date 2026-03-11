@@ -9,12 +9,12 @@ const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 const MAP_EXTENT: float = 150.0
 # Sample interval (world units between each terrain sample)
 const SAMPLE_INTERVAL: float = 6.0
-# Map display size (pixels)
-const MAP_SIZE: float = 700.0
+# Map display size (pixels) — smaller on mobile to avoid covering gameplay
+var MAP_SIZE: float = 350.0 if OS.get_name() == "iOS" else 700.0
 # Map padding from edges of the control
 const MAP_PADDING: float = 8.0
 # Position below TimePanel and weather info (pushed down to avoid overlap)
-const MAP_TOP: float = 380.0
+var MAP_TOP: float = 250.0 if OS.get_name() == "iOS" else 380.0
 const MAP_RIGHT_MARGIN: float = 20.0
 
 # Cached map data
@@ -79,15 +79,22 @@ func _build_ui() -> void:
 	panel_style.content_margin_bottom = 8
 	map_panel.add_theme_stylebox_override("panel", panel_style)
 
-	# Position at top-right, below TimePanel
+	# Position at top-right, below TimePanel (with safe area on mobile)
+	var sr: float = 0.0
+	var st: float = 0.0
+	if OS.get_name() == "iOS":
+		var safe_area: Rect2i = DisplayServer.get_display_safe_area()
+		var screen_w: int = DisplayServer.screen_get_size().x
+		sr = float(screen_w - (safe_area.position.x + safe_area.size.x))
+		st = float(safe_area.position.y)
 	map_panel.anchor_left = 1.0
 	map_panel.anchor_right = 1.0
 	map_panel.anchor_top = 0.0
 	map_panel.anchor_bottom = 0.0
-	map_panel.offset_left = -(MAP_SIZE + MAP_RIGHT_MARGIN + 16)
-	map_panel.offset_top = MAP_TOP
-	map_panel.offset_right = -MAP_RIGHT_MARGIN
-	map_panel.offset_bottom = MAP_TOP + MAP_SIZE + 16
+	map_panel.offset_left = -(MAP_SIZE + MAP_RIGHT_MARGIN + 16 + sr)
+	map_panel.offset_top = MAP_TOP + st
+	map_panel.offset_right = -(MAP_RIGHT_MARGIN + sr)
+	map_panel.offset_bottom = MAP_TOP + MAP_SIZE + 16 + st
 	map_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	map_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(map_panel)
@@ -230,7 +237,7 @@ func _on_map_draw() -> void:
 	for cave in cave_entrances_data:
 		var center: Vector2 = cave.get("center", Vector2.ZERO)
 		var map_pos: Vector2 = _world_to_map(center.x, center.y)
-		var cave_size: float = 12.0
+		var cave_size: float = 6.0 if OS.get_name() == "iOS" else 12.0
 		var cave_rect: Rect2 = Rect2(map_pos.x - cave_size / 2.0, map_pos.y - cave_size / 2.0, cave_size, cave_size)
 		map_control.draw_rect(cave_rect, Color(0.15, 0.1, 0.1, 1))
 		map_control.draw_rect(cave_rect, Color(0.5, 0.35, 0.35, 1), false, 1.0)

@@ -333,6 +333,9 @@ func _ready() -> void:
 		# Hide control hints row (touch buttons replace keyboard hints)
 		if equip_hint_label:
 			equip_hint_label.visible = false
+		# Prevent HUD Controls from intercepting GUI input meant for menu panels
+		# (menus on lower CanvasLayers would be blocked by HUD's mouse_filter)
+		_set_mouse_filter_ignore(self)
 		# Apply the full mobile HUD layout
 		_apply_mobile_hud_layout()
 
@@ -368,32 +371,65 @@ func _apply_mobile_hud_layout() -> void:
 	if stats_panel:
 		stats_panel.offset_left = 12 + sl
 		stats_panel.offset_top = 12 + st
-		stats_panel.offset_right = 190 + sl
-		stats_panel.offset_bottom = 68 + st
-		_scale_panel_margins(stats_panel, 0.3)
+		stats_panel.offset_right = 250 + sl
+		stats_panel.offset_bottom = 90 + st
+		# Set balanced vertical margins to center content
+		var s: StyleBox = stats_panel.get_theme_stylebox("panel")
+		if s and s is StyleBoxFlat:
+			var sf: StyleBoxFlat = s.duplicate() as StyleBoxFlat
+			sf.content_margin_left = 6
+			sf.content_margin_right = 6
+			sf.content_margin_top = 10
+			sf.content_margin_bottom = 10
+			stats_panel.add_theme_stylebox_override("panel", sf)
+	var stats_container: VBoxContainer = get_node_or_null("StatsPanel/StatsContainer") as VBoxContainer
+	if stats_container:
+		stats_container.alignment = BoxContainer.ALIGNMENT_CENTER
 	# Permanently hide coordinates on mobile
 	show_coordinates = false
 	if coordinates_label:
 		coordinates_label.visible = false
 		coordinates_label.text = ""
-	# Replace "Health"/"Hunger" text labels with emoji icons (per design)
+	# Replace "Health"/"Hunger" text labels with colored symbols
+	# (Emoji don't render in Godot iOS with monospace fonts — use basic Unicode)
 	var health_lbl: Label = get_node_or_null("StatsPanel/StatsContainer/HealthContainer/HealthLabel")
 	var hunger_lbl: Label = get_node_or_null("StatsPanel/StatsContainer/HungerContainer/HungerLabel")
 	if health_lbl:
-		health_lbl.text = "❤️"
-		health_lbl.add_theme_font_size_override("font_size", 18)
+		health_lbl.text = "HP"
+		health_lbl.add_theme_font_size_override("font_size", 24)
+		health_lbl.add_theme_color_override("font_color", Color(1, 0.3, 0.3, 1))
 	if hunger_lbl:
-		hunger_lbl.text = "🍖"
-		hunger_lbl.add_theme_font_size_override("font_size", 18)
-	# Compact bars
+		hunger_lbl.text = "FD"
+		hunger_lbl.add_theme_font_size_override("font_size", 24)
+		hunger_lbl.add_theme_color_override("font_color", Color(1, 0.7, 0.2, 1))
+	# Bars
 	if health_bar:
-		health_bar.custom_minimum_size = Vector2(140, 18)
+		health_bar.custom_minimum_size = Vector2(160, 22)
 	if hunger_bar:
-		hunger_bar.custom_minimum_size = Vector2(140, 18)
+		hunger_bar.custom_minimum_size = Vector2(160, 22)
 
-	# --- Hide compass widget on mobile (not in approved design) ---
+	# --- Compass widget: reposition below stats panel on mobile ---
 	if compass_widget:
-		compass_widget.visible = false
+		compass_widget.anchor_left = 0.0
+		compass_widget.anchor_right = 0.0
+		compass_widget.anchor_top = 0.0
+		compass_widget.anchor_bottom = 0.0
+		compass_widget.offset_left = 12 + sl
+		compass_widget.offset_top = 95 + st
+		compass_widget.offset_right = 100 + sl
+		compass_widget.offset_bottom = 185 + st
+
+	# --- Reposition left-side panels below compass widget with safe area offsets ---
+	if compass_panel:
+		compass_panel.offset_left = 20 + sl
+		compass_panel.offset_top = 190 + st
+		compass_panel.offset_right = 320 + sl
+		compass_panel.offset_bottom = 240 + st
+	if heat_panel:
+		heat_panel.offset_left = 20 + sl
+		heat_panel.offset_top = 245 + st
+		heat_panel.offset_right = 195 + sl
+		heat_panel.offset_bottom = 290 + st
 
 	# --- Time panel: centered at top (compass is hidden so no conflict) ---
 	var time_panel: PanelContainer = get_node_or_null("TimePanel")
@@ -403,20 +439,20 @@ func _apply_mobile_hud_layout() -> void:
 		time_panel.anchor_top = 0.0
 		time_panel.anchor_bottom = 0.0
 		time_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
-		time_panel.offset_left = -110
+		time_panel.offset_left = -130
 		time_panel.offset_top = 12 + st
-		time_panel.offset_right = 110
-		time_panel.offset_bottom = 56 + st
-		_scale_panel_margins(time_panel, 0.3)
-	# Compact time display
+		time_panel.offset_right = 130
+		time_panel.offset_bottom = 70 + st
+		_scale_panel_margins(time_panel, 0.5)
+	# Time display
 	if time_label:
-		time_label.add_theme_font_size_override("font_size", 20)
+		time_label.add_theme_font_size_override("font_size", 30)
 		time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	if period_label:
-		period_label.add_theme_font_size_override("font_size", 16)
+		period_label.add_theme_font_size_override("font_size", 24)
 		period_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	if day_counter_label:
-		day_counter_label.add_theme_font_size_override("font_size", 16)
+		day_counter_label.add_theme_font_size_override("font_size", 24)
 		day_counter_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	# Hide verbose info from time panel on mobile
 	if campsite_level_label:
@@ -435,13 +471,13 @@ func _apply_mobile_hud_layout() -> void:
 		equipped_panel.anchor_bottom = 0.0
 		equipped_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 		equipped_panel.grow_vertical = Control.GROW_DIRECTION_END
-		equipped_panel.offset_left = -200 - sr
+		equipped_panel.offset_left = -220 - sr
 		equipped_panel.offset_top = 12 + st
 		equipped_panel.offset_right = -12 - sr
-		equipped_panel.offset_bottom = 72 + st
-		_scale_panel_margins(equipped_panel, 0.4)
+		equipped_panel.offset_bottom = 80 + st
+		_scale_panel_margins(equipped_panel, 0.5)
 	if equipped_label:
-		equipped_label.add_theme_font_size_override("font_size", 18)
+		equipped_label.add_theme_font_size_override("font_size", 26)
 	# Add ◀ ▶ cycle text inside equipped panel (not as separate big buttons)
 	_create_touch_slot_arrows()
 
@@ -449,7 +485,17 @@ func _apply_mobile_hud_layout() -> void:
 	if interaction_prompt:
 		interaction_prompt.add_theme_font_size_override("font_size", MOBILE_SECONDARY_FONT)
 
-	# --- Notification label: smaller ---
+	# --- Notification panel: push well below time panel + menu buttons on mobile ---
+	if notification_panel:
+		notification_panel.anchors_preset = 0  # Clear preset so offsets stick
+		notification_panel.anchor_left = 0.5
+		notification_panel.anchor_right = 0.5
+		notification_panel.anchor_top = 0.0
+		notification_panel.anchor_bottom = 0.0
+		notification_panel.offset_left = -300.0
+		notification_panel.offset_right = 300.0
+		notification_panel.offset_top = 200 + st
+		notification_panel.offset_bottom = 260 + st
 	if notification_label:
 		notification_label.add_theme_font_size_override("font_size", MOBILE_SECONDARY_FONT)
 
@@ -464,6 +510,15 @@ func _apply_mobile_hud_layout() -> void:
 		celebration_unlocks.add_theme_font_size_override("font_size", MOBILE_SECONDARY_FONT)
 	if celebration_prompt:
 		celebration_prompt.add_theme_font_size_override("font_size", MOBILE_HINT_FONT)
+
+
+## Recursively set mouse_filter to IGNORE on all Control children.
+## Prevents HUD from intercepting GUI input meant for menu panels on lower CanvasLayers.
+func _set_mouse_filter_ignore(node: Node) -> void:
+	for child: Node in node.get_children():
+		if child is Control:
+			child.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_set_mouse_filter_ignore(child)
 
 
 ## Scale a panel's content margins.
@@ -492,10 +547,10 @@ func _create_touch_slot_arrows() -> void:
 	var screen_w: int = DisplayServer.screen_get_size().x
 	var sr: int = screen_w - (safe_area.position.x + safe_area.size.x)
 	var st: int = safe_area.position.y
-	container.offset_left = -100 - sr
+	container.offset_left = -220 - sr
 	container.offset_right = -12 - sr
-	container.offset_top = 64 + st
-	container.offset_bottom = 100 + st
+	container.offset_top = 86 + st
+	container.offset_bottom = 176 + st
 
 	var style_btn: StyleBoxFlat = StyleBoxFlat.new()
 	style_btn.bg_color = Color(0.1, 0.1, 0.12, 0.85)
@@ -504,20 +559,79 @@ func _create_touch_slot_arrows() -> void:
 	style_btn.corner_radius_bottom_left = 10
 	style_btn.corner_radius_bottom_right = 10
 
-	for arrow_data: Array in [["◀", "prev_slot"], ["▶", "next_slot"]]:
-		var btn: Button = Button.new()
-		btn.text = arrow_data[0]
-		btn.custom_minimum_size = Vector2(36, 32)
-		btn.add_theme_stylebox_override("normal", style_btn)
-		btn.add_theme_font_override("font", HUD_FONT)
-		btn.add_theme_font_size_override("font_size", 18)
-		btn.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9, 1))
-		var action: String = arrow_data[1]
-		btn.pressed.connect(func() -> void:
-			Input.action_press(action)
-			Input.action_release(action)
-		)
-		container.add_child(btn)
+	# ◀ arrow
+	var prev_btn: Button = Button.new()
+	prev_btn.text = "◀"
+	prev_btn.custom_minimum_size = Vector2(56, 88)
+	prev_btn.add_theme_stylebox_override("normal", style_btn)
+	prev_btn.add_theme_font_override("font", HUD_FONT)
+	prev_btn.add_theme_font_size_override("font_size", 28)
+	prev_btn.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9, 1))
+	prev_btn.pressed.connect(func() -> void:
+		var ev: InputEventAction = InputEventAction.new()
+		ev.action = "prev_slot"
+		ev.pressed = true
+		Input.parse_input_event(ev)
+		var ev_up: InputEventAction = InputEventAction.new()
+		ev_up.action = "prev_slot"
+		ev_up.pressed = false
+		Input.parse_input_event(ev_up)
+	)
+	container.add_child(prev_btn)
+
+	# USE button — between arrows
+	var use_btn: Button = Button.new()
+	use_btn.name = "UseButton"
+	use_btn.text = "USE"
+	use_btn.custom_minimum_size = Vector2(70, 88)
+	use_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var use_style: StyleBoxFlat = StyleBoxFlat.new()
+	use_style.bg_color = Color(0.08, 0.18, 0.08, 0.9)
+	use_style.corner_radius_top_left = 10
+	use_style.corner_radius_top_right = 10
+	use_style.corner_radius_bottom_left = 10
+	use_style.corner_radius_bottom_right = 10
+	use_btn.add_theme_stylebox_override("normal", use_style)
+	use_btn.add_theme_font_override("font", HUD_FONT)
+	use_btn.add_theme_font_size_override("font_size", 28)
+	use_btn.add_theme_color_override("font_color", Color(0.4, 1, 0.4, 1))
+	use_btn.visible = true
+	use_btn.disabled = true
+	use_btn.modulate = Color(0.4, 0.4, 0.4, 0.6)
+	# Use button_down/button_up for hold-to-use support (bow draw requires holding)
+	use_btn.button_down.connect(func() -> void:
+		var ev: InputEventAction = InputEventAction.new()
+		ev.action = "use_equipped"
+		ev.pressed = true
+		Input.parse_input_event(ev)
+	)
+	use_btn.button_up.connect(func() -> void:
+		var ev: InputEventAction = InputEventAction.new()
+		ev.action = "use_equipped"
+		ev.pressed = false
+		Input.parse_input_event(ev)
+	)
+	container.add_child(use_btn)
+
+	# ▶ arrow
+	var next_btn: Button = Button.new()
+	next_btn.text = "▶"
+	next_btn.custom_minimum_size = Vector2(56, 88)
+	next_btn.add_theme_stylebox_override("normal", style_btn)
+	next_btn.add_theme_font_override("font", HUD_FONT)
+	next_btn.add_theme_font_size_override("font_size", 28)
+	next_btn.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9, 1))
+	next_btn.pressed.connect(func() -> void:
+		var ev: InputEventAction = InputEventAction.new()
+		ev.action = "next_slot"
+		ev.pressed = true
+		Input.parse_input_event(ev)
+		var ev_up: InputEventAction = InputEventAction.new()
+		ev_up.action = "next_slot"
+		ev_up.pressed = false
+		Input.parse_input_event(ev_up)
+	)
+	container.add_child(next_btn)
 
 	add_child(container)
 
@@ -668,11 +782,23 @@ func _update_equipped_display() -> void:
 
 		# Update durability bar
 		_update_durability_bar()
+		# Enable mobile USE button when something is equipped
+		if is_mobile:
+			var use_btn: Button = get_node_or_null("TouchSlotArrows/UseButton") as Button
+			if use_btn:
+				use_btn.disabled = false
+				use_btn.modulate = Color(1, 1, 1, 1)
 	else:
 		equipped_label.text = "Equipped: None"
 		# Hide durability bar when nothing equipped
 		if durability_bar:
 			durability_bar.visible = false
+		# Gray out mobile USE button when nothing equipped
+		if is_mobile:
+			var use_btn: Button = get_node_or_null("TouchSlotArrows/UseButton") as Button
+			if use_btn:
+				use_btn.disabled = true
+				use_btn.modulate = Color(0.4, 0.4, 0.4, 0.6)
 
 	# Update control hints based on input device
 	_update_control_hints()
@@ -1511,7 +1637,7 @@ func update_coca_leaf_timer(remaining: float) -> void:
 		_create_coca_leaf_panel()
 
 	# Stack below the lowest visible left-side indicator to avoid overlap
-	var y_pos: float = 185.0  # Default: just below StatsPanel
+	var y_pos: float = 195.0 if is_mobile else 185.0  # Below compass widget on mobile
 	if compass_panel and compass_panel.visible:
 		y_pos = maxf(y_pos, compass_panel.offset_top + compass_panel.size.y + 5.0)
 	if heat_panel and heat_panel.visible:
@@ -1545,10 +1671,13 @@ func _create_coca_leaf_panel() -> void:
 	coca_leaf_label.add_theme_color_override("font_color", Color(0.6, 1.0, 0.6, 1))
 	coca_leaf_panel.add_child(coca_leaf_label)
 
-	# Position just below the StatsPanel (top-left corner)
+	# Position just below the compass widget (top-left corner)
 	coca_leaf_panel.anchors_preset = Control.PRESET_TOP_LEFT
-	coca_leaf_panel.offset_left = 20
-	coca_leaf_panel.offset_top = 185
+	var safe_area_c: Rect2i = DisplayServer.get_display_safe_area()
+	var sl_c: int = safe_area_c.position.x if is_mobile else 0
+	var st_c: int = safe_area_c.position.y if is_mobile else 0
+	coca_leaf_panel.offset_left = 20 + sl_c
+	coca_leaf_panel.offset_top = (195 + st_c) if is_mobile else 185
 	add_child(coca_leaf_panel)
 
 	coca_leaf_panel.visible = false
@@ -1875,7 +2004,8 @@ func set_desert_heat_active(active: bool) -> void:
 			if compass_panel and compass_panel.visible:
 				heat_panel.offset_top = compass_panel.offset_top + compass_panel.size.y + 5.0
 			else:
-				heat_panel.offset_top = 190.0
+				var sa: Rect2i = DisplayServer.get_display_safe_area()
+				heat_panel.offset_top = (245.0 + sa.position.y) if is_mobile else 190.0
 			heat_panel.offset_bottom = heat_panel.offset_top + 45.0
 
 

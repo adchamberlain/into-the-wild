@@ -388,16 +388,18 @@ func _cycle_slot(direction: int) -> void:
 	if not inventory:
 		return
 
-	# Find available equippable items in inventory
-	var available_slots: Array[int] = []
+	# Find available equippable items in inventory, plus "none" (slot 0)
+	var available_slots: Array[int] = [0]  # 0 = none / unequip
 	for item_type: String in EQUIPPABLE_ITEMS:
 		if inventory.has_item(item_type):
 			var slot: int = EQUIPPABLE_ITEMS[item_type].get("slot", 0)
 			if slot > 0:
 				available_slots.append(slot)
 
-	if available_slots.is_empty():
-		print("[Equipment] No items to equip")
+	if available_slots.size() <= 1:
+		# Only "none" available, nothing to cycle to
+		if equipped_item != "":
+			unequip()
 		return
 
 	available_slots.sort()
@@ -420,7 +422,10 @@ func _cycle_slot(direction: int) -> void:
 			next_index = available_slots.size() - 1
 
 	current_slot = available_slots[next_index]
-	_try_equip_slot(current_slot)
+	if current_slot == 0:
+		unequip()
+	else:
+		_try_equip_slot(current_slot)
 
 
 func _try_equip_slot(slot: int) -> void:

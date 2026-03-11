@@ -91,6 +91,9 @@ func _build_slot_list() -> void:
 	slot_labels.clear()
 	slot_panels.clear()
 
+	var is_mobile: bool = OS.get_name() == "iOS"
+	var font_size: int = 22 if is_mobile else 28
+
 	# Create a panel with label for each slot (panel allows highlight for controller nav)
 	for slot in EQUIPMENT_SLOTS:
 		var item_panel: PanelContainer = PanelContainer.new()
@@ -98,17 +101,29 @@ func _build_slot_list() -> void:
 		style.bg_color = Color(0, 0, 0, 0)  # Transparent by default
 		style.content_margin_left = 8
 		style.content_margin_right = 8
-		style.content_margin_top = 4
-		style.content_margin_bottom = 4
+		style.content_margin_top = 3 if is_mobile else 4
+		style.content_margin_bottom = 3 if is_mobile else 4
 		item_panel.add_theme_stylebox_override("panel", style)
 
-		var label: Label = Label.new()
-		label.add_theme_font_override("font", HUD_FONT)
-		label.add_theme_font_size_override("font_size", 28)
-		item_panel.add_child(label)
+		# On mobile, use a button for tap-to-equip; on desktop use a label
+		if is_mobile:
+			var btn: Button = Button.new()
+			btn.add_theme_font_override("font", HUD_FONT)
+			btn.add_theme_font_size_override("font_size", font_size)
+			btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			btn.custom_minimum_size = Vector2(0, 44)
+			var slot_type: String = slot["type"]
+			btn.pressed.connect(_on_mobile_slot_pressed.bind(slot_type))
+			item_panel.add_child(btn)
+			slot_labels[slot["type"]] = btn
+		else:
+			var label: Label = Label.new()
+			label.add_theme_font_override("font", HUD_FONT)
+			label.add_theme_font_size_override("font_size", font_size)
+			item_panel.add_child(label)
+			slot_labels[slot["type"]] = label
 
 		item_list.add_child(item_panel)
-		slot_labels[slot["type"]] = label
 		slot_panels.append(item_panel)
 
 	# Update display
@@ -116,10 +131,7 @@ func _build_slot_list() -> void:
 
 
 func _update_display() -> void:
-	if inventory:
-		print("[EquipmentMenu] Inventory contents: ", inventory.get_all_items())
-	else:
-		print("[EquipmentMenu] WARNING: No inventory reference!")
+	var is_mobile: bool = OS.get_name() == "iOS"
 
 	# Check if using controller for different display format
 	var using_controller: bool = false
@@ -127,14 +139,15 @@ func _update_display() -> void:
 	if input_mgr and input_mgr.has_method("is_using_controller"):
 		using_controller = input_mgr.is_using_controller()
 
-	for slot in EQUIPMENT_SLOTS:
+	for i: int in range(EQUIPMENT_SLOTS.size()):
+		var slot: Dictionary = EQUIPMENT_SLOTS[i]
 		var slot_type: String = slot["type"]
-		var label: Label = slot_labels.get(slot_type)
-		if not label:
+		var node: Control = slot_labels.get(slot_type)
+		if not node:
 			continue
 
 		var key: String = slot["key"]
-		var name: String = slot["name"]
+		var item_name: String = slot["name"]
 		var count: int = 0
 		var is_equipped: bool = false
 
@@ -146,29 +159,37 @@ func _update_display() -> void:
 		if equipment:
 			is_equipped = equipment.get_equipped() == slot_type
 
-		# Build display text - show keyboard keys or controller cycle hint
+		# On mobile, hide items with 0 count (keeps list clean)
+		if is_mobile:
+			var parent_panel: Control = node.get_parent()
+			if parent_panel:
+				parent_panel.visible = count > 0 or is_equipped
+
+		# Build display text
 		var text: String
-		if using_controller:
-			text = name  # No key hints for controller (use L1/R1 to cycle)
+		if is_mobile:
+			text = item_name
+		elif using_controller:
+			text = item_name
 		elif key != "":
-			text = "[%s] %s" % [key, name]
+			text = "[%s] %s" % [key, item_name]
 		else:
-			text = "    %s" % name  # No keyboard shortcut for this item
+			text = "    %s" % item_name
 
 		if count > 0:
 			text += " (x%d)" % count
-		else:
+		elif not is_mobile:
 			text += " (none)"
 
 		if is_equipped:
 			text += " [EQUIPPED]"
-			label.add_theme_color_override("font_color", Color(0.4, 1.0, 0.4, 1))
+			node.add_theme_color_override("font_color", Color(0.4, 1.0, 0.4, 1))
 		elif count > 0:
-			label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1))
+			node.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1))
 		else:
-			label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5, 1))
+			node.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5, 1))
 
-		label.text = text
+		node.text = text
 
 
 func _input(event: InputEvent) -> void:
@@ -236,19 +257,40 @@ func _is_other_menu_open() -> bool:
 	return false
 
 
+## Handle tap-to-equip on mobile.
+func _on_mobile_slot_pressed(slot_type: String) -> void:
+	if not equipment:
+		return
+	# If already equipped, unequip; otherwise equip
+	if equipment.get_equipped() == slot_type:
+		equipment.unequip()
+	else:
+		if inventory and inventory.get_item_count(slot_type) > 0:
+			equipment.equip(slot_type)
+	_update_display()
+	SFXManager.play_sfx("select")
+
+
 func toggle_menu() -> void:
 	is_visible = not is_visible
 	panel.visible = is_visible
+	var close_btn: Button = get_node_or_null("MobileCloseButton") as Button
+	if close_btn:
+		close_btn.visible = is_visible
 
 	if is_visible:
 		SFXManager.play_sfx("menu_open")
-		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		if OS.get_name() != "iOS":
+			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		TouchControls.menu_open = true
 		focused_slot_index = 0
 		_update_display()
 		_update_focus_highlight()
 	else:
 		SFXManager.play_sfx("menu_close")
-		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+		if OS.get_name() != "iOS":
+			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+		TouchControls.menu_open = false
 
 
 func _on_inventory_changed() -> void:
@@ -292,22 +334,63 @@ func _update_focus_highlight() -> void:
 
 
 func _apply_mobile_menu_style() -> void:
-	# Add close button to the panel (CanvasLayer child)
+	# Reposition panel as a centered overlay — compact and clear of HUD elements
+	panel.anchor_left = 0.2
+	panel.anchor_right = 0.8
+	panel.anchor_top = 0.12
+	panel.anchor_bottom = 0.88
+	panel.offset_left = 0
+	panel.offset_right = 0
+	panel.offset_top = 0
+	panel.offset_bottom = 0
+	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+
+	# Wrap the ItemList in a ScrollContainer for touch scrolling
+	var vbox: VBoxContainer = panel.get_node_or_null("VBoxContainer")
+	if vbox and item_list:
+		var scroll: ScrollContainer = ScrollContainer.new()
+		scroll.name = "MobileScroll"
+		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		# Reparent item_list into scroll
+		var idx: int = item_list.get_index()
+		vbox.remove_child(item_list)
+		scroll.add_child(item_list)
+		vbox.add_child(scroll)
+		vbox.move_child(scroll, idx)
+
+	# Reduce font sizes for mobile
+	var title: Label = panel.get_node_or_null("VBoxContainer/Title")
+	if title:
+		title.text = "Equipment"
+		title.add_theme_font_size_override("font_size", 28)
+
+	# Hide keyboard hint at bottom on mobile
+	var hint: Label = panel.get_node_or_null("VBoxContainer/HintLabel")
+	if hint:
+		hint.text = "Tap to equip"
+		hint.add_theme_font_size_override("font_size", 20)
+
+	# Add close button as a CanvasLayer child (NOT inside PanelContainer,
+	# which would stretch it to fill the entire panel and intercept all taps)
 	var close_btn: Button = Button.new()
+	close_btn.name = "MobileCloseButton"
 	close_btn.text = "✕"
 	close_btn.add_theme_font_size_override("font_size", 32)
 	close_btn.custom_minimum_size = Vector2(48, 48)
-	close_btn.anchor_left = 1.0
-	close_btn.anchor_right = 1.0
-	close_btn.offset_left = -60
-	close_btn.offset_top = 12
-	close_btn.offset_right = -12
-	close_btn.offset_bottom = 60
+	# Position at top-right of the panel (panel anchors 0.2-0.8 x 0.12-0.88)
+	close_btn.anchor_left = 0.8
+	close_btn.anchor_right = 0.8
+	close_btn.anchor_top = 0.12
+	close_btn.anchor_bottom = 0.12
+	close_btn.offset_left = -56
+	close_btn.offset_top = 4
+	close_btn.offset_right = -8
+	close_btn.offset_bottom = 52
+	close_btn.visible = false
 	close_btn.pressed.connect(toggle_menu)
-	panel.add_child(close_btn)
-
-	# Enforce minimum button sizes for touch
-	_enforce_min_button_size(panel, 44)
+	add_child(close_btn)
 
 
 static func _enforce_min_button_size(node: Node, min_size: int) -> void:

@@ -126,6 +126,10 @@ func open_storage(storage: Node) -> void:
 	current_storage = storage
 	is_open = true
 	panel.visible = true
+	var close_btn: Button = get_node_or_null("MobileCloseButton") as Button
+	if close_btn:
+		close_btn.visible = true
+		call_deferred("_position_close_button")
 
 	# Set cooldown to prevent L2 from immediately closing
 	open_cooldown_timer = OPEN_COOLDOWN
@@ -136,7 +140,9 @@ func open_storage(storage: Node) -> void:
 	focused_col_index = 0
 
 	# Show cursor
-	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	if OS.get_name() != "iOS":
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	TouchControls.menu_open = true
 
 	# Connect to storage inventory changes
 	if is_instance_valid(storage) and "storage_inventory" in storage and storage.storage_inventory:
@@ -159,9 +165,14 @@ func close_storage() -> void:
 	SFXManager.play_sfx("menu_close")
 	is_open = false
 	panel.visible = false
+	var close_btn: Button = get_node_or_null("MobileCloseButton") as Button
+	if close_btn:
+		close_btn.visible = false
 
 	# Re-capture mouse
-	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	if OS.get_name() != "iOS":
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	TouchControls.menu_open = false
 
 	# Disconnect signals
 	if current_storage and current_storage.storage_inventory:
@@ -432,22 +443,34 @@ func _unequip_if_equipped(item_type: String) -> void:
 
 
 func _apply_mobile_menu_style() -> void:
-	# Add close button to the panel (CanvasLayer child)
+	# Enforce minimum button sizes for touch BEFORE adding close button
+	_enforce_min_button_size(panel, 44)
+
+	# Add close button as CanvasLayer child (NOT panel child, which would
+	# stretch to fill the PanelContainer and intercept all taps)
 	var close_btn: Button = Button.new()
+	close_btn.name = "MobileCloseButton"
 	close_btn.text = "✕"
 	close_btn.add_theme_font_size_override("font_size", 32)
 	close_btn.custom_minimum_size = Vector2(48, 48)
-	close_btn.anchor_left = 1.0
-	close_btn.anchor_right = 1.0
-	close_btn.offset_left = -60
-	close_btn.offset_top = 12
-	close_btn.offset_right = -12
-	close_btn.offset_bottom = 60
+	close_btn.visible = false
 	close_btn.pressed.connect(close_storage)
-	panel.add_child(close_btn)
+	add_child(close_btn)
 
-	# Enforce minimum button sizes for touch
-	_enforce_min_button_size(panel, 44)
+
+func _position_close_button() -> void:
+	var close_btn: Button = get_node_or_null("MobileCloseButton") as Button
+	if not close_btn or not panel:
+		return
+	var rect: Rect2 = panel.get_global_rect()
+	close_btn.anchor_left = 0.0
+	close_btn.anchor_right = 0.0
+	close_btn.anchor_top = 0.0
+	close_btn.anchor_bottom = 0.0
+	close_btn.offset_left = rect.position.x + rect.size.x - 56
+	close_btn.offset_top = rect.position.y + 8
+	close_btn.offset_right = rect.position.x + rect.size.x - 8
+	close_btn.offset_bottom = rect.position.y + 56
 
 
 static func _enforce_min_button_size(node: Node, min_size: int) -> void:

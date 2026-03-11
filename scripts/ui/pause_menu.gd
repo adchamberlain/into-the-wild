@@ -74,7 +74,10 @@ func _ready() -> void:
 	_create_slot_panel()
 	_create_confirm_panel()
 
+	# Hide quit button on iOS (Apple doesn't allow apps to programmatically quit)
 	if OS.get_name() == "iOS":
+		quit_button.visible = false
+		button_list = [resume_button, save_button, load_button, settings_button, return_to_camp_button, credits_button]
 		_apply_mobile_menu_style()
 
 
@@ -205,7 +208,13 @@ func pause_game() -> void:
 	is_paused = true
 	get_tree().paused = true
 	panel.visible = true
-	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	var close_btn: Button = get_node_or_null("MobileCloseButton") as Button
+	if close_btn:
+		close_btn.visible = true
+		call_deferred("_position_close_button")
+	if OS.get_name() != "iOS":
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	TouchControls.menu_open = true
 	SFXManager.play_sfx("menu_open")
 
 	# Update hint label based on input device
@@ -220,7 +229,9 @@ func _update_hint_label() -> void:
 	if not hint_label:
 		return
 	var input_mgr: Node = get_node_or_null("/root/InputManager")
-	if input_mgr and input_mgr.is_using_controller():
+	if input_mgr and input_mgr.is_using_touch():
+		hint_label.text = "[Tap Resume or ✕ to resume]"
+	elif input_mgr and input_mgr.is_using_controller():
 		hint_label.text = "[✕ to resume]"
 	else:
 		hint_label.text = "[ESC to resume]"
@@ -237,11 +248,16 @@ func resume_game() -> void:
 	get_tree().paused = false
 	panel.visible = false
 	credits_panel.visible = false
+	var close_btn: Button = get_node_or_null("MobileCloseButton") as Button
+	if close_btn:
+		close_btn.visible = false
 	if slot_panel:
 		slot_panel.visible = false
 	if confirm_panel:
 		confirm_panel.visible = false
-	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	if OS.get_name() != "iOS":
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	TouchControls.menu_open = false
 	game_resumed.emit()
 
 
@@ -745,22 +761,38 @@ func _on_confirm_no() -> void:
 
 
 func _apply_mobile_menu_style() -> void:
-	# Add close button to the main pause panel (CanvasLayer child)
+	# Enforce minimum button sizes for touch (do this BEFORE creating close button
+	# so we know the panel's final size)
+	_enforce_min_button_size(panel, 44)
+
+	# Add close button as a CanvasLayer child (NOT inside PanelContainer,
+	# which would stretch it to fill the entire panel and intercept all taps)
 	var close_btn: Button = Button.new()
+	close_btn.name = "MobileCloseButton"
 	close_btn.text = "✕"
 	close_btn.add_theme_font_size_override("font_size", 32)
 	close_btn.custom_minimum_size = Vector2(48, 48)
-	close_btn.anchor_left = 1.0
-	close_btn.anchor_right = 1.0
-	close_btn.offset_left = -60
-	close_btn.offset_top = 12
-	close_btn.offset_right = -12
-	close_btn.offset_bottom = 60
+	close_btn.process_mode = Node.PROCESS_MODE_ALWAYS
+	close_btn.visible = false
 	close_btn.pressed.connect(resume_game)
-	panel.add_child(close_btn)
+	add_child(close_btn)
+	# Position is set dynamically in _position_close_button (deferred to get actual panel size)
 
-	# Enforce minimum button sizes for touch
-	_enforce_min_button_size(panel, 44)
+
+func _position_close_button() -> void:
+	var close_btn: Button = get_node_or_null("MobileCloseButton") as Button
+	if not close_btn or not panel:
+		return
+	# Read the panel's actual screen rect and place close button at its top-right
+	var rect: Rect2 = panel.get_global_rect()
+	close_btn.anchor_left = 0.0
+	close_btn.anchor_right = 0.0
+	close_btn.anchor_top = 0.0
+	close_btn.anchor_bottom = 0.0
+	close_btn.offset_left = rect.position.x + rect.size.x - 56
+	close_btn.offset_top = rect.position.y + 8
+	close_btn.offset_right = rect.position.x + rect.size.x - 8
+	close_btn.offset_bottom = rect.position.y + 56
 
 
 static func _enforce_min_button_size(node: Node, min_size: int) -> void:

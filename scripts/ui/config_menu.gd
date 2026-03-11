@@ -597,6 +597,9 @@ func toggle_menu() -> void:
 			slot_panel.visible = false
 		selecting_slot_for_save = false
 		selecting_slot_for_load = false
+		var close_btn: Button = get_node_or_null("MobileCloseButton") as Button
+		if close_btn:
+			close_btn.visible = false
 
 		# If opened from pause menu, return to it
 		if opened_from_pause_menu:
@@ -611,6 +614,10 @@ func toggle_menu() -> void:
 		if slot_panel and slot_panel.visible:
 			slot_panel.visible = false
 		panel.visible = true
+		var close_btn: Button = get_node_or_null("MobileCloseButton") as Button
+		if close_btn:
+			close_btn.visible = true
+			call_deferred("_position_close_button")
 		# Update hint label based on input device
 		_update_hint_label()
 		# Focus first control for controller navigation
@@ -619,9 +626,13 @@ func toggle_menu() -> void:
 
 	# Handle mouse capture
 	if is_visible:
-		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		if OS.get_name() != "iOS":
+			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		TouchControls.menu_open = true
 	else:
-		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+		if OS.get_name() != "iOS":
+			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+		TouchControls.menu_open = false
 
 
 ## Show the config menu (called from pause menu).
@@ -629,6 +640,10 @@ func show_menu(from_pause_menu: bool = false) -> void:
 	opened_from_pause_menu = from_pause_menu
 	is_visible = true
 	panel.visible = true
+	var close_btn: Button = get_node_or_null("MobileCloseButton") as Button
+	if close_btn:
+		close_btn.visible = true
+		call_deferred("_position_close_button")
 	SFXManager.play_sfx("menu_open")
 	if slot_panel:
 		slot_panel.visible = false
@@ -937,7 +952,9 @@ func _show_slot_panel() -> void:
 		panel.visible = false
 		slot_panel.visible = true
 		# Always show mouse cursor when slot panel is visible
-		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		if OS.get_name() != "iOS":
+			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		TouchControls.menu_open = true
 		# Focus first slot button for controller navigation
 		focused_slot_index = 0
 		if not slot_buttons.is_empty():
@@ -955,7 +972,9 @@ func _hide_slot_panel() -> void:
 			panel.visible = true
 		else:
 			# If config menu wasn't open, restore mouse capture
-			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+			if OS.get_name() != "iOS":
+				Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+			TouchControls.menu_open = false
 
 
 ## Handle slot button press.
@@ -1117,22 +1136,34 @@ func _on_input_device_changed(_is_controller: bool) -> void:
 
 
 func _apply_mobile_menu_style() -> void:
-	# Add close button to the panel (CanvasLayer child)
+	# Enforce minimum button sizes for touch BEFORE adding close button
+	_enforce_min_button_size(panel, 44)
+
+	# Add close button as CanvasLayer child (NOT panel child, which would
+	# stretch to fill the PanelContainer and intercept all taps)
 	var close_btn: Button = Button.new()
+	close_btn.name = "MobileCloseButton"
 	close_btn.text = "✕"
 	close_btn.add_theme_font_size_override("font_size", 32)
 	close_btn.custom_minimum_size = Vector2(48, 48)
-	close_btn.anchor_left = 1.0
-	close_btn.anchor_right = 1.0
-	close_btn.offset_left = -60
-	close_btn.offset_top = 12
-	close_btn.offset_right = -12
-	close_btn.offset_bottom = 60
+	close_btn.visible = false
 	close_btn.pressed.connect(toggle_menu)
-	panel.add_child(close_btn)
+	add_child(close_btn)
 
-	# Enforce minimum button sizes for touch
-	_enforce_min_button_size(panel, 44)
+
+func _position_close_button() -> void:
+	var close_btn: Button = get_node_or_null("MobileCloseButton") as Button
+	if not close_btn or not panel:
+		return
+	var rect: Rect2 = panel.get_global_rect()
+	close_btn.anchor_left = 0.0
+	close_btn.anchor_right = 0.0
+	close_btn.anchor_top = 0.0
+	close_btn.anchor_bottom = 0.0
+	close_btn.offset_left = rect.position.x + rect.size.x - 56
+	close_btn.offset_top = rect.position.y + 8
+	close_btn.offset_right = rect.position.x + rect.size.x - 8
+	close_btn.offset_bottom = rect.position.y + 56
 
 
 static func _enforce_min_button_size(node: Node, min_size: int) -> void:

@@ -146,7 +146,13 @@ func open_menu() -> void:
 	is_open = true
 	waiting_for_jump_release = false
 	main_panel.visible = true
-	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	var close_btn: Button = get_node_or_null("MobileCloseButton") as Button
+	if close_btn:
+		close_btn.visible = true
+		call_deferred("_position_close_button")
+	if OS.get_name() != "iOS":
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	TouchControls.menu_open = true
 
 	focused_index = 0
 	_refresh_item_list()
@@ -158,7 +164,12 @@ func open_menu() -> void:
 func close_menu() -> void:
 	SFXManager.play_sfx("menu_close")
 	main_panel.visible = false
-	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	var close_btn: Button = get_node_or_null("MobileCloseButton") as Button
+	if close_btn:
+		close_btn.visible = false
+	if OS.get_name() != "iOS":
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	TouchControls.menu_open = false
 
 	# Keep is_open true until jump action is released to prevent jumping
 	if Input.is_action_pressed("jump") or Input.is_action_pressed("ui_accept"):
@@ -277,6 +288,11 @@ func _add_item_row(item_type: String) -> void:
 	restore_label.add_theme_font_size_override("font_size", 32)
 	restore_label.add_theme_color_override("font_color", Color(0.6, 1, 0.6, 1))
 	hbox.add_child(restore_label)
+
+	# Make rows tappable on mobile
+	if OS.get_name() == "iOS":
+		row_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+		row_panel.gui_input.connect(_on_row_tapped.bind(item_panels.size()))
 
 	item_container.add_child(row_panel)
 	item_panels.append(row_panel)
@@ -409,7 +425,20 @@ func _handle_input() -> void:
 		vp.set_input_as_handled()
 
 
+func _on_row_tapped(event: InputEvent, index: int) -> void:
+	if event is InputEventMouseButton:
+		var mouse_event: InputEventMouseButton = event as InputEventMouseButton
+		if mouse_event.pressed and mouse_event.button_index == MOUSE_BUTTON_LEFT:
+			focused_index = index
+			_update_focus_highlight()
+			_consume_focused_item()
+
+
 func _update_button_prompts() -> void:
+	if OS.get_name() == "iOS":
+		hint_label.text = "Tap item to eat"
+		return
+
 	var consume_prompt: String = "Enter"
 	var close_prompt: String = "F"
 
@@ -426,22 +455,34 @@ func _on_input_device_changed(_is_controller: bool) -> void:
 
 
 func _apply_mobile_menu_style() -> void:
-	# Add close button to the main_panel (built in code)
+	# Enforce minimum button sizes for touch BEFORE adding close button
+	_enforce_min_button_size(main_panel, 44)
+
+	# Add close button as CanvasLayer child (NOT panel child, which would
+	# stretch to fill the PanelContainer and intercept all taps)
 	var close_btn: Button = Button.new()
+	close_btn.name = "MobileCloseButton"
 	close_btn.text = "✕"
 	close_btn.add_theme_font_size_override("font_size", 32)
 	close_btn.custom_minimum_size = Vector2(48, 48)
-	close_btn.anchor_left = 1.0
-	close_btn.anchor_right = 1.0
-	close_btn.offset_left = -60
-	close_btn.offset_top = 12
-	close_btn.offset_right = -12
-	close_btn.offset_bottom = 60
+	close_btn.visible = false
 	close_btn.pressed.connect(close_menu)
-	main_panel.add_child(close_btn)
+	add_child(close_btn)
 
-	# Enforce minimum button sizes for touch
-	_enforce_min_button_size(main_panel, 44)
+
+func _position_close_button() -> void:
+	var close_btn: Button = get_node_or_null("MobileCloseButton") as Button
+	if not close_btn or not main_panel:
+		return
+	var rect: Rect2 = main_panel.get_global_rect()
+	close_btn.anchor_left = 0.0
+	close_btn.anchor_right = 0.0
+	close_btn.anchor_top = 0.0
+	close_btn.anchor_bottom = 0.0
+	close_btn.offset_left = rect.position.x + rect.size.x - 56
+	close_btn.offset_top = rect.position.y + 8
+	close_btn.offset_right = rect.position.x + rect.size.x - 8
+	close_btn.offset_bottom = rect.position.y + 56
 
 
 static func _enforce_min_button_size(node: Node, min_size: int) -> void:

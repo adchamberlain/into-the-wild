@@ -7246,18 +7246,155 @@ Added a minimal, ambient tutorial hint system inspired by Breath of the Wild. 18
 
 ---
 
+## Session - iPad Testing & Refinement (2026-03-10)
+
+Successfully exported, deployed, and tested the iPad build on real hardware. Multiple rounds of iteration to fix touch interactions, UI layout, and performance.
+
+### iOS Export Pipeline
+Established a repeatable CLI-based export pipeline (no Xcode GUI needed):
+1. `Godot --headless --export-debug "iOS"` → generates Xcode project + archives + IPA
+2. `xcrun devicectl device install app --device <DEVICE_ID>` → installs directly to iPad
+3. iPad device ID: `5AADF247-1A77-512B-819E-25C8C4D15BCB`
+4. Added `build/.gdignore` to prevent Godot from scanning export output
+
+### Menu Button Fix (Critical Bug)
+**Root cause**: Close buttons ("✕") were added as children of `PanelContainer` in `_apply_mobile_menu_style()`. Godot's `PanelContainer` resizes ALL children to fill its content area, making each close button an invisible full-panel overlay that intercepted every tap and called close/resume — so tapping any menu item would just close the menu.
+
+**Fix**: Moved close buttons from `panel.add_child()` to `add_child()` (CanvasLayer level) with proper viewport-relative anchor positioning. Close buttons now start hidden and sync visibility with their respective menu open/close states.
+
+**Affected files**: `pause_menu.gd`, `equipment_menu.gd`, `crafting_ui.gd`
+
+### Removed Unnecessary iOS Touch Workarounds
+Removed `_try_ios_button_press()` manual hit-testing and `_ios_touch_frame` debounce code from all three menu scripts. With the close button fix, Godot's built-in `emulate_mouse_from_touch` handles button clicks naturally — no custom touch handling needed.
+
+### Menu CanvasLayer Ordering
+Raised all menu CanvasLayers above the HUD (layer 60) and TouchControls (layer 61) so GUI input reaches menus first:
+- `equipment_menu.tscn`: layer 5 → 102
+- `crafting_ui.tscn`: layer 2 → 102
+- `config_menu.tscn`: layer 10 → 102
+- `fire_menu.tscn`: layer 10 → 102
+- `storage_ui.tscn`: layer 10 → 102
+- `pause_menu.tscn`: already at layer 100
+
+### HUD Mouse Filter Fix
+Added `_set_mouse_filter_ignore(self)` on iOS in `hud.gd` `_ready()` — recursively sets `MOUSE_FILTER_IGNORE` on all HUD Controls so they don't intercept GUI input destined for menu panels on lower CanvasLayers.
+
+### Input.set_mouse_mode() iOS Guards
+Wrapped all `Input.set_mouse_mode()` calls in `OS.get_name() != "iOS"` guards across 7 menu scripts. On iOS, `set_mouse_mode()` is a no-op but could interfere with touch-to-mouse emulation. Affected: `pause_menu.gd`, `equipment_menu.gd`, `crafting_ui.gd`, `config_menu.gd`, `food_menu.gd`, `fire_menu.gd`, `storage_ui.gd`.
+
+### Compass Widget Restored on Mobile
+Re-enabled the graphical rotating compass on the mobile HUD, repositioned below the stats panel (top-left, at y=95 below HP/FD bars). Previously hidden on mobile. Removed the guard in `set_overlay_mode` that was hiding compass on mobile.
+
+### USE Button Repositioned
+Moved the USE touch button from overlapping the Equipped panel (top-right) to below the ◀ ▶ slot arrows. New position: right-aligned under equipped panel at y=185, preventing overlap with longer item names.
+
+### Left-Side HUD Stacking (Safe Area)
+Fixed all left-side HUD indicator panels to use safe area offsets on mobile, preventing overlap with the compass widget. Elements now stack correctly:
+- Stats panel (HP/FD): y=12 to 90
+- Compass widget: y=95 to 185
+- Compass panel (lodestone/POI text): y=190 to 240
+- Heat indicator: y=245 to 290
+- Coca leaf buff: stacks dynamically below lowest visible indicator
+
+### Touch Controls Performance Fix
+Optimized `touch_controls.gd` `_process()` to only iterate buttons when `menu_open` state changes (cached `_last_menu_open_state`), instead of every frame. Reduces per-frame work when menus are open/closed.
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/ui/pause_menu.gd` | Modified | Close button as CanvasLayer child, removed iOS touch workarounds, debug prints, mouse_mode guards, visibility sync |
+| `scripts/ui/equipment_menu.gd` | Modified | Close button as CanvasLayer child, removed iOS touch workarounds, mouse_mode guards, visibility sync |
+| `scripts/ui/crafting_ui.gd` | Modified | Close button as CanvasLayer child, removed iOS touch workarounds, mouse_mode guards, visibility sync |
+| `scripts/ui/hud.gd` | Modified | Compass widget on mobile, mouse_filter ignore, left-side safe area stacking, USE button note |
+| `scripts/ui/touch_controls.gd` | Modified | USE button repositioned, _process optimization |
+| `scripts/ui/config_menu.gd` | Modified | mouse_mode iOS guards |
+| `scripts/ui/food_menu.gd` | Modified | mouse_mode iOS guards |
+| `scripts/ui/fire_menu.gd` | Modified | mouse_mode iOS guards |
+| `scripts/ui/storage_ui.gd` | Modified | mouse_mode iOS guards |
+| `scenes/ui/equipment_menu.tscn` | Modified | CanvasLayer 5 → 102 |
+| `scenes/ui/crafting_ui.tscn` | Modified | CanvasLayer 2 → 102 |
+| `scenes/ui/config_menu.tscn` | Modified | CanvasLayer 10 → 102 |
+| `scenes/ui/fire_menu.tscn` | Modified | CanvasLayer 10 → 102 |
+| `scenes/ui/storage_ui.tscn` | Modified | CanvasLayer 10 → 102 |
+
+---
+
+## Session - iPad Polish & Menu Fixes (2026-03-10, continued)
+
+### Close Button Fix for All Menus
+
+Fixed the PanelContainer close button overlay bug across ALL remaining menus. The close button was being added as a child of PanelContainer, which stretched it to fill the entire panel and intercepted all taps. Moved close buttons to CanvasLayer children with deferred dynamic positioning using `panel.get_global_rect()`.
+
+Fixed menus: `config_menu.gd`, `storage_ui.gd`, `food_menu.gd`, `fire_menu.gd`, `journal_ui.gd`. Previously fixed: `pause_menu.gd`, `equipment_menu.gd`, `crafting_ui.gd`.
+
+### Quit Button Hidden on iOS
+
+`get_tree().quit()` doesn't work on iOS (Apple forbids programmatic app termination). Hidden the Quit Game button entirely on iOS in the pause menu.
+
+### Bow USE Button Hold-to-Draw
+
+The mobile USE button was dispatching both press and release of `use_equipped` in the same frame via the `pressed` signal, so the bow started drawing but immediately cancelled. Changed to `button_down`/`button_up` signals for proper hold-to-draw-and-release-to-fire.
+
+### Equipment Cycling with "None" Option
+
+Added slot 0 ("none") to the equipment cycling array so players can unequip items by cycling through with ◀ ▶ arrows. USE button stays visible but grays out when nothing is equipped.
+
+### Taller Touch Buttons
+
+Doubled the height of ◀, USE, and ▶ buttons (44px → 88px) and increased font size. BAG, EAT, CRAFT, MENU buttons also made 88px tall with dark gray borders for consistent design across all top-row buttons.
+
+### EAT Button
+
+Added EAT button to mobile HUD near the FD (food) bar. Uses the same `_create_menu_button` as BAG/CRAFT/MENU for consistent design (84x88 dark rectangle with gray border, orange text). Fires the "eat" action to open the food/consume menu.
+
+Fixed food menu open/close race condition — `player_controller` now calls `set_input_as_handled()` after opening the food menu to prevent `food_menu._input` from seeing the same press event and immediately closing it.
+
+### Food Menu Touch Support
+
+Made food item rows tappable on iOS by connecting `gui_input` on each row panel. Updated hint text from "[?] Consume" to "Tap item to eat" on mobile.
+
+### Notification Panel Positioning
+
+Pushed the notification panel well below the time panel on mobile (offset_top = 200+st). Required clearing `anchors_preset` and fully re-specifying anchors/offsets to ensure they stick.
+
+### Map HUD Adjustments
+
+Increased MAP_TOP from 200 to 250 on mobile to accommodate taller touch buttons.
+
+### Button Color Scheme
+
+- USE button: green text with dark green background (primary action)
+- EAT button: orange text (matches FD/hunger theme)
+- BAG, CRAFT, MENU: gray, all consistent design
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/ui/config_menu.gd` | Modified | Close button moved to CanvasLayer child, deferred positioning, visibility sync |
+| `scripts/ui/storage_ui.gd` | Modified | Close button moved to CanvasLayer child, deferred positioning, visibility sync |
+| `scripts/ui/food_menu.gd` | Modified | Close button fix, tappable item rows on iOS, "Tap item to eat" hint |
+| `scripts/ui/fire_menu.gd` | Modified | Close button moved to CanvasLayer child, deferred positioning, visibility sync |
+| `scripts/ui/journal_ui.gd` | Modified | Close button moved to CanvasLayer child, deferred positioning, freed on close |
+| `scripts/ui/pause_menu.gd` | Modified | Quit button hidden on iOS |
+| `scripts/ui/hud.gd` | Modified | EAT button, taller ◀/USE/▶, green USE style, notification repositioning |
+| `scripts/ui/touch_controls.gd` | Modified | Removed old EAT circle button, added EAT to menu strip, taller menu buttons with borders |
+| `scripts/ui/equipment_menu.gd` | Modified | Close button refinements |
+| `scripts/ui/bark_map_ui.gd` | Modified | MAP_TOP 200→250 on mobile |
+| `scripts/player/equipment.gd` | Modified | "None" option in slot cycling, USE grays out when unequipped |
+| `scripts/player/player_controller.gd` | Modified | set_input_as_handled after opening food menu |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Test iPad build on actual iPad hardware via TestFlight
+1. Continue iPad play-testing — verify all menus work with touch (save/load slots, storage, fire menu, settings)
 2. Tune touch sensitivity and joystick dead zones based on real device testing
 3. Continue play-testing tutorial hint system — verify all 18 hints trigger correctly
-2. Play-test procedural water generation — verify ponds/lakes/rivers appear beyond 300 units in non-desert biomes
-3. Deploy website to Cloudflare Pages at intothewild.dev
-4. Continue play-testing end-of-game trail sequence with new clues and compass
-5. When testing is done: set `trail_testing_mode = false` in `scripts/core/game_state.gd:24`
-6. When testing is done: revert player spawn in `scenes/main.tscn` from (345, 25, -345) to (0, 5, 0)
-7. Review and fix any bugs filed via GitHub Issues
+4. Play-test procedural water generation — verify ponds/lakes/rivers appear beyond 300 units in non-desert biomes
+5. Deploy website to Cloudflare Pages at intothewild.dev
+6. Continue play-testing end-of-game trail sequence with new clues and compass
+7. When testing is done: set `trail_testing_mode = false` in `scripts/core/game_state.gd:24`
+8. When testing is done: revert player spawn in `scenes/main.tscn` from (345, 25, -345) to (0, 5, 0)
+9. Review and fix any bugs filed via GitHub Issues
 
 ### Known Issues
 - Player spawn in main.tscn is at (345, 25, -345) for testing — needs revert to (0, 5, 0)

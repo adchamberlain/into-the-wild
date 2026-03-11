@@ -4,7 +4,7 @@
 [ext_resource type="Font" uid="uid://hud_mono_font" path="res://resources/hud_font.tres" id="2_font"]
 
 [node name="EquipmentMenu" type="CanvasLayer"]
-layer = 5
+layer = 102
 script = ExtResource("1_equip")
 
 [node name="Panel" type="PanelContainer" parent="."]

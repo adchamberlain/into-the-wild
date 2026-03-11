@@ -356,6 +356,7 @@ func _input(event: InputEvent) -> void:
 	# Handle eating (F key or Triangle button) - disabled while resting
 	if event.is_action_pressed("eat") and not is_resting:
 		_toggle_food_menu()
+		get_viewport().set_input_as_handled()
 		return
 
 	# Handle using equipped item (R key or R2 trigger) - disabled while resting or placing

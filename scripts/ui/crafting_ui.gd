@@ -136,6 +136,9 @@ func _toggle_crafting() -> void:
 func toggle_crafting_menu(from_bench: bool = false) -> void:
 	is_open = not is_open
 	panel.visible = is_open
+	var close_btn: Button = get_node_or_null("MobileCloseButton") as Button
+	if close_btn:
+		close_btn.visible = is_open
 
 	if is_open:
 		SFXManager.play_sfx("menu_open")
@@ -148,7 +151,9 @@ func toggle_crafting_menu(from_bench: bool = false) -> void:
 		# Update hint label based on input device
 		_update_hint_label()
 		# Show cursor for clicking
-		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		if OS.get_name() != "iOS":
+			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		TouchControls.menu_open = true
 		_refresh_recipe_list()
 		# Focus first recipe button for controller navigation
 		_focus_first_recipe()
@@ -156,7 +161,9 @@ func toggle_crafting_menu(from_bench: bool = false) -> void:
 		SFXManager.play_sfx("menu_close")
 		at_bench = false
 		# Re-capture mouse for gameplay
-		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+		if OS.get_name() != "iOS":
+			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+		TouchControls.menu_open = false
 
 
 func _refresh_recipe_list(preserve_focus: bool = false) -> void:
@@ -282,9 +289,15 @@ func _on_craft_pressed(recipe_id: String) -> void:
 	if campsite_manager and campsite_manager.has_method("get_level"):
 		camp_level = campsite_manager.get_level()
 
-	# Just call craft - the inventory_changed signal will trigger _on_inventory_changed
-	# which handles refreshing the list and restoring focus
-	crafting_system.craft(recipe_id, at_bench, camp_level)
+	# Craft the item - inventory_changed signal refreshes the list
+	var success: bool = crafting_system.craft(recipe_id, at_bench, camp_level)
+	if success:
+		SFXManager.play_sfx("select")
+		# Show notification via HUD
+		var recipe_name: String = recipe_id.capitalize().replace("_", " ")
+		var hud: Node = get_tree().root.get_node_or_null("Main/HUD")
+		if hud and hud.has_method("show_notification"):
+			hud.show_notification("Crafted %s!" % recipe_name, Color(0.6, 1.0, 0.6, 1))
 
 
 func _on_inventory_changed() -> void:
@@ -386,19 +399,25 @@ func get_crafting_system() -> CraftingSystem:
 
 
 func _apply_mobile_menu_style() -> void:
-	# Add close button to the panel (CanvasLayer child)
+	# Add close button as a CanvasLayer child (NOT inside PanelContainer,
+	# which would stretch it to fill the entire panel and intercept all taps)
 	var close_btn: Button = Button.new()
+	close_btn.name = "MobileCloseButton"
 	close_btn.text = "✕"
 	close_btn.add_theme_font_size_override("font_size", 32)
 	close_btn.custom_minimum_size = Vector2(48, 48)
-	close_btn.anchor_left = 1.0
-	close_btn.anchor_right = 1.0
-	close_btn.offset_left = -60
-	close_btn.offset_top = 12
-	close_btn.offset_right = -12
-	close_btn.offset_bottom = 60
+	# Position at top-right of the panel (panel is center-anchored ±450 x ±400)
+	close_btn.anchor_left = 0.5
+	close_btn.anchor_right = 0.5
+	close_btn.anchor_top = 0.5
+	close_btn.anchor_bottom = 0.5
+	close_btn.offset_left = 395
+	close_btn.offset_top = -395
+	close_btn.offset_right = 445
+	close_btn.offset_bottom = -347
+	close_btn.visible = false
 	close_btn.pressed.connect(func() -> void: toggle_crafting_menu(false))
-	panel.add_child(close_btn)
+	add_child(close_btn)
 
 	# Enforce minimum button sizes for touch
 	_enforce_min_button_size(panel, 44)

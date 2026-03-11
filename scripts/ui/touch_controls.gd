@@ -1,20 +1,21 @@
 extends CanvasLayer
+class_name TouchControls
 
 ## Touch controls overlay for iPad. Only instantiated on iOS.
 ## Provides virtual joystick, swipe-to-look, and action buttons.
 
 # Joystick config
-const JOYSTICK_RADIUS: float = 140.0  # Outer radius (280px diameter, matches design)
+const JOYSTICK_RADIUS: float = 160.0  # Outer radius (320px diameter)
 const JOYSTICK_DEADZONE: float = 0.15
 
 # Swipe look config
 const TOUCH_LOOK_SENSITIVITY: float = 0.003
 
 # Button config
-const BUTTON_RADIUS: float = 48.0  # 96px diameter (matches design proportions)
-const BUTTON_ALPHA_BG: float = 0.35
-const BUTTON_ALPHA_BORDER: float = 0.6
-const BUTTON_ALPHA_TEXT: float = 0.85
+const BUTTON_RADIUS: float = 60.0  # 120px diameter action buttons
+const BUTTON_ALPHA_BG: float = 0.75
+const BUTTON_ALPHA_BORDER: float = 0.9
+const BUTTON_ALPHA_TEXT: float = 1.0
 
 # State
 var joystick_touch_index: int = -1
@@ -37,10 +38,12 @@ var eat_button: TouchScreenButton = null
 var crouch_button: TouchScreenButton = null
 
 var safe_margin: Dictionary = {"left": 0, "top": 0, "right": 0, "bottom": 0}
+var _last_menu_open_state: bool = false  # Cache to avoid per-frame updates
 
 
 func _ready() -> void:
 	layer = 61
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_calculate_safe_area()
 	_setup_joystick()
 	_setup_action_buttons()
@@ -75,7 +78,8 @@ func _calculate_safe_area() -> void:
 
 func _setup_joystick() -> void:
 	var screen_size: Vector2 = get_viewport().get_visible_rect().size
-	joystick_center = Vector2(32 + safe_margin["left"] + JOYSTICK_RADIUS, screen_size.y - JOYSTICK_RADIUS - 50 - safe_margin["bottom"])
+	# Position joystick higher to keep downward drag away from iPad home indicator zone
+	joystick_center = Vector2(32 + safe_margin["left"] + JOYSTICK_RADIUS, screen_size.y - JOYSTICK_RADIUS - 100 - safe_margin["bottom"])
 
 	# Joystick background circle
 	joystick_bg = Sprite2D.new()
@@ -85,7 +89,7 @@ func _setup_joystick() -> void:
 
 	# Joystick thumb (inner knob)
 	joystick_thumb = Sprite2D.new()
-	joystick_thumb.texture = _create_circle_texture(100, Color(1, 1, 1, 0.35), Color(1, 1, 1, 0.55))
+	joystick_thumb.texture = _create_circle_texture(120, Color(1, 1, 1, 0.35), Color(1, 1, 1, 0.55))
 	joystick_thumb.position = joystick_center
 	add_child(joystick_thumb)
 
@@ -121,11 +125,11 @@ func _setup_action_buttons() -> void:
 	var right_x: float = screen_size.x - 52 - safe_margin["right"] - BUTTON_RADIUS
 	var bottom_y: float = screen_size.y - 48 - safe_margin["bottom"] - BUTTON_RADIUS
 
-	# Core buttons: ACT at bottom (most accessible), SPRINT middle, JUMP top
+	# Core buttons from bottom: SPRINT, JUMP, ACT (top)
 	var core_buttons: Array = [
-		{"name": "ACT", "action": "interact", "color": Color(1, 0.85, 0.3), "y_offset": 0},
-		{"name": "SPRINT", "action": "sprint", "color": Color(0.4, 0.85, 0.5), "y_offset": 110},
-		{"name": "JUMP", "action": "jump", "color": Color(0.75, 0.75, 0.75), "y_offset": 220},
+		{"name": "SPRINT", "action": "sprint", "color": Color(0.4, 0.85, 0.5), "y_offset": 0},
+		{"name": "JUMP", "action": "jump", "color": Color(0.75, 0.75, 0.75), "y_offset": 140},
+		{"name": "ACT", "action": "interact", "color": Color(1, 0.85, 0.3), "y_offset": 280},
 	]
 
 	for btn_data in core_buttons:
@@ -140,30 +144,15 @@ func _setup_action_buttons() -> void:
 	# Context-sensitive buttons
 	var screen_size_ctx: Vector2 = get_viewport().get_visible_rect().size
 
-	# USE — below equipped item panel (top-right), green dashed
-	use_button = _create_action_button(
-		"USE",
-		Vector2(screen_size_ctx.x - 230 - safe_margin["right"], 90 + safe_margin["top"]),
-		Color(0.4, 1, 0.4),  # Green
-		"use_equipped",
-		true  # Dashed border
-	)
-	use_button.visible = false
+	# USE button is now a compact HUD button in TouchSlotArrows (hud.gd)
+	# instead of a large circular TouchScreenButton here
 
-	# EAT — right next to stats panel (top-left)
-	eat_button = _create_action_button(
-		"EAT",
-		Vector2(220 + safe_margin["left"], 42 + safe_margin["top"]),
-		Color(0.7, 0.7, 0.7),  # Grey (matches design)
-		"eat",
-		true
-	)
-	eat_button.visible = false
+	# EAT is now a menu-style button created in _setup_menu_buttons()
 
 	# CROUCH — near core buttons, above ACT
 	crouch_button = _create_action_button(
 		"CROUCH",
-		Vector2(right_x, bottom_y - 330),
+		Vector2(right_x, bottom_y - 420),
 		Color(0.7, 0.7, 0.7),  # Grey
 		"crouch",
 		true
@@ -174,19 +163,31 @@ func _setup_action_buttons() -> void:
 func _setup_menu_buttons() -> void:
 	var screen_size: Vector2 = get_viewport().get_visible_rect().size
 	var center_x: float = screen_size.x / 2.0
-	# Colored menu buttons matching the approved mockup design
+	# Menu buttons with text labels (emoji don't render in Godot iOS with monospace fonts)
 	var menu_items: Array = [
-		{"icon": "🎒", "action": "open_inventory", "color": Color(0.9, 0.3, 0.3, 0.8)},
-		{"icon": "⚒️", "action": "open_crafting", "color": Color(0.5, 0.5, 0.55, 0.8)},
-		{"icon": "⏸️", "action": "pause", "color": Color(0.5, 0.5, 0.55, 0.8)},
+		{"icon": "BAG", "action": "open_inventory", "color": Color(0.45, 0.5, 0.55, 0.85)},
+		{"icon": "CRAFT", "action": "open_crafting", "color": Color(0.45, 0.5, 0.55, 0.85)},
+		{"icon": "MENU", "action": "pause", "color": Color(0.45, 0.5, 0.55, 0.85)},
 	]
 
-	# Position clearly right of time panel with good spacing
-	var start_x: float = center_x + 130
+	# EAT button: left side, next to stats panel (stats panel ends at ~250+sl)
+	var _eat_btn: TouchScreenButton = _create_menu_button(
+		"EAT",
+		Vector2(300 + safe_margin["left"], 56 + safe_margin["top"]),
+		"eat",
+		Color(0.45, 0.5, 0.55, 0.85)
+	)
+	# Set orange text for EAT label
+	var eat_lbl: Label = _eat_btn.get_child(0) as Label
+	if eat_lbl:
+		eat_lbl.add_theme_color_override("font_color", Color(1, 0.7, 0.2, 0.95))
+
+	# Position clearly right of time panel with good spacing (time panel is ±130 from center)
+	var start_x: float = center_x + 200
 	for i: int in range(menu_items.size()):
 		var _btn: TouchScreenButton = _create_menu_button(
 			menu_items[i]["icon"],
-			Vector2(start_x + i * 54, 28 + safe_margin["top"]),
+			Vector2(start_x + i * 96, 56 + safe_margin["top"]),
 			menu_items[i]["action"],
 			menu_items[i]["color"]
 		)
@@ -221,8 +222,8 @@ func _create_action_button(label_text: String, pos: Vector2, color: Color, actio
 	# Add label
 	var lbl: Label = Label.new()
 	lbl.text = label_text
-	lbl.add_theme_font_size_override("font_size", 22)
-	lbl.add_theme_color_override("font_color", Color(color.r, color.g, color.b, BUTTON_ALPHA_TEXT))
+	lbl.add_theme_font_size_override("font_size", 26)
+	lbl.add_theme_color_override("font_color", Color(1, 1, 1, 1.0))
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.size = Vector2(BUTTON_RADIUS * 2, BUTTON_RADIUS * 2)
@@ -232,23 +233,60 @@ func _create_action_button(label_text: String, pos: Vector2, color: Color, actio
 	return btn
 
 
-func _create_menu_button(icon: String, pos: Vector2, action: String, bg_color: Color = Color(0.1, 0.1, 0.12, 0.75)) -> TouchScreenButton:
+func _create_menu_button(label_text: String, pos: Vector2, action: String, bg_color: Color = Color(0.1, 0.1, 0.12, 0.85)) -> TouchScreenButton:
 	var btn: TouchScreenButton = TouchScreenButton.new()
-	var size_px: int = 48
-	var radius: float = size_px / 2.0
-	btn.position = pos - Vector2(radius, radius)
+	var btn_w: int = 84
+	var btn_h: int = 88
+	btn.position = pos - Vector2(btn_w / 2.0, btn_h / 2.0)
 	btn.action = action
 	btn.passby_press = false
 
-	# Create circular menu button texture
-	var img: Image = Image.create(size_px, size_px, false, Image.FORMAT_RGBA8)
+	# Create rounded rectangle menu button texture with border
+	var img: Image = Image.create(btn_w, btn_h, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
-	var center: Vector2 = Vector2(radius, radius)
-	for x: int in range(size_px):
-		for y: int in range(size_px):
-			var dist: float = Vector2(x, y).distance_to(center)
-			if dist <= radius:
-				img.set_pixel(x, y, bg_color)
+	var corner_r: int = 10
+	var border_w: int = 2
+	var border_color: Color = Color(0.3, 0.3, 0.35, 0.9)
+	for x: int in range(btn_w):
+		for y: int in range(btn_h):
+			# Rounded rectangle check
+			var inside: bool = false
+			if x >= corner_r and x < btn_w - corner_r:
+				inside = true
+			elif y >= corner_r and y < btn_h - corner_r:
+				inside = true
+			else:
+				# Check corner circles
+				var cx: int = corner_r if x < corner_r else btn_w - corner_r - 1
+				var cy: int = corner_r if y < corner_r else btn_h - corner_r - 1
+				if Vector2(x, y).distance_to(Vector2(cx, cy)) <= corner_r:
+					inside = true
+			if inside:
+				# Check if on border edge
+				var on_border: bool = (x < border_w or x >= btn_w - border_w
+					or y < border_w or y >= btn_h - border_w)
+				if not on_border:
+					# Also check inner corner radius for border
+					var inner_r: int = corner_r - border_w
+					if inner_r > 0:
+						var in_inner: bool = false
+						if x >= corner_r and x < btn_w - corner_r:
+							in_inner = true
+						elif y >= corner_r and y < btn_h - corner_r:
+							in_inner = true
+						else:
+							var icx: int = corner_r if x < corner_r else btn_w - corner_r - 1
+							var icy: int = corner_r if y < corner_r else btn_h - corner_r - 1
+							if Vector2(x, y).distance_to(Vector2(icx, icy)) <= inner_r:
+								in_inner = true
+						if in_inner:
+							img.set_pixel(x, y, bg_color)
+						else:
+							img.set_pixel(x, y, border_color)
+					else:
+						img.set_pixel(x, y, bg_color)
+				else:
+					img.set_pixel(x, y, border_color)
 	var tex: ImageTexture = ImageTexture.create_from_image(img)
 	btn.texture_normal = tex
 
@@ -256,18 +294,30 @@ func _create_menu_button(icon: String, pos: Vector2, action: String, bg_color: C
 	all_buttons.append(btn)
 
 	var lbl: Label = Label.new()
-	lbl.text = icon
-	lbl.add_theme_font_size_override("font_size", 22)
+	lbl.text = label_text
+	lbl.add_theme_font_size_override("font_size", 24)
+	lbl.add_theme_color_override("font_color", Color(0.95, 0.95, 0.95, 0.95))
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	lbl.size = Vector2(size_px, size_px)
+	lbl.size = Vector2(btn_w, btn_h)
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	btn.add_child(lbl)
 
 	return btn
 
 
+## Static flag — menus set this to prevent touch controls from consuming input
+static var menu_open: bool = false
+
+
 func _input(event: InputEvent) -> void:
+	# Don't intercept touch when menus/overlays are open
+	if menu_open:
+		if joystick_touch_index != -1:
+			joystick_touch_index = -1
+			_reset_joystick()
+		look_touch_index = -1
+		return
 	if event is InputEventScreenTouch:
 		_handle_screen_touch(event as InputEventScreenTouch)
 	elif event is InputEventScreenDrag:
@@ -334,7 +384,7 @@ func _reset_joystick() -> void:
 	joystick_thumb.position = joystick_center
 	# Release all movement actions
 	Input.action_release("move_forward")
-	Input.action_release("move_back")
+	Input.action_release("move_backward")
 	Input.action_release("move_left")
 	Input.action_release("move_right")
 
@@ -347,9 +397,9 @@ func _apply_joystick_to_actions(direction: Vector2) -> void:
 		Input.action_release("move_forward")
 
 	if direction.y > JOYSTICK_DEADZONE:
-		Input.action_press("move_back", direction.y)
+		Input.action_press("move_backward", direction.y)
 	else:
-		Input.action_release("move_back")
+		Input.action_release("move_backward")
 
 	# Left/right (strafe)
 	if direction.x < -JOYSTICK_DEADZONE:
@@ -379,7 +429,24 @@ func _is_on_any_button(pos: Vector2) -> bool:
 
 
 func _process(_delta: float) -> void:
-	if crouch_button and player_controller:
+	# Only update visibility when menu_open state changes (avoid per-frame iteration)
+	if menu_open != _last_menu_open_state:
+		_last_menu_open_state = menu_open
+		if menu_open:
+			for btn: TouchScreenButton in all_buttons:
+				btn.visible = false
+			joystick_bg.visible = false
+			joystick_thumb.visible = false
+		else:
+			# Restore core button visibility (context buttons handled separately)
+			for btn: TouchScreenButton in all_buttons:
+				if btn == use_button or btn == eat_button or btn == crouch_button:
+					continue  # Context buttons managed by their own logic
+				btn.visible = true
+			joystick_bg.visible = true
+			joystick_thumb.visible = true
+
+	if not menu_open and crouch_button and player_controller:
 		if player_controller.has_method("is_near_cliff_edge"):
 			crouch_button.visible = player_controller.is_near_cliff_edge()
 
