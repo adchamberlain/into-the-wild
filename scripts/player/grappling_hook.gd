@@ -63,7 +63,16 @@ func _setup_references() -> void:
 			chunk_manager = main.get_node_or_null("ChunkManager")
 
 
-func _process(_delta: float) -> void:
+var _grapple_check_timer: float = 0.0
+const GRAPPLE_CHECK_INTERVAL: float = 0.1  # Check 10x/sec instead of every frame
+
+func _process(delta: float) -> void:
+	# Throttle target validity checks — no need to run every frame
+	_grapple_check_timer += delta
+	if _grapple_check_timer < GRAPPLE_CHECK_INTERVAL:
+		return
+	_grapple_check_timer = 0.0
+
 	# Update target validity for reticle feedback
 	if player and _is_grappling_hook_equipped() and not is_grappling:
 		var target: Dictionary = get_grapple_target()

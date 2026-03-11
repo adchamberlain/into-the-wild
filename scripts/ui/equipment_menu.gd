@@ -45,6 +45,7 @@ const EQUIPMENT_SLOTS: Array = [
 	{"key": "", "type": "leather_axe_wrap", "name": "Leather Axe Wrap"},
 	{"key": "", "type": "leather_hook_wrap", "name": "Leather Hook Wrap"},
 	{"key": "", "type": "leather_bow_wrap", "name": "Leather Bow Wrap"},
+	{"key": "", "type": "hang_glider", "name": "Hang Glider"},
 ]
 
 # Cached labels for each slot
@@ -121,7 +122,12 @@ func _build_slot_list() -> void:
 	var font_size: int = 22 if is_mobile else 28
 
 	# Create a panel with label for each slot (panel allows highlight for controller nav)
-	for slot in EQUIPMENT_SLOTS:
+	# On mobile, sort equipment alphabetically (no keyboard hotkeys to preserve order for)
+	var slots_to_display: Array = EQUIPMENT_SLOTS.duplicate()
+	if is_mobile:
+		slots_to_display.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["name"] < b["name"])
+
+	for slot in slots_to_display:
 		var item_panel: PanelContainer = PanelContainer.new()
 		var style: StyleBoxFlat = StyleBoxFlat.new()
 		style.bg_color = Color(0, 0, 0, 0)  # Transparent by default

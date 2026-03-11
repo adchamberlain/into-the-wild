@@ -29,6 +29,7 @@ var sfx_manager: Node = null  # Cached for performance
 const PROCESSING_DISTANCE: float = 50.0  # Don't process animals beyond this
 const ROTATION_UPDATE_INTERVAL: float = 0.1  # Throttle look_at() calls
 var rotation_timer: float = 0.0
+var _obstacle_check_counter: int = 0
 var is_too_far: bool = false  # Skip processing when far from player
 
 # Movement
@@ -202,10 +203,9 @@ func _move_animal(delta: float, speed: float) -> void:
 				move_direction = -move_direction
 				return
 
-	# Sample terrain height at new position using max of nearby samples
-	# to avoid clipping into adjacent terrain block edges
+	# Sample terrain height at new position (single sample — animals are small enough)
 	if chunk_manager and chunk_manager.has_method("get_height_at"):
-		var terrain_height: float = _get_smoothed_terrain_height(new_pos.x, new_pos.z)
+		var terrain_height: float = chunk_manager.get_height_at(new_pos.x, new_pos.z)
 		# Skip water (negative height)
 		if terrain_height < 0:
 			move_direction = -move_direction
@@ -216,8 +216,10 @@ func _move_animal(delta: float, speed: float) -> void:
 			return
 		new_pos.y = terrain_height
 
-	# Check for obstacles (terrain blocks, trees, structures) via physics raycast
-	if is_inside_tree():
+	# Check for obstacles via physics raycast (throttled — every 5th move frame)
+	_obstacle_check_counter += 1
+	if _obstacle_check_counter >= 5 and is_inside_tree():
+		_obstacle_check_counter = 0
 		var space_state: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
 		if space_state:
 			var ray_origin: Vector3 = global_position + Vector3(0, 0.2, 0)

@@ -1446,38 +1446,11 @@ func _update_camera_collision(delta: float) -> void:
 
 
 ## Check if any UI menu is open and blocking player input.
-## This prevents actions like jump from triggering when X is used for ui_accept.
+## Uses TouchControls.menu_open flag instead of querying 6 node groups per frame.
 func _is_ui_blocking_input() -> bool:
-	# Check if game is paused (pause menu open)
 	if get_tree().paused:
 		return true
-
-	# Check for open menus by looking for nodes with is_open or is_visible properties
-	for node in get_tree().get_nodes_in_group("crafting_ui"):
-		if "is_open" in node and node.is_open:
-			return true
-
-	for node in get_tree().get_nodes_in_group("equipment_menu"):
-		if "is_visible" in node and node.is_visible:
-			return true
-
-	for node in get_tree().get_nodes_in_group("config_menu"):
-		if "is_visible" in node and node.is_visible:
-			return true
-
-	for node in get_tree().get_nodes_in_group("storage_ui"):
-		if "is_open" in node and node.is_open:
-			return true
-
-	for node in get_tree().get_nodes_in_group("fire_menu"):
-		if "is_open" in node and node.is_open:
-			return true
-
-	for node in get_tree().get_nodes_in_group("food_menu"):
-		if "is_open" in node and node.is_open:
-			return true
-
-	return false
+	return TouchControls.menu_open
 
 
 ## Close all open UI menus and restore mouse capture. Used on death/respawn.
