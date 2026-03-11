@@ -324,7 +324,7 @@ func _ready() -> void:
 		# Hide mouse cursor on iOS
 		Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
 
-	# Mobile HUD adaptations
+	# Mobile HUD adaptations — complete layout redesign per approved mockup
 	if is_mobile:
 		# Hide inventory panel (accessed via 🎒 menu button on touch controls)
 		inventory_visible = false
@@ -333,14 +333,8 @@ func _ready() -> void:
 		# Hide control hints row (touch buttons replace keyboard hints)
 		if equip_hint_label:
 			equip_hint_label.visible = false
-		# Move equipped panel to top-right (below time panel) so it doesn't overlap action buttons
-		_reposition_equipped_panel_mobile()
-		# Apply safe area insets for notch/home indicator avoidance
-		_apply_safe_area_insets()
-		# Add touch slot cycle buttons near equipped panel (top-right)
-		_create_touch_slot_arrows()
-		# Scale scene-node font sizes for mobile
-		_apply_mobile_font_scaling()
+		# Apply the full mobile HUD layout
+		_apply_mobile_hud_layout()
 
 
 ## Returns the appropriate font size for the current platform.
@@ -358,83 +352,103 @@ func _get_font_size(desktop_size: int) -> int:
 		return MOBILE_HINT_FONT
 
 
-## Move equipped panel from bottom-right (desktop) to top-right (mobile) below time panel.
-func _reposition_equipped_panel_mobile() -> void:
-	var equipped_panel: PanelContainer = get_node_or_null("EquippedPanel")
-	if not equipped_panel:
-		return
-	# Switch from bottom-right to top-right anchor
-	equipped_panel.anchors_preset = Control.PRESET_TOP_RIGHT
-	equipped_panel.anchor_left = 1.0
-	equipped_panel.anchor_top = 0.0
-	equipped_panel.anchor_right = 1.0
-	equipped_panel.anchor_bottom = 0.0
-	equipped_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	equipped_panel.grow_vertical = Control.GROW_DIRECTION_END
-	# Position below the time panel (approx 200px down)
-	equipped_panel.offset_left = -280
-	equipped_panel.offset_top = 200
-	equipped_panel.offset_right = -12
-	equipped_panel.offset_bottom = 280
-
-
-## Apply iOS safe area insets so HUD panels avoid the notch and home indicator.
-func _apply_safe_area_insets() -> void:
-	if not is_mobile:
-		return
-	var screen_size: Vector2i = DisplayServer.screen_get_size()
+## Apply the complete mobile HUD layout per the approved design mockup.
+## Compact stats (top-left), centered time, equipped (top-right), hidden verbose info.
+func _apply_mobile_hud_layout() -> void:
+	# --- Safe area calculation ---
+	var screen_size_i: Vector2i = DisplayServer.screen_get_size()
 	var safe_area: Rect2i = DisplayServer.get_display_safe_area()
-	var margin_left: int = safe_area.position.x
-	var margin_top: int = safe_area.position.y
-	var margin_right: int = screen_size.x - (safe_area.position.x + safe_area.size.x)
-	var margin_bottom: int = screen_size.y - (safe_area.position.y + safe_area.size.y)
-	var stats_panel: Control = get_node_or_null("StatsPanel")
-	var time_panel: Control = get_node_or_null("TimePanel")
-	var equipped_panel: Control = get_node_or_null("EquippedPanel")
+	var sl: int = safe_area.position.x  # safe left
+	var st: int = safe_area.position.y  # safe top
+	var sr: int = screen_size_i.x - (safe_area.position.x + safe_area.size.x)  # safe right
+	var _sb: int = screen_size_i.y - (safe_area.position.y + safe_area.size.y)  # safe bottom
+
+	# --- Stats panel: compact, top-left ---
+	var stats_panel: PanelContainer = get_node_or_null("StatsPanel")
 	if stats_panel:
-		stats_panel.position.x += margin_left
-		stats_panel.position.y += margin_top
-	if time_panel:
-		time_panel.position.y += margin_top
-	if equipped_panel:
-		equipped_panel.position.x -= margin_right
-		equipped_panel.position.y += margin_top
-
-
-## Scale pre-existing scene-based label fonts for mobile.
-func _apply_mobile_font_scaling() -> void:
-	# Time panel labels (desktop: 40-48px → mobile: 28px)
-	for lbl: Label in [time_label, period_label, day_counter_label, campsite_level_label, weather_label, protection_label]:
-		if lbl:
-			lbl.add_theme_font_size_override("font_size", MOBILE_PRIMARY_FONT)
-
-	# Stats panel labels (desktop: 40px → mobile: 22px for coordinates)
+		# Shrink the panel
+		stats_panel.offset_left = 12 + sl
+		stats_panel.offset_top = 12 + st
+		stats_panel.offset_right = 280 + sl
+		stats_panel.offset_bottom = 110 + st
+		# Scale padding
+		_scale_panel_margins(stats_panel, 0.5)
+	# Hide coordinates on mobile (too verbose)
 	if coordinates_label:
-		coordinates_label.add_theme_font_size_override("font_size", MOBILE_SECONDARY_FONT)
-
-	# Health/hunger bar labels
+		coordinates_label.visible = false
+	# Smaller health/hunger labels and bars
 	var health_lbl: Label = get_node_or_null("StatsPanel/StatsContainer/HealthContainer/HealthLabel")
 	var hunger_lbl: Label = get_node_or_null("StatsPanel/StatsContainer/HungerContainer/HungerLabel")
 	if health_lbl:
-		health_lbl.add_theme_font_size_override("font_size", MOBILE_PRIMARY_FONT)
+		health_lbl.add_theme_font_size_override("font_size", 22)
 	if hunger_lbl:
-		hunger_lbl.add_theme_font_size_override("font_size", MOBILE_PRIMARY_FONT)
+		hunger_lbl.add_theme_font_size_override("font_size", 22)
+	# Shrink bars
+	if health_bar:
+		health_bar.custom_minimum_size = Vector2(160, 24)
+	if hunger_bar:
+		hunger_bar.custom_minimum_size = Vector2(160, 24)
 
-	# Equipped panel labels (desktop: 40px → mobile: 22px)
+	# --- Time panel: compact, centered at top ---
+	var time_panel: PanelContainer = get_node_or_null("TimePanel")
+	if time_panel:
+		# Center the time panel at the top
+		time_panel.anchor_left = 0.5
+		time_panel.anchor_right = 0.5
+		time_panel.anchor_top = 0.0
+		time_panel.anchor_bottom = 0.0
+		time_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+		time_panel.offset_left = -130
+		time_panel.offset_top = 12 + st
+		time_panel.offset_right = 130
+		time_panel.offset_bottom = 60 + st
+		_scale_panel_margins(time_panel, 0.4)
+	# Compact time display: smaller font, hide verbose labels
+	if time_label:
+		time_label.add_theme_font_size_override("font_size", 24)
+		time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if period_label:
+		period_label.add_theme_font_size_override("font_size", 18)
+		period_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if day_counter_label:
+		day_counter_label.add_theme_font_size_override("font_size", 18)
+		day_counter_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# Hide verbose info from time panel on mobile
+	if campsite_level_label:
+		campsite_level_label.visible = false
+	if weather_label:
+		weather_label.visible = false
+	if protection_label:
+		protection_label.visible = false
+
+	# --- Equipped panel: compact, top-right ---
+	var equipped_panel: PanelContainer = get_node_or_null("EquippedPanel")
+	if equipped_panel:
+		equipped_panel.anchor_left = 1.0
+		equipped_panel.anchor_right = 1.0
+		equipped_panel.anchor_top = 0.0
+		equipped_panel.anchor_bottom = 0.0
+		equipped_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		equipped_panel.grow_vertical = Control.GROW_DIRECTION_END
+		equipped_panel.offset_left = -220 - sr
+		equipped_panel.offset_top = 12 + st
+		equipped_panel.offset_right = -12 - sr
+		equipped_panel.offset_bottom = 80 + st
+		_scale_panel_margins(equipped_panel, 0.5)
 	if equipped_label:
-		equipped_label.add_theme_font_size_override("font_size", MOBILE_SECONDARY_FONT)
-	if equip_hint_label:
-		equip_hint_label.add_theme_font_size_override("font_size", MOBILE_HINT_FONT)
+		equipped_label.add_theme_font_size_override("font_size", 20)
+	# Add ◀ ▶ cycle arrows below equipped panel
+	_create_touch_slot_arrows()
 
-	# Interaction prompt (desktop: 40px → mobile: 22px)
+	# --- Interaction prompt: smaller ---
 	if interaction_prompt:
 		interaction_prompt.add_theme_font_size_override("font_size", MOBILE_SECONDARY_FONT)
 
-	# Notification label
+	# --- Notification label: smaller ---
 	if notification_label:
 		notification_label.add_theme_font_size_override("font_size", MOBILE_SECONDARY_FONT)
 
-	# Celebration labels (desktop: 56-64px → mobile: 38px)
+	# --- Celebration labels: smaller ---
 	if celebration_title:
 		celebration_title.add_theme_font_size_override("font_size", MOBILE_TITLE_FONT)
 	if celebration_level_name:
@@ -446,17 +460,9 @@ func _apply_mobile_font_scaling() -> void:
 	if celebration_prompt:
 		celebration_prompt.add_theme_font_size_override("font_size", MOBILE_HINT_FONT)
 
-	# Scale panel sizes (~65% of desktop)
-	_scale_panel_for_mobile("StatsPanel", 0.65)
-	_scale_panel_for_mobile("TimePanel", 0.65)
-	_scale_panel_for_mobile("EquippedPanel", 0.65)
 
-
-## Scale a panel's content margins for mobile.
-func _scale_panel_for_mobile(panel_name: String, scale: float) -> void:
-	var panel: PanelContainer = get_node_or_null(panel_name)
-	if not panel:
-		return
+## Scale a panel's content margins.
+func _scale_panel_margins(panel: PanelContainer, scale: float) -> void:
 	var style: StyleBox = panel.get_theme_stylebox("panel")
 	if style and style is StyleBoxFlat:
 		var flat: StyleBoxFlat = style.duplicate() as StyleBoxFlat
@@ -471,16 +477,20 @@ func _scale_panel_for_mobile(panel_name: String, scale: float) -> void:
 func _create_touch_slot_arrows() -> void:
 	var container: HBoxContainer = HBoxContainer.new()
 	container.name = "TouchSlotArrows"
-	container.add_theme_constant_override("separation", 12)
-	# Anchor top-right near repositioned equipped panel
+	container.add_theme_constant_override("separation", 8)
+	# Position inside the equipped panel area (top-right)
 	container.anchor_left = 1.0
 	container.anchor_right = 1.0
 	container.anchor_top = 0.0
 	container.anchor_bottom = 0.0
-	container.offset_left = -200
-	container.offset_right = -12
-	container.offset_top = 284
-	container.offset_bottom = 340
+	var safe_area: Rect2i = DisplayServer.get_display_safe_area()
+	var screen_w: int = DisplayServer.screen_get_size().x
+	var sr: int = screen_w - (safe_area.position.x + safe_area.size.x)
+	var st: int = safe_area.position.y
+	container.offset_left = -140 - sr
+	container.offset_right = -12 - sr
+	container.offset_top = 84 + st
+	container.offset_bottom = 128 + st
 
 	var style_btn: StyleBoxFlat = StyleBoxFlat.new()
 	style_btn.bg_color = Color(0.1, 0.1, 0.12, 0.85)

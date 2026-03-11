@@ -4,7 +4,7 @@ extends CanvasLayer
 ## Provides virtual joystick, swipe-to-look, and action buttons.
 
 # Joystick config
-const JOYSTICK_RADIUS: float = 75.0  # Outer radius (150px diameter)
+const JOYSTICK_RADIUS: float = 100.0  # Outer radius (200px diameter)
 const JOYSTICK_DEADZONE: float = 0.15
 
 # Swipe look config
@@ -75,19 +75,29 @@ func _calculate_safe_area() -> void:
 
 func _setup_joystick() -> void:
 	var screen_size: Vector2 = get_viewport().get_visible_rect().size
-	joystick_center = Vector2(24 + safe_margin["left"] + JOYSTICK_RADIUS, screen_size.y - JOYSTICK_RADIUS - 40 - safe_margin["bottom"])
+	joystick_center = Vector2(32 + safe_margin["left"] + JOYSTICK_RADIUS, screen_size.y - JOYSTICK_RADIUS - 50 - safe_margin["bottom"])
 
 	# Joystick background circle
 	joystick_bg = Sprite2D.new()
-	joystick_bg.texture = _create_circle_texture(int(JOYSTICK_RADIUS * 2), Color(1, 1, 1, 0.2), Color(1, 1, 1, 0.45))
+	joystick_bg.texture = _create_circle_texture(int(JOYSTICK_RADIUS * 2), Color(1, 1, 1, 0.15), Color(1, 1, 1, 0.35))
 	joystick_bg.position = joystick_center
 	add_child(joystick_bg)
 
 	# Joystick thumb (inner knob)
 	joystick_thumb = Sprite2D.new()
-	joystick_thumb.texture = _create_circle_texture(56, Color(1, 1, 1, 0.4), Color(1, 1, 1, 0.65))
+	joystick_thumb.texture = _create_circle_texture(80, Color(1, 1, 1, 0.35), Color(1, 1, 1, 0.55))
 	joystick_thumb.position = joystick_center
 	add_child(joystick_thumb)
+
+	# "MOVE" label below joystick
+	var move_label: Label = Label.new()
+	move_label.text = "MOVE"
+	move_label.add_theme_font_size_override("font_size", 16)
+	move_label.add_theme_color_override("font_color", Color(1, 1, 1, 0.4))
+	move_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	move_label.position = Vector2(joystick_center.x - 30, joystick_center.y + JOYSTICK_RADIUS + 6)
+	move_label.size = Vector2(60, 20)
+	add_child(move_label)
 
 
 func _create_circle_texture(diameter: int, fill_color: Color, border_color: Color) -> ImageTexture:
@@ -108,8 +118,8 @@ func _create_circle_texture(diameter: int, fill_color: Color, border_color: Colo
 
 func _setup_action_buttons() -> void:
 	var screen_size: Vector2 = get_viewport().get_visible_rect().size
-	var right_x: float = screen_size.x - 60 - safe_margin["right"]
-	var bottom_y: float = screen_size.y - 60 - safe_margin["bottom"]
+	var right_x: float = screen_size.x - 52 - safe_margin["right"] - BUTTON_RADIUS
+	var bottom_y: float = screen_size.y - 48 - safe_margin["bottom"] - BUTTON_RADIUS
 
 	# Core buttons: JUMP, SPRINT, ACT (bottom-right, vertical stack)
 	var core_buttons: Array = [
@@ -164,19 +174,21 @@ func _setup_action_buttons() -> void:
 func _setup_menu_buttons() -> void:
 	var screen_size: Vector2 = get_viewport().get_visible_rect().size
 	var center_x: float = screen_size.x / 2.0
+	# Colored menu buttons matching the approved mockup design
 	var menu_items: Array = [
-		{"icon": "🎒", "action": "open_inventory"},
-		{"icon": "⚒️", "action": "open_crafting"},
-		{"icon": "⏸️", "action": "pause"},
+		{"icon": "🎒", "action": "open_inventory", "color": Color(0.9, 0.3, 0.3, 0.8)},
+		{"icon": "⚒️", "action": "open_crafting", "color": Color(0.5, 0.5, 0.55, 0.8)},
+		{"icon": "⏸️", "action": "pause", "color": Color(0.5, 0.5, 0.55, 0.8)},
 	]
 
-	# Position right of center, below the compass widget
-	var start_x: float = center_x + 100
+	# Position right of the centered time panel
+	var start_x: float = center_x + 145
 	for i: int in range(menu_items.size()):
 		var _btn: TouchScreenButton = _create_menu_button(
 			menu_items[i]["icon"],
-			Vector2(start_x + i * 56, 12 + safe_margin["top"]),
-			menu_items[i]["action"]
+			Vector2(start_x + i * 52, 16 + safe_margin["top"]),
+			menu_items[i]["action"],
+			menu_items[i]["color"]
 		)
 
 
@@ -220,15 +232,23 @@ func _create_action_button(label_text: String, pos: Vector2, color: Color, actio
 	return btn
 
 
-func _create_menu_button(icon: String, pos: Vector2, action: String) -> TouchScreenButton:
+func _create_menu_button(icon: String, pos: Vector2, action: String, bg_color: Color = Color(0.1, 0.1, 0.12, 0.75)) -> TouchScreenButton:
 	var btn: TouchScreenButton = TouchScreenButton.new()
-	btn.position = pos
+	var size_px: int = 44
+	var radius: float = size_px / 2.0
+	btn.position = pos - Vector2(radius, radius)
 	btn.action = action
 	btn.passby_press = false
 
-	var size_px: int = 48
+	# Create circular menu button texture
 	var img: Image = Image.create(size_px, size_px, false, Image.FORMAT_RGBA8)
-	img.fill(Color(0.1, 0.1, 0.12, 0.75))
+	img.fill(Color(0, 0, 0, 0))
+	var center: Vector2 = Vector2(radius, radius)
+	for x: int in range(size_px):
+		for y: int in range(size_px):
+			var dist: float = Vector2(x, y).distance_to(center)
+			if dist <= radius:
+				img.set_pixel(x, y, bg_color)
 	var tex: ImageTexture = ImageTexture.create_from_image(img)
 	btn.texture_normal = tex
 
@@ -237,7 +257,7 @@ func _create_menu_button(icon: String, pos: Vector2, action: String) -> TouchScr
 
 	var lbl: Label = Label.new()
 	lbl.text = icon
-	lbl.add_theme_font_size_override("font_size", 24)
+	lbl.add_theme_font_size_override("font_size", 22)
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.size = Vector2(size_px, size_px)
