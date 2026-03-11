@@ -794,38 +794,52 @@ func _update_equipped_display() -> void:
 
 		# On mobile touch, skip keyboard hints (USE button handles actions)
 		if not (is_mobile and input_manager and input_manager.is_using_touch()):
-			# Add usage hint based on item type and input device
 			var equipped_type: String = equipment.get_equipped()
-			var use_key: String = _get_button_prompt("use_equipped")
-			var unequip_key: String = _get_button_prompt("unequip")
+			var _is_mobile_controller: bool = is_mobile and input_manager and input_manager.is_using_controller()
 
-			if equipped_type == "torch" or equipped_type == "lodestone":
-				equipped_label.text += " [%s place, %s unequip]" % [use_key, unequip_key]
-			elif StructureData.is_placeable_item(equipped_type):
-				equipped_label.text += " [%s place, %s unequip]" % [use_key, unequip_key]
-			elif equipped_type == "fishing_rod":
-				# Fishing is done by interacting with fishing spots, not use_equipped
-				var interact_key: String = _get_button_prompt("interact")
-				equipped_label.text += " [%s fish, %s unequip]" % [interact_key, unequip_key]
-			elif equipped_type == "bow" or equipped_type == "enchanted_bow":
-				var arrow_count: int = 0
-				var arrow_type_name: String = "regular"
-				var cycle_key: String = _get_button_prompt("cycle_ammo")
-				var player_node: Node = get_tree().get_first_node_in_group("player")
-				if player_node:
-					var bow: Node = player_node.get_node_or_null("BowSystem")
-					if bow:
-						arrow_count = bow.get_preferred_arrow_count()
-						arrow_type_name = bow.get_preferred_arrow_name()
-				equipped_label.text += " (%d %s arrows) [R-click aim, %s switch, %s unequip]" % [arrow_count, arrow_type_name, cycle_key, unequip_key]
-			elif equipped_type == "map":
-				equipped_label.text += " [%s open map, %s unequip]" % [use_key, unequip_key]
-			elif equipped_type == "hang_glider":
-				var jump_key: String = _get_button_prompt("jump")
-				var crouch_key: String = _get_button_prompt("crouch")
-				equipped_label.text += " [%s deploy, %s boost, %s retract, %s unequip]" % [use_key, jump_key, crouch_key, unequip_key]
+			# On mobile with controller, only show compact info (no key hints — they clutter the small panel)
+			if _is_mobile_controller:
+				if equipped_type == "bow" or equipped_type == "enchanted_bow":
+					var arrow_count: int = 0
+					var arrow_type_name: String = "regular"
+					var player_node: Node = get_tree().get_first_node_in_group("player")
+					if player_node:
+						var bow: Node = player_node.get_node_or_null("BowSystem")
+						if bow:
+							arrow_count = bow.get_preferred_arrow_count()
+							arrow_type_name = bow.get_preferred_arrow_name()
+					equipped_label.text += "\n%d %s arrows" % [arrow_count, arrow_type_name]
 			else:
-				equipped_label.text += " [%s unequip]" % unequip_key
+				# Desktop: full usage hints with key prompts
+				var use_key: String = _get_button_prompt("use_equipped")
+				var unequip_key: String = _get_button_prompt("unequip")
+
+				if equipped_type == "torch" or equipped_type == "lodestone":
+					equipped_label.text += " [%s place, %s unequip]" % [use_key, unequip_key]
+				elif StructureData.is_placeable_item(equipped_type):
+					equipped_label.text += " [%s place, %s unequip]" % [use_key, unequip_key]
+				elif equipped_type == "fishing_rod":
+					var interact_key: String = _get_button_prompt("interact")
+					equipped_label.text += " [%s fish, %s unequip]" % [interact_key, unequip_key]
+				elif equipped_type == "bow" or equipped_type == "enchanted_bow":
+					var arrow_count: int = 0
+					var arrow_type_name: String = "regular"
+					var cycle_key: String = _get_button_prompt("cycle_ammo")
+					var player_node: Node = get_tree().get_first_node_in_group("player")
+					if player_node:
+						var bow: Node = player_node.get_node_or_null("BowSystem")
+						if bow:
+							arrow_count = bow.get_preferred_arrow_count()
+							arrow_type_name = bow.get_preferred_arrow_name()
+					equipped_label.text += " (%d %s arrows) [R-click aim, %s switch, %s unequip]" % [arrow_count, arrow_type_name, cycle_key, unequip_key]
+				elif equipped_type == "map":
+					equipped_label.text += " [%s open map, %s unequip]" % [use_key, unequip_key]
+				elif equipped_type == "hang_glider":
+					var jump_key: String = _get_button_prompt("jump")
+					var crouch_key: String = _get_button_prompt("crouch")
+					equipped_label.text += " [%s deploy, %s boost, %s retract, %s unequip]" % [use_key, jump_key, crouch_key, unequip_key]
+				else:
+					equipped_label.text += " [%s unequip]" % unequip_key
 
 		# Update durability bar
 		_update_durability_bar()
