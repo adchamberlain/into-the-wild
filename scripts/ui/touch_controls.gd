@@ -248,14 +248,15 @@ func _create_action_button(label_text: String, pos: Vector2, color: Color, actio
 	all_buttons.append(btn)
 
 	# Explicit action press/release via signals — iOS TouchScreenButton doesn't reliably release actions
+	# Note: TouchScreenButton extends Node2D, not BaseButton — uses pressed/released, not button_down/button_up
 	var captured_action: String = action
-	btn.button_down.connect(func() -> void:
+	btn.pressed.connect(func() -> void:
 		var ev: InputEventAction = InputEventAction.new()
 		ev.action = captured_action
 		ev.pressed = true
 		Input.parse_input_event(ev)
 	)
-	btn.button_up.connect(func() -> void:
+	btn.released.connect(func() -> void:
 		var ev: InputEventAction = InputEventAction.new()
 		ev.action = captured_action
 		ev.pressed = false
@@ -337,13 +338,13 @@ func _create_menu_button(label_text: String, pos: Vector2, action: String, bg_co
 
 	# Explicit action press/release — same iOS reliability fix as action buttons
 	var captured_action: String = action
-	btn.button_down.connect(func() -> void:
+	btn.pressed.connect(func() -> void:
 		var ev: InputEventAction = InputEventAction.new()
 		ev.action = captured_action
 		ev.pressed = true
 		Input.parse_input_event(ev)
 	)
-	btn.button_up.connect(func() -> void:
+	btn.released.connect(func() -> void:
 		var ev: InputEventAction = InputEventAction.new()
 		ev.action = captured_action
 		ev.pressed = false
