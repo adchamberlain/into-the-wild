@@ -4,14 +4,14 @@ extends CanvasLayer
 ## Provides virtual joystick, swipe-to-look, and action buttons.
 
 # Joystick config
-const JOYSTICK_RADIUS: float = 100.0  # Outer radius (200px diameter)
+const JOYSTICK_RADIUS: float = 140.0  # Outer radius (280px diameter, matches design)
 const JOYSTICK_DEADZONE: float = 0.15
 
 # Swipe look config
 const TOUCH_LOOK_SENSITIVITY: float = 0.003
 
 # Button config
-const BUTTON_RADIUS: float = 36.0  # 72px diameter (larger for iPad touch targets)
+const BUTTON_RADIUS: float = 48.0  # 96px diameter (matches design proportions)
 const BUTTON_ALPHA_BG: float = 0.35
 const BUTTON_ALPHA_BORDER: float = 0.6
 const BUTTON_ALPHA_TEXT: float = 0.85
@@ -85,7 +85,7 @@ func _setup_joystick() -> void:
 
 	# Joystick thumb (inner knob)
 	joystick_thumb = Sprite2D.new()
-	joystick_thumb.texture = _create_circle_texture(80, Color(1, 1, 1, 0.35), Color(1, 1, 1, 0.55))
+	joystick_thumb.texture = _create_circle_texture(100, Color(1, 1, 1, 0.35), Color(1, 1, 1, 0.55))
 	joystick_thumb.position = joystick_center
 	add_child(joystick_thumb)
 
@@ -124,8 +124,8 @@ func _setup_action_buttons() -> void:
 	# Core buttons: ACT at bottom (most accessible), SPRINT middle, JUMP top
 	var core_buttons: Array = [
 		{"name": "ACT", "action": "interact", "color": Color(1, 0.85, 0.3), "y_offset": 0},
-		{"name": "SPRINT", "action": "sprint", "color": Color(0.4, 0.85, 0.5), "y_offset": 84},
-		{"name": "JUMP", "action": "jump", "color": Color(0.75, 0.75, 0.75), "y_offset": 168},
+		{"name": "SPRINT", "action": "sprint", "color": Color(0.4, 0.85, 0.5), "y_offset": 110},
+		{"name": "JUMP", "action": "jump", "color": Color(0.75, 0.75, 0.75), "y_offset": 220},
 	]
 
 	for btn_data in core_buttons:
@@ -140,21 +140,21 @@ func _setup_action_buttons() -> void:
 	# Context-sensitive buttons
 	var screen_size_ctx: Vector2 = get_viewport().get_visible_rect().size
 
-	# USE — below equipped item panel (top-right)
+	# USE — below equipped item panel (top-right), green dashed
 	use_button = _create_action_button(
 		"USE",
-		Vector2(screen_size_ctx.x - 70 - safe_margin["right"], 110 + safe_margin["top"]),
+		Vector2(screen_size_ctx.x - 230 - safe_margin["right"], 90 + safe_margin["top"]),
 		Color(0.4, 1, 0.4),  # Green
 		"use_equipped",
 		true  # Dashed border
 	)
 	use_button.visible = false
 
-	# EAT — beside health/hunger bars (top-left)
+	# EAT — right next to stats panel (top-left)
 	eat_button = _create_action_button(
 		"EAT",
-		Vector2(190 + safe_margin["left"], 55 + safe_margin["top"]),
-		Color(1, 0.6, 0.2),  # Orange
+		Vector2(220 + safe_margin["left"], 42 + safe_margin["top"]),
+		Color(0.7, 0.7, 0.7),  # Grey (matches design)
 		"eat",
 		true
 	)
@@ -163,7 +163,7 @@ func _setup_action_buttons() -> void:
 	# CROUCH — near core buttons, above ACT
 	crouch_button = _create_action_button(
 		"CROUCH",
-		Vector2(right_x, bottom_y - 252),
+		Vector2(right_x, bottom_y - 330),
 		Color(0.7, 0.7, 0.7),  # Grey
 		"crouch",
 		true
@@ -181,12 +181,12 @@ func _setup_menu_buttons() -> void:
 		{"icon": "⏸️", "action": "pause", "color": Color(0.5, 0.5, 0.55, 0.8)},
 	]
 
-	# Position right of the centered time panel (time panel is center ± 110px)
-	var start_x: float = center_x + 120
+	# Position clearly right of time panel with good spacing
+	var start_x: float = center_x + 130
 	for i: int in range(menu_items.size()):
 		var _btn: TouchScreenButton = _create_menu_button(
 			menu_items[i]["icon"],
-			Vector2(start_x + i * 52, 16 + safe_margin["top"]),
+			Vector2(start_x + i * 54, 28 + safe_margin["top"]),
 			menu_items[i]["action"],
 			menu_items[i]["color"]
 		)
@@ -221,7 +221,7 @@ func _create_action_button(label_text: String, pos: Vector2, color: Color, actio
 	# Add label
 	var lbl: Label = Label.new()
 	lbl.text = label_text
-	lbl.add_theme_font_size_override("font_size", 18)
+	lbl.add_theme_font_size_override("font_size", 22)
 	lbl.add_theme_color_override("font_color", Color(color.r, color.g, color.b, BUTTON_ALPHA_TEXT))
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -234,7 +234,7 @@ func _create_action_button(label_text: String, pos: Vector2, color: Color, actio
 
 func _create_menu_button(icon: String, pos: Vector2, action: String, bg_color: Color = Color(0.1, 0.1, 0.12, 0.75)) -> TouchScreenButton:
 	var btn: TouchScreenButton = TouchScreenButton.new()
-	var size_px: int = 44
+	var size_px: int = 48
 	var radius: float = size_px / 2.0
 	btn.position = pos - Vector2(radius, radius)
 	btn.action = action

@@ -376,13 +376,15 @@ func _apply_mobile_hud_layout() -> void:
 	if coordinates_label:
 		coordinates_label.visible = false
 		coordinates_label.text = ""
-	# Hide "Health"/"Hunger" text labels (design shows just bars)
+	# Replace "Health"/"Hunger" text labels with emoji icons (per design)
 	var health_lbl: Label = get_node_or_null("StatsPanel/StatsContainer/HealthContainer/HealthLabel")
 	var hunger_lbl: Label = get_node_or_null("StatsPanel/StatsContainer/HungerContainer/HungerLabel")
 	if health_lbl:
-		health_lbl.visible = false
+		health_lbl.text = "❤️"
+		health_lbl.add_theme_font_size_override("font_size", 18)
 	if hunger_lbl:
-		hunger_lbl.visible = false
+		hunger_lbl.text = "🍖"
+		hunger_lbl.add_theme_font_size_override("font_size", 18)
 	# Compact bars
 	if health_bar:
 		health_bar.custom_minimum_size = Vector2(140, 18)
