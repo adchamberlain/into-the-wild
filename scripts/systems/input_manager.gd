@@ -45,7 +45,8 @@ const TOUCH_PROMPTS: Dictionary = {
 }
 
 # Button prompt mappings for PlayStation controller (DualSense)
-# Using recognizable labels: Share (left button), Pad (touchpad), Menu (right button)
+# Share (left button), R3 (right stick click), Menu (right button)
+# Note: Touchpad (Pad) doesn't work on iOS — R3 is the alternative
 const CONTROLLER_PROMPTS: Dictionary = {
 	"interact": "L2",
 	"jump": "○",
@@ -53,7 +54,7 @@ const CONTROLLER_PROMPTS: Dictionary = {
 	"eat": "△",
 	"use_equipped": "R2",
 	"unequip": "□",
-	"open_crafting": "Pad",
+	"open_crafting": "R3",
 	"open_inventory": "Share",
 	"pause": "Menu",
 	"next_slot": "R1",
@@ -75,6 +76,8 @@ func _ready() -> void:
 	if OS.get_name() == "iOS":
 		using_touch = true
 		using_controller = false
+	# Listen for controller connect/disconnect events
+	Input.joy_connection_changed.connect(_on_joy_connection_changed)
 
 
 func _input(event: InputEvent) -> void:
@@ -147,3 +150,13 @@ func get_connected_joypads() -> Array[int]:
 ## Check if any joypad is connected.
 func has_joypad_connected() -> bool:
 	return Input.get_connected_joypads().size() > 0
+
+
+## Handle controller connect/disconnect events.
+func _on_joy_connection_changed(device: int, connected: bool) -> void:
+	if not connected and using_controller:
+		# Controller disconnected — switch back to touch on iOS, keyboard elsewhere
+		if OS.get_name() == "iOS":
+			using_touch = true
+		using_controller = false
+		input_device_changed.emit(false)

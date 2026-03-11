@@ -148,6 +148,10 @@ var is_player_resting: bool = false
 # Gliding state indicator
 var gliding_panel: PanelContainer = null
 
+# Controller hints panel (bottom of screen on mobile)
+var controller_hints_panel: PanelContainer = null
+var controller_hints_label: Label = null
+
 # Weather damage flash
 var weather_damage_flash_timer: float = 0.0
 var last_player_health: float = 100.0
@@ -365,7 +369,7 @@ func _apply_mobile_hud_layout() -> void:
 	var sl: int = safe_area.position.x  # safe left
 	var st: int = safe_area.position.y  # safe top
 	var sr: int = screen_size_i.x - (safe_area.position.x + safe_area.size.x)  # safe right
-	var _sb: int = screen_size_i.y - (safe_area.position.y + safe_area.size.y)  # safe bottom
+	var sb: int = screen_size_i.y - (safe_area.position.y + safe_area.size.y)  # safe bottom
 
 	# --- Stats panel: compact bars only, top-left (per design: just bars, no text) ---
 	var stats_panel: PanelContainer = get_node_or_null("StatsPanel")
@@ -511,6 +515,40 @@ func _apply_mobile_hud_layout() -> void:
 		celebration_unlocks.add_theme_font_size_override("font_size", MOBILE_SECONDARY_FONT)
 	if celebration_prompt:
 		celebration_prompt.add_theme_font_size_override("font_size", MOBILE_HINT_FONT)
+
+	# --- Controller hints panel: bottom-center, hidden by default ---
+	controller_hints_panel = PanelContainer.new()
+	controller_hints_panel.name = "ControllerHintsPanel"
+	var ch_style: StyleBoxFlat = StyleBoxFlat.new()
+	ch_style.bg_color = Color(0.05, 0.05, 0.08, 0.75)
+	ch_style.corner_radius_top_left = 10
+	ch_style.corner_radius_top_right = 10
+	ch_style.corner_radius_bottom_left = 10
+	ch_style.corner_radius_bottom_right = 10
+	ch_style.content_margin_left = 16
+	ch_style.content_margin_right = 16
+	ch_style.content_margin_top = 8
+	ch_style.content_margin_bottom = 8
+	controller_hints_panel.add_theme_stylebox_override("panel", ch_style)
+	controller_hints_panel.anchor_left = 0.5
+	controller_hints_panel.anchor_right = 0.5
+	controller_hints_panel.anchor_top = 1.0
+	controller_hints_panel.anchor_bottom = 1.0
+	controller_hints_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	controller_hints_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	controller_hints_panel.offset_left = -280
+	controller_hints_panel.offset_right = 280
+	controller_hints_panel.offset_top = -60 - sb
+	controller_hints_panel.offset_bottom = -12 - sb
+	controller_hints_label = Label.new()
+	controller_hints_label.name = "ControllerHintsLabel"
+	controller_hints_label.add_theme_font_override("font", HUD_FONT)
+	controller_hints_label.add_theme_font_size_override("font_size", MOBILE_SECONDARY_FONT)
+	controller_hints_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7, 1))
+	controller_hints_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	controller_hints_panel.add_child(controller_hints_label)
+	add_child(controller_hints_panel)
+	controller_hints_panel.visible = false
 
 
 ## Recursively set mouse_filter to IGNORE on all Control children.
@@ -818,19 +856,30 @@ func _update_control_hints() -> void:
 	if not equip_hint_label:
 		return
 
+	var using_ctrl: bool = input_manager and input_manager.is_using_controller()
+
 	# On mobile touch, hide control hints entirely (touch buttons replace them)
 	if is_mobile and input_manager and input_manager.is_using_touch():
 		equip_hint_label.visible = false
+		if controller_hints_panel:
+			controller_hints_panel.visible = false
 		return
 
-	equip_hint_label.visible = true
-	var using_controller: bool = input_manager and input_manager.is_using_controller()
+	# On mobile with controller, use the bottom-of-screen controller hints panel
+	if is_mobile and using_ctrl:
+		equip_hint_label.visible = false
+		if controller_hints_panel and controller_hints_label:
+			controller_hints_label.text = "Share-Equip  R3-Craft  D\u2190-Inventory  Menu-Pause"
+			controller_hints_panel.visible = true
+		return
 
-	if using_controller:
-		# Controller prompts (Share=left button, Pad=touchpad, Menu=right button)
-		equip_hint_label.text = "Share-Equip  Pad-Craft  D←-Inventory  Menu-Pause"
+	# Desktop: use the inline hint label in EquippedPanel
+	if controller_hints_panel:
+		controller_hints_panel.visible = false
+	equip_hint_label.visible = true
+	if using_ctrl:
+		equip_hint_label.text = "Share-Equip  R3-Craft  D\u2190-Inventory  Menu-Pause"
 	else:
-		# Keyboard prompts
 		equip_hint_label.text = "I-Equip X-Craft C-Crouch V-Inventory Tab-Menu"
 
 
