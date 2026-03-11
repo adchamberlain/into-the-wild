@@ -103,6 +103,9 @@ func _input(event: InputEvent) -> void:
 
 	# Detect keyboard/mouse input
 	elif event is InputEventKey or event is InputEventMouseButton or event is InputEventMouseMotion:
+		# On iOS, mouse events are emulated from touch — don't let them override touch mode
+		if OS.get_name() == "iOS" and (event is InputEventMouseButton or event is InputEventMouseMotion):
+			return
 		using_controller = false
 		using_touch = false
 
