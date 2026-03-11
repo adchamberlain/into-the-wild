@@ -366,52 +366,52 @@ func _apply_mobile_hud_layout() -> void:
 	# --- Stats panel: compact, top-left ---
 	var stats_panel: PanelContainer = get_node_or_null("StatsPanel")
 	if stats_panel:
-		# Shrink the panel
 		stats_panel.offset_left = 12 + sl
 		stats_panel.offset_top = 12 + st
-		stats_panel.offset_right = 280 + sl
-		stats_panel.offset_bottom = 110 + st
-		# Scale padding
-		_scale_panel_margins(stats_panel, 0.5)
-	# Hide coordinates on mobile (too verbose)
+		stats_panel.offset_right = 240 + sl
+		stats_panel.offset_bottom = 80 + st
+		_scale_panel_margins(stats_panel, 0.4)
+	# Permanently hide coordinates on mobile
+	show_coordinates = false
 	if coordinates_label:
 		coordinates_label.visible = false
 	# Smaller health/hunger labels and bars
 	var health_lbl: Label = get_node_or_null("StatsPanel/StatsContainer/HealthContainer/HealthLabel")
 	var hunger_lbl: Label = get_node_or_null("StatsPanel/StatsContainer/HungerContainer/HungerLabel")
 	if health_lbl:
-		health_lbl.add_theme_font_size_override("font_size", 22)
+		health_lbl.add_theme_font_size_override("font_size", 18)
 	if hunger_lbl:
-		hunger_lbl.add_theme_font_size_override("font_size", 22)
-	# Shrink bars
+		hunger_lbl.add_theme_font_size_override("font_size", 18)
 	if health_bar:
-		health_bar.custom_minimum_size = Vector2(160, 24)
+		health_bar.custom_minimum_size = Vector2(120, 20)
 	if hunger_bar:
-		hunger_bar.custom_minimum_size = Vector2(160, 24)
+		hunger_bar.custom_minimum_size = Vector2(120, 20)
 
-	# --- Time panel: compact, centered at top ---
+	# --- Time panel: compact, positioned LEFT of compass ---
+	# The compass widget sits at top-center (offset_left=-55, offset_right=55, offset_top=15)
+	# Position time panel to the left of the compass, not overlapping
 	var time_panel: PanelContainer = get_node_or_null("TimePanel")
 	if time_panel:
-		# Center the time panel at the top
 		time_panel.anchor_left = 0.5
 		time_panel.anchor_right = 0.5
 		time_panel.anchor_top = 0.0
 		time_panel.anchor_bottom = 0.0
 		time_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
-		time_panel.offset_left = -130
+		# Position left of compass (compass is at center -55 to +55)
+		time_panel.offset_left = -200
 		time_panel.offset_top = 12 + st
-		time_panel.offset_right = 130
-		time_panel.offset_bottom = 60 + st
-		_scale_panel_margins(time_panel, 0.4)
-	# Compact time display: smaller font, hide verbose labels
+		time_panel.offset_right = -65
+		time_panel.offset_bottom = 56 + st
+		_scale_panel_margins(time_panel, 0.3)
+	# Compact time: "8:25 AM · Morning · Day 1" style
 	if time_label:
-		time_label.add_theme_font_size_override("font_size", 24)
+		time_label.add_theme_font_size_override("font_size", 20)
 		time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	if period_label:
-		period_label.add_theme_font_size_override("font_size", 18)
+		period_label.add_theme_font_size_override("font_size", 16)
 		period_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	if day_counter_label:
-		day_counter_label.add_theme_font_size_override("font_size", 18)
+		day_counter_label.add_theme_font_size_override("font_size", 16)
 		day_counter_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	# Hide verbose info from time panel on mobile
 	if campsite_level_label:
@@ -420,6 +420,13 @@ func _apply_mobile_hud_layout() -> void:
 		weather_label.visible = false
 	if protection_label:
 		protection_label.visible = false
+
+	# --- Compass widget: make slightly smaller on mobile ---
+	if compass_widget:
+		compass_widget.offset_left = -45.0
+		compass_widget.offset_right = 45.0
+		compass_widget.offset_top = 8.0 + st
+		compass_widget.offset_bottom = 98.0 + st
 
 	# --- Equipped panel: compact, top-right ---
 	var equipped_panel: PanelContainer = get_node_or_null("EquippedPanel")
@@ -430,14 +437,14 @@ func _apply_mobile_hud_layout() -> void:
 		equipped_panel.anchor_bottom = 0.0
 		equipped_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 		equipped_panel.grow_vertical = Control.GROW_DIRECTION_END
-		equipped_panel.offset_left = -220 - sr
+		equipped_panel.offset_left = -200 - sr
 		equipped_panel.offset_top = 12 + st
 		equipped_panel.offset_right = -12 - sr
-		equipped_panel.offset_bottom = 80 + st
-		_scale_panel_margins(equipped_panel, 0.5)
+		equipped_panel.offset_bottom = 60 + st
+		_scale_panel_margins(equipped_panel, 0.4)
 	if equipped_label:
-		equipped_label.add_theme_font_size_override("font_size", 20)
-	# Add ◀ ▶ cycle arrows below equipped panel
+		equipped_label.add_theme_font_size_override("font_size", 18)
+	# Add ◀ ▶ cycle arrows inside equipped panel area
 	_create_touch_slot_arrows()
 
 	# --- Interaction prompt: smaller ---
@@ -477,8 +484,8 @@ func _scale_panel_margins(panel: PanelContainer, scale: float) -> void:
 func _create_touch_slot_arrows() -> void:
 	var container: HBoxContainer = HBoxContainer.new()
 	container.name = "TouchSlotArrows"
-	container.add_theme_constant_override("separation", 8)
-	# Position inside the equipped panel area (top-right)
+	container.add_theme_constant_override("separation", 6)
+	# Position tight under the equipped panel (top-right)
 	container.anchor_left = 1.0
 	container.anchor_right = 1.0
 	container.anchor_top = 0.0
@@ -487,10 +494,10 @@ func _create_touch_slot_arrows() -> void:
 	var screen_w: int = DisplayServer.screen_get_size().x
 	var sr: int = screen_w - (safe_area.position.x + safe_area.size.x)
 	var st: int = safe_area.position.y
-	container.offset_left = -140 - sr
+	container.offset_left = -100 - sr
 	container.offset_right = -12 - sr
-	container.offset_top = 84 + st
-	container.offset_bottom = 128 + st
+	container.offset_top = 64 + st
+	container.offset_bottom = 100 + st
 
 	var style_btn: StyleBoxFlat = StyleBoxFlat.new()
 	style_btn.bg_color = Color(0.1, 0.1, 0.12, 0.85)
@@ -502,10 +509,10 @@ func _create_touch_slot_arrows() -> void:
 	for arrow_data: Array in [["◀", "prev_slot"], ["▶", "next_slot"]]:
 		var btn: Button = Button.new()
 		btn.text = arrow_data[0]
-		btn.custom_minimum_size = Vector2(56, 56)
+		btn.custom_minimum_size = Vector2(36, 32)
 		btn.add_theme_stylebox_override("normal", style_btn)
 		btn.add_theme_font_override("font", HUD_FONT)
-		btn.add_theme_font_size_override("font_size", _get_font_size(32))
+		btn.add_theme_font_size_override("font_size", 18)
 		btn.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9, 1))
 		var action: String = arrow_data[1]
 		btn.pressed.connect(func() -> void:

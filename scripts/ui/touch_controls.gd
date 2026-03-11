@@ -181,8 +181,8 @@ func _setup_menu_buttons() -> void:
 		{"icon": "⏸️", "action": "pause", "color": Color(0.5, 0.5, 0.55, 0.8)},
 	]
 
-	# Position right of the centered time panel
-	var start_x: float = center_x + 145
+	# Position right of compass widget (compass is at center + ~55px)
+	var start_x: float = center_x + 70
 	for i: int in range(menu_items.size()):
 		var _btn: TouchScreenButton = _create_menu_button(
 			menu_items[i]["icon"],
