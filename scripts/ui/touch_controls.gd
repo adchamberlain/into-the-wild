@@ -224,7 +224,8 @@ func _create_action_button(label_text: String, pos: Vector2, color: Color, actio
 	# Creates a circular semi-transparent touch button
 	var btn: TouchScreenButton = TouchScreenButton.new()
 	btn.position = pos - Vector2(BUTTON_RADIUS, BUTTON_RADIUS)
-	btn.action = action
+	# Don't use btn.action on iOS — TouchScreenButton fails to release actions reliably.
+	# Instead, use button_down/button_up signals with Input.parse_input_event().
 	btn.passby_press = false
 
 	# Create circle shape texture with visible alpha
@@ -246,6 +247,21 @@ func _create_action_button(label_text: String, pos: Vector2, color: Color, actio
 	add_child(btn)
 	all_buttons.append(btn)
 
+	# Explicit action press/release via signals — iOS TouchScreenButton doesn't reliably release actions
+	var captured_action: String = action
+	btn.button_down.connect(func() -> void:
+		var ev: InputEventAction = InputEventAction.new()
+		ev.action = captured_action
+		ev.pressed = true
+		Input.parse_input_event(ev)
+	)
+	btn.button_up.connect(func() -> void:
+		var ev: InputEventAction = InputEventAction.new()
+		ev.action = captured_action
+		ev.pressed = false
+		Input.parse_input_event(ev)
+	)
+
 	# Add label
 	var lbl: Label = Label.new()
 	lbl.text = label_text
@@ -265,7 +281,6 @@ func _create_menu_button(label_text: String, pos: Vector2, action: String, bg_co
 	var btn_w: int = 84
 	var btn_h: int = 88
 	btn.position = pos - Vector2(btn_w / 2.0, btn_h / 2.0)
-	btn.action = action
 	btn.passby_press = false
 
 	# Create rounded rectangle menu button texture with border
@@ -319,6 +334,21 @@ func _create_menu_button(label_text: String, pos: Vector2, action: String, bg_co
 
 	add_child(btn)
 	all_buttons.append(btn)
+
+	# Explicit action press/release — same iOS reliability fix as action buttons
+	var captured_action: String = action
+	btn.button_down.connect(func() -> void:
+		var ev: InputEventAction = InputEventAction.new()
+		ev.action = captured_action
+		ev.pressed = true
+		Input.parse_input_event(ev)
+	)
+	btn.button_up.connect(func() -> void:
+		var ev: InputEventAction = InputEventAction.new()
+		ev.action = captured_action
+		ev.pressed = false
+		Input.parse_input_event(ev)
+	)
 
 	var lbl: Label = Label.new()
 	lbl.text = label_text
