@@ -50,9 +50,35 @@ const EQUIPMENT_SLOTS: Array = [
 # Cached labels for each slot
 var slot_labels: Dictionary = {}
 
+# Resource inventory labels (iOS only)
+var resource_labels: Dictionary = {}  # item_type -> Label
+var resource_header: Label = null
+var food_header: Label = null
+
 # Controller navigation
 var focused_slot_index: int = 0
 var slot_panels: Array[PanelContainer] = []  # For highlighting focused item
+
+# Items that are equipment (shown in equipment section, not resources)
+const EQUIPMENT_TYPES: Array = [
+	"torch", "primitive_axe", "stone_axe", "metal_axe", "campfire_kit",
+	"rope", "shelter_kit", "storage_box", "fishing_rod", "crafting_bench_kit",
+	"drying_rack_kit", "garden_plot_kit", "canvas_tent_kit", "cabin_kit",
+	"snare_trap_kit", "smithing_station_kit", "smoker_kit", "weather_vane_kit",
+	"machete", "lantern", "grappling_hook", "lodestone", "map",
+	"leather_axe_wrap", "leather_hook_wrap", "leather_bow_wrap", "compass",
+	"bow", "arrows", "diamond_axe", "enchanted_bow", "diamond_arrows", "hang_glider",
+]
+
+const FOOD_TYPES: Array = [
+	"berry", "mushroom", "herb", "fish", "osha_root", "cactus_fruit",
+	"berry_pouch",
+	"cooked_berries", "cooked_mushroom", "cooked_fish", "cooked_meat",
+	"dried_fish", "dried_berries", "dried_mushroom", "dried_herb",
+	"smoked_meat", "smoked_fish",
+	"hearty_stew", "preserved_meal", "herb_tea", "fish_dinner", "mushroom_soup",
+	"healing_salve",
+]
 
 
 func _ready() -> void:
@@ -126,6 +152,10 @@ func _build_slot_list() -> void:
 		item_list.add_child(item_panel)
 		slot_panels.append(item_panel)
 
+	# On iOS, add resource/food inventory section below equipment
+	if is_mobile and inventory:
+		_build_resource_section()
+
 	# Update display
 	_update_display()
 
@@ -190,6 +220,10 @@ func _update_display() -> void:
 			node.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5, 1))
 
 		node.text = text
+
+	# Update resource inventory section on iOS
+	if is_mobile and resource_header:
+		_update_resource_display()
 
 
 func _input(event: InputEvent) -> void:
@@ -363,7 +397,7 @@ func _apply_mobile_menu_style() -> void:
 	# Reduce font sizes for mobile
 	var title: Label = panel.get_node_or_null("VBoxContainer/Title")
 	if title:
-		title.text = "Equipment"
+		title.text = "Inventory"
 		title.add_theme_font_size_override("font_size", 28)
 
 	# Hide keyboard hint at bottom on mobile
@@ -391,6 +425,98 @@ func _apply_mobile_menu_style() -> void:
 	close_btn.visible = false
 	close_btn.pressed.connect(toggle_menu)
 	add_child(close_btn)
+
+
+## Build resource and food inventory section below equipment list (iOS only).
+func _build_resource_section() -> void:
+	resource_labels.clear()
+	resource_header = null
+	food_header = null
+
+	# Separator
+	var sep: HSeparator = HSeparator.new()
+	sep.add_theme_constant_override("separation", 12)
+	item_list.add_child(sep)
+
+	# Resources header
+	resource_header = Label.new()
+	resource_header.text = "-- Resources --"
+	resource_header.add_theme_font_override("font", HUD_FONT)
+	resource_header.add_theme_font_size_override("font_size", 22)
+	resource_header.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
+	item_list.add_child(resource_header)
+
+	# Food header
+	food_header = Label.new()
+	food_header.text = "-- Food --"
+	food_header.add_theme_font_override("font", HUD_FONT)
+	food_header.add_theme_font_size_override("font_size", 22)
+	food_header.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
+	item_list.add_child(food_header)
+
+
+## Update the resource/food labels based on current inventory (iOS only).
+func _update_resource_display() -> void:
+	if not inventory:
+		return
+
+	var items: Dictionary = inventory.get_all_items()
+
+	# Collect resources and food with counts > 0
+	var resources: Array[Dictionary] = []
+	var food: Array[Dictionary] = []
+	for item_type: String in items:
+		var count: int = items[item_type]
+		if count <= 0:
+			continue
+		if item_type in EQUIPMENT_TYPES:
+			continue  # Already shown in equipment section
+		var display_name: String = item_type.capitalize().replace("_", " ").replace("River Rock", "Rock")
+		if item_type in FOOD_TYPES:
+			food.append({"type": item_type, "name": display_name, "count": count})
+		else:
+			resources.append({"type": item_type, "name": display_name, "count": count})
+
+	# Sort alphabetically
+	resources.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["name"] < b["name"])
+	food.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["name"] < b["name"])
+
+	# Remove old resource labels
+	for key: String in resource_labels:
+		var lbl: Label = resource_labels[key]
+		if is_instance_valid(lbl):
+			lbl.queue_free()
+	resource_labels.clear()
+
+	# Add resource labels after the resource header
+	if resource_header:
+		resource_header.visible = not resources.is_empty()
+		var insert_idx: int = resource_header.get_index() + 1
+		for res: Dictionary in resources:
+			var lbl: Label = Label.new()
+			lbl.text = "%s x%d" % [res["name"], res["count"]]
+			lbl.add_theme_font_override("font", HUD_FONT)
+			lbl.add_theme_font_size_override("font_size", 20)
+			lbl.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85, 1))
+			item_list.add_child(lbl)
+			item_list.move_child(lbl, insert_idx)
+			resource_labels[res["type"]] = lbl
+			insert_idx += 1
+
+	# Add food labels after the food header
+	if food_header:
+		food_header.visible = not food.is_empty()
+		var insert_idx: int = food_header.get_index() + 1
+		for f: Dictionary in food:
+			var lbl: Label = Label.new()
+			lbl.text = "%s x%d" % [f["name"], f["count"]]
+			lbl.add_theme_font_override("font", HUD_FONT)
+			lbl.add_theme_font_size_override("font_size", 20)
+			lbl.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85, 1))
+			item_list.add_child(lbl)
+			item_list.move_child(lbl, insert_idx)
+			resource_labels["food_" + f["type"]] = lbl
+			insert_idx += 1
 
 
 static func _enforce_min_button_size(node: Node, min_size: int) -> void:

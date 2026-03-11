@@ -44,27 +44,54 @@ var _last_menu_open_state: bool = false  # Cache to avoid per-frame updates
 func _ready() -> void:
 	layer = 61
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	# Reset static menu_open flag — scene reload preserves static vars,
+	# so saving from pause menu would leave controls permanently hidden
+	menu_open = false
 	_calculate_safe_area()
 	_setup_joystick()
 	_setup_action_buttons()
 	_setup_menu_buttons()
 	# Hide/show touch controls when input device changes
 	InputManager.input_device_changed.connect(_on_input_device_changed)
-	# Find player controller for touch look and context signals
+	# Find player controller for touch look and context signals (deferred to ensure player exists)
+	_find_player_deferred()
+
+
+## Find the player controller, retrying each frame until found (handles save load timing).
+func _find_player_deferred() -> void:
+	# Wait a frame first to let the scene tree settle
 	await get_tree().process_frame
-	player_controller = get_tree().get_first_node_in_group("player")
-	# Connect to equipment and inventory signals via player controller children
-	if player_controller:
-		var equipment: Node = player_controller.get_node_or_null("Equipment")
-		if equipment:
-			if equipment.has_signal("item_equipped"):
-				equipment.item_equipped.connect(_on_item_equipped)
-			if equipment.has_signal("item_unequipped"):
-				equipment.item_unequipped.connect(_on_item_unequipped)
-		var inventory: Node = player_controller.get_node_or_null("Inventory")
-		if inventory:
-			if inventory.has_signal("inventory_changed"):
-				inventory.inventory_changed.connect(_on_inventory_changed)
+	# Try up to 60 frames (~1 second) to find the player
+	var attempts: int = 0
+	while not player_controller and attempts < 60:
+		player_controller = get_tree().get_first_node_in_group("player")
+		if player_controller:
+			break
+		attempts += 1
+		await get_tree().process_frame
+
+	if not player_controller:
+		push_warning("[TouchControls] Could not find player controller")
+		return
+
+	# Connect to equipment and inventory signals
+	var equipment_node: Node = player_controller.get_node_or_null("Equipment")
+	if equipment_node:
+		if equipment_node.has_signal("item_equipped"):
+			equipment_node.item_equipped.connect(_on_item_equipped)
+		if equipment_node.has_signal("item_unequipped"):
+			equipment_node.item_unequipped.connect(_on_item_unequipped)
+	var inventory_node: Node = player_controller.get_node_or_null("Inventory")
+	if inventory_node:
+		if inventory_node.has_signal("inventory_changed"):
+			inventory_node.inventory_changed.connect(_on_inventory_changed)
+
+	# Set initial button visibility based on current state
+	if equipment_node and equipment_node.has_method("get_equipped"):
+		var equipped: String = equipment_node.get_equipped()
+		if eat_button:
+			eat_button.visible = player_controller.has_consumable() if player_controller.has_method("has_consumable") else false
+		# use_button is managed by HUD TouchSlotArrows, not here
 
 
 func _calculate_safe_area() -> void:
@@ -170,15 +197,15 @@ func _setup_menu_buttons() -> void:
 		{"icon": "MENU", "action": "pause", "color": Color(0.45, 0.5, 0.55, 0.85)},
 	]
 
-	# EAT button: left side, next to stats panel (stats panel ends at ~250+sl)
-	var _eat_btn: TouchScreenButton = _create_menu_button(
+	# EAT button: left side, right of stats panel + air bubbles (moved right to avoid bubble overlap)
+	eat_button = _create_menu_button(
 		"EAT",
-		Vector2(300 + safe_margin["left"], 56 + safe_margin["top"]),
+		Vector2(380 + safe_margin["left"], 56 + safe_margin["top"]),
 		"eat",
 		Color(0.45, 0.5, 0.55, 0.85)
 	)
 	# Set orange text for EAT label
-	var eat_lbl: Label = _eat_btn.get_child(0) as Label
+	var eat_lbl: Label = eat_button.get_child(0) as Label
 	if eat_lbl:
 		eat_lbl.add_theme_color_override("font_color", Color(1, 0.7, 0.2, 0.95))
 

@@ -7383,6 +7383,72 @@ Increased MAP_TOP from 200 to 250 on mobile to accommodate taller touch buttons.
 
 ---
 
+## Session 38 - iOS Polish: Placement, Inventory, Save Load Fixes (2026-03-10)
+
+Continued iPad play-testing and fixed several critical iOS issues discovered during gameplay.
+
+### Crafting Menu Scroll Position Preserved
+
+When crafting an item, the recipe list used to jump back to the top (all children were cleared and recreated). Now saves and restores `scroll_container.scroll_vertical` when `preserve_focus=true`, so players can craft multiple items without losing their scroll position. Also set `mouse_filter = MOUSE_FILTER_PASS` on recipe buttons and panels so touch drag gestures pass through to the ScrollContainer for smoother scrolling. Increased `scroll_deadzone` from 30 to 40.
+
+### Placement Mode Touch Buttons
+
+Placing structures (campfire kit, shelter, etc.) was impossible on iOS — the USE button grayed out when entering placement mode (item gets unequipped), and the cancel prompt referenced the Q key which doesn't exist on touch. Fixed by transforming the ◀/USE/▶ button strip during placement:
+- ◀ becomes **X** (cancel) — fires `unequip` action to cancel placement
+- USE becomes **PLACE** (or **MOVE** during structure move) — stays enabled to confirm
+- ▶ is hidden during placement
+- Buttons restore to normal when placement ends
+
+### Structure MOVE Button
+
+Added a contextual golden MOVE button that appears below the equipment arrows when near a moveable structure (shelter, fire pit, etc.). Fires the `move_structure` action. Hidden when player walks away.
+
+### Touch-Friendly Placement Prompts
+
+On iOS, placement prompts now show "Walk to position, tap PLACE to set down" instead of "[R] Place [Q] Cancel" which referenced non-existent keyboard keys.
+
+### Resource Inventory in BAG Menu
+
+The BAG (equipment) menu on iOS now shows a full inventory with three sections:
+- **Equipment** — tap to equip (same as before)
+- **Resources** — wood, branches, rocks, ore, etc. with counts
+- **Food** — berries, fish, cooked items, etc. with counts
+
+Title changed from "Equipment" to "Inventory". Resource/food sections update in real-time when inventory changes.
+
+### Save Load Touch Controls Fix
+
+Loading a saved game broke all touch controls (no joystick, no buttons, no camera panning). Root cause: `static var menu_open` on TouchControls persisted across scene reloads — saving from the pause menu left it `true`, hiding everything permanently. Fixed by resetting `menu_open = false` in `_ready()`.
+
+Also fixed player controller lookup — replaced single-frame `await` with a retry loop (up to 60 frames) so touch look works even if the player node loads late after a save.
+
+### EAT Button Visibility on Save Load
+
+EAT button didn't appear after loading a save because `eat_button` member variable was never assigned (local `_eat_btn` was used instead). Fixed assignment and added initial visibility check in `_find_player_deferred` based on current food inventory.
+
+### EAT Button Position
+
+Moved EAT button rightward (300→380 + safe margin) to avoid overlapping with underwater air bubble display.
+
+### Notification Panel Position
+
+Pushed notification panel further down (offset_top 200→320 + safe top) to fully clear the time panel and menu buttons on iOS.
+
+### Crafting Menu Event Consumption
+
+Added `_handle_input()` (set_input_as_handled) after toggling the crafting menu to prevent the action event from being processed by multiple handlers, which could cause an immediate open-then-close.
+
+| File | Status | Changes |
+|------|--------|---------|
+| `scripts/ui/crafting_ui.gd` | Modified | Scroll position preserved on craft, MOUSE_FILTER_PASS for touch scroll, event consumption fix |
+| `scripts/ui/equipment_menu.gd` | Modified | Resource/food inventory sections on iOS, title → "Inventory" |
+| `scripts/ui/hud.gd` | Modified | Placement touch buttons (PLACE/X/MOVE), notification position fix, structure MOVE button |
+| `scripts/ui/touch_controls.gd` | Modified | menu_open reset, player lookup retry, EAT button assignment + position, initial visibility |
+| `scripts/ui/food_menu.gd` | Modified | scroll_deadzone for iOS |
+| `scripts/ui/storage_ui.gd` | Modified | scroll_deadzone for iOS |
+
+---
+
 ## Next Session
 
 ### Planned Tasks

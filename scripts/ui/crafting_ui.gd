@@ -59,6 +59,9 @@ func _ready() -> void:
 		campsite_manager = player.get_parent().get_node_or_null("CampsiteManager")
 
 	if OS.get_name() == "iOS":
+		# Enable touch scroll deadzone so swipe gestures scroll instead of tapping buttons
+		if scroll_container:
+			scroll_container.scroll_deadzone = 40
 		_apply_mobile_menu_style()
 
 
@@ -73,6 +76,7 @@ func _input(event: InputEvent) -> void:
 		if not is_open and _is_other_menu_open():
 			return
 		_toggle_crafting()
+		_handle_input()
 		return
 
 	# Only handle other inputs when menu is open
@@ -167,8 +171,9 @@ func toggle_crafting_menu(from_bench: bool = false) -> void:
 
 
 func _refresh_recipe_list(preserve_focus: bool = false) -> void:
-	# Save current focus index if preserving
+	# Save current focus index and scroll position if preserving
 	var saved_focus_index: int = focused_recipe_index
+	var saved_scroll: int = scroll_container.scroll_vertical if preserve_focus else 0
 
 	# Clear existing buttons
 	for child in recipe_list.get_children():
@@ -212,6 +217,9 @@ func _refresh_recipe_list(preserve_focus: bool = false) -> void:
 		item_style.content_margin_top = 10
 		item_style.content_margin_bottom = 10
 		item_panel.add_theme_stylebox_override("panel", item_style)
+		# On iOS, let scroll gestures pass through to ScrollContainer
+		if OS.get_name() == "iOS":
+			item_panel.mouse_filter = Control.MOUSE_FILTER_PASS
 
 		# Create recipe container inside the panel
 		var container: VBoxContainer = VBoxContainer.new()
@@ -225,6 +233,9 @@ func _refresh_recipe_list(preserve_focus: bool = false) -> void:
 		button.add_theme_font_size_override("font_size", 40)
 		button.pressed.connect(_on_craft_pressed.bind(recipe_id))
 		button.focus_mode = Control.FOCUS_ALL  # Allow focus for controller navigation
+		# On iOS, let scroll gestures pass through buttons to the ScrollContainer
+		if OS.get_name() == "iOS":
+			button.mouse_filter = Control.MOUSE_FILTER_PASS
 		container.add_child(button)
 		recipe_buttons[recipe_id] = button
 		recipe_button_list.append(button)
@@ -281,6 +292,14 @@ func _refresh_recipe_list(preserve_focus: bool = false) -> void:
 		var spacer: Control = Control.new()
 		spacer.custom_minimum_size = Vector2(0, 6)
 		recipe_list.add_child(spacer)
+
+	# Restore scroll position after layout if preserving focus
+	if preserve_focus and saved_scroll > 0:
+		call_deferred("_restore_scroll_position", saved_scroll)
+
+
+func _restore_scroll_position(pos: int) -> void:
+	scroll_container.scroll_vertical = pos
 
 
 func _on_craft_pressed(recipe_id: String) -> void:

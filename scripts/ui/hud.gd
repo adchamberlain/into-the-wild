@@ -494,8 +494,8 @@ func _apply_mobile_hud_layout() -> void:
 		notification_panel.anchor_bottom = 0.0
 		notification_panel.offset_left = -300.0
 		notification_panel.offset_right = 300.0
-		notification_panel.offset_top = 200 + st
-		notification_panel.offset_bottom = 260 + st
+		notification_panel.offset_top = 320 + st
+		notification_panel.offset_bottom = 380 + st
 	if notification_label:
 		notification_label.add_theme_font_size_override("font_size", MOBILE_SECONDARY_FONT)
 
@@ -667,13 +667,19 @@ func _on_interaction_target_changed(target: Node, interaction_text: String) -> v
 	if interaction_prompt:
 		var prompt_text: String = _get_interact_prompt() + " " + interaction_text
 		# Add move hint if target is a structure (except torches/lodestones - pick up only)
+		var show_move: bool = false
 		if is_instance_valid(target) and target.is_in_group("structure"):
 			var stype: String = target.get("structure_type") if target.get("structure_type") else ""
 			var is_pickup_only: bool = stype == "placed_torch" or stype == "lodestone" or stype == "placed_lantern"
 			if not is_pickup_only:
-				var move_key: String = _get_button_prompt("move_structure")
-				prompt_text += "  [%s] Move" % move_key
+				show_move = true
+				if not is_mobile:
+					var move_key: String = _get_button_prompt("move_structure")
+					prompt_text += "  [%s] Move" % move_key
 		interaction_prompt.text = prompt_text
+		# Show/hide mobile MOVE button
+		if is_mobile:
+			_show_mobile_move_button(show_move)
 	if interaction_prompt_panel and not _overlay_active:
 		interaction_prompt_panel.visible = true
 
@@ -696,6 +702,8 @@ func _on_input_device_changed(_is_controller: bool) -> void:
 func _on_interaction_cleared() -> void:
 	if interaction_prompt_panel:
 		interaction_prompt_panel.visible = false
+	if is_mobile:
+		_show_mobile_move_button(false)
 
 
 func _on_health_changed(new_value: float, max_value: float) -> void:
@@ -1327,31 +1335,46 @@ func _connect_to_placement_system() -> void:
 
 func _on_placement_started(_structure_type: String) -> void:
 	_show_placement_prompt(false)
+	if is_mobile:
+		_enter_placement_touch_mode(false)
 
 
 func _on_placement_ended(_arg1 = null, _arg2 = null) -> void:
 	_hide_placement_prompt()
+	if is_mobile:
+		_exit_placement_touch_mode()
 
 
 func _on_move_started(_structure: Node3D) -> void:
 	_show_placement_prompt(true)
+	if is_mobile:
+		_enter_placement_touch_mode(true)
 
 
 func _on_move_ended(_arg1 = null, _arg2 = null, _arg3 = null) -> void:
 	_hide_placement_prompt()
+	if is_mobile:
+		_exit_placement_touch_mode()
 
 
 func _show_placement_prompt(is_move: bool) -> void:
 	if not interaction_prompt or not interaction_prompt_panel:
 		return
 
-	var confirm_key: String = _get_button_prompt("use_equipped")
-	var cancel_key: String = _get_button_prompt("unequip")
-
-	if is_move:
-		interaction_prompt.text = "[%s] Confirm Move  [%s] Cancel" % [confirm_key, cancel_key]
+	if is_mobile:
+		# On iOS, buttons handle the actions — show simple guidance text
+		if is_move:
+			interaction_prompt.text = "Walk to position, tap PLACE to confirm"
+		else:
+			interaction_prompt.text = "Walk to position, tap PLACE to set down"
 	else:
-		interaction_prompt.text = "[%s] Place  [%s] Cancel" % [confirm_key, cancel_key]
+		var confirm_key: String = _get_button_prompt("use_equipped")
+		var cancel_key: String = _get_button_prompt("unequip")
+
+		if is_move:
+			interaction_prompt.text = "[%s] Confirm Move  [%s] Cancel" % [confirm_key, cancel_key]
+		else:
+			interaction_prompt.text = "[%s] Place  [%s] Cancel" % [confirm_key, cancel_key]
 
 	if not _overlay_active:
 		interaction_prompt_panel.visible = true
@@ -1360,6 +1383,132 @@ func _show_placement_prompt(is_move: bool) -> void:
 func _hide_placement_prompt() -> void:
 	if interaction_prompt_panel:
 		interaction_prompt_panel.visible = false
+
+
+## Transform ◀ USE ▶ buttons into CANCEL / PLACE during placement/move mode on iOS.
+func _enter_placement_touch_mode(is_move: bool) -> void:
+	var container: HBoxContainer = get_node_or_null("TouchSlotArrows") as HBoxContainer
+	if not container:
+		return
+
+	# Get the three buttons: ◀, USE, ▶
+	var prev_btn: Button = container.get_child(0) as Button
+	var use_btn: Button = container.get_child(1) as Button
+	var next_btn: Button = container.get_child(2) as Button
+
+	# Hide ▶ arrow
+	if next_btn:
+		next_btn.visible = false
+
+	# Transform ◀ into CANCEL button
+	if prev_btn:
+		prev_btn.text = "X"
+		# Disconnect old pressed signal and connect cancel
+		if prev_btn.pressed.get_connections().size() > 0:
+			for conn: Dictionary in prev_btn.pressed.get_connections():
+				prev_btn.pressed.disconnect(conn["callable"])
+		prev_btn.pressed.connect(_placement_cancel_pressed)
+
+	# Transform USE into PLACE button — enable it
+	if use_btn:
+		use_btn.text = "PLACE" if not is_move else "MOVE"
+		use_btn.disabled = false
+		use_btn.modulate = Color(1, 1, 1, 1)
+
+
+## Restore ◀ USE ▶ buttons after placement/move mode ends on iOS.
+func _exit_placement_touch_mode() -> void:
+	var container: HBoxContainer = get_node_or_null("TouchSlotArrows") as HBoxContainer
+	if not container:
+		return
+
+	var prev_btn: Button = container.get_child(0) as Button
+	var use_btn: Button = container.get_child(1) as Button
+	var next_btn: Button = container.get_child(2) as Button
+
+	# Restore ▶ arrow
+	if next_btn:
+		next_btn.visible = true
+
+	# Restore ◀ arrow — disconnect cancel and reconnect prev_slot
+	if prev_btn:
+		prev_btn.text = "◀"
+		if prev_btn.pressed.get_connections().size() > 0:
+			for conn: Dictionary in prev_btn.pressed.get_connections():
+				prev_btn.pressed.disconnect(conn["callable"])
+		prev_btn.pressed.connect(func() -> void:
+			var ev: InputEventAction = InputEventAction.new()
+			ev.action = "prev_slot"
+			ev.pressed = true
+			Input.parse_input_event(ev)
+			var ev_up: InputEventAction = InputEventAction.new()
+			ev_up.action = "prev_slot"
+			ev_up.pressed = false
+			Input.parse_input_event(ev_up)
+		)
+
+	# Restore USE button — gray out since item was unequipped during placement
+	if use_btn:
+		use_btn.text = "USE"
+		use_btn.disabled = true
+		use_btn.modulate = Color(0.4, 0.4, 0.4, 0.6)
+
+
+## Show/hide a contextual MOVE button on mobile when near a moveable structure.
+func _show_mobile_move_button(show: bool) -> void:
+	var move_btn: Button = get_node_or_null("MobileMoveButton") as Button
+	if show and not move_btn:
+		# Create MOVE button below the slot arrows
+		move_btn = Button.new()
+		move_btn.name = "MobileMoveButton"
+		move_btn.text = "MOVE"
+		move_btn.custom_minimum_size = Vector2(120, 50)
+		var move_style: StyleBoxFlat = StyleBoxFlat.new()
+		move_style.bg_color = Color(0.15, 0.12, 0.08, 0.9)
+		move_style.corner_radius_top_left = 10
+		move_style.corner_radius_top_right = 10
+		move_style.corner_radius_bottom_left = 10
+		move_style.corner_radius_bottom_right = 10
+		move_btn.add_theme_stylebox_override("normal", move_style)
+		move_btn.add_theme_font_override("font", HUD_FONT)
+		move_btn.add_theme_font_size_override("font_size", 24)
+		move_btn.add_theme_color_override("font_color", Color(1, 0.85, 0.3, 1))
+		# Position below the slot arrows
+		var container: HBoxContainer = get_node_or_null("TouchSlotArrows") as HBoxContainer
+		if container:
+			move_btn.anchor_left = 1.0
+			move_btn.anchor_right = 1.0
+			move_btn.anchor_top = 0.0
+			move_btn.anchor_bottom = 0.0
+			move_btn.offset_left = container.offset_left
+			move_btn.offset_right = container.offset_right
+			move_btn.offset_top = container.offset_bottom + 6
+			move_btn.offset_bottom = container.offset_bottom + 56
+		move_btn.pressed.connect(func() -> void:
+			var ev: InputEventAction = InputEventAction.new()
+			ev.action = "move_structure"
+			ev.pressed = true
+			Input.parse_input_event(ev)
+			var ev_up: InputEventAction = InputEventAction.new()
+			ev_up.action = "move_structure"
+			ev_up.pressed = false
+			Input.parse_input_event(ev_up)
+		)
+		add_child(move_btn)
+	elif not show and move_btn:
+		move_btn.queue_free()
+
+
+## Handle cancel button press during placement mode.
+func _placement_cancel_pressed() -> void:
+	var ev: InputEventAction = InputEventAction.new()
+	ev.action = "unequip"
+	ev.pressed = true
+	Input.parse_input_event(ev)
+	var ev_up: InputEventAction = InputEventAction.new()
+	ev_up.action = "unequip"
+	ev_up.pressed = false
+	Input.parse_input_event(ev_up)
 
 
 func _update_resting_prompt() -> void:

@@ -49,6 +49,10 @@ func _ready() -> void:
 	is_open = false
 
 	if OS.get_name() == "iOS":
+		if player_scroll:
+			player_scroll.scroll_deadzone = 30
+		if storage_scroll:
+			storage_scroll.scroll_deadzone = 30
 		_apply_mobile_menu_style()
 
 

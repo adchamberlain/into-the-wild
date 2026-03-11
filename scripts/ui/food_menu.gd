@@ -106,6 +106,8 @@ func _build_ui() -> void:
 	scroll_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	# Max height ~480px, variable otherwise
 	scroll_container.custom_minimum_size.y = 60
+	if OS.get_name() == "iOS":
+		scroll_container.scroll_deadzone = 30
 	vbox.add_child(scroll_container)
 
 	item_container = VBoxContainer.new()
