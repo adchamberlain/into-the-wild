@@ -121,11 +121,11 @@ func _setup_action_buttons() -> void:
 	var right_x: float = screen_size.x - 52 - safe_margin["right"] - BUTTON_RADIUS
 	var bottom_y: float = screen_size.y - 48 - safe_margin["bottom"] - BUTTON_RADIUS
 
-	# Core buttons: JUMP, SPRINT, ACT (bottom-right, vertical stack)
+	# Core buttons: ACT at bottom (most accessible), SPRINT middle, JUMP top
 	var core_buttons: Array = [
-		{"name": "JUMP", "action": "jump", "color": Color(1, 1, 1), "y_offset": 0},
-		{"name": "SPRINT", "action": "sprint", "color": Color(0.4, 0.8, 1), "y_offset": 84},
-		{"name": "ACT", "action": "interact", "color": Color(1, 0.85, 0.3), "y_offset": 168},
+		{"name": "ACT", "action": "interact", "color": Color(1, 0.85, 0.3), "y_offset": 0},
+		{"name": "SPRINT", "action": "sprint", "color": Color(0.4, 0.85, 0.5), "y_offset": 84},
+		{"name": "JUMP", "action": "jump", "color": Color(0.75, 0.75, 0.75), "y_offset": 168},
 	]
 
 	for btn_data in core_buttons:
@@ -181,8 +181,8 @@ func _setup_menu_buttons() -> void:
 		{"icon": "⏸️", "action": "pause", "color": Color(0.5, 0.5, 0.55, 0.8)},
 	]
 
-	# Position right of compass widget (compass is at center + ~55px)
-	var start_x: float = center_x + 70
+	# Position right of the centered time panel (time panel is center ± 110px)
+	var start_x: float = center_x + 120
 	for i: int in range(menu_items.size()):
 		var _btn: TouchScreenButton = _create_menu_button(
 			menu_items[i]["icon"],

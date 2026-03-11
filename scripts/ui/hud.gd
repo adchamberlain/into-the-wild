@@ -363,33 +363,37 @@ func _apply_mobile_hud_layout() -> void:
 	var sr: int = screen_size_i.x - (safe_area.position.x + safe_area.size.x)  # safe right
 	var _sb: int = screen_size_i.y - (safe_area.position.y + safe_area.size.y)  # safe bottom
 
-	# --- Stats panel: compact, top-left ---
+	# --- Stats panel: compact bars only, top-left (per design: just bars, no text) ---
 	var stats_panel: PanelContainer = get_node_or_null("StatsPanel")
 	if stats_panel:
 		stats_panel.offset_left = 12 + sl
 		stats_panel.offset_top = 12 + st
-		stats_panel.offset_right = 240 + sl
-		stats_panel.offset_bottom = 80 + st
-		_scale_panel_margins(stats_panel, 0.4)
+		stats_panel.offset_right = 190 + sl
+		stats_panel.offset_bottom = 68 + st
+		_scale_panel_margins(stats_panel, 0.3)
 	# Permanently hide coordinates on mobile
 	show_coordinates = false
 	if coordinates_label:
 		coordinates_label.visible = false
-	# Smaller health/hunger labels and bars
+		coordinates_label.text = ""
+	# Hide "Health"/"Hunger" text labels (design shows just bars)
 	var health_lbl: Label = get_node_or_null("StatsPanel/StatsContainer/HealthContainer/HealthLabel")
 	var hunger_lbl: Label = get_node_or_null("StatsPanel/StatsContainer/HungerContainer/HungerLabel")
 	if health_lbl:
-		health_lbl.add_theme_font_size_override("font_size", 18)
+		health_lbl.visible = false
 	if hunger_lbl:
-		hunger_lbl.add_theme_font_size_override("font_size", 18)
+		hunger_lbl.visible = false
+	# Compact bars
 	if health_bar:
-		health_bar.custom_minimum_size = Vector2(120, 20)
+		health_bar.custom_minimum_size = Vector2(140, 18)
 	if hunger_bar:
-		hunger_bar.custom_minimum_size = Vector2(120, 20)
+		hunger_bar.custom_minimum_size = Vector2(140, 18)
 
-	# --- Time panel: compact, positioned LEFT of compass ---
-	# The compass widget sits at top-center (offset_left=-55, offset_right=55, offset_top=15)
-	# Position time panel to the left of the compass, not overlapping
+	# --- Hide compass widget on mobile (not in approved design) ---
+	if compass_widget:
+		compass_widget.visible = false
+
+	# --- Time panel: centered at top (compass is hidden so no conflict) ---
 	var time_panel: PanelContainer = get_node_or_null("TimePanel")
 	if time_panel:
 		time_panel.anchor_left = 0.5
@@ -397,13 +401,12 @@ func _apply_mobile_hud_layout() -> void:
 		time_panel.anchor_top = 0.0
 		time_panel.anchor_bottom = 0.0
 		time_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
-		# Position left of compass (compass is at center -55 to +55)
-		time_panel.offset_left = -200
+		time_panel.offset_left = -110
 		time_panel.offset_top = 12 + st
-		time_panel.offset_right = -65
+		time_panel.offset_right = 110
 		time_panel.offset_bottom = 56 + st
 		_scale_panel_margins(time_panel, 0.3)
-	# Compact time: "8:25 AM · Morning · Day 1" style
+	# Compact time display
 	if time_label:
 		time_label.add_theme_font_size_override("font_size", 20)
 		time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -421,14 +424,7 @@ func _apply_mobile_hud_layout() -> void:
 	if protection_label:
 		protection_label.visible = false
 
-	# --- Compass widget: make slightly smaller on mobile ---
-	if compass_widget:
-		compass_widget.offset_left = -45.0
-		compass_widget.offset_right = 45.0
-		compass_widget.offset_top = 8.0 + st
-		compass_widget.offset_bottom = 98.0 + st
-
-	# --- Equipped panel: compact, top-right ---
+	# --- Equipped panel: compact, top-right with integrated ◀ ▶ cycle ---
 	var equipped_panel: PanelContainer = get_node_or_null("EquippedPanel")
 	if equipped_panel:
 		equipped_panel.anchor_left = 1.0
@@ -440,11 +436,11 @@ func _apply_mobile_hud_layout() -> void:
 		equipped_panel.offset_left = -200 - sr
 		equipped_panel.offset_top = 12 + st
 		equipped_panel.offset_right = -12 - sr
-		equipped_panel.offset_bottom = 60 + st
+		equipped_panel.offset_bottom = 72 + st
 		_scale_panel_margins(equipped_panel, 0.4)
 	if equipped_label:
 		equipped_label.add_theme_font_size_override("font_size", 18)
-	# Add ◀ ▶ cycle arrows inside equipped panel area
+	# Add ◀ ▶ cycle text inside equipped panel (not as separate big buttons)
 	_create_touch_slot_arrows()
 
 	# --- Interaction prompt: smaller ---
@@ -927,6 +923,10 @@ func _update_campsite_level_display() -> void:
 
 func _update_coordinates_display() -> void:
 	if not coordinates_label:
+		return
+	# On mobile, coordinates are always hidden
+	if is_mobile:
+		coordinates_label.visible = false
 		return
 
 	coordinates_label.visible = show_coordinates
