@@ -6,16 +6,15 @@ extends CanvasLayer
 # Joystick config
 const JOYSTICK_RADIUS: float = 65.0  # Outer radius
 const JOYSTICK_DEADZONE: float = 0.15
-const JOYSTICK_POSITION: Vector2 = Vector2(90, -110)  # From bottom-left
 
 # Swipe look config
 const TOUCH_LOOK_SENSITIVITY: float = 0.003
 
 # Button config
 const BUTTON_RADIUS: float = 28.0  # 56px diameter
-const BUTTON_ALPHA_BG: float = 0.06
-const BUTTON_ALPHA_BORDER: float = 0.15
-const BUTTON_ALPHA_TEXT: float = 0.4
+const BUTTON_ALPHA_BG: float = 0.25
+const BUTTON_ALPHA_BORDER: float = 0.45
+const BUTTON_ALPHA_TEXT: float = 0.7
 
 # State
 var joystick_touch_index: int = -1
@@ -25,12 +24,12 @@ var look_touch_index: int = -1
 var look_previous_position: Vector2 = Vector2.ZERO
 
 # Node references
-var joystick_base: Control
-var joystick_thumb: Control
+var joystick_bg: Sprite2D
+var joystick_thumb: Sprite2D
 var player_controller: Node = null
 
-# Action button data: {name, action, color, position, node}
-var action_buttons: Array = []
+# All touchable button nodes (for hit testing)
+var all_buttons: Array[TouchScreenButton] = []
 
 # Context button references
 var use_button: TouchScreenButton = null
@@ -76,19 +75,35 @@ func _calculate_safe_area() -> void:
 
 func _setup_joystick() -> void:
 	var screen_size: Vector2 = get_viewport().get_visible_rect().size
+	joystick_center = Vector2(24 + safe_margin["left"] + JOYSTICK_RADIUS, screen_size.y - JOYSTICK_RADIUS - 40 - safe_margin["bottom"])
 
-	joystick_base = Control.new()
-	joystick_base.custom_minimum_size = Vector2(JOYSTICK_RADIUS * 2, JOYSTICK_RADIUS * 2)
-	joystick_base.position = Vector2(24 + safe_margin["left"], screen_size.y - JOYSTICK_RADIUS * 2 - 40 - safe_margin["bottom"])
-	joystick_base.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(joystick_base)
-	joystick_center = joystick_base.position + Vector2(JOYSTICK_RADIUS, JOYSTICK_RADIUS)
+	# Joystick background circle
+	joystick_bg = Sprite2D.new()
+	joystick_bg.texture = _create_circle_texture(int(JOYSTICK_RADIUS * 2), Color(1, 1, 1, 0.12), Color(1, 1, 1, 0.3))
+	joystick_bg.position = joystick_center
+	add_child(joystick_bg)
 
-	joystick_thumb = Control.new()
-	joystick_thumb.custom_minimum_size = Vector2(50, 50)
-	joystick_thumb.position = Vector2(JOYSTICK_RADIUS - 25, JOYSTICK_RADIUS - 25)
-	joystick_thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	joystick_base.add_child(joystick_thumb)
+	# Joystick thumb (inner knob)
+	joystick_thumb = Sprite2D.new()
+	joystick_thumb.texture = _create_circle_texture(50, Color(1, 1, 1, 0.3), Color(1, 1, 1, 0.5))
+	joystick_thumb.position = joystick_center
+	add_child(joystick_thumb)
+
+
+func _create_circle_texture(diameter: int, fill_color: Color, border_color: Color) -> ImageTexture:
+	var img: Image = Image.create(diameter, diameter, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var radius: float = diameter / 2.0
+	var center: Vector2 = Vector2(radius, radius)
+	for x: int in range(diameter):
+		for y: int in range(diameter):
+			var dist: float = Vector2(x, y).distance_to(center)
+			if dist <= radius:
+				if dist >= radius - 2.5:
+					img.set_pixel(x, y, border_color)
+				else:
+					img.set_pixel(x, y, fill_color)
+	return ImageTexture.create_from_image(img)
 
 
 func _setup_action_buttons() -> void:
@@ -104,14 +119,13 @@ func _setup_action_buttons() -> void:
 	]
 
 	for btn_data in core_buttons:
-		var btn: TouchScreenButton = _create_action_button(
+		var _btn: TouchScreenButton = _create_action_button(
 			btn_data["name"],
 			Vector2(right_x, bottom_y - btn_data["y_offset"]),
 			btn_data["color"],
 			btn_data["action"],
 			false
 		)
-		action_buttons.append({"node": btn, "action": btn_data["action"]})
 
 	# Context-sensitive buttons
 	var screen_size_ctx: Vector2 = get_viewport().get_visible_rect().size
@@ -172,16 +186,15 @@ func _create_action_button(label_text: String, pos: Vector2, color: Color, actio
 	btn.action = action
 	btn.passby_press = false
 
-	# Create circle shape texture
+	# Create circle shape texture with visible alpha
 	var img: Image = Image.create(int(BUTTON_RADIUS * 2), int(BUTTON_RADIUS * 2), false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
-	# Draw filled circle with low alpha
 	var center: Vector2i = Vector2i(int(BUTTON_RADIUS), int(BUTTON_RADIUS))
 	for x: int in range(img.get_width()):
 		for y: int in range(img.get_height()):
 			var dist: float = Vector2(x, y).distance_to(Vector2(center))
 			if dist <= BUTTON_RADIUS:
-				if dist >= BUTTON_RADIUS - 2:
+				if dist >= BUTTON_RADIUS - 2.5:
 					img.set_pixel(x, y, Color(color.r, color.g, color.b, BUTTON_ALPHA_BORDER))
 				else:
 					img.set_pixel(x, y, Color(color.r, color.g, color.b, BUTTON_ALPHA_BG))
@@ -190,6 +203,7 @@ func _create_action_button(label_text: String, pos: Vector2, color: Color, actio
 	btn.texture_normal = tex
 
 	add_child(btn)
+	all_buttons.append(btn)
 
 	# Add label
 	var lbl: Label = Label.new()
@@ -211,19 +225,20 @@ func _create_menu_button(icon: String, pos: Vector2, action: String) -> TouchScr
 	btn.action = action
 	btn.passby_press = false
 
-	var img: Image = Image.create(36, 36, false, Image.FORMAT_RGBA8)
-	img.fill(Color(0.1, 0.1, 0.12, 0.8))
+	var img: Image = Image.create(44, 44, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0.1, 0.1, 0.12, 0.6))
 	var tex: ImageTexture = ImageTexture.create_from_image(img)
 	btn.texture_normal = tex
 
 	add_child(btn)
+	all_buttons.append(btn)
 
 	var lbl: Label = Label.new()
 	lbl.text = icon
-	lbl.add_theme_font_size_override("font_size", 18)
+	lbl.add_theme_font_size_override("font_size", 20)
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	lbl.size = Vector2(36, 36)
+	lbl.size = Vector2(44, 44)
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	btn.add_child(lbl)
 
@@ -239,12 +254,16 @@ func _input(event: InputEvent) -> void:
 
 func _handle_screen_touch(event: InputEventScreenTouch) -> void:
 	if event.pressed:
+		# Let TouchScreenButton handle its own touches — don't consume them
+		if _is_on_any_button(event.position):
+			return
+
 		# Check if touch is in joystick zone (left side of screen)
 		if _is_in_joystick_zone(event.position) and joystick_touch_index == -1:
 			joystick_touch_index = event.index
 			_update_joystick(event.position)
 			get_viewport().set_input_as_handled()
-		elif not _is_on_button(event.position):
+		else:
 			# Swipe-to-look zone (anywhere not on joystick or buttons)
 			look_touch_index = event.index
 			look_previous_position = event.position
@@ -281,8 +300,8 @@ func _update_joystick(touch_pos: Vector2) -> void:
 
 	joystick_current = diff / JOYSTICK_RADIUS  # Normalized -1 to 1
 
-	# Update thumb visual
-	joystick_thumb.position = Vector2(JOYSTICK_RADIUS - 25, JOYSTICK_RADIUS - 25) + diff
+	# Update thumb visual position
+	joystick_thumb.position = joystick_center + diff
 
 	# Map to movement actions
 	_apply_joystick_to_actions(joystick_current)
@@ -290,7 +309,7 @@ func _update_joystick(touch_pos: Vector2) -> void:
 
 func _reset_joystick() -> void:
 	joystick_current = Vector2.ZERO
-	joystick_thumb.position = Vector2(JOYSTICK_RADIUS - 25, JOYSTICK_RADIUS - 25)
+	joystick_thumb.position = joystick_center
 	# Release all movement actions
 	Input.action_release("move_forward")
 	Input.action_release("move_back")
@@ -326,12 +345,13 @@ func _is_in_joystick_zone(pos: Vector2) -> bool:
 	return pos.distance_to(joystick_center) <= JOYSTICK_RADIUS * 1.5
 
 
-func _is_on_button(pos: Vector2) -> bool:
-	# Check if position overlaps any action button
-	for btn_data: Dictionary in action_buttons:
-		var btn: TouchScreenButton = btn_data["node"]
-		var btn_center: Vector2 = btn.position + Vector2(BUTTON_RADIUS, BUTTON_RADIUS)
-		if pos.distance_to(btn_center) <= BUTTON_RADIUS * 1.2:
+func _is_on_any_button(pos: Vector2) -> bool:
+	# Check ALL touch buttons (core, context, and menu)
+	for btn: TouchScreenButton in all_buttons:
+		if not btn.visible:
+			continue
+		var btn_rect: Rect2 = Rect2(btn.position, btn.texture_normal.get_size())
+		if btn_rect.grow(8.0).has_point(pos):
 			return true
 	return false
 

@@ -41,7 +41,7 @@ const MOBILE_HINT_FONT: int = 20
 
 # How many items fit in one column before splitting to two columns
 const INVENTORY_COLUMN_THRESHOLD: int = 14
-var inventory_visible: bool = true
+var inventory_visible: bool = true  # Overridden to false on mobile in _ready()
 var inventory_toggle_hint: Label = null
 
 # Equipment
@@ -324,16 +324,21 @@ func _ready() -> void:
 		# Hide mouse cursor on iOS
 		Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
 
-	# Hide inventory on mobile (touch UI replaces it)
-	if is_mobile and inventory_panel:
-		inventory_panel.visible = false
-
-	# Apply safe area insets for notch/home indicator avoidance
-	_apply_safe_area_insets()
-
-	# Add touch slot cycle buttons on mobile
+	# Mobile HUD adaptations
 	if is_mobile:
+		# Hide inventory panel (accessed via 🎒 menu button on touch controls)
+		inventory_visible = false
+		if inventory_panel:
+			inventory_panel.visible = false
+		# Hide control hints row (touch buttons replace keyboard hints)
+		if equip_hint_label:
+			equip_hint_label.visible = false
+		# Apply safe area insets for notch/home indicator avoidance
+		_apply_safe_area_insets()
+		# Add touch slot cycle buttons
 		_create_touch_slot_arrows()
+		# Scale scene-node font sizes for mobile
+		_apply_mobile_font_scaling()
 
 
 ## Returns the appropriate font size for the current platform.
@@ -372,6 +377,72 @@ func _apply_safe_area_insets() -> void:
 	if equipped_panel:
 		equipped_panel.position.x -= margin_right
 		equipped_panel.position.y += margin_top
+
+
+## Scale pre-existing scene-based label fonts for mobile.
+func _apply_mobile_font_scaling() -> void:
+	# Time panel labels (desktop: 40-48px → mobile: 28px)
+	for lbl: Label in [time_label, period_label, day_counter_label, campsite_level_label, weather_label, protection_label]:
+		if lbl:
+			lbl.add_theme_font_size_override("font_size", MOBILE_PRIMARY_FONT)
+
+	# Stats panel labels (desktop: 40px → mobile: 22px for coordinates)
+	if coordinates_label:
+		coordinates_label.add_theme_font_size_override("font_size", MOBILE_SECONDARY_FONT)
+
+	# Health/hunger bar labels
+	var health_lbl: Label = get_node_or_null("StatsPanel/StatsContainer/HealthContainer/HealthLabel")
+	var hunger_lbl: Label = get_node_or_null("StatsPanel/StatsContainer/HungerContainer/HungerLabel")
+	if health_lbl:
+		health_lbl.add_theme_font_size_override("font_size", MOBILE_PRIMARY_FONT)
+	if hunger_lbl:
+		hunger_lbl.add_theme_font_size_override("font_size", MOBILE_PRIMARY_FONT)
+
+	# Equipped panel labels (desktop: 40px → mobile: 22px)
+	if equipped_label:
+		equipped_label.add_theme_font_size_override("font_size", MOBILE_SECONDARY_FONT)
+	if equip_hint_label:
+		equip_hint_label.add_theme_font_size_override("font_size", MOBILE_HINT_FONT)
+
+	# Interaction prompt (desktop: 40px → mobile: 22px)
+	if interaction_prompt:
+		interaction_prompt.add_theme_font_size_override("font_size", MOBILE_SECONDARY_FONT)
+
+	# Notification label
+	if notification_label:
+		notification_label.add_theme_font_size_override("font_size", MOBILE_SECONDARY_FONT)
+
+	# Celebration labels (desktop: 56-64px → mobile: 38px)
+	if celebration_title:
+		celebration_title.add_theme_font_size_override("font_size", MOBILE_TITLE_FONT)
+	if celebration_level_name:
+		celebration_level_name.add_theme_font_size_override("font_size", MOBILE_PRIMARY_FONT)
+	if celebration_description:
+		celebration_description.add_theme_font_size_override("font_size", MOBILE_SECONDARY_FONT)
+	if celebration_unlocks:
+		celebration_unlocks.add_theme_font_size_override("font_size", MOBILE_SECONDARY_FONT)
+	if celebration_prompt:
+		celebration_prompt.add_theme_font_size_override("font_size", MOBILE_HINT_FONT)
+
+	# Scale panel sizes (~65% of desktop)
+	_scale_panel_for_mobile("StatsPanel", 0.65)
+	_scale_panel_for_mobile("TimePanel", 0.65)
+	_scale_panel_for_mobile("EquippedPanel", 0.65)
+
+
+## Scale a panel's content margins for mobile.
+func _scale_panel_for_mobile(panel_name: String, scale: float) -> void:
+	var panel: PanelContainer = get_node_or_null(panel_name)
+	if not panel:
+		return
+	var style: StyleBox = panel.get_theme_stylebox("panel")
+	if style and style is StyleBoxFlat:
+		var flat: StyleBoxFlat = style.duplicate() as StyleBoxFlat
+		flat.content_margin_left *= scale
+		flat.content_margin_right *= scale
+		flat.content_margin_top *= scale
+		flat.content_margin_bottom *= scale
+		panel.add_theme_stylebox_override("panel", flat)
 
 
 ## Create ◀ ▶ touch buttons for cycling equipped item slots on mobile.
@@ -523,38 +594,40 @@ func _update_equipped_display() -> void:
 		var item_name: String = equipment.get_equipped_name()
 		equipped_label.text = "Equipped: " + item_name
 
-		# Add usage hint based on item type and input device
-		var equipped_type: String = equipment.get_equipped()
-		var use_key: String = _get_button_prompt("use_equipped")
-		var unequip_key: String = _get_button_prompt("unequip")
+		# On mobile touch, skip keyboard hints (USE button handles actions)
+		if not (is_mobile and input_manager and input_manager.is_using_touch()):
+			# Add usage hint based on item type and input device
+			var equipped_type: String = equipment.get_equipped()
+			var use_key: String = _get_button_prompt("use_equipped")
+			var unequip_key: String = _get_button_prompt("unequip")
 
-		if equipped_type == "torch" or equipped_type == "lodestone":
-			equipped_label.text += " [%s place, %s unequip]" % [use_key, unequip_key]
-		elif StructureData.is_placeable_item(equipped_type):
-			equipped_label.text += " [%s place, %s unequip]" % [use_key, unequip_key]
-		elif equipped_type == "fishing_rod":
-			# Fishing is done by interacting with fishing spots, not use_equipped
-			var interact_key: String = _get_button_prompt("interact")
-			equipped_label.text += " [%s fish, %s unequip]" % [interact_key, unequip_key]
-		elif equipped_type == "bow" or equipped_type == "enchanted_bow":
-			var arrow_count: int = 0
-			var arrow_type_name: String = "regular"
-			var cycle_key: String = _get_button_prompt("cycle_ammo")
-			var player_node: Node = get_tree().get_first_node_in_group("player")
-			if player_node:
-				var bow: Node = player_node.get_node_or_null("BowSystem")
-				if bow:
-					arrow_count = bow.get_preferred_arrow_count()
-					arrow_type_name = bow.get_preferred_arrow_name()
-			equipped_label.text += " (%d %s arrows) [R-click aim, %s switch, %s unequip]" % [arrow_count, arrow_type_name, cycle_key, unequip_key]
-		elif equipped_type == "map":
-			equipped_label.text += " [%s open map, %s unequip]" % [use_key, unequip_key]
-		elif equipped_type == "hang_glider":
-			var jump_key: String = _get_button_prompt("jump")
-			var crouch_key: String = _get_button_prompt("crouch")
-			equipped_label.text += " [%s deploy, %s boost, %s retract, %s unequip]" % [use_key, jump_key, crouch_key, unequip_key]
-		else:
-			equipped_label.text += " [%s unequip]" % unequip_key
+			if equipped_type == "torch" or equipped_type == "lodestone":
+				equipped_label.text += " [%s place, %s unequip]" % [use_key, unequip_key]
+			elif StructureData.is_placeable_item(equipped_type):
+				equipped_label.text += " [%s place, %s unequip]" % [use_key, unequip_key]
+			elif equipped_type == "fishing_rod":
+				# Fishing is done by interacting with fishing spots, not use_equipped
+				var interact_key: String = _get_button_prompt("interact")
+				equipped_label.text += " [%s fish, %s unequip]" % [interact_key, unequip_key]
+			elif equipped_type == "bow" or equipped_type == "enchanted_bow":
+				var arrow_count: int = 0
+				var arrow_type_name: String = "regular"
+				var cycle_key: String = _get_button_prompt("cycle_ammo")
+				var player_node: Node = get_tree().get_first_node_in_group("player")
+				if player_node:
+					var bow: Node = player_node.get_node_or_null("BowSystem")
+					if bow:
+						arrow_count = bow.get_preferred_arrow_count()
+						arrow_type_name = bow.get_preferred_arrow_name()
+				equipped_label.text += " (%d %s arrows) [R-click aim, %s switch, %s unequip]" % [arrow_count, arrow_type_name, cycle_key, unequip_key]
+			elif equipped_type == "map":
+				equipped_label.text += " [%s open map, %s unequip]" % [use_key, unequip_key]
+			elif equipped_type == "hang_glider":
+				var jump_key: String = _get_button_prompt("jump")
+				var crouch_key: String = _get_button_prompt("crouch")
+				equipped_label.text += " [%s deploy, %s boost, %s retract, %s unequip]" % [use_key, jump_key, crouch_key, unequip_key]
+			else:
+				equipped_label.text += " [%s unequip]" % unequip_key
 
 		# Update durability bar
 		_update_durability_bar()
@@ -573,6 +646,12 @@ func _update_control_hints() -> void:
 	if not equip_hint_label:
 		return
 
+	# On mobile touch, hide control hints entirely (touch buttons replace them)
+	if is_mobile and input_manager and input_manager.is_using_touch():
+		equip_hint_label.visible = false
+		return
+
+	equip_hint_label.visible = true
 	var using_controller: bool = input_manager and input_manager.is_using_controller()
 
 	if using_controller:
@@ -635,6 +714,9 @@ func _is_journal_open() -> bool:
 
 ## Toggle inventory panel visibility.
 func _toggle_inventory() -> void:
+	# On mobile, inventory is always hidden (accessed via full-screen overlay)
+	if is_mobile:
+		return
 	inventory_visible = not inventory_visible
 	if inventory_panel:
 		inventory_panel.visible = inventory_visible
@@ -1309,6 +1391,11 @@ func _create_inventory_toggle_hint() -> void:
 func _update_inventory_toggle_hint() -> void:
 	if not inventory_toggle_hint:
 		return
+	# On mobile, inventory panel is hidden so no toggle hint needed
+	if is_mobile:
+		inventory_toggle_hint.visible = false
+		return
+	inventory_toggle_hint.visible = true
 	var using_ctrl: bool = input_manager and input_manager.is_using_controller()
 	if using_ctrl:
 		inventory_toggle_hint.text = "[D←] Hide inventory"
