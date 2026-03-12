@@ -223,6 +223,7 @@ func run_tests() -> Dictionary:
 	test_map_updates_player_position()
 	test_journal_interact_sets_sinkhole_book_collected()
 	test_rock_spire_is_static_body()
+	test_weather_manager_connects_day_changed()
 
 	return get_results()
 
@@ -4423,3 +4424,29 @@ func test_rock_spire_is_static_body() -> void:
 			"Rock spire uses StaticBody3D for collision")
 		assert_true(fn_body.find("CollisionShape3D") != -1,
 			"Rock spire has CollisionShape3D")
+
+
+func test_weather_manager_connects_day_changed() -> void:
+	## Bug: WeatherManager only reset _rolled_today during the Night period.
+	## If the player slept from Evening/Dusk (skipping Night), _rolled_today
+	## stayed true and the weather never rolled at the next dawn.
+	var file: FileAccess = FileAccess.open("res://scripts/world/weather_manager.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open weather_manager.gd")
+		return
+	var source: String = file.get_as_text()
+
+	# Must connect to day_changed signal
+	assert_true(source.find("day_changed.connect") != -1,
+		"WeatherManager connects to day_changed signal")
+
+	# Must have _on_day_changed handler that resets _rolled_today
+	var fn_start: int = source.find("func _on_day_changed(")
+	assert_true(fn_start != -1, "WeatherManager has _on_day_changed handler")
+	if fn_start != -1:
+		var fn_end: int = source.find("\nfunc ", fn_start + 1)
+		if fn_end == -1:
+			fn_end = source.length()
+		var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+		assert_true(fn_body.find("_rolled_today = false") != -1,
+			"_on_day_changed resets _rolled_today so weather rolls at next dawn")

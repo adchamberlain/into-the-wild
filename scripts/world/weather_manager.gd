@@ -72,6 +72,8 @@ func _ready() -> void:
 		if time_manager:
 			if not time_manager.period_changed.is_connected(_on_period_changed):
 				time_manager.period_changed.connect(_on_period_changed)
+			if time_manager.has_signal("day_changed") and not time_manager.day_changed.is_connected(_on_day_changed):
+				time_manager.day_changed.connect(_on_day_changed)
 
 	if player_path:
 		player = get_node_or_null(player_path)
@@ -176,6 +178,13 @@ func _update_storm_fire_effects(delta: float) -> void:
 					fire.extinguish()
 					print("[WeatherManager] Fire extinguished by storm!")
 				fire_storm_timers.erase(fire)
+
+
+func _on_day_changed(_day: int) -> void:
+	# Reset daily roll flag when a new day starts, so weather can roll at dawn.
+	# This handles sleeping from Evening/Dusk which skips the Night period
+	# where _rolled_today was previously the only reset point.
+	_rolled_today = false
 
 
 func _on_period_changed(period: String) -> void:
