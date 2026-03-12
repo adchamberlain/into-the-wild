@@ -40,6 +40,10 @@ var desert_hunger_multiplier: float = 1.0  # 1.5x when in desert
 # Reference to player for checking sprint state
 var player: CharacterBody3D
 
+# Day length scaling: hunger depletes per game-day, not per real-second
+const BASE_DAY_LENGTH_MINUTES: float = 20.0  # Rate was tuned for 20-min days
+var day_length_scale: float = 1.0  # Set from TimeManager in _ready
+
 
 func _ready() -> void:
 	health = max_health
@@ -49,6 +53,9 @@ func _ready() -> void:
 	var parent: Node = get_parent()
 	if parent is CharacterBody3D:
 		player = parent
+
+	# Scale hunger rate to day length so shorter days deplete faster
+	call_deferred("_sync_day_length_scale")
 
 
 ## Get effective max health including bonuses.
@@ -61,11 +68,20 @@ func _process(delta: float) -> void:
 	_update_health(delta)
 
 
+func _sync_day_length_scale() -> void:
+	var time_manager: Node = get_node_or_null("/root/Main/TimeManager")
+	if time_manager and "day_length_minutes" in time_manager:
+		day_length_scale = BASE_DAY_LENGTH_MINUTES / time_manager.day_length_minutes
+
+
 func _update_hunger(delta: float) -> void:
 	if not hunger_depletion_enabled:
 		return
 
 	var depletion: float = hunger_depletion_rate
+
+	# Scale by day length so hunger depletes per game-day, not per real-second
+	depletion *= day_length_scale
 
 	# Apply weather multiplier (e.g., heat wave)
 	depletion *= hunger_multiplier
@@ -93,11 +109,11 @@ func _update_health(delta: float) -> void:
 	var old_health: float = health
 
 	if hunger <= 0.0 and health_drain_enabled:
-		# Starving: drain health (only if enabled)
-		health = max(0.0, health - health_drain_rate * delta)
+		# Starving: drain health (only if enabled), scaled to day length
+		health = max(0.0, health - health_drain_rate * day_length_scale * delta)
 	elif hunger >= max_hunger * 0.98:
 		# Nearly full: regenerate health (threshold avoids frame-order race with hunger drain)
-		health = min(get_max_health(), health + health_regen_rate * delta)
+		health = min(get_max_health(), health + health_regen_rate * day_length_scale * delta)
 
 	if health != old_health:
 		health_changed.emit(health, get_max_health())
