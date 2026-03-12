@@ -1455,7 +1455,7 @@ func _spawn_rock_spire() -> void:
 	var spire_z: float = rock_spire_position.y
 	var spire_y: float = get_height_at(spire_x, spire_z)
 
-	var spire_root: Node3D = Node3D.new()
+	var spire_root: StaticBody3D = StaticBody3D.new()
 	spire_root.name = "RockSpire"
 	spire_root.position = Vector3(spire_x, spire_y, spire_z)
 
@@ -1507,6 +1507,14 @@ func _spawn_rock_spire() -> void:
 	cap.position = Vector3(0.1, 9.6, -0.1)
 	cap.rotation_degrees = Vector3(5.0, 15.0, -8.0)  # Slight tilt for character
 	spire_root.add_child(cap)
+
+	# Collision shape covering the full spire height
+	var collision: CollisionShape3D = CollisionShape3D.new()
+	var col_shape: BoxShape3D = BoxShape3D.new()
+	col_shape.size = Vector3(3.0, 10.0, 3.0)
+	collision.shape = col_shape
+	collision.position = Vector3(0.0, 5.0, 0.0)
+	spire_root.add_child(collision)
 
 	add_child(spire_root)
 	rock_spire_spawned = true

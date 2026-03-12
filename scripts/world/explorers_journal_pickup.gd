@@ -177,6 +177,11 @@ func interact(player: Node) -> void:
 
 	is_collected = true
 
+	# Mark as collected in ChunkManager so it won't respawn
+	var chunk_manager: Node = _find_chunk_manager()
+	if chunk_manager:
+		chunk_manager.sinkhole_book_collected = true
+
 	# Add to player inventory
 	if inventory:
 		inventory.add_item("explorers_journal", 1)
@@ -211,6 +216,13 @@ func _find_hud() -> Node:
 	var root: Node = get_tree().root
 	if root.has_node("Main/HUD"):
 		return root.get_node("Main/HUD")
+	return null
+
+
+func _find_chunk_manager() -> Node:
+	var root: Node = get_tree().root
+	if root.has_node("Main/ChunkManager"):
+		return root.get_node("Main/ChunkManager")
 	return null
 
 
