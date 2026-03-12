@@ -1155,7 +1155,7 @@ func _apply_journal_rewards() -> void:
 	# Reward 1: Stat boost — +25 max health and 20% slower hunger
 	if stats:
 		stats.max_health_bonus = 25
-		stats.hunger_depletion_rate = 0.04  # -20% from 0.05
+		stats.hunger_depletion_rate = 0.133  # -20% from 0.167
 		stats.health = stats.get_max_health()  # Heal to new max
 	get_tree().call_group("hud", "show_notification", "Ancient survival wisdom flows through you...", Color(0.6, 1, 0.6, 1))
 
