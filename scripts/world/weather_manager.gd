@@ -210,68 +210,16 @@ func _on_period_changed(period: String) -> void:
 
 
 func _daily_weather_roll() -> void:
-	# If we have active weather, check for persistence
-	if current_weather != Weather.CLEAR:
-		if randf() < weather_persistence_chance:
-			# Weather persists - extend duration
-			var hours: float = randf_range(min_weather_duration_hours, max_weather_duration_hours)
-			if time_manager and "day_length_minutes" in time_manager:
-				var seconds_per_hour: float = (time_manager.day_length_minutes * 60.0) / 24.0
-				weather_duration_remaining = hours * seconds_per_hour
-			else:
-				weather_duration_remaining = hours * 50.0
-			print("[WeatherManager] Weather persists: %s for another %.1f hours" % [get_weather_name(), hours])
-			return
-		else:
-			# Weather clears
-			_set_weather(Weather.CLEAR)
-			print("[WeatherManager] Weather cleared after multi-day pattern")
-			return
+	# Apply the forecasted weather for today
+	_set_weather(next_weather)
+	if next_weather != Weather.CLEAR:
+		print("[WeatherManager] Today's weather: %s (from forecast)" % get_weather_name())
+	else:
+		print("[WeatherManager] Weather check: staying clear")
 
-	# Roll for new weather (from clear)
-	_roll_for_new_weather()
-
-
-func _roll_for_new_weather() -> void:
-	var roll: float = randf()
-	var cumulative: float = 0.0
-
-	# Get current season hint from time_manager if available
-	var day: int = 1
-	if time_manager and time_manager.has_method("get_current_day"):
-		day = time_manager.get_current_day()
-
-	# Rain - most common bad weather
-	cumulative += rain_chance
-	if roll < cumulative:
-		_set_weather(Weather.RAIN)
-		_generate_forecast()
-		return
-
-	# Fog - more common in early game (spring-like)
-	cumulative += fog_chance
-	if roll < cumulative:
-		_set_weather(Weather.FOG)
-		_generate_forecast()
-		return
-
-	# Heat wave - rare
-	cumulative += heat_wave_chance
-	if roll < cumulative:
-		_set_weather(Weather.HEAT_WAVE)
-		_generate_forecast()
-		return
-
-	# Cold snap - rare
-	cumulative += cold_snap_chance
-	if roll < cumulative:
-		_set_weather(Weather.COLD_SNAP)
-		_generate_forecast()
-		return
-
-	# Otherwise stays clear (most likely outcome ~67% chance)
+	# Generate forecast for tomorrow
 	_generate_forecast()
-	print("[WeatherManager] Weather check: staying clear")
+
 
 
 func _set_weather(weather: Weather) -> void:
@@ -448,7 +396,7 @@ func _generate_forecast() -> void:
 			next_weather = current_weather
 			return
 
-	# Otherwise roll for new weather (same logic as _roll_for_new_weather)
+	# Otherwise roll for new weather
 	cumulative += rain_chance
 	if roll < cumulative:
 		next_weather = Weather.RAIN
