@@ -366,7 +366,7 @@ The game auto-detects your input device and switches button prompts accordingly.
 
 ## Development
 
-See `DEV_LOG.md` for development history and `into-the-wild-game-spec.md` for the full game specification.
+See `DEV_LOG.md` for development history.
 
 ## Credits
 
