@@ -147,18 +147,6 @@ func _start_smelting(ore_type: String) -> void:
 	print("[SmithingStation] Started smelting %s (using %d wood)" % [ore_type, FUEL_REQUIRED])
 
 
-func _try_auto_smelt() -> bool:
-	## Try to automatically start smelting the next ore if player has materials.
-	if not player_inventory:
-		return false
-	if not player_inventory.has_item("wood", FUEL_REQUIRED):
-		return false
-	for ore_type: String in SMELT_RECIPES:
-		if player_inventory.has_item(ore_type):
-			_start_smelting(ore_type)
-			return true
-	return false
-
 
 func _complete_smelting() -> void:
 	var output_type: String = SMELT_RECIPES.get(current_ore, "metal_ingot")
@@ -180,10 +168,6 @@ func _complete_smelting() -> void:
 	var hud: Node = get_tree().get_first_node_in_group("hud")
 	if hud and hud.has_method("show_notification"):
 		hud.show_notification("Smelting complete! %d ingot%s ready." % [pending_output_count, "s" if pending_output_count > 1 else ""], Color(1, 0.85, 0.3, 1))
-
-	# Auto-start next smelt if player has ore and fuel
-	if player_inventory and _try_auto_smelt():
-		return
 
 	interaction_text = "Collect %d Ingot%s" % [pending_output_count, "s" if pending_output_count > 1 else ""]
 	_update_forge_visuals()
