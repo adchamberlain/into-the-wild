@@ -193,6 +193,8 @@ func has_consumable() -> bool:
 func _ready() -> void:
 	# Add to player group for identification
 	add_to_group("player")
+	# Reset static menu flag so controller input isn't blocked on scene reload
+	TouchControls.menu_open = false
 	# Capture mouse for first-person control
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	# Ensure camera is active

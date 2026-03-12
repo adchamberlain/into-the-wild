@@ -728,7 +728,14 @@ func _apply_player_data(data: Dictionary) -> void:
 		if data.has("max_health_bonus"):
 			stats.max_health_bonus = int(data["max_health_bonus"])
 		if data.has("hunger_depletion_rate"):
-			stats.hunger_depletion_rate = float(data["hunger_depletion_rate"])
+			var saved_rate: float = float(data["hunger_depletion_rate"])
+			# Migrate old hunger rates to new values (0.05 → 0.167, 0.04 → 0.133)
+			if saved_rate <= 0.05:
+				if int(data.get("max_health_bonus", 0)) > 0:
+					saved_rate = 0.133  # Journal bonus rate
+				else:
+					saved_rate = 0.167  # Base rate
+			stats.hunger_depletion_rate = saved_rate
 		# Now clamp health to correct max (with bonus)
 		if data.has("health"):
 			stats.health = clampf(float(data["health"]), 0.0, stats.get_max_health())
