@@ -53,7 +53,7 @@ const CONTROLLER_PROMPTS: Dictionary = {
 	"sprint": "L3",
 	"eat": "△",
 	"use_equipped": "R2",
-	"unequip": "□",
+	"unequip": "✕",
 	"open_crafting": "R3",
 	"open_inventory": "Share",
 	"pause": "Menu",
