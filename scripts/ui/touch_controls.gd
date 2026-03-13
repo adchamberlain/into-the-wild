@@ -176,15 +176,7 @@ func _setup_action_buttons() -> void:
 
 	# EAT is now a menu-style button created in _setup_menu_buttons()
 
-	# CROUCH — near core buttons, above ACT
-	crouch_button = _create_action_button(
-		"CROUCH",
-		Vector2(right_x, bottom_y - 420),
-		Color(0.7, 0.7, 0.7),  # Grey
-		"crouch",
-		true
-	)
-	crouch_button.visible = false
+	# CROUCH removed from iOS — adds UI complexity with little gameplay value on touch
 
 
 func _setup_menu_buttons() -> void:
@@ -503,10 +495,10 @@ func _process(_delta: float) -> void:
 				btn.visible = true
 			joystick_bg.visible = true
 			joystick_thumb.visible = true
+			# Restore eat button based on current consumable state
+			if eat_button and player_controller and player_controller.has_method("has_consumable"):
+				eat_button.visible = player_controller.has_consumable()
 
-	if not menu_open and crouch_button and player_controller:
-		if player_controller.has_method("is_near_cliff_edge"):
-			crouch_button.visible = player_controller.is_near_cliff_edge()
 
 
 func _on_item_equipped(item_type: String) -> void:

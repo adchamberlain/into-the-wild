@@ -20,6 +20,11 @@ var background: ColorRect
 var shadow: PanelContainer
 var panel: PanelContainer
 
+# Touch/swipe support for iOS
+var _swipe_start: Vector2 = Vector2.ZERO
+var _swipe_touch_index: int = -1
+const SWIPE_THRESHOLD: float = 80.0  # Minimum swipe distance in pixels
+
 const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 
 
@@ -787,7 +792,9 @@ func _populate_page() -> void:
 	hint_label.add_theme_color_override("font_color", hint_color)
 
 	var input_mgr: Node = get_node_or_null("/root/InputManager")
-	if input_mgr and input_mgr.has_method("is_using_controller") and input_mgr.is_using_controller():
+	if OS.get_name() == "iOS":
+		hint_label.text = "Swipe or tap arrows to turn pages"
+	elif input_mgr and input_mgr.has_method("is_using_controller") and input_mgr.is_using_controller():
 		hint_label.text = "D-Pad: turn pages  |  X: close"
 	else:
 		hint_label.text = "Arrows: turn pages  |  ESC / B: close"
@@ -803,6 +810,40 @@ func _input(event: InputEvent) -> void:
 
 	# Journal consumes ALL input while open — prevents other menus from responding
 	var vp: Viewport = get_viewport()
+
+	# Touch/swipe page turning for iOS
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			_swipe_start = event.position
+			_swipe_touch_index = event.index
+		else:
+			if event.index == _swipe_touch_index and _swipe_start != Vector2.ZERO:
+				var swipe_delta: float = event.position.x - _swipe_start.x
+				if swipe_delta < -SWIPE_THRESHOLD:
+					# Swipe left → next page
+					if _current_page < _total_pages - 1:
+						_current_page += 1
+						_populate_page()
+						SFXManager.play_sfx("select")
+						_update_mobile_nav_visibility()
+				elif swipe_delta > SWIPE_THRESHOLD:
+					# Swipe right → previous page
+					if _current_page > 0:
+						_current_page -= 1
+						_populate_page()
+						SFXManager.play_sfx("select")
+						_update_mobile_nav_visibility()
+			_swipe_start = Vector2.ZERO
+			_swipe_touch_index = -1
+		if vp:
+			vp.set_input_as_handled()
+		return
+
+	if event is InputEventScreenDrag:
+		# Consume drag events to prevent camera movement while journal is open
+		if vp:
+			vp.set_input_as_handled()
+		return
 
 	# Page turning — d-pad left/right, ui_left/ui_right, or keyboard arrow keys
 	var turn_left: bool = event.is_action_pressed("ui_left")
@@ -859,35 +900,111 @@ func _apply_mobile_menu_style() -> void:
 	# Enforce minimum button sizes for touch BEFORE adding close button
 	_enforce_min_button_size(panel, 44)
 
-	# Add close button as CanvasLayer child (NOT panel child, which would
-	# stretch to fill the PanelContainer and intercept all taps)
-	# Remove old close button if it exists (journal rebuilds UI each open)
-	var old_btn: Button = get_node_or_null("MobileCloseButton") as Button
-	if old_btn:
-		old_btn.queue_free()
+	# Remove old mobile buttons if they exist (journal rebuilds UI each open)
+	for btn_name: String in ["MobileCloseButton", "MobilePrevButton", "MobileNextButton"]:
+		var old_btn: Button = get_node_or_null(btn_name) as Button
+		if old_btn:
+			old_btn.queue_free()
+
+	# Close button (top-right)
 	var close_btn: Button = Button.new()
 	close_btn.name = "MobileCloseButton"
-	close_btn.text = "✕"
+	close_btn.text = "X"
 	close_btn.add_theme_font_size_override("font_size", 32)
 	close_btn.custom_minimum_size = Vector2(48, 48)
 	close_btn.pressed.connect(_close_journal)
 	add_child(close_btn)
-	call_deferred("_position_close_button")
+
+	# Previous page arrow button (left side)
+	var prev_btn: Button = Button.new()
+	prev_btn.name = "MobilePrevButton"
+	prev_btn.text = "<"
+	prev_btn.add_theme_font_size_override("font_size", 36)
+	prev_btn.custom_minimum_size = Vector2(56, 56)
+	prev_btn.pressed.connect(_mobile_prev_page)
+	add_child(prev_btn)
+
+	# Next page arrow button (right side)
+	var next_btn: Button = Button.new()
+	next_btn.name = "MobileNextButton"
+	next_btn.text = ">"
+	next_btn.add_theme_font_size_override("font_size", 36)
+	next_btn.custom_minimum_size = Vector2(56, 56)
+	next_btn.pressed.connect(_mobile_next_page)
+	add_child(next_btn)
+
+	call_deferred("_position_mobile_buttons")
 
 
-func _position_close_button() -> void:
-	var close_btn: Button = get_node_or_null("MobileCloseButton") as Button
-	if not close_btn or not is_instance_valid(panel):
+func _position_mobile_buttons() -> void:
+	if not is_instance_valid(panel):
 		return
 	var rect: Rect2 = panel.get_global_rect()
-	close_btn.anchor_left = 0.0
-	close_btn.anchor_right = 0.0
-	close_btn.anchor_top = 0.0
-	close_btn.anchor_bottom = 0.0
-	close_btn.offset_left = rect.position.x + rect.size.x - 56
-	close_btn.offset_top = rect.position.y + 8
-	close_btn.offset_right = rect.position.x + rect.size.x - 8
-	close_btn.offset_bottom = rect.position.y + 56
+
+	# Close button — top-right corner of the book
+	var close_btn: Button = get_node_or_null("MobileCloseButton") as Button
+	if close_btn:
+		close_btn.anchor_left = 0.0
+		close_btn.anchor_right = 0.0
+		close_btn.anchor_top = 0.0
+		close_btn.anchor_bottom = 0.0
+		close_btn.offset_left = rect.position.x + rect.size.x - 56
+		close_btn.offset_top = rect.position.y + 8
+		close_btn.offset_right = rect.position.x + rect.size.x - 8
+		close_btn.offset_bottom = rect.position.y + 56
+
+	# Prev arrow — vertically centered on left edge of book
+	var prev_btn: Button = get_node_or_null("MobilePrevButton") as Button
+	if prev_btn:
+		var cy: float = rect.position.y + rect.size.y / 2.0
+		prev_btn.anchor_left = 0.0
+		prev_btn.anchor_right = 0.0
+		prev_btn.anchor_top = 0.0
+		prev_btn.anchor_bottom = 0.0
+		prev_btn.offset_left = rect.position.x - 64
+		prev_btn.offset_top = cy - 28
+		prev_btn.offset_right = rect.position.x - 8
+		prev_btn.offset_bottom = cy + 28
+		prev_btn.visible = _current_page > 0
+
+	# Next arrow — vertically centered on right edge of book
+	var next_btn: Button = get_node_or_null("MobileNextButton") as Button
+	if next_btn:
+		var cy: float = rect.position.y + rect.size.y / 2.0
+		next_btn.anchor_left = 0.0
+		next_btn.anchor_right = 0.0
+		next_btn.anchor_top = 0.0
+		next_btn.anchor_bottom = 0.0
+		next_btn.offset_left = rect.position.x + rect.size.x + 8
+		next_btn.offset_top = cy - 28
+		next_btn.offset_right = rect.position.x + rect.size.x + 64
+		next_btn.offset_bottom = cy + 28
+		next_btn.visible = _current_page < _total_pages - 1
+
+
+func _mobile_prev_page() -> void:
+	if _current_page > 0:
+		_current_page -= 1
+		_populate_page()
+		SFXManager.play_sfx("select")
+		_update_mobile_nav_visibility()
+
+
+func _mobile_next_page() -> void:
+	if _current_page < _total_pages - 1:
+		_current_page += 1
+		_populate_page()
+		SFXManager.play_sfx("select")
+		_update_mobile_nav_visibility()
+
+
+func _update_mobile_nav_visibility() -> void:
+	var prev_btn: Button = get_node_or_null("MobilePrevButton") as Button
+	if prev_btn:
+		prev_btn.visible = _current_page > 0
+	var next_btn: Button = get_node_or_null("MobileNextButton") as Button
+	if next_btn:
+		next_btn.visible = _current_page < _total_pages - 1
 
 
 static func _enforce_min_button_size(node: Node, min_size: int) -> void:
@@ -906,10 +1023,11 @@ func _close_journal() -> void:
 	SFXManager.play_sfx("menu_close")
 	_is_open = false
 
-	# Hide mobile close button
-	var close_btn: Button = get_node_or_null("MobileCloseButton") as Button
-	if close_btn:
-		close_btn.queue_free()
+	# Hide mobile buttons
+	for btn_name: String in ["MobileCloseButton", "MobilePrevButton", "MobileNextButton"]:
+		var mobile_btn: Button = get_node_or_null(btn_name) as Button
+		if mobile_btn:
+			mobile_btn.queue_free()
 
 	# Free the built UI nodes so re-opening doesn't stack duplicates
 	if is_instance_valid(background):
