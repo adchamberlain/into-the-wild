@@ -232,6 +232,8 @@ func load_game_slot(slot: int) -> bool:
 		if game_state:
 			game_state.set_pending_world_seed(saved_seed)
 			game_state.set_pending_load_slot(slot)
+			# Unpause before reload — pause menu left tree paused
+			get_tree().paused = false
 			# Reload the main scene - terrain will regenerate with correct seed
 			get_tree().reload_current_scene()
 			return true

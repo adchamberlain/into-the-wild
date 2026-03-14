@@ -323,6 +323,10 @@ func _ready() -> void:
 
 	# Instantiate touch controls on iOS
 	if OS.get_name() == "iOS":
+		# Remove any existing TouchControls from root (survives reload_current_scene)
+		for child: Node in get_tree().root.get_children():
+			if child is CanvasLayer and child.name.begins_with("TouchControls"):
+				child.queue_free()
 		var touch_scene: PackedScene = preload("res://scenes/ui/touch_controls.tscn")
 		var touch_controls: CanvasLayer = touch_scene.instantiate()
 		get_tree().root.add_child.call_deferred(touch_controls)
