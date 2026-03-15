@@ -182,12 +182,6 @@ func _setup_action_buttons() -> void:
 func _setup_menu_buttons() -> void:
 	var screen_size: Vector2 = get_viewport().get_visible_rect().size
 	var center_x: float = screen_size.x / 2.0
-	# Menu buttons with text labels (emoji don't render in Godot iOS with monospace fonts)
-	var menu_items: Array = [
-		{"icon": "BAG", "action": "open_inventory", "color": Color(0.45, 0.5, 0.55, 0.85)},
-		{"icon": "CRAFT", "action": "open_crafting", "color": Color(0.45, 0.5, 0.55, 0.85)},
-		{"icon": "MENU", "action": "pause", "color": Color(0.45, 0.5, 0.55, 0.85)},
-	]
 
 	# EAT button: left side, right of stats panel + air bubbles (moved right to avoid bubble overlap)
 	eat_button = _create_menu_button(
@@ -201,15 +195,24 @@ func _setup_menu_buttons() -> void:
 	if eat_lbl:
 		eat_lbl.add_theme_color_override("font_color", Color(1, 0.7, 0.2, 0.95))
 
+	# BAG, CRAFT, MENU buttons — call toggle functions directly instead of routing
+	# through Input.parse_input_event(), which can fail after scene reload on iOS
+	var menu_items: Array = [
+		{"icon": "BAG", "action": "open_inventory", "color": Color(0.45, 0.5, 0.55, 0.85)},
+		{"icon": "CRAFT", "action": "open_crafting", "color": Color(0.45, 0.5, 0.55, 0.85)},
+		{"icon": "MENU", "action": "pause", "color": Color(0.45, 0.5, 0.55, 0.85)},
+	]
+
 	# Position clearly right of time panel with good spacing (time panel is ±130 from center)
 	var start_x: float = center_x + 200
 	for i: int in range(menu_items.size()):
-		var _btn: TouchScreenButton = _create_menu_button(
+		var btn: TouchScreenButton = _create_menu_button_no_action(
 			menu_items[i]["icon"],
 			Vector2(start_x + i * 96, 56 + safe_margin["top"]),
-			menu_items[i]["action"],
 			menu_items[i]["color"]
 		)
+		var action: String = menu_items[i]["action"]
+		btn.pressed.connect(_on_menu_button_pressed.bind(action))
 
 
 func _create_action_button(label_text: String, pos: Vector2, color: Color, action: String, _dashed: bool) -> TouchScreenButton:
@@ -354,6 +357,97 @@ func _create_menu_button(label_text: String, pos: Vector2, action: String, bg_co
 	btn.add_child(lbl)
 
 	return btn
+
+
+## Create a menu-style button without Input.parse_input_event action binding.
+## Used for BAG/CRAFT/MENU buttons which call toggle functions directly.
+func _create_menu_button_no_action(label_text: String, pos: Vector2, bg_color: Color = Color(0.1, 0.1, 0.12, 0.85)) -> TouchScreenButton:
+	var btn: TouchScreenButton = TouchScreenButton.new()
+	var btn_w: int = 84
+	var btn_h: int = 88
+	btn.position = pos - Vector2(btn_w / 2.0, btn_h / 2.0)
+	btn.passby_press = false
+
+	# Create rounded rectangle menu button texture with border
+	var img: Image = Image.create(btn_w, btn_h, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var corner_r: int = 10
+	var border_w: int = 2
+	var border_color: Color = Color(0.3, 0.3, 0.35, 0.9)
+	for x: int in range(btn_w):
+		for y: int in range(btn_h):
+			var inside: bool = false
+			if x >= corner_r and x < btn_w - corner_r:
+				inside = true
+			elif y >= corner_r and y < btn_h - corner_r:
+				inside = true
+			else:
+				var cx: int = corner_r if x < corner_r else btn_w - corner_r - 1
+				var cy: int = corner_r if y < corner_r else btn_h - corner_r - 1
+				if Vector2(x, y).distance_to(Vector2(cx, cy)) <= corner_r:
+					inside = true
+			if inside:
+				var on_border: bool = (x < border_w or x >= btn_w - border_w
+					or y < border_w or y >= btn_h - border_w)
+				if not on_border:
+					var inner_r: int = corner_r - border_w
+					if inner_r > 0:
+						var in_inner: bool = false
+						if x >= corner_r and x < btn_w - corner_r:
+							in_inner = true
+						elif y >= corner_r and y < btn_h - corner_r:
+							in_inner = true
+						else:
+							var icx: int = corner_r if x < corner_r else btn_w - corner_r - 1
+							var icy: int = corner_r if y < corner_r else btn_h - corner_r - 1
+							if Vector2(x, y).distance_to(Vector2(icx, icy)) <= inner_r:
+								in_inner = true
+						if in_inner:
+							img.set_pixel(x, y, bg_color)
+						else:
+							img.set_pixel(x, y, border_color)
+					else:
+						img.set_pixel(x, y, bg_color)
+				else:
+					img.set_pixel(x, y, border_color)
+	var tex: ImageTexture = ImageTexture.create_from_image(img)
+	btn.texture_normal = tex
+
+	add_child(btn)
+	all_buttons.append(btn)
+
+	var lbl: Label = Label.new()
+	lbl.text = label_text
+	lbl.add_theme_font_size_override("font_size", 24)
+	lbl.add_theme_color_override("font_color", Color(0.95, 0.95, 0.95, 0.95))
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lbl.size = Vector2(btn_w, btn_h)
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	btn.add_child(lbl)
+
+	return btn
+
+
+## Directly toggle a menu by finding its node — bypasses Input.parse_input_event
+## which can silently fail after reload_current_scene on iOS.
+func _on_menu_button_pressed(action: String) -> void:
+	match action:
+		"open_inventory":
+			for node: Node in get_tree().get_nodes_in_group("equipment_menu"):
+				if node.has_method("toggle_menu"):
+					node.toggle_menu()
+					return
+		"open_crafting":
+			for node: Node in get_tree().get_nodes_in_group("crafting_ui"):
+				if node.has_method("toggle_crafting_menu"):
+					node.toggle_crafting_menu(false)
+					return
+		"pause":
+			for node: Node in get_tree().get_nodes_in_group("pause_menu"):
+				if node.has_method("toggle_pause"):
+					node.toggle_pause()
+					return
 
 
 ## Static flag — menus set this to prevent touch controls from consuming input

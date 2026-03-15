@@ -49,6 +49,7 @@ var delete_buttons: Array[Button] = []
 func _ready() -> void:
 	# This node must process even when the tree is paused
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	add_to_group("pause_menu")
 
 	# Resolve references
 	_resolve_references()
