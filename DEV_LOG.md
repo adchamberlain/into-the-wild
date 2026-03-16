@@ -7690,13 +7690,41 @@ Prepared iOS App Store update with all bug fixes since v1.0.0 submission. Added 
 
 ---
 
+## Session 47 - Website & Play Guide Updates for App Store Launch (2026-03-16)
+
+iPad app accepted on the App Store. Updated website and documentation to promote the iPad version and fixed several play guide inaccuracies.
+
+### Changes
+
+- **Website**: Added iPad App Store download card to the download grid alongside macOS and Windows, updated meta description to mention iPad, added iPad help text
+- **Website CSS**: Widened download section from 600px to 750px, changed grid from 2 to 3 columns
+- **README**: Added iPad App Store link to intro paragraph and split Requirements into Desktop/iPad subsections
+- **Play Guide moved**: Moved `PLAY_GUIDE.md` from `dist/` (gitignored) to repo root so it's accessible on GitHub; updated website links from release download URL to `blob/main/` URL
+- **Play Guide fixes**:
+  - Added missing Crouch (C key) to keyboard controls
+  - Fixed smithing station description to mention manual ore placement
+  - Fixed ore tip: iron ore spawns in rocky/hills/mountain regions, not caves
+  - Fixed machete description: strips birch bark for maps, not "clear vegetation"
+  - Removed misleading "dried food doesn't spoil" tip (no spoilage mechanic exists)
+  - Added cryptic desert sinkhole tip hinting at the Explorer's Journal
+
+### Files Modified
+| File | Changes |
+|------|---------|
+| `website/index.html` | iPad download card, updated play guide URL, meta description |
+| `website/style.css` | 3-column download grid, wider download section |
+| `README.md` | iPad App Store link, split Requirements section |
+| `PLAY_GUIDE.md` | Moved to repo root; 6 content fixes |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Check v1.1.0 App Store review status — address any rejection feedback
-2. Continue iPad play-testing with controller — verify all menus navigate correctly
-3. Continue play-testing end-of-game trail sequence with new clues and compass
-4. Review and fix any bugs filed via GitHub Issues
+1. Continue iPad play-testing with controller — verify all menus navigate correctly
+2. Continue play-testing end-of-game trail sequence with new clues and compass
+3. Review and fix any bugs filed via GitHub Issues
+4. Redeploy website on Cloudflare with iPad download card
 
 ### Known Issues
 - None
