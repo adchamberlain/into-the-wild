@@ -312,7 +312,7 @@ Choose your 5 items wisely. A metal axe or grappling hook can give you a huge he
 - **Place multiple storage boxes** — Keep resources organized near your crafting bench.
 - **Watch the weather** — Don't venture far when storms are coming.
 - **Diamond arrows are recoverable** — Worth the investment for hunting.
-- **Dried food doesn't spoil** — Build a drying rack early for reliable food stores.
+- **Dry food for bonus hunger** — Drying rack preserves fish, berries, mushrooms, and herbs into compact, higher-value food.
 - **The fishing pond is always near camp** — A reliable early food source.
 
 ---
