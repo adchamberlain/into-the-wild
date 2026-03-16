@@ -140,7 +140,7 @@ Crafting is divided into **hand crafting** (available anywhere) and **bench craf
 | Snare Trap Kit | 2 Rope, 4 Branch | Passive hunting |
 | Garden Plot Kit | 4 Wood, 2 Herb | Grow herbs |
 | Compass | 2 Rare Ore, 1 Metal Ingot, 1 Crystal | Navigation + beacon |
-| Machete | 2 Metal Ingot, 1 Branch | Clear vegetation |
+| Machete | 2 Metal Ingot, 1 Branch | Strip birch bark for maps |
 
 ### Bench Recipes (Level 3)
 
