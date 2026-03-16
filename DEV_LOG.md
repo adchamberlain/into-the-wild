@@ -7679,6 +7679,7 @@ Prepared iOS App Store update with all bug fixes since v1.0.0 submission. Added 
 - **Version bump**: iOS `short_version` and `version` bumped from `1.0.0` to `1.1.0` in `export_presets.cfg`
 - **Godot UID files**: Added `scripts/ui/hint_manager.gd.uid` and `scripts/ui/touch_controls.gd.uid` — Godot 4.5 resource tracking files
 - **iOS export**: Generated fresh Xcode project and archive via Godot CLI export
+- **App Store submission**: v1.1.0 submitted for Apple App Store review on 2026-03-16
 
 ### Files Modified
 | File | Changes |
@@ -7692,7 +7693,7 @@ Prepared iOS App Store update with all bug fixes since v1.0.0 submission. Added 
 ## Next Session
 
 ### Planned Tasks
-1. Upload v1.1.0 build to App Store Connect and submit for review
+1. Check v1.1.0 App Store review status — address any rejection feedback
 2. Continue iPad play-testing with controller — verify all menus navigate correctly
 3. Continue play-testing end-of-game trail sequence with new clues and compass
 4. Review and fix any bugs filed via GitHub Issues
