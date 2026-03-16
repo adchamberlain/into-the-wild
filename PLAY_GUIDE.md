@@ -308,7 +308,7 @@ Choose your 5 items wisely. A metal axe or grappling hook can give you a huge he
 
 - **Cook everything** — Cooked food restores significantly more hunger than raw.
 - **Stockpile rope** — You'll need it for almost every mid-to-late game recipe.
-- **Explore caves early for ore** — Metal ingots unlock the best tools and the grappling hook.
+- **Head to the mountains for iron ore** — Smelt it into metal ingots to unlock the best tools and the grappling hook. Caves have crystal and rare ore for late-game gear.
 - **Place multiple storage boxes** — Keep resources organized near your crafting bench.
 - **Watch the weather** — Don't venture far when storms are coming.
 - **Diamond arrows are recoverable** — Worth the investment for hunting.
