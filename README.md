@@ -2,7 +2,7 @@
 
 > **Website:** [intothewild.dev](https://intothewild.dev/) | **Found a bug or have feedback?** [Report it here](https://github.com/adchamberlain/into-the-wild/issues/new/choose)
 
-A solo camping adventure game built in Godot 4.5. Explore an infinite procedural wilderness, gather resources, craft tools, build your campsite, and uncover hidden secrets deep in the desert.
+A solo camping adventure game built in Godot 4.5. Explore an infinite procedural wilderness, gather resources, craft tools, build your campsite, and uncover hidden secrets deep in the desert. Available for [macOS and Windows](https://github.com/adchamberlain/into-the-wild/releases/latest) and free on the [iPad App Store](https://apps.apple.com/us/app/into-the-wild-adventure-game/id6760426669).
 
 **Visual Style:** Blocky, retro aesthetic reminiscent of early 3D games like Minecraft. All visuals are procedurally generated using layered BoxMesh primitives — no imported 3D models.
 
@@ -290,10 +290,15 @@ Accessible via the config menu (Tab key or through Pause menu):
 
 ## Requirements
 
+### Desktop (source build)
 - **Godot 4.5+** (free and open source game engine)
 - **Operating System:** Windows 10/11, macOS 10.15+, or Linux
 - **Graphics:** OpenGL 3.3 / Vulkan compatible GPU
 - **Controller (optional):** PlayStation DualSense/DualShock or Xbox controller
+
+### iPad
+- **iPadOS 17+**
+- Available free on the [App Store](https://apps.apple.com/us/app/into-the-wild-adventure-game/id6760426669)
 
 ## Installation
 
