@@ -314,6 +314,7 @@ Choose your 5 items wisely. A metal axe or grappling hook can give you a huge he
 - **Diamond arrows are recoverable** — Worth the investment for hunting.
 - **Dry food for bonus hunger** — Drying rack preserves fish, berries, mushrooms, and herbs into compact, higher-value food.
 - **The fishing pond is always near camp** — A reliable early food source.
+- **The desert hides more than sand** — Somewhere in the dunes lies a deep well. What's at the bottom may be your only way home.
 
 ---
 
