@@ -409,7 +409,7 @@ func _apply_mobile_menu_style() -> void:
 	# Hide keyboard hint at bottom on mobile
 	var hint: Label = panel.get_node_or_null("VBoxContainer/HintLabel")
 	if hint:
-		hint.text = "Tap to equip"
+		hint.text = "Tap to equip  |  ✕ to close"
 		hint.add_theme_font_size_override("font_size", 20)
 
 	# Add close button as a CanvasLayer child (NOT inside PanelContainer,

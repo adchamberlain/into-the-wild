@@ -418,6 +418,10 @@ func _update_button_prompts() -> void:
 	if not close_button:
 		return
 
+	if input_manager and input_manager.is_using_touch():
+		close_button.text = "Close"
+		return
+
 	var close_prompt: String = "E"
 	if input_manager and input_manager.has_method("get_prompt"):
 		close_prompt = input_manager.get_prompt("interact")
