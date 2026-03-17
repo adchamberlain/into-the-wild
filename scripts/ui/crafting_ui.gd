@@ -406,7 +406,9 @@ func _update_hint_label() -> void:
 	if not hint_label:
 		return
 	var input_mgr: Node = get_node_or_null("/root/InputManager")
-	if input_mgr and input_mgr.is_using_controller():
+	if input_mgr and input_mgr.is_using_touch():
+		hint_label.text = "Tap ✕ to close"
+	elif input_mgr and input_mgr.is_using_controller():
 		hint_label.text = "Touchpad or ○ to close"
 	else:
 		hint_label.text = "Press X to close"

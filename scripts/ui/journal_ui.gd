@@ -793,7 +793,7 @@ func _populate_page() -> void:
 
 	var input_mgr: Node = get_node_or_null("/root/InputManager")
 	if OS.get_name() == "iOS":
-		hint_label.text = "Swipe or tap arrows to turn pages"
+		hint_label.text = "Swipe or tap arrows to turn pages  |  ✕ to close"
 	elif input_mgr and input_mgr.has_method("is_using_controller") and input_mgr.is_using_controller():
 		hint_label.text = "D-Pad: turn pages  |  X: close"
 	else:
@@ -909,7 +909,7 @@ func _apply_mobile_menu_style() -> void:
 	# Close button (top-right)
 	var close_btn: Button = Button.new()
 	close_btn.name = "MobileCloseButton"
-	close_btn.text = "X"
+	close_btn.text = "✕"
 	close_btn.add_theme_font_size_override("font_size", 32)
 	close_btn.custom_minimum_size = Vector2(48, 48)
 	close_btn.pressed.connect(_close_journal)
