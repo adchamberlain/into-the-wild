@@ -438,7 +438,7 @@ func _on_row_tapped(event: InputEvent, index: int) -> void:
 
 func _update_button_prompts() -> void:
 	if OS.get_name() == "iOS":
-		hint_label.text = "Tap item to eat"
+		hint_label.text = "Tap item to eat  |  ✕ to close"
 		return
 
 	var consume_prompt: String = "Enter"
