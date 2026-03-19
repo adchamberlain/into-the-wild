@@ -166,7 +166,11 @@ func close() -> void:
 	SFXManager.play_sfx("menu_close")
 	visible = false
 	is_open = false
-	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	var close_btn: Button = get_node_or_null("MobileCloseButton") as Button
+	if close_btn:
+		close_btn.queue_free()
+	if OS.get_name() != "iOS":
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 	if _player_ref and is_instance_valid(_player_ref) and _player_ref.has_method("set_resting"):
 		_player_ref.set_resting(false)
@@ -309,10 +313,31 @@ func _build_ui() -> void:
 	_confirm_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_confirm_label)
 
+	# Make confirm label tappable on iOS
+	if OS.get_name() == "iOS":
+		_confirm_label.mouse_filter = Control.MOUSE_FILTER_STOP
+		_confirm_label.gui_input.connect(func(event: InputEvent) -> void:
+			if event is InputEventMouseButton and event.pressed:
+				_on_confirm = true
+				_refresh_list()
+				_show_confirmation()
+		)
+
 	# Update dynamic elements
 	_update_counter()
 	_update_confirm_style()
 	_update_hint_label()
+
+	# Mobile close button (iOS)
+	if OS.get_name() == "iOS":
+		var close_btn: Button = Button.new()
+		close_btn.name = "MobileCloseButton"
+		close_btn.text = "\u2715"
+		close_btn.add_theme_font_size_override("font_size", 32)
+		close_btn.custom_minimum_size = Vector2(48, 48)
+		close_btn.pressed.connect(close)
+		add_child(close_btn)
+		call_deferred("_position_mobile_close_button")
 
 
 ## Rebuild item rows in a compact, centered multi-column grid.
@@ -410,6 +435,17 @@ func _rebuild_item_rows() -> void:
 		count_label.add_theme_font_size_override("font_size", 28)
 		count_label.add_theme_color_override("font_color", Color(0.6, 1.0, 0.6, 1))
 		hbox.add_child(count_label)
+
+		# Make rows tappable on iOS
+		if OS.get_name() == "iOS":
+			row_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+			var captured_idx: int = i
+			row_panel.gui_input.connect(func(event: InputEvent) -> void:
+				if event is InputEventMouseButton and event.pressed:
+					_cursor_index = captured_idx
+					_on_confirm = false
+					_toggle_selection()
+			)
 
 		columns[col_idx].add_child(row_panel)
 		_row_panels.append(row_panel)
@@ -608,6 +644,12 @@ func _show_confirmation() -> void:
 	_cancel_btn.add_theme_font_override("font", HUD_FONT)
 	_cancel_btn.add_theme_font_size_override("font_size", 32)
 	_cancel_btn.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if OS.get_name() == "iOS":
+		_cancel_btn.mouse_filter = Control.MOUSE_FILTER_STOP
+		_cancel_btn.gui_input.connect(func(event: InputEvent) -> void:
+			if event is InputEventMouseButton and event.pressed:
+				_dismiss_confirmation()
+		)
 	buttons_hbox.add_child(_cancel_btn)
 
 	# Depart button
@@ -617,6 +659,12 @@ func _show_confirmation() -> void:
 	_depart_btn.add_theme_font_override("font", HUD_FONT)
 	_depart_btn.add_theme_font_size_override("font_size", 32)
 	_depart_btn.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if OS.get_name() == "iOS":
+		_depart_btn.mouse_filter = Control.MOUSE_FILTER_STOP
+		_depart_btn.gui_input.connect(func(event: InputEvent) -> void:
+			if event is InputEventMouseButton and event.pressed:
+				_actually_depart()
+		)
 	buttons_hbox.add_child(_depart_btn)
 
 	_update_confirmation_display()
@@ -707,9 +755,21 @@ func _get_display_name(item_type: String) -> String:
 	return item_type.replace("_", " ").capitalize()
 
 
+func _position_mobile_close_button() -> void:
+	var btn: Button = get_node_or_null("MobileCloseButton") as Button
+	if not btn or not is_instance_valid(_main_panel):
+		return
+	var rect: Rect2 = _main_panel.get_global_rect()
+	btn.position = Vector2(rect.position.x + rect.size.x - 56, rect.position.y + 8)
+
+
 ## Update hint label text based on input device.
 func _update_hint_label() -> void:
 	if not is_instance_valid(_hint_label):
+		return
+
+	if OS.get_name() == "iOS":
+		_hint_label.text = "Tap items to select  |  \u2715 to close"
 		return
 
 	var nav_prompt: String = "Arrows"

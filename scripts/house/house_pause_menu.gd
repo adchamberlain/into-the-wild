@@ -88,15 +88,16 @@ func _ready() -> void:
 	vbox.add_child(save_btn)
 	button_list.append(save_btn)
 
-	# Quit button
-	var quit_btn: Button = Button.new()
-	quit_btn.text = "Quit to Desktop"
-	quit_btn.add_theme_font_override("font", HUD_FONT)
-	quit_btn.add_theme_font_size_override("font_size", 36)
-	quit_btn.focus_mode = Control.FOCUS_ALL
-	quit_btn.pressed.connect(_on_quit)
-	vbox.add_child(quit_btn)
-	button_list.append(quit_btn)
+	# Quit button (hidden on iOS per Apple policy)
+	if OS.get_name() != "iOS":
+		var quit_btn: Button = Button.new()
+		quit_btn.text = "Quit to Desktop"
+		quit_btn.add_theme_font_override("font", HUD_FONT)
+		quit_btn.add_theme_font_size_override("font_size", 36)
+		quit_btn.focus_mode = Control.FOCUS_ALL
+		quit_btn.pressed.connect(_on_quit)
+		vbox.add_child(quit_btn)
+		button_list.append(quit_btn)
 
 	# Save confirmation label (hidden by default)
 	save_confirmation_label = Label.new()
@@ -191,7 +192,8 @@ func toggle_pause() -> void:
 		is_paused = true
 		get_tree().paused = true
 		panel.visible = true
-		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		if OS.get_name() != "iOS":
+			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 		SFXManager.play_sfx("menu_open")
 		focused_index = 0
 		button_list[0].grab_focus()
@@ -205,7 +207,8 @@ func _on_resume() -> void:
 	get_tree().paused = false
 	panel.visible = false
 	save_confirmation_label.visible = false
-	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	if OS.get_name() != "iOS":
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
 func _on_save_game() -> void:
@@ -280,17 +283,40 @@ func _show_slot_picker() -> void:
 		slot_label.add_theme_font_override("font", HUD_FONT)
 		slot_label.add_theme_font_size_override("font_size", 32)
 		slot_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		if OS.get_name() == "iOS":
+			slot_label.mouse_filter = Control.MOUSE_FILTER_STOP
+			var captured_slot: int = slot_num
+			var captured_idx: int = i
+			slot_label.gui_input.connect(func(event: InputEvent) -> void:
+				if event is InputEventMouseButton and event.pressed:
+					_slot_cursor = captured_idx
+					_update_slot_highlight()
+					_save_to_slot(captured_slot)
+			)
 		slot_vbox.add_child(slot_label)
 		_slot_labels.append(slot_label)
 
 	# Hint
 	var hint: Label = Label.new()
-	hint.text = "[Esc] Cancel"
+	if OS.get_name() == "iOS":
+		hint.text = "Tap a slot to save"
+	else:
+		hint.text = "[Esc] Cancel"
 	hint.add_theme_font_override("font", HUD_FONT)
 	hint.add_theme_font_size_override("font_size", 24)
 	hint.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5, 1))
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	slot_vbox.add_child(hint)
+
+	# Cancel button for iOS
+	if OS.get_name() == "iOS":
+		var cancel_btn: Button = Button.new()
+		cancel_btn.text = "Cancel"
+		cancel_btn.add_theme_font_override("font", HUD_FONT)
+		cancel_btn.add_theme_font_size_override("font_size", 32)
+		cancel_btn.custom_minimum_size = Vector2(200, 48)
+		cancel_btn.pressed.connect(_dismiss_slot_picker)
+		slot_vbox.add_child(cancel_btn)
 
 	_update_slot_highlight()
 	SFXManager.play_sfx("menu_open")
@@ -427,6 +453,9 @@ func _hide_save_confirmation() -> void:
 ## Update the hint text based on current input device.
 func _update_hint_text() -> void:
 	if not is_instance_valid(_hint_label):
+		return
+	if OS.get_name() == "iOS":
+		_hint_label.text = "Tap a button above"
 		return
 	var prompt: String = "ESC"
 	if _input_manager and _input_manager.has_method("get_prompt"):

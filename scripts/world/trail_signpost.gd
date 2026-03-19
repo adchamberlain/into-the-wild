@@ -39,6 +39,11 @@ const REFERENCE_HEIGHT: float = 1080.0
 const COLOR_SELECTED: Color = Color(0.15, 0.10, 0.02)  # Dark brown, bold
 const COLOR_UNSELECTED: Color = Color(0.50, 0.45, 0.35)  # Faded brown
 
+# iOS mobile buttons
+var _mobile_yes_btn: Button
+var _mobile_no_btn: Button
+var _mobile_close_btn: Button
+
 
 func _ready() -> void:
 	add_to_group("interactable")
@@ -349,6 +354,9 @@ func _update_selection_visuals() -> void:
 func _update_hint_text() -> void:
 	if not _hint_label:
 		return
+	if OS.get_name() == "iOS":
+		_hint_label.text = "Tap a choice below"
+		return
 	var input_mgr: Node = get_node_or_null("/root/InputManager")
 	var using_controller: bool = false
 	if input_mgr and "using_controller" in input_mgr:
@@ -460,11 +468,76 @@ func _show_overlay(player_node: Node) -> void:
 		if hud.has_method("set_overlay_mode"):
 			hud.set_overlay_mode(true)
 
+	if OS.get_name() == "iOS":
+		_add_mobile_buttons()
+
+
+func _add_mobile_buttons() -> void:
+	# Tappable "Yes, head home" button
+	_mobile_yes_btn = Button.new()
+	_mobile_yes_btn.text = "Yes, head home"
+	_mobile_yes_btn.add_theme_font_override("font", HUD_FONT)
+	_mobile_yes_btn.add_theme_font_size_override("font_size", 40)
+	_mobile_yes_btn.custom_minimum_size = Vector2(300, 56)
+	_mobile_yes_btn.pressed.connect(func() -> void:
+		_selected_index = 0
+		_update_selection_visuals()
+		_confirm_leave()
+	)
+	overlay_layer.add_child(_mobile_yes_btn)
+
+	# Tappable "Not yet" button
+	_mobile_no_btn = Button.new()
+	_mobile_no_btn.text = "Not yet"
+	_mobile_no_btn.add_theme_font_override("font", HUD_FONT)
+	_mobile_no_btn.add_theme_font_size_override("font_size", 40)
+	_mobile_no_btn.custom_minimum_size = Vector2(300, 56)
+	_mobile_no_btn.pressed.connect(func() -> void:
+		_hide_overlay()
+	)
+	overlay_layer.add_child(_mobile_no_btn)
+
+	# Close button (top-right X)
+	_mobile_close_btn = Button.new()
+	_mobile_close_btn.text = "\u2715"
+	_mobile_close_btn.add_theme_font_size_override("font_size", 32)
+	_mobile_close_btn.custom_minimum_size = Vector2(48, 48)
+	_mobile_close_btn.pressed.connect(func() -> void:
+		_hide_overlay()
+	)
+	overlay_layer.add_child(_mobile_close_btn)
+
+	call_deferred("_position_mobile_buttons")
+
+
+func _position_mobile_buttons() -> void:
+	var vp_size: Vector2 = get_viewport().get_visible_rect().size
+	var cx: float = vp_size.x / 2.0
+
+	if is_instance_valid(_mobile_yes_btn):
+		_mobile_yes_btn.position = Vector2(cx - 150, vp_size.y * 0.62)
+
+	if is_instance_valid(_mobile_no_btn):
+		_mobile_no_btn.position = Vector2(cx - 150, vp_size.y * 0.62 + 70)
+
+	if is_instance_valid(_mobile_close_btn):
+		_mobile_close_btn.position = Vector2(vp_size.x * 0.9 - 24, vp_size.y * 0.06)
+
+
+func _free_mobile_buttons() -> void:
+	for btn: Button in [_mobile_yes_btn, _mobile_no_btn, _mobile_close_btn]:
+		if is_instance_valid(btn):
+			btn.queue_free()
+	_mobile_yes_btn = null
+	_mobile_no_btn = null
+	_mobile_close_btn = null
+
 
 func _hide_overlay() -> void:
 	if not is_overlay_visible:
 		return
 	is_overlay_visible = false
+	_free_mobile_buttons()
 	# During scene teardown get_tree() may be null — just clear flag and bail
 	if not is_inside_tree():
 		return

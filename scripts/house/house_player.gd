@@ -17,6 +17,8 @@ const STAND_HEIGHT: float = 1.8
 const CROUCH_CAMERA_Y: float = 0.8
 const JUMP_VELOCITY: float = 5.5
 
+const TOUCH_SENSITIVITY: float = 0.003
+
 const HUD_FONT: Font = preload("res://resources/hud_font.tres")
 
 var _camera: Camera3D
@@ -134,6 +136,10 @@ func _build_crosshair() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# On iOS, ignore emulated mouse events from touch — touch controls handle input
+	if OS.get_name() == "iOS" and (event is InputEventMouseButton or event is InputEventMouseMotion):
+		return
+
 	# Handle mouse capture on click
 	if event is InputEventMouseButton:
 		var mb: InputEventMouseButton = event as InputEventMouseButton
@@ -163,6 +169,19 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
 			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+
+
+func apply_touch_look(delta_x: float, delta_y: float) -> void:
+	if _is_resting:
+		return
+	rotate_y(-delta_x * TOUCH_SENSITIVITY)
+	_camera.rotate_x(-delta_y * TOUCH_SENSITIVITY)
+	_camera.rotation.x = clamp(
+		_camera.rotation.x,
+		deg_to_rad(CAMERA_PITCH_MIN),
+		deg_to_rad(CAMERA_PITCH_MAX)
+	)
+	_camera.rotation.z = 0.0
 
 
 func _handle_mouse_look(event: InputEventMouseMotion) -> void:
