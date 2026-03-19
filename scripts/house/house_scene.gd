@@ -118,6 +118,7 @@ func _ready() -> void:
 	_build_pause_menu()
 	_build_text_overlay()
 	_setup_home_music()
+	_setup_touch_controls()
 	_start_fade_in()
 
 
@@ -3472,6 +3473,23 @@ func _hide_text_overlay() -> void:
 	var player: Node = get_tree().get_first_node_in_group("player")
 	if player and player.has_method("set_resting"):
 		player.set_resting(false)
+
+
+# =============================================================================
+# TOUCH CONTROLS (iOS)
+# =============================================================================
+
+func _setup_touch_controls() -> void:
+	if OS.get_name() != "iOS":
+		return
+	# Remove any lingering touch controls from the wilderness scene
+	for child: Node in get_tree().root.get_children():
+		if child is CanvasLayer and child.name.begins_with("TouchControls"):
+			child.queue_free()
+	var touch_scene: PackedScene = preload("res://scenes/ui/touch_controls.tscn")
+	var touch_controls: CanvasLayer = touch_scene.instantiate()
+	get_tree().root.add_child.call_deferred(touch_controls)
+	Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
 
 
 # =============================================================================

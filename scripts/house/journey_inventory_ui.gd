@@ -36,6 +36,11 @@ func close() -> void:
 	visible = false
 	is_open = false
 
+	# Free mobile close button
+	var close_btn: Button = get_node_or_null("MobileCloseButton") as Button
+	if close_btn:
+		close_btn.queue_free()
+
 	# Unfreeze player
 	if _player_ref and is_instance_valid(_player_ref) and _player_ref.has_method("set_resting"):
 		_player_ref.set_resting(false)
@@ -190,12 +195,34 @@ func _build_ui() -> void:
 	var close_prompt: String = "Esc"
 	if _input_manager and _input_manager.has_method("get_prompt"):
 		close_prompt = _input_manager.get_prompt("ui_cancel")
-	close_label.text = "[%s] Close" % close_prompt
+	if OS.get_name() == "iOS":
+		close_label.text = "Tap \u2715 to close"
+	else:
+		close_label.text = "[%s] Close" % close_prompt
 	close_label.add_theme_font_override("font", HUD_FONT)
 	close_label.add_theme_font_size_override("font_size", 28)
 	close_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6, 1))
 	close_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(close_label)
+
+	# Mobile close button (iOS)
+	if OS.get_name() == "iOS":
+		var close_btn: Button = Button.new()
+		close_btn.name = "MobileCloseButton"
+		close_btn.text = "\u2715"
+		close_btn.add_theme_font_size_override("font_size", 32)
+		close_btn.custom_minimum_size = Vector2(48, 48)
+		close_btn.pressed.connect(close)
+		add_child(close_btn)
+		call_deferred("_position_mobile_close_button", panel)
+
+
+func _position_mobile_close_button(panel_node: PanelContainer) -> void:
+	var btn: Button = get_node_or_null("MobileCloseButton") as Button
+	if not btn or not is_instance_valid(panel_node):
+		return
+	var rect: Rect2 = panel_node.get_global_rect()
+	btn.position = Vector2(rect.position.x + rect.size.x - 56, rect.position.y + 8)
 
 
 func _add_item_row(parent: VBoxContainer, display_name: String, count: int, alt_bg: bool) -> void:

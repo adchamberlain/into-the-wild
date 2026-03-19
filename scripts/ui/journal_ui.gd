@@ -813,6 +813,9 @@ func _input(event: InputEvent) -> void:
 
 	# Touch/swipe page turning for iOS
 	if event is InputEventScreenTouch:
+		# Let taps on mobile buttons pass through to the GUI system
+		if _is_touch_on_mobile_button(event.position):
+			return
 		if event.pressed:
 			_swipe_start = event.position
 			_swipe_touch_index = event.index
@@ -1015,6 +1018,14 @@ static func _enforce_min_button_size(node: Node, min_size: int) -> void:
 			if child.custom_minimum_size.y < min_size:
 				child.custom_minimum_size.y = min_size
 		_enforce_min_button_size(child, min_size)
+
+
+func _is_touch_on_mobile_button(pos: Vector2) -> bool:
+	for btn_name: String in ["MobileCloseButton", "MobilePrevButton", "MobileNextButton"]:
+		var btn: Button = get_node_or_null(btn_name) as Button
+		if btn and btn.visible and btn.get_global_rect().has_point(pos):
+			return true
+	return false
 
 
 func _close_journal() -> void:
