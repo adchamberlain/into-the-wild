@@ -7737,28 +7737,35 @@ Fixed iOS touch controls for the Explorer's Journal UI. Bumped iOS version to 1.
 
 ---
 
-## Session 49 - Fix iOS Journal Close Button (2026-03-20)
+## Session 49 - Fix iOS Journal Touch Controls (2026-03-20)
 
-**Attempt 1** (coordinate transform): Added `_screen_to_canvas()` using `get_final_transform().affine_inverse()` to transform touch coords to viewport space before hit-testing buttons. Still failed on iPhone — the coordinate space of `InputEventScreenTouch.position` on iOS is ambiguous (may be viewport or window space depending on device/version).
+Multiple attempts to fix the journal close button on iOS. First two attempts (coordinate transforms, proportional zone checks) failed because they addressed the wrong problem.
 
-**Attempt 2** (proportional zones): Replaced `get_global_rect().has_point()` entirely with proportional zone checks computed from the known panel anchor positions (0.06-0.94). Tests against BOTH viewport size and window size — one will match whatever coordinate space iOS uses. This eliminates the coordinate space ambiguity entirely.
+**Attempt 1** (coordinate transform): Added `_screen_to_canvas()` to transform touch coords. Failed — wrong diagnosis.
 
-### Changes
+**Attempt 2** (proportional zones): Replaced `get_global_rect()` with proportional zone checks against both viewport and window sizes. Still failed.
 
-- **Proportional hit zones**: `_handle_mobile_button_tap()` now computes close zone from anchor positions (top-right 80x80 area of book at 0.94 anchor) instead of using `get_global_rect()`
-- **Dual reference frame**: Tests touch position against both `get_visible_rect().size` (viewport) and `DisplayServer.window_get_size()` (window) to handle either coordinate space
-- **Tap-outside-to-close**: Tapping outside the book panel (using same proportional zones) closes the journal
-- **Removed**: `_screen_to_canvas()` helper (coordinate transform approach was unreliable)
+**Attempt 3** (root cause found): `TouchControls` has `PROCESS_MODE_ALWAYS` and its own `_input()` handler that claims ALL touch events for joystick/look input when `menu_open == false`. The journal was the ONLY menu that didn't set `TouchControls.menu_open = true` when opening. Every other menu (pause, crafting, storage, equipment, fire, food, config) correctly sets this flag. TouchControls consumed every touch event with `set_input_as_handled()` before the journal's `_input()` could process them.
 
 ### Root Cause
 
-`get_global_rect().has_point()` is unreliable for iOS touch hit-testing because the touch event coordinate space doesn't reliably match the button rect coordinate space under `canvas_items` stretch mode. Swipes work because they only use coordinate deltas.
+`TouchControls.menu_open` was never set to `true` when the journal opened. TouchControls runs with `PROCESS_MODE_ALWAYS` (active even when game tree is paused) and intercepted ALL touch events for joystick/camera-look input, consuming them before the journal could see them.
+
+### Changes
+
+- **Set menu_open flag**: `open_journal()` sets `TouchControls.menu_open = true`, `_close_journal()` sets it back to `false`
+- **Proportional hit zones** (kept from attempt 2): `_handle_mobile_button_tap()` uses proportional zones as a robust fallback
+- **Regression test**: `test_journal_sets_menu_open_flag()` verifies both open and close set the flag
 
 ### Files Modified
 | File | Changes |
 |------|---------|
-| `scripts/ui/journal_ui.gd` | Rewrote `_handle_mobile_button_tap()` with proportional zones, removed `_screen_to_canvas()` |
-| `tests/test_bug_regressions.gd` | Added `test_journal_proportional_close_zone()` |
+| `scripts/ui/journal_ui.gd` | Set `TouchControls.menu_open` on open/close, proportional zone hit-testing |
+| `tests/test_bug_regressions.gd` | Added `test_journal_sets_menu_open_flag()` |
+
+### Lesson
+
+When iOS touch input seems broken, check `TouchControls.menu_open` first. The touch controls system has `PROCESS_MODE_ALWAYS` and will silently consume all touch events unless told a menu is open.
 
 ---
 
