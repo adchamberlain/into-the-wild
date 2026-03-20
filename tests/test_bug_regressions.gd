@@ -222,6 +222,8 @@ func run_tests() -> Dictionary:
 	test_journal_interact_sets_sinkhole_book_collected()
 	test_rock_spire_is_static_body()
 	test_weather_manager_connects_day_changed()
+	test_journal_screen_to_canvas_transform()
+	test_journal_tap_outside_book_closes()
 
 	return get_results()
 
@@ -4385,3 +4387,52 @@ func test_weather_manager_connects_day_changed() -> void:
 		var fn_body: String = source.substr(fn_start, fn_end - fn_start)
 		assert_true(fn_body.find("_rolled_today = false") != -1,
 			"_on_day_changed resets _rolled_today so weather rolls at next dawn")
+
+
+func test_journal_screen_to_canvas_transform() -> void:
+	# Regression: iOS journal close button unreachable because touch coordinates
+	# (screen space) were compared directly against button rects (canvas space).
+	# With canvas_items stretch mode, these differ. The fix uses _screen_to_canvas()
+	# and the tap handler must receive transformed coordinates.
+	var file: FileAccess = FileAccess.open("res://scripts/ui/journal_ui.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open journal_ui.gd")
+		return
+	var source: String = file.get_as_text()
+	# Verify _screen_to_canvas helper exists and uses get_final_transform
+	assert_true(source.find("func _screen_to_canvas(") != -1,
+		"journal_ui has _screen_to_canvas coordinate transform helper")
+	assert_true(source.find("get_final_transform().affine_inverse()") != -1,
+		"_screen_to_canvas uses viewport final_transform inverse for screen->canvas")
+	# Verify the touch tap handler receives transformed coordinates, not raw event.position
+	var tap_call_idx: int = source.find("_handle_mobile_button_tap(")
+	assert_true(tap_call_idx != -1, "journal_ui calls _handle_mobile_button_tap")
+	if tap_call_idx != -1:
+		# Find the line containing the call
+		var line_start: int = source.rfind("\n", tap_call_idx) + 1
+		var line_end: int = source.find("\n", tap_call_idx)
+		var call_line: String = source.substr(line_start, line_end - line_start)
+		# Must NOT pass raw event.position — must use canvas_pos (transformed)
+		assert_true(call_line.find("event.position") == -1,
+			"_handle_mobile_button_tap receives transformed canvas coords, not raw screen coords")
+
+
+func test_journal_tap_outside_book_closes() -> void:
+	# Regression: iOS users couldn't close journal because close button tap detection
+	# failed. As a fallback, tapping outside the book panel should also close it.
+	var file: FileAccess = FileAccess.open("res://scripts/ui/journal_ui.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open journal_ui.gd")
+		return
+	var source: String = file.get_as_text()
+	var fn_start: int = source.find("func _handle_mobile_button_tap(")
+	assert_true(fn_start != -1, "journal_ui has _handle_mobile_button_tap")
+	if fn_start != -1:
+		var fn_end: int = source.find("\nfunc ", fn_start + 1)
+		if fn_end == -1:
+			fn_end = source.length()
+		var fn_body: String = source.substr(fn_start, fn_end - fn_start)
+		assert_true(fn_body.find("panel.get_global_rect().has_point(pos)") != -1,
+			"_handle_mobile_button_tap checks if tap is outside book panel")
+		assert_true(fn_body.find("_close_journal()") != -1,
+			"_handle_mobile_button_tap can trigger close from outside-book tap")

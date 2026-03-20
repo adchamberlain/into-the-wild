@@ -840,7 +840,11 @@ func _input(event: InputEvent) -> void:
 					# events while the journal is open, which blocks the emulated
 					# InputEventMouseButton that Godot generates from touches —
 					# and Button nodes only respond to mouse events, not raw touch.
-					_handle_mobile_button_tap(event.position)
+						# IMPORTANT: Touch position is in window/screen coords but
+					# button rects are in canvas/viewport coords (1920x1080).
+					# With canvas_items stretch mode these differ on iOS.
+					var canvas_pos: Vector2 = _screen_to_canvas(event.position)
+					_handle_mobile_button_tap(canvas_pos)
 			_swipe_start = Vector2.ZERO
 			_swipe_touch_index = -1
 		if vp:
@@ -1025,7 +1029,20 @@ static func _enforce_min_button_size(node: Node, min_size: int) -> void:
 		_enforce_min_button_size(child, min_size)
 
 
+## Convert screen/window touch coordinates to canvas/viewport coordinates.
+## With canvas_items stretch mode, the viewport (1920x1080) is scaled to fit the
+## device screen. Touch events arrive in screen coords; Control.get_global_rect()
+## returns canvas coords. get_final_transform() maps viewport -> screen, so its
+## inverse maps screen -> viewport.
+func _screen_to_canvas(screen_pos: Vector2) -> Vector2:
+	var vp: Viewport = get_viewport()
+	if vp:
+		return vp.get_final_transform().affine_inverse() * screen_pos
+	return screen_pos
+
+
 func _handle_mobile_button_tap(pos: Vector2) -> void:
+	# pos is already in canvas/viewport coordinates (transformed by caller)
 	var close_btn: Button = get_node_or_null("MobileCloseButton") as Button
 	if close_btn and close_btn.visible and close_btn.get_global_rect().has_point(pos):
 		_close_journal()
@@ -1037,6 +1054,10 @@ func _handle_mobile_button_tap(pos: Vector2) -> void:
 	var next_btn: Button = get_node_or_null("MobileNextButton") as Button
 	if next_btn and next_btn.visible and next_btn.get_global_rect().has_point(pos):
 		_mobile_next_page()
+		return
+	# Tap outside the book panel closes the journal (fallback for iOS usability)
+	if is_instance_valid(panel) and not panel.get_global_rect().has_point(pos):
+		_close_journal()
 		return
 
 
