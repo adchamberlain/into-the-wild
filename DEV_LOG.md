@@ -7737,32 +7737,35 @@ Fixed iOS touch controls for the Explorer's Journal UI. Bumped iOS version to 1.
 
 ---
 
-## Session 49 - Fix iOS Journal Close Button Coordinate Mismatch (2026-03-20)
+## Session 49 - Fix iOS Journal Close Button (2026-03-20)
 
-Fixed the root cause of the iOS journal close button being untappable. The previous fix (Session 48) added manual tap hit-testing, but compared raw screen/window touch coordinates against button rects in canvas/viewport coordinates (1920x1080). With `canvas_items` stretch mode, these coordinate spaces differ on iOS devices, so the tap position never matched the button rect.
+**Attempt 1** (coordinate transform): Added `_screen_to_canvas()` using `get_final_transform().affine_inverse()` to transform touch coords to viewport space before hit-testing buttons. Still failed on iPhone — the coordinate space of `InputEventScreenTouch.position` on iOS is ambiguous (may be viewport or window space depending on device/version).
+
+**Attempt 2** (proportional zones): Replaced `get_global_rect().has_point()` entirely with proportional zone checks computed from the known panel anchor positions (0.06-0.94). Tests against BOTH viewport size and window size — one will match whatever coordinate space iOS uses. This eliminates the coordinate space ambiguity entirely.
 
 ### Changes
 
-- **Coordinate transform**: Added `_screen_to_canvas()` helper that uses `get_viewport().get_final_transform().affine_inverse()` to convert screen touch coordinates to canvas/viewport coordinates before hit-testing buttons
-- **Tap-outside-to-close**: Added fallback — tapping outside the book panel now closes the journal, improving iOS usability
-- **Regression tests**: Added 2 tests verifying the coordinate transform is used and the outside-book-close behavior exists
+- **Proportional hit zones**: `_handle_mobile_button_tap()` now computes close zone from anchor positions (top-right 80x80 area of book at 0.94 anchor) instead of using `get_global_rect()`
+- **Dual reference frame**: Tests touch position against both `get_visible_rect().size` (viewport) and `DisplayServer.window_get_size()` (window) to handle either coordinate space
+- **Tap-outside-to-close**: Tapping outside the book panel (using same proportional zones) closes the journal
+- **Removed**: `_screen_to_canvas()` helper (coordinate transform approach was unreliable)
 
 ### Root Cause
 
-`InputEventScreenTouch.position` is in window/screen coordinates (device native resolution), but `Button.get_global_rect()` returns canvas coordinates (1920x1080 viewport space). The `canvas_items` stretch mode scales between these spaces. Swipes worked because they only use deltas (same coordinate space), but absolute position hit-testing failed.
+`get_global_rect().has_point()` is unreliable for iOS touch hit-testing because the touch event coordinate space doesn't reliably match the button rect coordinate space under `canvas_items` stretch mode. Swipes work because they only use coordinate deltas.
 
 ### Files Modified
 | File | Changes |
 |------|---------|
-| `scripts/ui/journal_ui.gd` | Added `_screen_to_canvas()`, transform touch pos before hit-testing, tap-outside-book closes journal |
-| `tests/test_bug_regressions.gd` | Added `test_journal_screen_to_canvas_transform()` and `test_journal_tap_outside_book_closes()` |
+| `scripts/ui/journal_ui.gd` | Rewrote `_handle_mobile_button_tap()` with proportional zones, removed `_screen_to_canvas()` |
+| `tests/test_bug_regressions.gd` | Added `test_journal_proportional_close_zone()` |
 
 ---
 
 ## Next Session
 
 ### Planned Tasks
-1. Bump iOS version and deploy to iPad for play-testing the journal fix
+1. Bump iOS version and deploy to iPhone for play-testing the journal close fix
 2. Continue iPad play-testing with controller — verify all menus navigate correctly
 3. Continue play-testing end-of-game trail sequence with new clues and compass
 3. Review and fix any bugs filed via GitHub Issues
