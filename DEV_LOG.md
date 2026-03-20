@@ -7737,11 +7737,34 @@ Fixed iOS touch controls for the Explorer's Journal UI. Bumped iOS version to 1.
 
 ---
 
+## Session 49 - Fix iOS Journal Close Button Coordinate Mismatch (2026-03-20)
+
+Fixed the root cause of the iOS journal close button being untappable. The previous fix (Session 48) added manual tap hit-testing, but compared raw screen/window touch coordinates against button rects in canvas/viewport coordinates (1920x1080). With `canvas_items` stretch mode, these coordinate spaces differ on iOS devices, so the tap position never matched the button rect.
+
+### Changes
+
+- **Coordinate transform**: Added `_screen_to_canvas()` helper that uses `get_viewport().get_final_transform().affine_inverse()` to convert screen touch coordinates to canvas/viewport coordinates before hit-testing buttons
+- **Tap-outside-to-close**: Added fallback — tapping outside the book panel now closes the journal, improving iOS usability
+- **Regression tests**: Added 2 tests verifying the coordinate transform is used and the outside-book-close behavior exists
+
+### Root Cause
+
+`InputEventScreenTouch.position` is in window/screen coordinates (device native resolution), but `Button.get_global_rect()` returns canvas coordinates (1920x1080 viewport space). The `canvas_items` stretch mode scales between these spaces. Swipes worked because they only use deltas (same coordinate space), but absolute position hit-testing failed.
+
+### Files Modified
+| File | Changes |
+|------|---------|
+| `scripts/ui/journal_ui.gd` | Added `_screen_to_canvas()`, transform touch pos before hit-testing, tap-outside-book closes journal |
+| `tests/test_bug_regressions.gd` | Added `test_journal_screen_to_canvas_transform()` and `test_journal_tap_outside_book_closes()` |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Continue iPad play-testing with controller — verify all menus navigate correctly
-2. Continue play-testing end-of-game trail sequence with new clues and compass
+1. Bump iOS version and deploy to iPad for play-testing the journal fix
+2. Continue iPad play-testing with controller — verify all menus navigate correctly
+3. Continue play-testing end-of-game trail sequence with new clues and compass
 3. Review and fix any bugs filed via GitHub Issues
 4. Redeploy website on Cloudflare with iPad download card
 
