@@ -152,6 +152,9 @@ func open_journal(is_first_read: bool) -> void:
 	if OS.get_name() == "iOS":
 		_apply_mobile_menu_style()
 
+	# Tell touch controls to stop intercepting touches while journal is open
+	TouchControls.menu_open = true
+
 	# Pause the game tree
 	get_tree().paused = true
 
@@ -1080,6 +1083,9 @@ func _close_journal() -> void:
 		panel = null
 	_left_vbox = null
 	_right_vbox = null
+
+	# Re-enable touch controls
+	TouchControls.menu_open = false
 
 	# Unpause the game tree
 	get_tree().paused = false

@@ -222,7 +222,7 @@ func run_tests() -> Dictionary:
 	test_journal_interact_sets_sinkhole_book_collected()
 	test_rock_spire_is_static_body()
 	test_weather_manager_connects_day_changed()
-	test_journal_proportional_close_zone()
+	test_journal_sets_menu_open_flag()
 
 	return get_results()
 
@@ -4388,34 +4388,35 @@ func test_weather_manager_connects_day_changed() -> void:
 			"_on_day_changed resets _rolled_today so weather rolls at next dawn")
 
 
-func test_journal_proportional_close_zone() -> void:
-	# Regression: iOS journal close button unreachable because touch coordinates
-	# could be in viewport OR window space depending on device. Using
-	# get_global_rect() for hit-testing fails when spaces mismatch. The fix uses
-	# proportional zone checks against both viewport and window sizes.
+func test_journal_sets_menu_open_flag() -> void:
+	# ROOT CAUSE: Journal never set TouchControls.menu_open = true, so TouchControls
+	# (which has PROCESS_MODE_ALWAYS) kept intercepting all touch events for
+	# joystick/look input, consuming them before the journal could process them.
+	# This made close button, swipe-left, and tap-outside-to-close all fail on iOS.
 	var file: FileAccess = FileAccess.open("res://scripts/ui/journal_ui.gd", FileAccess.READ)
 	if not file:
 		assert_true(false, "Could not open journal_ui.gd")
 		return
 	var source: String = file.get_as_text()
-	var fn_start: int = source.find("func _handle_mobile_button_tap(")
-	assert_true(fn_start != -1, "journal_ui has _handle_mobile_button_tap")
-	if fn_start != -1:
-		var fn_end: int = source.find("\nfunc ", fn_start + 1)
-		if fn_end == -1:
-			fn_end = source.length()
-		var fn_body: String = source.substr(fn_start, fn_end - fn_start)
-		# Actual hit-test code must NOT call get_global_rect().has_point()
-		assert_true(fn_body.find(".get_global_rect().has_point(") == -1,
-			"_handle_mobile_button_tap must NOT use get_global_rect for hit-testing (coordinate space mismatch on iOS)")
-		# Must check both viewport size and window size
-		assert_true(fn_body.find("get_visible_rect") != -1,
-			"_handle_mobile_button_tap checks viewport size")
-		assert_true(fn_body.find("window_get_size") != -1,
-			"_handle_mobile_button_tap checks window size")
-		# Must have proportional close zone using anchor positions (0.94 = book right edge)
-		assert_true(fn_body.find("0.94") != -1,
-			"_handle_mobile_button_tap uses panel anchor proportions for hit zones")
-		# Must have close action
-		assert_true(fn_body.find("_close_journal()") != -1,
-			"_handle_mobile_button_tap can trigger close")
+
+	# open_journal must set TouchControls.menu_open = true
+	var open_fn: int = source.find("func open_journal(")
+	assert_true(open_fn != -1, "journal_ui has open_journal function")
+	if open_fn != -1:
+		var open_end: int = source.find("\nfunc ", open_fn + 1)
+		if open_end == -1:
+			open_end = source.length()
+		var open_body: String = source.substr(open_fn, open_end - open_fn)
+		assert_true(open_body.find("TouchControls.menu_open = true") != -1,
+			"open_journal sets TouchControls.menu_open = true")
+
+	# _close_journal must set TouchControls.menu_open = false
+	var close_fn: int = source.find("func _close_journal(")
+	assert_true(close_fn != -1, "journal_ui has _close_journal function")
+	if close_fn != -1:
+		var close_end: int = source.find("\nfunc ", close_fn + 1)
+		if close_end == -1:
+			close_end = source.length()
+		var close_body: String = source.substr(close_fn, close_end - close_fn)
+		assert_true(close_body.find("TouchControls.menu_open = false") != -1,
+			"_close_journal sets TouchControls.menu_open = false")
