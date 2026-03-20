@@ -813,9 +813,6 @@ func _input(event: InputEvent) -> void:
 
 	# Touch/swipe page turning for iOS
 	if event is InputEventScreenTouch:
-		# Let taps on mobile buttons pass through to the GUI system
-		if _is_touch_on_mobile_button(event.position):
-			return
 		if event.pressed:
 			_swipe_start = event.position
 			_swipe_touch_index = event.index
@@ -836,6 +833,14 @@ func _input(event: InputEvent) -> void:
 						_populate_page()
 						SFXManager.play_sfx("select")
 						_update_mobile_nav_visibility()
+				else:
+					# Short tap (not a swipe) — check if it landed on a mobile button
+					# and fire the action directly. We handle taps here instead of
+					# relying on GUI event propagation because _input() consumes all
+					# events while the journal is open, which blocks the emulated
+					# InputEventMouseButton that Godot generates from touches —
+					# and Button nodes only respond to mouse events, not raw touch.
+					_handle_mobile_button_tap(event.position)
 			_swipe_start = Vector2.ZERO
 			_swipe_touch_index = -1
 		if vp:
@@ -1020,12 +1025,19 @@ static func _enforce_min_button_size(node: Node, min_size: int) -> void:
 		_enforce_min_button_size(child, min_size)
 
 
-func _is_touch_on_mobile_button(pos: Vector2) -> bool:
-	for btn_name: String in ["MobileCloseButton", "MobilePrevButton", "MobileNextButton"]:
-		var btn: Button = get_node_or_null(btn_name) as Button
-		if btn and btn.visible and btn.get_global_rect().has_point(pos):
-			return true
-	return false
+func _handle_mobile_button_tap(pos: Vector2) -> void:
+	var close_btn: Button = get_node_or_null("MobileCloseButton") as Button
+	if close_btn and close_btn.visible and close_btn.get_global_rect().has_point(pos):
+		_close_journal()
+		return
+	var prev_btn: Button = get_node_or_null("MobilePrevButton") as Button
+	if prev_btn and prev_btn.visible and prev_btn.get_global_rect().has_point(pos):
+		_mobile_prev_page()
+		return
+	var next_btn: Button = get_node_or_null("MobileNextButton") as Button
+	if next_btn and next_btn.visible and next_btn.get_global_rect().has_point(pos):
+		_mobile_next_page()
+		return
 
 
 func _close_journal() -> void:
