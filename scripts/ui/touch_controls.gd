@@ -457,12 +457,16 @@ static var menu_open: bool = false
 func _input(event: InputEvent) -> void:
 	# Don't intercept touch when menus/overlays are open
 	if menu_open:
+		if event is InputEventScreenTouch:
+			print("[TOUCH_DBG] menu_open=true, SKIPPING touch event")
 		if joystick_touch_index != -1:
 			joystick_touch_index = -1
 			_reset_joystick()
 		look_touch_index = -1
 		return
 	if event is InputEventScreenTouch:
+		print("[TOUCH_DBG] menu_open=false, HANDLING touch event pos=%s pressed=%s" % [
+			(event as InputEventScreenTouch).position, (event as InputEventScreenTouch).pressed])
 		_handle_screen_touch(event as InputEventScreenTouch)
 	elif event is InputEventScreenDrag:
 		_handle_screen_drag(event as InputEventScreenDrag)

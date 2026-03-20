@@ -141,6 +141,7 @@ func _ready() -> void:
 
 
 func open_journal(is_first_read: bool) -> void:
+	print("[JOURNAL_DBG] open_journal called, is_first_read=%s" % is_first_read)
 	_is_first_read = is_first_read
 	_is_open = true
 	_current_page = 0
@@ -814,6 +815,21 @@ func _input(event: InputEvent) -> void:
 	# Journal consumes ALL input while open — prevents other menus from responding
 	var vp: Viewport = get_viewport()
 
+	# === DIAGNOSTIC: Log all input events the journal receives ===
+	if event is InputEventScreenTouch:
+		var vp_size: Vector2 = get_viewport().get_visible_rect().size
+		var win_size: Vector2 = Vector2(DisplayServer.window_get_size())
+		print("[JOURNAL_DBG] ScreenTouch pressed=%s pos=%s index=%d vp=%s win=%s menu_open=%s" % [
+			event.pressed, event.position, event.index, vp_size, win_size, TouchControls.menu_open])
+	elif event is InputEventScreenDrag:
+		pass  # Don't spam drag logs
+	elif event is InputEventMouseButton:
+		print("[JOURNAL_DBG] MouseButton pressed=%s pos=%s button=%d" % [
+			event.pressed, event.position, event.button_index])
+	else:
+		print("[JOURNAL_DBG] Other event: %s" % event.get_class())
+	# === END DIAGNOSTIC ===
+
 	# Touch/swipe page turning for iOS
 	if event is InputEventScreenTouch:
 		if event.pressed:
@@ -822,8 +838,10 @@ func _input(event: InputEvent) -> void:
 		else:
 			if event.index == _swipe_touch_index and _swipe_start != Vector2.ZERO:
 				var swipe_delta: float = event.position.x - _swipe_start.x
+				print("[JOURNAL_DBG] Swipe delta=%.1f threshold=%.1f" % [swipe_delta, SWIPE_THRESHOLD])
 				if swipe_delta < -SWIPE_THRESHOLD:
 					# Swipe left → next page
+					print("[JOURNAL_DBG] -> NEXT PAGE")
 					if _current_page < _total_pages - 1:
 						_current_page += 1
 						_populate_page()
@@ -831,6 +849,7 @@ func _input(event: InputEvent) -> void:
 						_update_mobile_nav_visibility()
 				elif swipe_delta > SWIPE_THRESHOLD:
 					# Swipe right → previous page
+					print("[JOURNAL_DBG] -> PREV PAGE")
 					if _current_page > 0:
 						_current_page -= 1
 						_populate_page()
@@ -838,11 +857,7 @@ func _input(event: InputEvent) -> void:
 						_update_mobile_nav_visibility()
 				else:
 					# Short tap — check proportional screen zones for close/nav.
-					# We use raw event.position (no coordinate transform) and test
-					# against zones computed from BOTH viewport size and window size,
-					# because iOS touch events may be in either coordinate space
-					# depending on Godot version and device. This avoids the
-					# get_global_rect() mismatch that made the close button unreachable.
+					print("[JOURNAL_DBG] -> TAP at %s" % event.position)
 					_handle_mobile_button_tap(event.position)
 			_swipe_start = Vector2.ZERO
 			_swipe_touch_index = -1
@@ -1029,14 +1044,9 @@ static func _enforce_min_button_size(node: Node, min_size: int) -> void:
 
 
 func _handle_mobile_button_tap(pos: Vector2) -> void:
-	# On iOS, touch event coordinates may be in viewport space (1920x1080 with
-	# canvas_items stretch) OR window/screen space (device native resolution).
-	# Using get_global_rect() fails when the spaces don't match. Instead, we
-	# compute hit zones from the known panel anchor positions (0.06 - 0.94) and
-	# test against BOTH viewport size and window size. One of them will match
-	# whatever coordinate space the touch event uses.
 	var vp_size: Vector2 = get_viewport().get_visible_rect().size
 	var win_size: Vector2 = Vector2(DisplayServer.window_get_size())
+	print("[JOURNAL_DBG] _handle_mobile_button_tap pos=%s vp=%s win=%s" % [pos, vp_size, win_size])
 
 	var sizes: Array[Vector2] = [vp_size]
 	if not vp_size.is_equal_approx(win_size):
@@ -1045,18 +1055,25 @@ func _handle_mobile_button_tap(pos: Vector2) -> void:
 	for ref: Vector2 in sizes:
 		var book_right: float = ref.x * 0.94
 		var book_top: float = ref.y * 0.06
+		var book_left: float = ref.x * 0.06
+		var book_bottom: float = ref.y * 0.94
+		print("[JOURNAL_DBG]   ref=%s book_rect=(%s,%s)-(%s,%s) close_zone=x>%s,y<%s" % [
+			ref, book_left, book_top, book_right, book_bottom,
+			book_right - 80.0, book_top + 80.0])
 
 		# Close zone: top-right 80x80 area of the book panel
 		if pos.x > book_right - 80.0 and pos.y < book_top + 80.0 and pos.x < ref.x and pos.y > 0.0:
+			print("[JOURNAL_DBG]   -> HIT CLOSE ZONE, closing!")
 			_close_journal()
 			return
 
 		# Tap outside book panel: close
-		var book_left: float = ref.x * 0.06
-		var book_bottom: float = ref.y * 0.94
 		if pos.x < book_left or pos.x > book_right or pos.y < book_top or pos.y > book_bottom:
+			print("[JOURNAL_DBG]   -> OUTSIDE BOOK, closing!")
 			_close_journal()
 			return
+
+	print("[JOURNAL_DBG]   -> No zone matched, tap ignored")
 
 
 func _close_journal() -> void:
