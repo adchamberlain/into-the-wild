@@ -22,7 +22,6 @@ var panel: PanelContainer
 
 # Touch/swipe support for iOS
 var _swipe_start: Vector2 = Vector2.ZERO
-var _swipe_touch_index: int = -1
 const SWIPE_THRESHOLD: float = 80.0  # Minimum swipe distance in pixels
 
 const HUD_FONT: Font = preload("res://resources/hud_font.tres")
@@ -175,6 +174,8 @@ func _build_ui() -> void:
 	background.color = Color(0.0, 0.0, 0.0, 0.75)
 	background.anchors_preset = Control.PRESET_FULL_RECT
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	background.mouse_filter = Control.MOUSE_FILTER_STOP
+	background.gui_input.connect(_on_background_gui_input)
 	add_child(background)
 
 	# Drop shadow behind book
@@ -194,6 +195,7 @@ func _build_ui() -> void:
 	shadow.offset_top = 4 * sf
 	shadow.offset_right = 4 * sf
 	shadow.offset_bottom = 4 * sf
+	shadow.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(shadow)
 
 	# Leather cover panel (the book itself)
@@ -805,6 +807,10 @@ func _populate_page() -> void:
 
 	_right_vbox.add_child(hint_label)
 
+	# Ensure all controls inside the panel pass mouse events through to the background
+	if is_instance_valid(panel):
+		_set_controls_passthrough(panel)
+
 
 func _input(event: InputEvent) -> void:
 	if not is_inside_tree():
@@ -812,64 +818,13 @@ func _input(event: InputEvent) -> void:
 	if not _is_open:
 		return
 
-	# Journal consumes ALL input while open — prevents other menus from responding
+	# Let touch/mouse events pass through to the GUI system.
+	# The background's gui_input handles swipe/tap, mobile buttons handle close/nav.
+	if event is InputEventScreenTouch or event is InputEventScreenDrag \
+			or event is InputEventMouseButton or event is InputEventMouseMotion:
+		return
+
 	var vp: Viewport = get_viewport()
-
-	# === DIAGNOSTIC: Log all input events the journal receives ===
-	if event is InputEventScreenTouch:
-		var vp_size: Vector2 = get_viewport().get_visible_rect().size
-		var win_size: Vector2 = Vector2(DisplayServer.window_get_size())
-		print("[JOURNAL_DBG] ScreenTouch pressed=%s pos=%s index=%d vp=%s win=%s menu_open=%s" % [
-			event.pressed, event.position, event.index, vp_size, win_size, TouchControls.menu_open])
-	elif event is InputEventScreenDrag:
-		pass  # Don't spam drag logs
-	elif event is InputEventMouseButton:
-		print("[JOURNAL_DBG] MouseButton pressed=%s pos=%s button=%d" % [
-			event.pressed, event.position, event.button_index])
-	else:
-		print("[JOURNAL_DBG] Other event: %s" % event.get_class())
-	# === END DIAGNOSTIC ===
-
-	# Touch/swipe page turning for iOS
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			_swipe_start = event.position
-			_swipe_touch_index = event.index
-		else:
-			if event.index == _swipe_touch_index and _swipe_start != Vector2.ZERO:
-				var swipe_delta: float = event.position.x - _swipe_start.x
-				print("[JOURNAL_DBG] Swipe delta=%.1f threshold=%.1f" % [swipe_delta, SWIPE_THRESHOLD])
-				if swipe_delta < -SWIPE_THRESHOLD:
-					# Swipe left → next page
-					print("[JOURNAL_DBG] -> NEXT PAGE")
-					if _current_page < _total_pages - 1:
-						_current_page += 1
-						_populate_page()
-						SFXManager.play_sfx("select")
-						_update_mobile_nav_visibility()
-				elif swipe_delta > SWIPE_THRESHOLD:
-					# Swipe right → previous page
-					print("[JOURNAL_DBG] -> PREV PAGE")
-					if _current_page > 0:
-						_current_page -= 1
-						_populate_page()
-						SFXManager.play_sfx("select")
-						_update_mobile_nav_visibility()
-				else:
-					# Short tap — check proportional screen zones for close/nav.
-					print("[JOURNAL_DBG] -> TAP at %s" % event.position)
-					_handle_mobile_button_tap(event.position)
-			_swipe_start = Vector2.ZERO
-			_swipe_touch_index = -1
-		if vp:
-			vp.set_input_as_handled()
-		return
-
-	if event is InputEventScreenDrag:
-		# Consume drag events to prevent camera movement while journal is open
-		if vp:
-			vp.set_input_as_handled()
-		return
 
 	# Page turning — d-pad left/right, ui_left/ui_right, or keyboard arrow keys
 	var turn_left: bool = event.is_action_pressed("ui_left")
@@ -885,6 +840,7 @@ func _input(event: InputEvent) -> void:
 			_current_page -= 1
 			_populate_page()
 			SFXManager.play_sfx("select")
+			_update_mobile_nav_visibility()
 		if vp:
 			vp.set_input_as_handled()
 		return
@@ -894,6 +850,7 @@ func _input(event: InputEvent) -> void:
 			_current_page += 1
 			_populate_page()
 			SFXManager.play_sfx("select")
+			_update_mobile_nav_visibility()
 		if vp:
 			vp.set_input_as_handled()
 		return
@@ -914,7 +871,7 @@ func _input(event: InputEvent) -> void:
 			vp.set_input_as_handled()
 		return
 
-	# Consume all other input events while journal is open
+	# Consume all other non-touch input while journal is open
 	if vp:
 		vp.set_input_as_handled()
 
@@ -1043,37 +1000,49 @@ static func _enforce_min_button_size(node: Node, min_size: int) -> void:
 		_enforce_min_button_size(child, min_size)
 
 
-func _handle_mobile_button_tap(pos: Vector2) -> void:
-	var vp_size: Vector2 = get_viewport().get_visible_rect().size
-	var win_size: Vector2 = Vector2(DisplayServer.window_get_size())
-	print("[JOURNAL_DBG] _handle_mobile_button_tap pos=%s vp=%s win=%s" % [pos, vp_size, win_size])
+func _on_background_gui_input(event: InputEvent) -> void:
+	if not _is_open:
+		return
+	if not event is InputEventMouseButton:
+		return
+	if event.button_index != MOUSE_BUTTON_LEFT:
+		return
 
-	var sizes: Array[Vector2] = [vp_size]
-	if not vp_size.is_equal_approx(win_size):
-		sizes.append(win_size)
-
-	for ref: Vector2 in sizes:
-		var book_right: float = ref.x * 0.94
-		var book_top: float = ref.y * 0.06
-		var book_left: float = ref.x * 0.06
-		var book_bottom: float = ref.y * 0.94
-		print("[JOURNAL_DBG]   ref=%s book_rect=(%s,%s)-(%s,%s) close_zone=x>%s,y<%s" % [
-			ref, book_left, book_top, book_right, book_bottom,
-			book_right - 80.0, book_top + 80.0])
-
-		# Close zone: top-right 80x80 area of the book panel
-		if pos.x > book_right - 80.0 and pos.y < book_top + 80.0 and pos.x < ref.x and pos.y > 0.0:
-			print("[JOURNAL_DBG]   -> HIT CLOSE ZONE, closing!")
-			_close_journal()
+	if event.pressed:
+		_swipe_start = event.position
+	else:
+		if _swipe_start == Vector2.ZERO:
 			return
+		var delta_x: float = event.position.x - _swipe_start.x
+		if delta_x < -SWIPE_THRESHOLD:
+			# Swipe left -> next page
+			if _current_page < _total_pages - 1:
+				_current_page += 1
+				_populate_page()
+				SFXManager.play_sfx("select")
+				_update_mobile_nav_visibility()
+		elif delta_x > SWIPE_THRESHOLD:
+			# Swipe right -> previous page
+			if _current_page > 0:
+				_current_page -= 1
+				_populate_page()
+				SFXManager.play_sfx("select")
+				_update_mobile_nav_visibility()
+		else:
+			# Short tap — close if outside the book panel
+			if is_instance_valid(panel):
+				if not panel.get_global_rect().has_point(event.position):
+					_close_journal()
+			else:
+				_close_journal()
+		_swipe_start = Vector2.ZERO
 
-		# Tap outside book panel: close
-		if pos.x < book_left or pos.x > book_right or pos.y < book_top or pos.y > book_bottom:
-			print("[JOURNAL_DBG]   -> OUTSIDE BOOK, closing!")
-			_close_journal()
-			return
 
-	print("[JOURNAL_DBG]   -> No zone matched, tap ignored")
+static func _set_controls_passthrough(node: Node) -> void:
+	if node is Control:
+		(node as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for child: Node in node.get_children():
+		_set_controls_passthrough(child)
 
 
 func _close_journal() -> void:

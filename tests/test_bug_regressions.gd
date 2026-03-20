@@ -223,6 +223,7 @@ func run_tests() -> Dictionary:
 	test_rock_spire_is_static_body()
 	test_weather_manager_connects_day_changed()
 	test_journal_sets_menu_open_flag()
+	test_journal_uses_gui_input_for_touch()
 
 	return get_results()
 
@@ -4420,3 +4421,37 @@ func test_journal_sets_menu_open_flag() -> void:
 		var close_body: String = source.substr(close_fn, close_end - close_fn)
 		assert_true(close_body.find("TouchControls.menu_open = false") != -1,
 			"_close_journal sets TouchControls.menu_open = false")
+
+
+func test_journal_uses_gui_input_for_touch() -> void:
+	# ROOT CAUSE: Journal's _input() called set_input_as_handled() on ALL touch events,
+	# which runs BEFORE Godot's GUI system. This prevented mobile Button nodes and
+	# background gui_input from ever receiving touch events, breaking close/nav/swipe.
+	# Fix: _input() must NOT consume touch/mouse events — let them flow to GUI system.
+	var file: FileAccess = FileAccess.open("res://scripts/ui/journal_ui.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open journal_ui.gd")
+		return
+	var source: String = file.get_as_text()
+
+	# _input() must not call set_input_as_handled() on InputEventScreenTouch
+	var input_fn: int = source.find("func _input(")
+	assert_true(input_fn != -1, "journal_ui has _input function")
+	if input_fn != -1:
+		var input_end: int = source.find("\nfunc ", input_fn + 1)
+		if input_end == -1:
+			input_end = source.length()
+		var input_body: String = source.substr(input_fn, input_end - input_fn)
+		# Must NOT handle InputEventScreenTouch in _input (should return early for touch)
+		assert_true(input_body.find("InputEventScreenTouch") != -1,
+			"_input references InputEventScreenTouch (to skip it)")
+		assert_true(input_body.find("_handle_screen_touch") == -1,
+			"_input does not manually handle screen touches")
+
+	# Must have _on_background_gui_input for touch/swipe handling via GUI system
+	assert_true(source.find("func _on_background_gui_input(") != -1,
+		"journal_ui has _on_background_gui_input handler")
+
+	# background must connect gui_input signal
+	assert_true(source.find("gui_input.connect(_on_background_gui_input)") != -1,
+		"background connects gui_input signal")

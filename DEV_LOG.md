@@ -7769,14 +7769,49 @@ When iOS touch input seems broken, check `TouchControls.menu_open` first. The to
 
 ---
 
+## Session 50 - Fix iOS Journal Touch Input (Architectural Rewrite) (2026-03-20)
+
+Previous attempts (sessions 48-49) failed because they treated symptoms instead of root cause. The real bug: journal's `_input()` called `set_input_as_handled()` on ALL touch events, which runs BEFORE Godot's GUI system. Mobile Button nodes and gui_input handlers never received touch input.
+
+### Root Cause
+
+Godot processes input in this order: `_input()` → GUI system (`_gui_input()`) → `_unhandled_input()`. The journal's `_input()` consumed every `InputEventScreenTouch` and `InputEventScreenDrag` with `set_input_as_handled()`, which blocked step 2 entirely. The mobile close/prev/next Button nodes could never fire because the GUI system never saw the touch events.
+
+### Architectural Fix
+
+Replaced manual touch handling in `_input()` with Godot's native GUI input system:
+
+1. **background** (full-screen ColorRect) gets `mouse_filter = MOUSE_FILTER_STOP` and `gui_input` signal connected — handles swipe detection and tap-outside-to-close
+2. **panel/shadow** and all inner controls set to `MOUSE_FILTER_IGNORE` via `_set_controls_passthrough()` — touch events pass through to background
+3. **Mobile buttons** (close, prev, next) work natively through GUI system — no manual hit-testing needed
+4. **`_input()`** returns immediately for all touch/mouse events — lets them flow to GUI system. Only handles keyboard/controller input.
+5. Removed `_handle_mobile_button_tap()` entirely — no more manual coordinate zone calculations
+6. Kept `TouchControls.menu_open = true/false` as belt-and-suspenders safety
+7. Removed all diagnostic logging from both journal_ui.gd and touch_controls.gd
+
+### Additional Fixes
+
+- **Xcode warnings**: Set iOS privacy description strings (camera, microphone, photo library) to non-empty values — fixes "must be a non-empty string" warnings
+- **Version bump**: iOS 1.1.3 → 1.1.4
+
+### Files Modified
+| File | Changes |
+|------|---------|
+| `scripts/ui/journal_ui.gd` | Architectural rewrite: GUI input system instead of manual touch handling |
+| `scripts/ui/touch_controls.gd` | Removed diagnostic print lines |
+| `export_presets.cfg` | Privacy descriptions, version bump to 1.1.4 |
+| `tests/test_bug_regressions.gd` | Added `test_journal_uses_gui_input_for_touch()` |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Bump iOS version and deploy to iPhone for play-testing the journal close fix
+1. Deploy iOS 1.1.4 to iPhone and verify journal close/swipe/nav buttons work
 2. Continue iPad play-testing with controller — verify all menus navigate correctly
 3. Continue play-testing end-of-game trail sequence with new clues and compass
-3. Review and fix any bugs filed via GitHub Issues
-4. Redeploy website on Cloudflare with iPad download card
+4. Review and fix any bugs filed via GitHub Issues
+5. Redeploy website on Cloudflare with iPad download card
 
 ### Known Issues
 - None
