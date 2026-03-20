@@ -7789,6 +7789,10 @@ Replaced manual touch handling in `_input()` with Godot's native GUI input syste
 6. Kept `TouchControls.menu_open = true/false` as belt-and-suspenders safety
 7. Removed all diagnostic logging from both journal_ui.gd and touch_controls.gd
 
+### Verified on Device
+
+Deployed iOS 1.1.4 to iPhone — journal close button, swipe left/right, and prev/next nav buttons all work correctly. Fix confirmed.
+
 ### Additional Fixes
 
 - **Xcode warnings**: Set iOS privacy description strings (camera, microphone, photo library) to non-empty values — fixes "must be a non-empty string" warnings
@@ -7807,11 +7811,10 @@ Replaced manual touch handling in `_input()` with Godot's native GUI input syste
 ## Next Session
 
 ### Planned Tasks
-1. Deploy iOS 1.1.4 to iPhone and verify journal close/swipe/nav buttons work
-2. Continue iPad play-testing with controller — verify all menus navigate correctly
-3. Continue play-testing end-of-game trail sequence with new clues and compass
-4. Review and fix any bugs filed via GitHub Issues
-5. Redeploy website on Cloudflare with iPad download card
+1. Continue iPad play-testing with controller — verify all menus navigate correctly
+2. Continue play-testing end-of-game trail sequence with new clues and compass
+3. Review and fix any bugs filed via GitHub Issues
+4. Redeploy website on Cloudflare with iPad download card
 
 ### Known Issues
 - None
