@@ -7718,6 +7718,25 @@ iPad app accepted on the App Store. Updated website and documentation to promote
 
 ---
 
+## Session 48 - iOS Journal Touch Controls Fix (2026-03-19)
+
+Fixed iOS touch controls for the Explorer's Journal UI. Bumped iOS version to 1.1.3.
+
+### Changes
+
+- **Journal touch handling**: Fixed journal buttons not responding to taps on iOS by handling taps directly in `_input()` via manual hit-testing (`_handle_mobile_button_tap()`), since the journal consumes all input events which blocks normal GUI propagation to Button nodes
+- **Mobile navigation buttons**: Added prev/next arrow buttons on the left/right edges of the journal book for iOS page turning (in addition to swipe gestures)
+- **Swipe vs tap detection**: Distinguishes between swipe gestures (page turning) and short taps (button presses) using `SWIPE_THRESHOLD`
+- **Version bump**: Updated iOS version from 1.1.0 to 1.1.3
+
+### Files Modified
+| File | Changes |
+|------|---------|
+| `scripts/ui/journal_ui.gd` | Added `_handle_mobile_button_tap()` for direct tap handling, mobile prev/next buttons |
+| `export_presets.cfg` | Version bump to 1.1.3 |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
