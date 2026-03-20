@@ -834,17 +834,13 @@ func _input(event: InputEvent) -> void:
 						SFXManager.play_sfx("select")
 						_update_mobile_nav_visibility()
 				else:
-					# Short tap (not a swipe) — check if it landed on a mobile button
-					# and fire the action directly. We handle taps here instead of
-					# relying on GUI event propagation because _input() consumes all
-					# events while the journal is open, which blocks the emulated
-					# InputEventMouseButton that Godot generates from touches —
-					# and Button nodes only respond to mouse events, not raw touch.
-						# IMPORTANT: Touch position is in window/screen coords but
-					# button rects are in canvas/viewport coords (1920x1080).
-					# With canvas_items stretch mode these differ on iOS.
-					var canvas_pos: Vector2 = _screen_to_canvas(event.position)
-					_handle_mobile_button_tap(canvas_pos)
+					# Short tap — check proportional screen zones for close/nav.
+					# We use raw event.position (no coordinate transform) and test
+					# against zones computed from BOTH viewport size and window size,
+					# because iOS touch events may be in either coordinate space
+					# depending on Godot version and device. This avoids the
+					# get_global_rect() mismatch that made the close button unreachable.
+					_handle_mobile_button_tap(event.position)
 			_swipe_start = Vector2.ZERO
 			_swipe_touch_index = -1
 		if vp:
@@ -1029,36 +1025,35 @@ static func _enforce_min_button_size(node: Node, min_size: int) -> void:
 		_enforce_min_button_size(child, min_size)
 
 
-## Convert screen/window touch coordinates to canvas/viewport coordinates.
-## With canvas_items stretch mode, the viewport (1920x1080) is scaled to fit the
-## device screen. Touch events arrive in screen coords; Control.get_global_rect()
-## returns canvas coords. get_final_transform() maps viewport -> screen, so its
-## inverse maps screen -> viewport.
-func _screen_to_canvas(screen_pos: Vector2) -> Vector2:
-	var vp: Viewport = get_viewport()
-	if vp:
-		return vp.get_final_transform().affine_inverse() * screen_pos
-	return screen_pos
-
-
 func _handle_mobile_button_tap(pos: Vector2) -> void:
-	# pos is already in canvas/viewport coordinates (transformed by caller)
-	var close_btn: Button = get_node_or_null("MobileCloseButton") as Button
-	if close_btn and close_btn.visible and close_btn.get_global_rect().has_point(pos):
-		_close_journal()
-		return
-	var prev_btn: Button = get_node_or_null("MobilePrevButton") as Button
-	if prev_btn and prev_btn.visible and prev_btn.get_global_rect().has_point(pos):
-		_mobile_prev_page()
-		return
-	var next_btn: Button = get_node_or_null("MobileNextButton") as Button
-	if next_btn and next_btn.visible and next_btn.get_global_rect().has_point(pos):
-		_mobile_next_page()
-		return
-	# Tap outside the book panel closes the journal (fallback for iOS usability)
-	if is_instance_valid(panel) and not panel.get_global_rect().has_point(pos):
-		_close_journal()
-		return
+	# On iOS, touch event coordinates may be in viewport space (1920x1080 with
+	# canvas_items stretch) OR window/screen space (device native resolution).
+	# Using get_global_rect() fails when the spaces don't match. Instead, we
+	# compute hit zones from the known panel anchor positions (0.06 - 0.94) and
+	# test against BOTH viewport size and window size. One of them will match
+	# whatever coordinate space the touch event uses.
+	var vp_size: Vector2 = get_viewport().get_visible_rect().size
+	var win_size: Vector2 = Vector2(DisplayServer.window_get_size())
+
+	var sizes: Array[Vector2] = [vp_size]
+	if not vp_size.is_equal_approx(win_size):
+		sizes.append(win_size)
+
+	for ref: Vector2 in sizes:
+		var book_right: float = ref.x * 0.94
+		var book_top: float = ref.y * 0.06
+
+		# Close zone: top-right 80x80 area of the book panel
+		if pos.x > book_right - 80.0 and pos.y < book_top + 80.0 and pos.x < ref.x and pos.y > 0.0:
+			_close_journal()
+			return
+
+		# Tap outside book panel: close
+		var book_left: float = ref.x * 0.06
+		var book_bottom: float = ref.y * 0.94
+		if pos.x < book_left or pos.x > book_right or pos.y < book_top or pos.y > book_bottom:
+			_close_journal()
+			return
 
 
 func _close_journal() -> void:
