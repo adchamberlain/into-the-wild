@@ -26,6 +26,7 @@ var _input_manager: Node
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	layer = 150
+	add_to_group("pause_menu")
 
 	panel = PanelContainer.new()
 	var style: StyleBoxFlat = StyleBoxFlat.new()

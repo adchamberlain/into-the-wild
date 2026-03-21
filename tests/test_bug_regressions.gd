@@ -224,6 +224,7 @@ func run_tests() -> Dictionary:
 	test_weather_manager_connects_day_changed()
 	test_journal_sets_menu_open_flag()
 	test_journal_uses_gui_input_for_touch()
+	test_house_pause_menu_in_pause_group()
 
 	return get_results()
 
@@ -4455,3 +4456,16 @@ func test_journal_uses_gui_input_for_touch() -> void:
 	# background must connect gui_input signal
 	assert_true(source.find("gui_input.connect(_on_background_gui_input)") != -1,
 		"background connects gui_input signal")
+
+
+func test_house_pause_menu_in_pause_group() -> void:
+	# ROOT CAUSE: house_pause_menu.gd never called add_to_group("pause_menu"),
+	# so TouchControls._on_menu_button_pressed("pause") found no nodes and
+	# the MENU button did nothing on iOS in the house scene.
+	var file: FileAccess = FileAccess.open("res://scripts/house/house_pause_menu.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open house_pause_menu.gd")
+		return
+	var source: String = file.get_as_text()
+	assert_true(source.find("add_to_group(\"pause_menu\")") != -1,
+		"house_pause_menu adds itself to pause_menu group")
