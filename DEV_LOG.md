@@ -7808,10 +7808,30 @@ Deployed iOS 1.1.4 to iPhone — journal close button, swipe left/right, and pre
 
 ---
 
+## Session 51 - Fix iOS House Scene MENU Button (2026-03-21)
+
+House scene MENU touch button did nothing on iOS — tapping BAG, CRAFT, or MENU had no effect. Saving from the house was impossible.
+
+### Root Cause
+
+`house_pause_menu.gd` never called `add_to_group("pause_menu")`. The main game's `pause_menu.gd` does this at line 52, but the house-specific version was missing it. When `TouchControls._on_menu_button_pressed("pause")` searched for nodes in the `"pause_menu"` group, it found nothing and silently returned.
+
+### Fix
+
+Added `add_to_group("pause_menu")` to `house_pause_menu.gd`'s `_ready()` function, matching the pattern used by the main game's pause menu.
+
+### Files Modified
+| File | Changes |
+|------|---------|
+| `scripts/house/house_pause_menu.gd` | Added `add_to_group("pause_menu")` in `_ready()` |
+| `tests/test_bug_regressions.gd` | Added `test_house_pause_menu_in_pause_group()` regression test |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Continue iPad play-testing with controller — verify all menus navigate correctly
+1. Continue iOS play-testing — verify MENU button works in house scene
 2. Continue play-testing end-of-game trail sequence with new clues and compass
 3. Review and fix any bugs filed via GitHub Issues
 4. Redeploy website on Cloudflare with iPad download card
