@@ -225,6 +225,9 @@ func run_tests() -> Dictionary:
 	test_journal_sets_menu_open_flag()
 	test_journal_uses_gui_input_for_touch()
 	test_house_pause_menu_in_pause_group()
+	test_pond_edge_collision_extends_downward()
+	test_water_area_matches_visual_dimensions()
+	test_player_has_water_exit_grace_timer()
 
 	return get_results()
 
@@ -4469,3 +4472,53 @@ func test_house_pause_menu_in_pause_group() -> void:
 	var source: String = file.get_as_text()
 	assert_true(source.find("add_to_group(\"pause_menu\")") != -1,
 		"house_pause_menu adds itself to pause_menu group")
+
+
+func test_pond_edge_collision_extends_downward() -> void:
+	# ROOT CAUSE: At the pond-to-land transition, the pond floor cell (height -2.5)
+	# had a thin slab with top at -2.5, while the adjacent shore cell (height +0.5)
+	# had a box with bottom at ~0. This left a 2.5-unit gap the player swam through.
+	# Fix: ALL boxes now use abs(height) + 3.0 depth, extending well below the
+	# surface so adjacent cells always overlap vertically at water edges.
+	var file: FileAccess = FileAccess.open("res://scripts/world/terrain_chunk.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open terrain_chunk.gd")
+		return
+	var source: String = file.get_as_text()
+	# Must NOT have the old thin-slab formula for negative heights
+	assert_true(source.find("height + box_height / 2.0") == -1,
+		"no upward-extending slabs (old bug pattern)")
+	# All boxes use unified formula with extra depth to close water-land gaps
+	assert_true(source.find("abs(height) + 3.0") != -1,
+		"all collision boxes extend 3 extra units deep to prevent pond edge gaps")
+
+
+func test_water_area_matches_visual_dimensions() -> void:
+	# ROOT CAUSE: WaterArea was pond_width + 1.0 on X/Z, causing body_exited
+	# to fire while the player was still at the pond edge. This switched off
+	# swim physics prematurely and full gravity clipped them through terrain.
+	var file: FileAccess = FileAccess.open("res://scripts/resources/fishing_spot.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open fishing_spot.gd")
+		return
+	var source: String = file.get_as_text()
+	# WaterArea should NOT have + 1.0 on pond_width or pond_depth
+	assert_true(source.find("pond_width + 1.0") == -1,
+		"WaterArea X dimension should not be oversized by +1.0")
+	assert_true(source.find("pond_depth + 1.0") == -1,
+		"WaterArea Z dimension should not be oversized by +1.0")
+
+
+func test_player_has_water_exit_grace_timer() -> void:
+	# ROOT CAUSE: When exiting water, swim physics switched off instantly and
+	# full gravity kicked in before the player cleared the pond edge slope.
+	# Fix: a grace timer keeps swim physics active briefly after leaving water.
+	var file: FileAccess = FileAccess.open("res://scripts/player/player_controller.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open player_controller.gd")
+		return
+	var source: String = file.get_as_text()
+	assert_true(source.find("_water_exit_grace_timer") != -1,
+		"player_controller has water exit grace timer variable")
+	assert_true(source.find("WATER_EXIT_GRACE_DURATION") != -1,
+		"player_controller has water exit grace duration constant")

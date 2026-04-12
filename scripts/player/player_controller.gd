@@ -122,6 +122,8 @@ var swim_sink_speed: float = 3.0  # How fast player sinks in water
 var swim_rise_speed: float = 2.5  # How fast player rises when pressing space
 var swim_move_speed: float = 2.5  # Movement speed while swimming
 var water_surface_y: float = 0.15  # Y position of water surface (matches pond_height in fishing_spot)
+var _water_exit_grace_timer: float = 0.0  # Grace period after exiting water to prevent instant gravity
+const WATER_EXIT_GRACE_DURATION: float = 0.3  # Seconds of swim physics after leaving water area
 
 # Breath / drowning
 var air_bubbles: int = 5  # Current bubbles remaining (5 = full breath)
@@ -483,7 +485,11 @@ func _physics_process(delta: float) -> void:
 		return
 
 	# Handle swimming vs normal movement
-	var actually_swimming: bool = is_in_water and global_position.y < water_surface_y
+	# Grace timer keeps swim physics active briefly after exiting the WaterArea
+	# to prevent instant gravity from clipping the player through the pond edge slope
+	if _water_exit_grace_timer > 0.0:
+		_water_exit_grace_timer -= delta
+	var actually_swimming: bool = (is_in_water or _water_exit_grace_timer > 0.0) and global_position.y < water_surface_y
 	if actually_swimming:
 		_process_swimming(delta)
 	else:
@@ -928,6 +934,12 @@ func set_in_water(in_water: bool) -> void:
 
 	if is_in_water and not was_in_water:
 		HintManager.try_show("swim_warning")
+		_water_exit_grace_timer = 0.0  # Reset grace timer when entering water
+
+	# Start grace period when exiting water so swim physics persist briefly
+	# This prevents instant gravity at the pond edge from clipping through terrain
+	if not is_in_water and was_in_water:
+		_water_exit_grace_timer = WATER_EXIT_GRACE_DURATION
 
 	# Update underwater visual effect
 	if is_in_water and not was_in_water:
@@ -1196,8 +1208,8 @@ func _update_fall_protection(delta: float) -> void:
 			_has_safe_position = true
 
 	# Emergency recovery if player falls extremely low (shouldn't happen with proper collision)
-	# Skip when swimming — deep water bodies (sinkhole) legitimately go far below terrain
-	if global_position.y < fall_warning_y and not is_in_water:
+	# Skip when swimming or in water-exit grace period — deep water bodies (sinkhole) legitimately go far below terrain
+	if global_position.y < fall_warning_y and not is_in_water and _water_exit_grace_timer <= 0.0:
 		push_warning("[Player] Emergency fall recovery triggered (y=%.1f)." % global_position.y)
 		_recover_from_fall()
 

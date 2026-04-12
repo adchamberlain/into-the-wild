@@ -866,23 +866,12 @@ func _generate_box_collision() -> void:
 
 			var height: float = _height_cache[cz + 1][cx + 1]
 
-			# For water cells (negative height), create collision at water bottom
-			# This allows swimming while preventing fall-through
-			# Use absolute value to get depth, minimum 0.5 for thin collision
-			var box_height: float
-			var box_y_center: float
-
-			if height < 0:
-				# Water cell: thin collision slab at pond floor only.
-				# No collision at water surface so the player falls through
-				# and triggers swimming via Area3D detection.
-				box_height = 0.5
-				box_y_center = height + box_height / 2.0  # Sits at the pond floor
-			else:
-				# Normal terrain: box TOP at terrain height, extending downward
-				# Minimum thickness of 0.5 ensures reliable collision
-				box_height = max(height, 0.5)
-				box_y_center = height - box_height / 2.0
+			# Box TOP sits at cell height, extending downward.
+			# Extra 3.0 depth on every box ensures adjacent cells always overlap
+			# vertically at water-land transitions (pond floors can be at -2.5,
+			# so even positive-height shore cells must extend below that).
+			var box_height: float = abs(height) + 3.0
+			var box_y_center: float = height - box_height / 2.0
 
 			# Calculate world position (cell center)
 			var world_x: float = chunk_world_x + cx * cell_size + cell_size / 2.0
@@ -923,17 +912,9 @@ func _generate_box_collision_batched() -> void:
 
 			var height: float = _height_cache[cz + 1][cx + 1]
 
-			var box_height: float
-			var box_y_center: float
-
-			if height < 0:
-				# Water cell: thin slab at pond floor only (matches sync version)
-				box_height = 0.5
-				box_y_center = height + box_height / 2.0
-			else:
-				# Normal terrain: box TOP at terrain height, extending downward
-				box_height = max(height, 0.5)
-				box_y_center = height - box_height / 2.0
+			# Matches sync version: box top at height, +3.0 extra depth
+			var box_height: float = abs(height) + 3.0
+			var box_y_center: float = height - box_height / 2.0
 
 			var world_x: float = chunk_world_x + cx * cell_size + cell_size / 2.0
 			var world_z: float = chunk_world_z + cz * cell_size + cell_size / 2.0

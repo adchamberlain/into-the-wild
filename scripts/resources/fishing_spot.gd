@@ -253,8 +253,9 @@ func _create_water_area() -> void:
 
 	var area_shape := CollisionShape3D.new()
 	var area_box := BoxShape3D.new()
-	# Match the water volume size, slightly larger to catch player entering
-	area_box.size = Vector3(pond_width + 1.0, water_depth + 1.0, pond_depth + 1.0)
+	# Match the water volume size exactly - oversizing causes premature exit signals
+	# that drop the player out of swim physics while still at the pond edge
+	area_box.size = Vector3(pond_width, water_depth + 1.0, pond_depth)
 	area_shape.shape = area_box
 	# Position to match water volume (surface at pond_height, extends down)
 	area_shape.position = Vector3(0, pond_height - water_depth / 2.0, 0)
