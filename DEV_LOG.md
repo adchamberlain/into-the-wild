@@ -7898,6 +7898,24 @@ Two player-reported issues fixed: unclear camp level gating in crafting UI, and 
 
 ---
 
+## Session 54 - Fix Controller Crafting Hint (2026-04-12)
+
+HUD showed "R3-Craft" when using a PlayStation controller, but R3 (right stick click) was not bound to the crafting action. The actual binding was the touchpad click (button_index 20 / `JOY_BUTTON_MISC1`). The display label, the `InputManager.CONTROLLER_PROMPTS` dictionary, and the actual InputMap all disagreed.
+
+### Fix
+
+Updated display labels to "Pad" in both places:
+- `InputManager.CONTROLLER_PROMPTS["open_crafting"]`: "R3" → "Pad"
+- `hud.gd` hardcoded controller hint strings (2 occurrences): "R3-Craft" → "Pad-Craft"
+
+### Files Modified
+| File | Changes |
+|------|---------|
+| `scripts/systems/input_manager.gd` | Changed `open_crafting` prompt from "R3" to "Pad" |
+| `scripts/ui/hud.gd` | Changed controller hint strings from "R3-Craft" to "Pad-Craft" |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
