@@ -324,9 +324,7 @@ func _on_cook_pressed() -> void:
 	# Add cooked item to inventory
 	player_inventory.add_item(output_item, 1)
 
-	# Visual flare effect
-	if current_fire.has_method("flare"):
-		current_fire.flare()
+	# No flare effect for cooking — cooking uses the fire, it doesn't feed it
 
 	# Show notification
 	var output_name: String = output_item.capitalize().replace("_", " ")

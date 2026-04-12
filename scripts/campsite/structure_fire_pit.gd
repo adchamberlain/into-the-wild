@@ -22,6 +22,12 @@ var is_lit: bool = true
 var effectiveness: float = 1.0  # Reduced by rain/storm
 var base_light_energy: float = 1.4
 
+# Fire brightness levels: dim (default), medium (+1 wood), bright (+2 wood)
+# Adding fuel boosts brightness one level, capped at bright. Resets when fire relights.
+var _brightness_level: int = 0  # 0=dim, 1=medium, 2=bright
+const BRIGHTNESS_MULTIPLIERS: Array[float] = [1.0, 1.35, 1.7]  # Per level
+const MAX_BRIGHTNESS_LEVEL: int = 2
+
 # Node references (set after scene instantiation)
 var fire_light: OmniLight3D
 var fire_mesh: Node3D
@@ -65,7 +71,7 @@ func _process(delta: float) -> void:
 			# Fire dims as fuel runs low (below 30%) — skip if flare tween is animating
 			if not (flare_tween and flare_tween.is_valid()):
 				var dim_factor: float = fuel_remaining / (max_fuel * 0.3)
-				fire_light.light_energy = base_light_energy * effectiveness * (0.5 + 0.5 * dim_factor)
+				fire_light.light_energy = _get_current_base_energy() * (0.5 + 0.5 * dim_factor)
 
 
 func interact(player: Node) -> bool:
@@ -159,8 +165,12 @@ func add_fuel(amount: float = -1.0) -> void:
 
 	# Relight the fire if it was extinguished
 	if not is_lit and fuel_remaining > 0:
+		_brightness_level = 0  # Reset brightness on relight
 		_set_fire_state(true)
 		print("[FirePit] Fire relit with added fuel!")
+
+	# Each wood added boosts brightness one level (dim → medium → bright, then capped)
+	boost_brightness()
 
 	var days_remaining: float = fuel_remaining / max_fuel
 	print("[FirePit] Fuel added. Remaining: %.1f days" % days_remaining)
@@ -177,12 +187,28 @@ func flare() -> void:
 	if flare_tween and flare_tween.is_valid():
 		flare_tween.kill()
 
-	var original_energy: float = fire_light.light_energy
-	var flare_energy: float = original_energy * 2.0
+	# Always compute from the stable baseline — never read current node value,
+	# which could be mid-tween and ratchet the brightness up without limit
+	var target_energy: float = _get_current_base_energy()
+	var flare_energy: float = target_energy * 1.5
 
 	flare_tween = create_tween()
 	flare_tween.tween_property(fire_light, "light_energy", flare_energy, 0.1)
-	flare_tween.tween_property(fire_light, "light_energy", original_energy, 0.4)
+	flare_tween.tween_property(fire_light, "light_energy", target_energy, 0.4)
+
+
+## Boost brightness one level (dim → medium → bright). Called when adding fuel.
+func boost_brightness() -> void:
+	if _brightness_level < MAX_BRIGHTNESS_LEVEL:
+		_brightness_level += 1
+	# Apply the new brightness immediately (flare will animate from here)
+	if is_instance_valid(fire_light) and is_lit:
+		fire_light.light_energy = _get_current_base_energy()
+
+
+## Get the stable base energy for the current brightness level and effectiveness.
+func _get_current_base_energy() -> float:
+	return base_light_energy * BRIGHTNESS_MULTIPLIERS[_brightness_level] * effectiveness
 
 
 func _set_fire_state(lit: bool) -> void:
@@ -230,9 +256,9 @@ func set_effectiveness(value: float) -> void:
 	effectiveness = clampf(value, 0.0, 1.0)
 	warmth_radius = base_warmth_radius * effectiveness
 
-	# Adjust light intensity based on effectiveness
+	# Adjust light intensity based on effectiveness and current brightness level
 	if fire_light and is_lit:
-		fire_light.light_energy = light_energy * effectiveness
+		fire_light.light_energy = _get_current_base_energy()
 
 	print("[FirePit] Effectiveness set to %.0f%%" % (effectiveness * 100))
 

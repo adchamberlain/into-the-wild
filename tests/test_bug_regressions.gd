@@ -230,6 +230,9 @@ func run_tests() -> Dictionary:
 	test_player_has_water_exit_grace_timer()
 	test_camp_level_crafting_hint_exists()
 	test_crafting_ui_shows_camp_level_label()
+	test_fire_flare_uses_stable_baseline()
+	test_cooking_does_not_flare_fire()
+	test_fire_brightness_has_max_level()
 
 	return get_results()
 
@@ -4550,3 +4553,53 @@ func test_crafting_ui_shows_camp_level_label() -> void:
 		"crafting UI shows camp level requirement label on locked recipes")
 	assert_true(source.find("camp_level_crafting") != -1,
 		"crafting UI triggers camp_level_crafting hint")
+
+
+func test_fire_flare_uses_stable_baseline() -> void:
+	# ROOT CAUSE: flare() read fire_light.light_energy (current node value) as its
+	# baseline. If called mid-tween, the sampled value was an intermediate brightness,
+	# ratcheting the fire brighter each time. Fix: use _get_current_base_energy().
+	var file: FileAccess = FileAccess.open("res://scripts/campsite/structure_fire_pit.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open structure_fire_pit.gd")
+		return
+	var source: String = file.get_as_text()
+	# flare() must NOT sample from fire_light.light_energy
+	assert_true(source.find("var original_energy: float = fire_light.light_energy") == -1,
+		"flare() does not read current light_energy as baseline (ratchet bug)")
+	# flare() must use the stable baseline function
+	assert_true(source.find("_get_current_base_energy()") != -1,
+		"flare() uses _get_current_base_energy() for stable baseline")
+
+
+func test_cooking_does_not_flare_fire() -> void:
+	# Cooking food on the fire was calling flare(), making the fire brighter
+	# with each item cooked. Cooking should not affect fire brightness.
+	var file: FileAccess = FileAccess.open("res://scripts/ui/fire_menu.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open fire_menu.gd")
+		return
+	var source: String = file.get_as_text()
+	# Find the cook function and verify no flare call between cook and notification
+	var cook_idx: int = source.find("_on_cook_pressed")
+	var add_fuel_idx: int = source.find("_on_add_fuel_pressed")
+	if cook_idx != -1 and add_fuel_idx != -1:
+		var cook_section: String = source.substr(cook_idx, add_fuel_idx - cook_idx)
+		assert_true(cook_section.find(".flare()") == -1,
+			"cook handler does not call flare() on the fire")
+
+
+func test_fire_brightness_has_max_level() -> void:
+	# Fire brightness must be capped at 3 levels (dim, medium, bright).
+	# Without a cap, adding wood repeatedly made the fire white/purple/black.
+	var file: FileAccess = FileAccess.open("res://scripts/campsite/structure_fire_pit.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open structure_fire_pit.gd")
+		return
+	var source: String = file.get_as_text()
+	assert_true(source.find("MAX_BRIGHTNESS_LEVEL") != -1,
+		"fire pit has a max brightness level constant")
+	assert_true(source.find("BRIGHTNESS_MULTIPLIERS") != -1,
+		"fire pit has brightness multiplier table")
+	assert_true(source.find("_brightness_level < MAX_BRIGHTNESS_LEVEL") != -1,
+		"boost_brightness() checks against max level before incrementing")
