@@ -192,6 +192,8 @@ func _refresh_recipe_list(preserve_focus: bool = false) -> void:
 
 	var recipes: Array[Dictionary] = crafting_system.get_all_recipes_status(at_bench, camp_level)
 
+	var has_level_locked_recipes: bool = false
+
 	for recipe: Dictionary in recipes:
 		var recipe_id: String = recipe.get("id", "")
 		var recipe_name: String = recipe.get("name", "Unknown")
@@ -199,10 +201,15 @@ func _refresh_recipe_list(preserve_focus: bool = false) -> void:
 		var inputs: Dictionary = recipe.get("inputs", {})
 		var description: String = recipe.get("description", "")
 		var requires_bench: bool = recipe.get("requires_bench", false)
+		var min_camp_level: int = recipe.get("min_camp_level", 1)
 
 		# Skip advanced recipes entirely when not at bench - only show basic recipes
 		if requires_bench and not at_bench:
 			continue
+
+		# Track whether any visible recipes are locked by camp level
+		if min_camp_level > camp_level:
+			has_level_locked_recipes = true
 
 		# Create outer panel for each recipe item with darker background
 		var item_panel: PanelContainer = PanelContainer.new()
@@ -264,6 +271,15 @@ func _refresh_recipe_list(preserve_focus: bool = false) -> void:
 		desc_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7, 1))
 		container.add_child(desc_label)
 
+		# Show "Requires Camp Lvl X" label for recipes locked by camp level
+		if min_camp_level > camp_level:
+			var level_label: Label = Label.new()
+			level_label.text = "Requires Camp Lvl %d" % min_camp_level
+			level_label.add_theme_font_override("font", HUD_FONT)
+			level_label.add_theme_font_size_override("font_size", 28)
+			level_label.add_theme_color_override("font_color", Color(1.0, 0.7, 0.3, 1))
+			container.add_child(level_label)
+
 		# Show "Inventory full" warning if player has ingredients but output is at limit
 		if not can_craft_recipe and player and player.has_method("get_inventory"):
 			var inv: Inventory = player.get_inventory()
@@ -292,6 +308,10 @@ func _refresh_recipe_list(preserve_focus: bool = false) -> void:
 		var spacer: Control = Control.new()
 		spacer.custom_minimum_size = Vector2(0, 6)
 		recipe_list.add_child(spacer)
+
+	# Show one-time hint if player sees camp-level-locked recipes
+	if has_level_locked_recipes:
+		HintManager.try_show("camp_level_crafting")
 
 	# Restore scroll position after layout if preserving focus
 	if preserve_focus and saved_scroll > 0:

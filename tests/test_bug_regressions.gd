@@ -228,6 +228,8 @@ func run_tests() -> Dictionary:
 	test_pond_edge_collision_extends_downward()
 	test_water_area_matches_visual_dimensions()
 	test_player_has_water_exit_grace_timer()
+	test_camp_level_crafting_hint_exists()
+	test_crafting_ui_shows_camp_level_label()
 
 	return get_results()
 
@@ -4522,3 +4524,29 @@ func test_player_has_water_exit_grace_timer() -> void:
 		"player_controller has water exit grace timer variable")
 	assert_true(source.find("WATER_EXIT_GRACE_DURATION") != -1,
 		"player_controller has water exit grace duration constant")
+
+
+func test_camp_level_crafting_hint_exists() -> void:
+	# Players didn't realize recipes were locked behind camp levels.
+	# A one-time hint fires when they see level-locked recipes in the crafting UI.
+	var file: FileAccess = FileAccess.open("res://scripts/ui/hint_manager.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open hint_manager.gd")
+		return
+	var source: String = file.get_as_text()
+	assert_true(source.find("\"camp_level_crafting\"") != -1,
+		"hint_manager has camp_level_crafting hint defined")
+
+
+func test_crafting_ui_shows_camp_level_label() -> void:
+	# Recipes locked by camp level must show "Requires Camp Lvl X" so players
+	# understand why the button is disabled.
+	var file: FileAccess = FileAccess.open("res://scripts/ui/crafting_ui.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open crafting_ui.gd")
+		return
+	var source: String = file.get_as_text()
+	assert_true(source.find("Requires Camp Lvl") != -1,
+		"crafting UI shows camp level requirement label on locked recipes")
+	assert_true(source.find("camp_level_crafting") != -1,
+		"crafting UI triggers camp_level_crafting hint")

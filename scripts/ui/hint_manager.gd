@@ -56,6 +56,9 @@ const HINTS: Dictionary = {
 	"deep_well_discovery": {
 		"message": "There's something at the bottom of this well... but it's far too deep to swim. Maybe there's [color=#ffda4d]another way down[/color]."
 	},
+	"camp_level_crafting": {
+		"message": "Some recipes require a higher [color=#ffda4d]Camp Level[/color]. Build more structures at your campsite to level up and unlock advanced crafting!"
+	},
 }
 
 const RARE_RESOURCES: Array[String] = ["diamond", "opal", "crystal", "rare_ore", "iron_ore"]
