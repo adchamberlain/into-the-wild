@@ -7861,6 +7861,43 @@ Unified the collision formula for all cells: `box_height = abs(height) + 3.0` wi
 
 ---
 
+## Session 53 - Camp Level Crafting Hints & Fire Brightness Fix (2026-04-12)
+
+Two player-reported issues fixed: unclear camp level gating in crafting UI, and fire pit brightness escalating to white/purple/black.
+
+### Camp Level Crafting Hints
+
+**Problem**: Players didn't realize recipes were locked behind camp levels. The crafting UI showed disabled/greyed buttons with no explanation of why they couldn't craft.
+
+**Fix — two changes**:
+1. **"Requires Camp Lvl X" label** (orange text) on every recipe card locked by camp level — always visible, answers "why is this greyed out?" at a glance
+2. **One-time survival tip** (`camp_level_crafting`) fires the first time the player opens crafting and sees level-locked recipes: *"Some recipes require a higher Camp Level. Build more structures at your campsite to level up and unlock advanced crafting!"*
+
+### Fire Pit Brightness Fix
+
+**Problem**: Fire got progressively brighter (white → purple → black) when adding wood or cooking food.
+
+**Root Cause**: Three bugs combined:
+1. `flare()` read `fire_light.light_energy` (potentially mid-tween) as its baseline, then doubled it. Each interrupted flare ratcheted brightness higher permanently.
+2. Cooking called `flare()`, making the fire brighter with each item cooked — cooking should not affect fire brightness.
+3. No brightness cap — adding wood increased light energy without limit.
+
+**Fix**:
+1. `flare()` now uses `_get_current_base_energy()` (stable baseline from `base_light_energy * brightness_multiplier * effectiveness`) instead of sampling the current node value
+2. Removed `flare()` call from `_on_cook_pressed()` in fire_menu.gd
+3. Added 3-level brightness system: dim (1.0x), medium (1.35x), bright (1.7x) — capped at bright, resets on relight
+
+### Files Modified
+| File | Changes |
+|------|---------|
+| `scripts/ui/hint_manager.gd` | Added `camp_level_crafting` hint |
+| `scripts/ui/crafting_ui.gd` | Added "Requires Camp Lvl X" label on locked recipes, triggers hint |
+| `scripts/campsite/structure_fire_pit.gd` | Fixed `flare()` baseline, added 3-level brightness system with cap |
+| `scripts/ui/fire_menu.gd` | Removed `flare()` from cooking handler |
+| `tests/test_bug_regressions.gd` | Added 5 regression tests |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
