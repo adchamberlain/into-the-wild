@@ -909,7 +909,7 @@ func _update_control_hints() -> void:
 	if is_mobile and using_ctrl:
 		equip_hint_label.visible = false
 		if controller_hints_panel and controller_hints_label:
-			controller_hints_label.text = "Share-Equip  R3-Craft  D\u2190-Inventory  Menu-Pause"
+			controller_hints_label.text = "Share-Equip  Pad-Craft  D\u2190-Inventory  Menu-Pause"
 			controller_hints_panel.visible = true
 		return
 
@@ -918,7 +918,7 @@ func _update_control_hints() -> void:
 		controller_hints_panel.visible = false
 	equip_hint_label.visible = true
 	if using_ctrl:
-		equip_hint_label.text = "Share-Equip  R3-Craft  D\u2190-Inventory  Menu-Pause"
+		equip_hint_label.text = "Share-Equip  Pad-Craft  D\u2190-Inventory  Menu-Pause"
 	else:
 		equip_hint_label.text = "I-Equip X-Craft C-Crouch V-Inventory Tab-Menu"
 

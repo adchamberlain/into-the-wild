@@ -45,8 +45,7 @@ const TOUCH_PROMPTS: Dictionary = {
 }
 
 # Button prompt mappings for PlayStation controller (DualSense)
-# Share (left button), R3 (right stick click), Menu (right button)
-# Note: Touchpad (Pad) doesn't work on iOS — R3 is the alternative
+# Share (left button), Pad (touchpad click), Menu (right button)
 const CONTROLLER_PROMPTS: Dictionary = {
 	"interact": "L2",
 	"jump": "○",
@@ -54,7 +53,7 @@ const CONTROLLER_PROMPTS: Dictionary = {
 	"eat": "△",
 	"use_equipped": "R2",
 	"unequip": "✕",
-	"open_crafting": "R3",
+	"open_crafting": "Pad",
 	"open_inventory": "Share",
 	"pause": "Menu",
 	"next_slot": "R1",
