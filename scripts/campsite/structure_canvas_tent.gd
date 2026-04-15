@@ -14,6 +14,10 @@ func _ready() -> void:
 	structure_name = "Canvas Tent"
 	interaction_text = "Rest in Tent"
 	protection_radius = CANVAS_TENT_PROTECTION_RADIUS
+	# Camera inside tent: player lies on ground, camera at head height looking up
+	rest_position_offset = Vector3(0, 0.1, 0.2)
+	rest_camera_y = 0.4  # Head height when lying down inside tent
+	rest_camera_rotation = Vector3(-80, 0, 0)  # Nearly straight up at canvas roof
 
 
 func _skip_to_dawn(player: Node, time_manager: Node) -> void:

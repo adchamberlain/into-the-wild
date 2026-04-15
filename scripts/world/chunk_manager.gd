@@ -2458,10 +2458,12 @@ func is_near_any_pond(world_x: float, world_z: float, buffer: float = 2.0) -> bo
 	return is_in_water(world_x, world_z, buffer)
 
 
-func is_inside_cave_tunnel(world_x: float, world_z: float) -> bool:
-	## Check if a world position falls inside the cave skip zone (crater/stairway).
-	## Skip zone: X:[-3,+3], Z:[-6,+6] (2x4 cells = 6 wide x 12 deep).
-	## The tunnel area (Z < -6) is NOT skipped — terrain generates on top.
+func is_inside_cave_tunnel(world_x: float, world_z: float, include_underground: bool = false) -> bool:
+	## Check if a world position falls inside the cave skip zone.
+	## Default: sinkhole only — X:[-3,+3], Z:[-6,+6] (for mesh + collision).
+	## With include_underground=true: also covers the underground tunnel
+	## X:[-3,+3], Z:[-24,-6] (for collision-only skip, so terrain collision
+	## doesn't extend into the tunnel and block the player).
 	##
 	## Cave center is snapped to cell_size grid, so skip zone boundaries align
 	## exactly with cell edges. We shrink the check by half_cell since this
@@ -2475,6 +2477,13 @@ func is_inside_cave_tunnel(world_x: float, world_z: float) -> bool:
 		if (local_x >= -3.0 + half_cell and local_x <= 3.0 - half_cell
 				and local_z >= -6.0 + half_cell and local_z <= 6.0 - half_cell):
 			return true
+		# Underground tunnel: terrain collision must be skipped here too,
+		# otherwise the extended collision depth (abs(height)+3.0) pushes
+		# terrain collision into the tunnel space and blocks the player.
+		if include_underground:
+			if (local_x >= -3.0 + half_cell and local_x <= 3.0 - half_cell
+					and local_z >= -24.0 + half_cell and local_z < -6.0 + half_cell):
+				return true
 	return false
 
 

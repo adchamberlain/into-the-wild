@@ -858,10 +858,13 @@ func _generate_box_collision() -> void:
 
 	for cz in range(chunk_size_cells):
 		for cx in range(chunk_size_cells):
-			# Skip cells inside cave tunnels (cave has its own collision)
+			# Skip cells inside cave skip zones (sinkhole + underground tunnel)
+			# The underground tunnel needs collision skipped too, because the
+			# extended collision depth (abs(height)+3.0) pushes terrain collision
+			# down into the tunnel space and blocks the player.
 			var cell_cx: float = chunk_world_x + cx * cell_size + cell_size / 2.0
 			var cell_cz: float = chunk_world_z + cz * cell_size + cell_size / 2.0
-			if chunk_manager.is_inside_cave_tunnel(cell_cx, cell_cz):
+			if chunk_manager.is_inside_cave_tunnel(cell_cx, cell_cz, true):
 				continue
 
 			var height: float = _height_cache[cz + 1][cx + 1]
@@ -904,10 +907,10 @@ func _generate_box_collision_batched() -> void:
 			return
 
 		for cx in range(chunk_size_cells):
-			# Skip cells inside cave tunnels (cave has its own collision)
+			# Skip cells inside cave skip zones (sinkhole + underground tunnel)
 			var cell_cx: float = chunk_world_x + cx * cell_size + cell_size / 2.0
 			var cell_cz: float = chunk_world_z + cz * cell_size + cell_size / 2.0
-			if chunk_manager.is_inside_cave_tunnel(cell_cx, cell_cz):
+			if chunk_manager.is_inside_cave_tunnel(cell_cx, cell_cz, true):
 				continue
 
 			var height: float = _height_cache[cz + 1][cx + 1]

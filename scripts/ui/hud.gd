@@ -727,7 +727,14 @@ func _on_interaction_target_changed(target: Node, interaction_text: String) -> v
 		return
 
 	if interaction_prompt:
-		var prompt_text: String = _get_interact_prompt() + " " + interaction_text
+		# Use "use_equipped" prompt for tool-based resources (axe/pickaxe chop),
+		# since the player presses USE (R / R2 / Tap USE), not interact (E / L2 / Tap ACT).
+		var action_prompt: String = _get_interact_prompt()
+		if is_instance_valid(target) and target.get("required_tool") is String:
+			var req_tool: String = target.get("required_tool") as String
+			if req_tool != "" and target.get("chops_required") is int and (target.get("chops_required") as int) > 1:
+				action_prompt = "[%s]" % _get_button_prompt("use_equipped")
+		var prompt_text: String = action_prompt + " " + interaction_text
 		# Add move hint if target is a structure (except torches/lodestones - pick up only)
 		var show_move: bool = false
 		if is_instance_valid(target) and target.is_in_group("structure"):

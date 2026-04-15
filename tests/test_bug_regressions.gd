@@ -6,6 +6,9 @@ extends "res://tests/test_base.gd"
 func run_tests() -> Dictionary:
 	set_test_name("BugRegressions")
 
+	test_cave_terrain_collision_skips_underground_tunnel()
+	test_tool_resource_prompt_uses_use_equipped()
+	test_canvas_tent_camera_inside_tent()
 	test_inventory_keys_use_crafting_ids()
 	test_garden_cooldown_minutes_at_boundary()
 	test_fishing_spot_respawn_color_matches_original()
@@ -4603,3 +4606,59 @@ func test_fire_brightness_has_max_level() -> void:
 		"fire pit has brightness multiplier table")
 	assert_true(source.find("_brightness_level < MAX_BRIGHTNESS_LEVEL") != -1,
 		"boost_brightness() checks against max level before incrementing")
+
+
+func test_cave_terrain_collision_skips_underground_tunnel() -> void:
+	# Regression: terrain collision formula abs(height)+3.0 pushed terrain collision
+	# into the underground cave tunnel, requiring crouch to enter.
+	# Fix: is_inside_cave_tunnel(include_underground=true) skips collision
+	# above the tunnel area (Z:[-24,-6] in cave-local coords).
+	var file: FileAccess = FileAccess.open("res://scripts/world/chunk_manager.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open chunk_manager.gd")
+		return
+	var source: String = file.get_as_text()
+	assert_true(source.find("include_underground: bool = false") != -1,
+		"is_inside_cave_tunnel has include_underground parameter")
+	assert_true(source.find("local_z >= -24.0") != -1,
+		"underground tunnel skip zone extends to Z=-24")
+
+	# Verify collision generation uses include_underground=true
+	var tc_file: FileAccess = FileAccess.open("res://scripts/world/terrain_chunk.gd", FileAccess.READ)
+	if not tc_file:
+		assert_true(false, "Could not open terrain_chunk.gd")
+		return
+	var tc_source: String = tc_file.get_as_text()
+	assert_true(tc_source.find("is_inside_cave_tunnel(cell_cx, cell_cz, true)") != -1,
+		"collision generation skips underground tunnel area")
+
+
+func test_tool_resource_prompt_uses_use_equipped() -> void:
+	# On iOS, the prompt for tool resources (axe/pickaxe) showed "[Tap ACT]"
+	# but the player actually uses the USE button. Fix: detect tool-requiring
+	# resources and show the use_equipped prompt instead.
+	var file: FileAccess = FileAccess.open("res://scripts/ui/hud.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open hud.gd")
+		return
+	var source: String = file.get_as_text()
+	assert_true(source.find("required_tool") != -1,
+		"HUD checks for required_tool on interaction targets")
+	assert_true(source.find("use_equipped") != -1,
+		"HUD uses use_equipped prompt for tool resources")
+
+
+func test_canvas_tent_camera_inside_tent() -> void:
+	# Canvas tent camera was positioned above the tent looking down instead of
+	# inside the tent looking up. Fix: explicitly set camera Y position and
+	# adjust rest position to place player inside the tent.
+	var file: FileAccess = FileAccess.open("res://scripts/campsite/structure_canvas_tent.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open structure_canvas_tent.gd")
+		return
+	var source: String = file.get_as_text()
+	assert_true(source.find("rest_camera_y") != -1,
+		"canvas tent sets rest_camera_y for inside-tent view")
+	# Camera Y must be below tent ridge (1.8) and above ground (0)
+	assert_true(source.find("rest_camera_y = 0.4") != -1,
+		"camera Y at 0.4 places view inside tent, not above it")

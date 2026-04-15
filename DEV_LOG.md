@@ -7916,10 +7916,44 @@ Updated display labels to "Pad" in both places:
 
 ---
 
+## Session 55 - Fix Cave Entry, iOS Tool Hint, Tent Camera (2026-04-14)
+
+Three bug fixes:
+
+### Bug 1: Cave entrance requires crouch (regression)
+
+Session 52's pond fix changed terrain collision depth from `max(height, 0.5)` to `abs(height) + 3.0`, adding 3 extra units of downward depth. This pushed terrain collision above cave tunnels down INTO the tunnel space, reducing clearance and requiring players to crouch (or making entry impossible on iOS where crouch is disabled).
+
+**Fix**: Extended `is_inside_cave_tunnel()` with an `include_underground` parameter. When `true`, the skip zone covers both the sinkhole (Z:[-6,+6]) AND the underground tunnel (Z:[-24,-6]). Collision generation now uses `include_underground=true` while mesh generation still uses `false` (so terrain visuals above the tunnel remain intact).
+
+### Bug 2: iOS axe hint shows "Tap ACT" instead of "Tap USE"
+
+Tool-based resource interactions (axe chopping trees, pickaxe mining) use the `use_equipped` action (USE button / R key), not the `interact` action (ACT button / E key). The HUD always showed the interact prompt regardless.
+
+**Fix**: HUD now checks if the interaction target has `required_tool` and `chops_required > 1`, and shows the `use_equipped` prompt instead.
+
+### Bug 3: Canvas tent camera above tent instead of inside
+
+When resting in the canvas tent, the camera was positioned above the tent looking down. Root cause: the camera collision ray started inside the tent's collision box, so Godot didn't detect the ceiling, leaving the camera at its default height (1.6) above the player — above the tent ridge (1.8).
+
+**Fix**: Added `rest_camera_y` property to `StructureShelter` (default -1 = no override). Canvas tent sets `rest_camera_y = 0.4` and `rest_position_offset.y = 0.1` to place the camera inside the tent at head-height-when-lying-down, looking nearly straight up (-80°) at the canvas roof. Other shelters (basic shelter, cabin bed) are unaffected.
+
+### Files Modified
+| File | Changes |
+|------|---------|
+| `scripts/world/chunk_manager.gd` | Added `include_underground` param to `is_inside_cave_tunnel()` |
+| `scripts/world/terrain_chunk.gd` | Collision generation uses `include_underground=true` |
+| `scripts/ui/hud.gd` | Tool resources show `use_equipped` prompt instead of `interact` |
+| `scripts/campsite/structure_shelter.gd` | Added `rest_camera_y` property, camera Y positioning in rest mode |
+| `scripts/campsite/structure_canvas_tent.gd` | Set inside-tent camera position and rotation |
+| `tests/test_bug_regressions.gd` | 3 regression tests for all fixes |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Continue iOS play-testing — verify MENU button works in house scene
+1. Continue iOS play-testing — verify cave entry, tool hints, tent camera
 2. Continue play-testing end-of-game trail sequence with new clues and compass
 3. Review and fix any bugs filed via GitHub Issues
 

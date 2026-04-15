@@ -13,6 +13,7 @@ signal resting_ended(player: Node)
 # Resting position offset (relative to shelter)
 @export var rest_position_offset: Vector3 = Vector3(0, 0.3, 0.2)
 @export var rest_camera_rotation: Vector3 = Vector3(-70, 0, 0)  # Looking up at canvas
+@export var rest_camera_y: float = -1.0  # Camera Y override when resting (-1 = no override)
 
 # State
 var player_inside: bool = false
@@ -22,6 +23,7 @@ var resting_player: Node = null
 var player_original_position: Vector3
 var player_original_rotation: Vector3
 var player_camera_original_rotation: Vector3
+var player_camera_original_y: float = 1.6
 
 # Node references
 var protection_area: Area3D
@@ -81,7 +83,11 @@ func _enter_rest_mode(player: Node) -> void:
 	# Tilt camera to look up at the shelter canvas
 	if player.has_node("Camera3D"):
 		var camera: Node3D = player.get_node("Camera3D")
+		player_camera_original_y = camera.position.y
 		camera.rotation = Vector3(deg_to_rad(rest_camera_rotation.x), 0, 0)
+		# Override camera height if set (places camera inside the structure)
+		if rest_camera_y >= 0:
+			camera.position.y = rest_camera_y
 
 	# Disable player movement
 	if player.has_method("set_resting"):
@@ -191,10 +197,11 @@ func _exit_rest_mode(player: Node) -> void:
 	# Face the player away from the shelter (looking outward from exit)
 	player.rotation.y = rotation.y + _get_exit_facing_offset()
 
-	# Restore camera rotation
+	# Restore camera rotation and position
 	if player.has_node("Camera3D"):
 		var camera: Node3D = player.get_node("Camera3D")
 		camera.rotation = Vector3(0, 0, 0)  # Reset to neutral
+		camera.position.y = player_camera_original_y
 
 	# Re-enable player movement
 	if player.has_method("set_resting"):
