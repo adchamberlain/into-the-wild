@@ -237,6 +237,14 @@ func run_tests() -> Dictionary:
 	test_cooking_does_not_flare_fire()
 	test_fire_brightness_has_max_level()
 
+	# Round 11 regression tests (player feedback: compass/cursor/NG+ arrows/bundle)
+	test_first_compass_hint_exists()
+	test_compass_triggers_hint_on_inventory_add()
+	test_focus_out_skips_mouse_release_when_controller_active()
+	test_new_game_plus_stack_amounts_exist()
+	test_ng_plus_diamond_arrows_granted_as_ten()
+	test_new_game_plus_bundles_compass_and_lodestone()
+
 	return get_results()
 
 
@@ -4662,3 +4670,99 @@ func test_canvas_tent_camera_inside_tent() -> void:
 	# Camera Y must be below tent ridge (1.8) and above ground (0)
 	assert_true(source.find("rest_camera_y = 0.4") != -1,
 		"camera Y at 0.4 places view inside tent, not above it")
+
+
+func test_first_compass_hint_exists() -> void:
+	# Players didn't understand the compass+lodestone mechanic on first craft.
+	# A one-time hint now fires when the compass enters the inventory.
+	var file: FileAccess = FileAccess.open("res://scripts/ui/hint_manager.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open hint_manager.gd")
+		return
+	var source: String = file.get_as_text()
+	assert_true(source.find("\"first_compass\"") != -1,
+		"hint_manager defines first_compass hint")
+	assert_true(source.find("\"compass\": \"first_compass\"") != -1,
+		"hint_manager ITEM_HINTS maps compass → first_compass")
+
+
+func test_compass_triggers_hint_on_inventory_add() -> void:
+	# The inventory.gd add_item hook is the actual trigger point for item hints.
+	# If compass isn't in the hook's item list, the hint won't fire even if defined.
+	var file: FileAccess = FileAccess.open("res://scripts/player/inventory.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open inventory.gd")
+		return
+	var source: String = file.get_as_text()
+	assert_true(source.find("\"compass\"") != -1,
+		"inventory.gd item-hint hook includes compass")
+	assert_true(source.find("\"compass\": \"first_compass\"") != -1,
+		"inventory.gd maps compass to first_compass hint")
+
+
+func test_focus_out_skips_mouse_release_when_controller_active() -> void:
+	# macOS + DualSense bug: window focus-out fires spuriously (from touchpad
+	# OS-level mouse emulation or system game-controller handling), revealing
+	# the system cursor over the HUD crosshair. Fix: skip the voluntary
+	# MOUSE_MODE_VISIBLE call when a controller is driving.
+	var file: FileAccess = FileAccess.open("res://scripts/player/player_controller.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open player_controller.gd")
+		return
+	var source: String = file.get_as_text()
+	var focus_idx: int = source.find("NOTIFICATION_WM_WINDOW_FOCUS_OUT")
+	assert_true(focus_idx != -1, "focus-out handler exists")
+	# The guard must be near the focus-out handler
+	var next_section: int = source.find("NOTIFICATION_WM_WINDOW_FOCUS_IN", focus_idx)
+	assert_true(next_section != -1, "focus-in handler also exists")
+	var section: String = source.substr(focus_idx, next_section - focus_idx)
+	assert_true(section.find("using_controller") != -1,
+		"focus-out handler checks using_controller before releasing mouse")
+
+
+func test_new_game_plus_stack_amounts_exist() -> void:
+	# Stackable consumables (e.g. diamond_arrows) must be granted as a usable
+	# bundle, not a single unit, when returning to the wilderness via NG+.
+	var file: FileAccess = FileAccess.open("res://scripts/player/player_controller.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open player_controller.gd")
+		return
+	var source: String = file.get_as_text()
+	assert_true(source.find("NG_PLUS_STACK_AMOUNTS") != -1,
+		"player_controller defines NG_PLUS_STACK_AMOUNTS constant")
+	assert_true(source.find("\"diamond_arrows\": 10") != -1,
+		"NG_PLUS_STACK_AMOUNTS grants 10 diamond_arrows")
+
+
+func test_ng_plus_diamond_arrows_granted_as_ten() -> void:
+	# The NG+ grant loop must use NG_PLUS_STACK_AMOUNTS.get(type, 1) rather
+	# than a hardcoded 1 for every item.
+	var file: FileAccess = FileAccess.open("res://scripts/player/player_controller.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open player_controller.gd")
+		return
+	var source: String = file.get_as_text()
+	assert_true(source.find("NG_PLUS_STACK_AMOUNTS.get(item_type, 1)") != -1,
+		"NG+ grant loop looks up amount per item type")
+
+
+func test_new_game_plus_bundles_compass_and_lodestone() -> void:
+	# Compass and lodestone always work together, so they should be one
+	# selectable row in the NG+ UI and grant both items when chosen.
+	var file: FileAccess = FileAccess.open("res://scripts/house/new_game_plus_ui.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open new_game_plus_ui.gd")
+		return
+	var source: String = file.get_as_text()
+	assert_true(source.find("\"lodestone\" and compass_present") != -1,
+		"lodestone is filtered from available items when compass present")
+	assert_true(source.find("Compass & Lodestone") != -1,
+		"compass row displays as 'Compass & Lodestone'")
+	assert_true(source.find("items_to_grant") != -1,
+		"depart expands compass selection into compass + lodestone")
+	# Verify the expansion actually adds lodestone alongside compass
+	var depart_idx: int = source.find("func _actually_depart")
+	assert_true(depart_idx != -1, "_actually_depart function exists")
+	var depart_section: String = source.substr(depart_idx, 1500)
+	assert_true(depart_section.find("items_to_grant.append(\"lodestone\")") != -1,
+		"_actually_depart appends lodestone when compass is selected")

@@ -114,8 +114,8 @@ func add_item(resource_type: String, amount: int = 1) -> int:
 	# Tutorial hints for specific equipment items
 	var _hint_mgr: Node = get_node_or_null("/root/HintManager") if is_inside_tree() else null
 	if _hint_mgr and _hint_mgr.has_method("try_show"):
-		if resource_type in ["bow", "enchanted_bow", "machete", "hang_glider"]:
-			var hint_map: Dictionary = {"bow": "first_bow", "enchanted_bow": "first_bow", "machete": "first_machete", "hang_glider": "first_hang_glider"}
+		if resource_type in ["bow", "enchanted_bow", "machete", "hang_glider", "compass"]:
+			var hint_map: Dictionary = {"bow": "first_bow", "enchanted_bow": "first_bow", "machete": "first_machete", "hang_glider": "first_hang_glider", "compass": "first_compass"}
 			_hint_mgr.try_show(hint_map[resource_type])
 		if resource_type in ["diamond", "opal", "crystal", "rare_ore", "iron_ore"]:
 			_hint_mgr.try_show("first_rare_resource")

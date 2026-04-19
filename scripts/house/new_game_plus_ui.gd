@@ -144,9 +144,14 @@ func open(player: Node) -> void:
 	# Build available items list from journey inventory (exclude non-carryable items)
 	var inventory: Dictionary = _get_journey_inventory()
 	_available_items.clear()
+	var compass_present: bool = inventory.has("compass")
 	for item_type: String in inventory.keys():
 		if item_type == "explorers_journal":
 			continue  # Journal stays in the house
+		# Compass and lodestone are bundled — the compass entry represents both.
+		# Skip lodestone if compass exists to avoid a duplicate selection row.
+		if item_type == "lodestone" and compass_present:
+			continue
 		_available_items.append(item_type)
 	_available_items.sort()
 
@@ -704,10 +709,17 @@ func _dismiss_confirmation() -> void:
 func _actually_depart() -> void:
 	_showing_confirmation = false
 
-	# Save to GameState
+	# Save to GameState — expand the compass bundle into both compass and lodestone.
+	# The UI represents them as a single selectable row, but the wilderness needs
+	# both items granted on arrival.
+	var items_to_grant: Array[String] = _selected_items.duplicate()
+	if "compass" in items_to_grant:
+		var inventory: Dictionary = _get_journey_inventory()
+		if inventory.has("lodestone") and "lodestone" not in items_to_grant:
+			items_to_grant.append("lodestone")
 	var game_state: Node = get_node_or_null("/root/GameState")
 	if game_state:
-		game_state.set_new_game_plus_items(_selected_items)
+		game_state.set_new_game_plus_items(items_to_grant)
 		# Generate new world seed
 		var new_seed: int = randi()
 		game_state.set_pending_world_seed(new_seed)
@@ -752,6 +764,11 @@ func _get_journey_inventory() -> Dictionary:
 
 ## Convert an item_type key to a human-readable display name.
 func _get_display_name(item_type: String) -> String:
+	# Compass selection represents both compass and lodestone — they always work together.
+	if item_type == "compass":
+		var inventory: Dictionary = _get_journey_inventory()
+		if inventory.has("lodestone"):
+			return "Compass & Lodestone"
 	return item_type.replace("_", " ").capitalize()
 
 

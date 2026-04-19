@@ -7950,6 +7950,48 @@ When resting in the canvas tent, the camera was positioned above the tent lookin
 
 ---
 
+## Session 56 - Player-Reported Bug Batch: Compass Hint, macOS Cursor, NG+ Arrows, NG+ Compass Bundle (2026-04-19)
+
+Four player-reported bugs addressed in one pass.
+
+### Bug 1: First-craft compass hint missing
+
+Players had no idea what the compass+lodestone did on first craft.
+
+**Fix**: Added `first_compass` hint to `hint_manager.gd` and wired `"compass"` into the item-hint trigger list in `inventory.gd`. Hint fires the first time a compass enters the inventory, explaining that the lodestone can be placed anywhere and the compass needle always points back to it.
+
+### Bug 2: macOS crosshair replaced by OS cursor during controller play
+
+On macOS with a DualSense controller, the system mouse cursor repeatedly appeared over the HUD crosshair. `player_controller.gd:_notification` unconditionally set `MOUSE_MODE_VISIBLE` on `NOTIFICATION_WM_WINDOW_FOCUS_OUT`. With a PS controller on macOS, spurious focus-out events (likely from the touchpad's OS-level mouse emulation or macOS game-controller handling) fired repeatedly during normal play, revealing the cursor each time.
+
+**Fix**: Skip the voluntary `MOUSE_MODE_VISIBLE` call on focus-out when a controller is driving (`InputManager.using_controller == true`). macOS still releases the cursor automatically when the window is genuinely backgrounded, so alt-tab remains unaffected. Controller users don't need the cursor in either case.
+
+### Bug 3: Diamond arrows return as 1 instead of 10 in New Game+
+
+The NG+ item grant loop in `player_controller.gd:_ready` called `inventory.add_item(item_type, 1)` unconditionally. A player choosing diamond arrows in the home scene got a single functionally-useless arrow.
+
+**Fix**: Added `NG_PLUS_STACK_AMOUNTS` constant mapping stackable consumables to their bundle size. `diamond_arrows` now grants 10 on return. The dict supports future additions without more code changes.
+
+### Bug 4: Compass and lodestone split across two NG+ selection slots
+
+The NG+ UI built `_available_items` from every key in `journey_inventory`, so compass and lodestone appeared as two independently-selectable rows. Since they only work as a pair, this wasted a slot.
+
+**Fix**: In `new_game_plus_ui.gd`:
+- `open()` filters lodestone out of `_available_items` when compass is present
+- `_get_display_name()` returns "Compass & Lodestone" for the compass row when both are in the journey inventory
+- `_actually_depart()` expands a compass selection to include lodestone in the list passed to `GameState.set_new_game_plus_items()`, so the player receives both items on arrival
+
+### Files Modified
+| File | Changes |
+|------|---------|
+| `scripts/ui/hint_manager.gd` | Added `first_compass` hint and `compass → first_compass` in `ITEM_HINTS` |
+| `scripts/player/inventory.gd` | Added `compass` to the item-hint trigger list |
+| `scripts/player/player_controller.gd` | `NG_PLUS_STACK_AMOUNTS` const, focus-out controller guard, per-item NG+ grant amounts |
+| `scripts/house/new_game_plus_ui.gd` | Filter lodestone when compass present, bundled display name, expand selection on depart |
+| `tests/test_bug_regressions.gd` | 6 regression tests covering all four fixes |
+
+---
+
 ## Next Session
 
 ### Planned Tasks

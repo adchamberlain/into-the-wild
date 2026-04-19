@@ -33,6 +33,12 @@ const CAMERA_COLLISION_LERP_SPEED: float = 12.0  # Smoothing speed
 # Interaction settings
 @export var interaction_distance: float = 3.0
 
+# New Game+ stack amounts — stackable consumables return as a usable bundle
+# instead of a single unit. Non-listed items default to 1.
+const NG_PLUS_STACK_AMOUNTS: Dictionary = {
+	"diamond_arrows": 10,
+}
+
 # Node references
 @onready var camera: Camera3D = $Camera3D
 @onready var head: Node3D = $Camera3D
@@ -238,7 +244,8 @@ func _ready() -> void:
 		var ng_plus_items: Array[String] = game_state.consume_new_game_plus_items()
 		if ng_plus_items.size() > 0:
 			for item_type: String in ng_plus_items:
-				inventory.add_item(item_type, 1)
+				var amount: int = NG_PLUS_STACK_AMOUNTS.get(item_type, 1)
+				inventory.add_item(item_type, amount)
 			print("[Player] New Game+ started with %d items: %s" % [ng_plus_items.size(), str(ng_plus_items)])
 
 	# Dev mode: populate inventory with all items
@@ -1189,7 +1196,16 @@ func _apply_journal_rewards() -> void:
 func _notification(what: int) -> void:
 	# Release mouse when window loses focus
 	if what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
-		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+		# Skip voluntary release when driving with a controller — controller users
+		# don't need the cursor, and macOS can fire spurious focus-out events
+		# (e.g., DualSense touchpad emitting OS-level mouse motion) that would
+		# otherwise flash the system cursor over the HUD crosshair repeatedly.
+		# macOS still releases the cursor automatically when the window is
+		# genuinely backgrounded, so alt-tab still works.
+		var input_mgr: Node = get_node_or_null("/root/InputManager")
+		var using_controller: bool = input_mgr != null and "using_controller" in input_mgr and input_mgr.using_controller
+		if not using_controller:
+			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	# Re-capture mouse when window regains focus (only if no UI menu is open)
 	elif what == NOTIFICATION_WM_WINDOW_FOCUS_IN:
 		if not _is_ui_blocking_input():

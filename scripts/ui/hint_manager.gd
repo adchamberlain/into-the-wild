@@ -59,6 +59,9 @@ const HINTS: Dictionary = {
 	"camp_level_crafting": {
 		"message": "Some recipes require a higher [color=#ffda4d]Camp Level[/color]. Build more structures at your campsite to level up and unlock advanced crafting!"
 	},
+	"first_compass": {
+		"message": "You crafted the [color=#ffda4d]Compass & Lodestone[/color]! Place the lodestone anywhere to mark a location — the compass needle in your HUD always points back to it. Lifesaver for finding your way home."
+	},
 }
 
 const RARE_RESOURCES: Array[String] = ["diamond", "opal", "crystal", "rare_ore", "iron_ore"]
@@ -68,6 +71,7 @@ const ITEM_HINTS: Dictionary = {
 	"enchanted_bow": "first_bow",
 	"machete": "first_machete",
 	"hang_glider": "first_hang_glider",
+	"compass": "first_compass",
 }
 
 const QUEUE_SPACING: float = 4.0
