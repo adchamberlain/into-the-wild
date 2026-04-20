@@ -16,6 +16,7 @@ var dust_particles: GPUParticles3D
 # Transition state
 var active_particles: GPUParticles3D = null
 var transition_tween: Tween = null
+var previous_weather: String = ""
 const TRANSITION_DURATION: float = 2.0
 
 
@@ -219,6 +220,14 @@ func _disable_all_particles() -> void:
 
 
 func _on_weather_changed(weather_type: String) -> void:
+	# Weather persistence (40% chance to repeat next day) and save/load refresh-emits
+	# both re-fire weather_changed with the same weather. Re-entering the transition
+	# flow resets amount_ratio to 0 and queues conflicting parallel tweens on the same
+	# property, which leaves active particles stuck invisible.
+	if weather_type == previous_weather:
+		return
+	previous_weather = weather_type
+
 	print("[WeatherParticles] Weather changed to: %s" % weather_type)
 
 	# Cancel any existing transition
@@ -260,18 +269,21 @@ func _transition_to_particles(new_particles: GPUParticles3D) -> void:
 	transition_tween = create_tween()
 	transition_tween.set_parallel(true)
 
-	# Fade out all current particles
-	if rain_particles.emitting:
+	# Fade out any currently emitting particles that aren't our target.
+	# Skipping the target is important: setting amount_ratio=0 and queuing a
+	# fade-out + fade-in on the same property in parallel leaves the particle
+	# stuck invisible.
+	if rain_particles.emitting and rain_particles != new_particles:
 		transition_tween.tween_property(rain_particles, "amount_ratio", 0.0, TRANSITION_DURATION)
-	if storm_particles.emitting:
+	if storm_particles.emitting and storm_particles != new_particles:
 		transition_tween.tween_property(storm_particles, "amount_ratio", 0.0, TRANSITION_DURATION)
-	if snow_particles.emitting:
+	if snow_particles.emitting and snow_particles != new_particles:
 		transition_tween.tween_property(snow_particles, "amount_ratio", 0.0, TRANSITION_DURATION)
-	if dust_particles.emitting:
+	if dust_particles.emitting and dust_particles != new_particles:
 		transition_tween.tween_property(dust_particles, "amount_ratio", 0.0, TRANSITION_DURATION)
 
-	# Fade in new particles
-	if new_particles:
+	# Fade in new particles, but only if they aren't already the active ones.
+	if new_particles and new_particles != active_particles:
 		new_particles.emitting = true
 		new_particles.amount_ratio = 0.0
 		transition_tween.tween_property(new_particles, "amount_ratio", 1.0, TRANSITION_DURATION)

@@ -8034,6 +8034,41 @@ All 1220 regression tests pass.
 
 ---
 
+## Session 58 - Fix Invisible Rain Particles (2026-04-19)
+
+Follow-up to Session 57's weather rewrite. Player reported that when the HUD said "Weather: Rain", no raindrops appeared in the world.
+
+### Root Cause
+
+Session 57 made rain actually happen (previously it rarely rolled). That exposed a latent bug in `weather_particles.gd` that had been masked by rain almost never triggering.
+
+Weather persists day-to-day with a 40% chance (`weather_persistence_chance`), so Rain → Rain is the common case for multi-day rain. Every `day_changed` calls `_set_weather(current)` which unconditionally emits `weather_changed("Rain")` even when the weather is unchanged. Save/load also re-emits the same weather as a refresh.
+
+On each re-emit, `_on_weather_changed` re-entered `_transition_to_particles(rain_particles)`. That path:
+1. Saw `rain_particles.emitting == true` and queued a fade-out tween (`amount_ratio` → 0).
+2. Synchronously set `rain_particles.amount_ratio = 0.0` (killing visible rain immediately).
+3. Queued a fade-in tween (`amount_ratio` → 1) on the same property in parallel.
+
+Two parallel tweens on the same property produce undefined ordering in Godot. In practice `amount_ratio` stayed at 0, leaving rain emitting zero particles.
+
+### Fix
+
+Two layers of defense in `scripts/world/weather_particles.gd`:
+
+1. `_on_weather_changed` tracks `previous_weather` and early-returns when the incoming string matches. Persistence repeats and save/load refresh-emits become no-ops before the transition flow runs.
+2. `_transition_to_particles` now skips the fade-out of whichever particle system is about to become active, and skips the fade-in reset if `new_particles == active_particles`. A duplicate call can't wipe the active particles even if it bypasses the `previous_weather` guard.
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/weather_particles.gd` | Added `previous_weather` guard in `_on_weather_changed`; `_transition_to_particles` skips self-fade-out and self-reset |
+| `tests/test_weather_forecast.gd` | 2 source-scanning tests asserting both guards remain in place |
+
+All 1226 regression tests pass.
+
+---
+
 ## Next Session
 
 ### Planned Tasks
