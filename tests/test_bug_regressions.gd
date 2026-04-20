@@ -97,8 +97,8 @@ func run_tests() -> Dictionary:
 	test_cave_transition_saves_state()
 	test_cave_resource_state_deep_duplicate()
 	test_save_load_awaits_campsite_data()
-	test_weather_data_saves_rolled_today()
-	test_weather_data_restores_rolled_today()
+	test_weather_data_saves_day_tracking()
+	test_weather_data_restores_day_tracking()
 	test_load_game_slot_callers_use_await()
 	test_config_menu_has_apply_config()
 	test_config_kl_keys_check_visibility()
@@ -437,8 +437,8 @@ func test_fire_pit_state_uses_property_check() -> void:
 
 
 func test_weather_forecast_saved_and_restored() -> void:
-	## Bug: save_load.gd saved current_weather and duration_remaining but NOT
-	## next_weather. After loading, the forecast always reset to CLEAR.
+	## Bug class: if the forecast queue isn't persisted, loading a save resets
+	## the weather schedule, breaking the forecast the weather vane showed.
 	var save_script: GDScript = load("res://scripts/core/save_load.gd") as GDScript
 	if not save_script:
 		assert_true(false, "Could not load save_load.gd")
@@ -446,23 +446,23 @@ func test_weather_forecast_saved_and_restored() -> void:
 
 	var source: String = save_script.source_code
 
-	# Verify next_weather is saved in _collect_weather_data
+	# Verify forecast queue is saved
 	var collect_start: int = source.find("func _collect_weather_data()")
 	var collect_end: int = source.find("\nfunc ", collect_start + 1)
 	if collect_end == -1:
 		collect_end = source.length()
 	var collect_body: String = source.substr(collect_start, collect_end - collect_start)
-	assert_true(collect_body.find("next_weather") != -1,
-		"_collect_weather_data() saves next_weather")
+	assert_true(collect_body.find("forecast") != -1,
+		"_collect_weather_data() saves the forecast queue")
 
-	# Verify next_weather is restored in _apply_weather_data
+	# Verify forecast queue is restored
 	var apply_start: int = source.find("func _apply_weather_data(")
 	var apply_end: int = source.find("\nfunc ", apply_start + 1)
 	if apply_end == -1:
 		apply_end = source.length()
 	var apply_body: String = source.substr(apply_start, apply_end - apply_start)
-	assert_true(apply_body.find("next_weather") != -1,
-		"_apply_weather_data() restores next_weather")
+	assert_true(apply_body.find("forecast") != -1,
+		"_apply_weather_data() restores the forecast queue")
 
 
 func test_death_resets_movement_state() -> void:
@@ -2401,9 +2401,9 @@ func test_save_load_awaits_campsite_data() -> void:
 		"save_load awaits _apply_save_data")
 
 
-func test_weather_data_saves_rolled_today() -> void:
-	## Bug: weather _rolled_today flag was not saved, so loading a save would
-	## re-roll weather for the day, losing the original forecast.
+func test_weather_data_saves_day_tracking() -> void:
+	## Bug class: without tracking the last-rolled day, a load that re-emits
+	## day_changed would re-pop the forecast and apply the wrong weather.
 	var script: GDScript = load("res://scripts/core/save_load.gd") as GDScript
 	if not script:
 		assert_true(false, "Could not load save_load.gd")
@@ -2412,14 +2412,15 @@ func test_weather_data_saves_rolled_today() -> void:
 	var collect_idx: int = src.find("func _collect_weather_data")
 	assert_true(collect_idx != -1, "save_load has _collect_weather_data")
 	var collect_body: String = src.substr(collect_idx, 400)
-	assert_true(collect_body.find("rolled_today") != -1,
-		"_collect_weather_data includes rolled_today")
+	assert_true(collect_body.find("last_rolled_day") != -1,
+		"_collect_weather_data includes last_rolled_day")
 	assert_true(collect_body.find("weather_enabled") != -1,
 		"_collect_weather_data includes weather_enabled")
 
 
-func test_weather_data_restores_rolled_today() -> void:
-	## Bug: _apply_weather_data did not restore _rolled_today or weather_enabled.
+func test_weather_data_restores_day_tracking() -> void:
+	## Bug class: _apply_weather_data must restore last_rolled_day and
+	## weather_enabled alongside the forecast state.
 	var script: GDScript = load("res://scripts/core/save_load.gd") as GDScript
 	if not script:
 		assert_true(false, "Could not load save_load.gd")
@@ -2427,9 +2428,9 @@ func test_weather_data_restores_rolled_today() -> void:
 	var src: String = script.source_code
 	var apply_idx: int = src.find("func _apply_weather_data")
 	assert_true(apply_idx != -1, "save_load has _apply_weather_data")
-	var apply_body: String = src.substr(apply_idx, 500)
-	assert_true(apply_body.find("_rolled_today") != -1,
-		"_apply_weather_data restores _rolled_today")
+	var apply_body: String = src.substr(apply_idx, 1200)
+	assert_true(apply_body.find("last_rolled_day") != -1,
+		"_apply_weather_data restores last_rolled_day")
 	assert_true(apply_body.find("weather_enabled") != -1,
 		"_apply_weather_data restores weather_enabled")
 
@@ -3663,7 +3664,10 @@ func test_weather_load_replays_side_effects() -> void:
 	file.close()
 	var weather_idx: int = src.find("func _apply_weather_data")
 	assert_true(weather_idx != -1, "save_load has _apply_weather_data")
-	var body: String = src.substr(weather_idx, 1500)
+	var weather_end: int = src.find("\nfunc ", weather_idx + 1)
+	if weather_end == -1:
+		weather_end = src.length()
+	var body: String = src.substr(weather_idx, weather_end - weather_idx)
 	assert_true(body.find("hunger_multiplier") != -1,
 		"_apply_weather_data restores hunger_multiplier")
 	assert_true(body.find("_update_fire_effectiveness") != -1,
@@ -4384,20 +4388,19 @@ func test_rock_spire_is_static_body() -> void:
 
 
 func test_weather_manager_connects_day_changed() -> void:
-	## Bug: WeatherManager only reset _rolled_today during the Night period.
-	## If the player slept from Evening/Dusk (skipping Night), _rolled_today
-	## stayed true and the weather never rolled at the next dawn.
+	## Bug class: weather must advance on every new day regardless of which
+	## time period the transition came from (sleep-from-dusk skips Night).
+	## With the rolling-queue design, _on_day_changed is the sole driver of
+	## daily weather advancement and must pop the forecast queue.
 	var file: FileAccess = FileAccess.open("res://scripts/world/weather_manager.gd", FileAccess.READ)
 	if not file:
 		assert_true(false, "Could not open weather_manager.gd")
 		return
 	var source: String = file.get_as_text()
 
-	# Must connect to day_changed signal
 	assert_true(source.find("day_changed.connect") != -1,
 		"WeatherManager connects to day_changed signal")
 
-	# Must have _on_day_changed handler that resets _rolled_today
 	var fn_start: int = source.find("func _on_day_changed(")
 	assert_true(fn_start != -1, "WeatherManager has _on_day_changed handler")
 	if fn_start != -1:
@@ -4405,8 +4408,8 @@ func test_weather_manager_connects_day_changed() -> void:
 		if fn_end == -1:
 			fn_end = source.length()
 		var fn_body: String = source.substr(fn_start, fn_end - fn_start)
-		assert_true(fn_body.find("_rolled_today = false") != -1,
-			"_on_day_changed resets _rolled_today so weather rolls at next dawn")
+		assert_true(fn_body.find("forecast.pop_front") != -1,
+			"_on_day_changed pops the forecast queue to advance weather")
 
 
 func test_journal_sets_menu_open_flag() -> void:

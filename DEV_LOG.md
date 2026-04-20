@@ -7992,6 +7992,48 @@ The NG+ UI built `_available_items` from every key in `journey_inventory`, so co
 
 ---
 
+## Session 57 - Weather System Architectural Rewrite (2026-04-19)
+
+Player reported that the weather vane's forecast seemed static day-to-day and that rain almost never happened across many hours of play. Investigation uncovered a third bug in the same class previously patched by commits `0efd172` and `e30847d` — rather than land another targeted fix, rewrote the weather system around a simpler, explicit forecast model.
+
+### Root Cause
+
+The previous design coupled three moving parts:
+- `next_weather` — a one-day lookahead stored as state.
+- `get_forecast(5)` — a *simulated* multi-day prediction for the weather vane, using a deterministic RNG seeded by `current_day`. Days +2 through +5 on the vane had no relationship to what actually happened when those days arrived.
+- `_rolled_today` — a boolean guard that depended on signal ordering to stay correct across sleep and save/load.
+
+`_skip_to_dawn` in shelter, cabin bed, canvas tent, and `_apply_time_data` in save_load all emit `_update_period()` (which fires `period_changed("Dawn")`) *before* emitting `day_changed`. When the player slept from Evening or Dusk (the most natural survival loop), `_rolled_today` was still `true` from the earlier day's dawn. The weather manager saw `period_changed("Dawn")`, checked `_rolled_today`, and skipped the roll. `day_changed` then fired too late to help. `next_weather` almost never updated, so the forecast looked frozen and non-clear weather barely surfaced.
+
+### New Design
+
+Replaced the forecast/roll dance with a rolling queue:
+- `forecast: Array[int]` — the next 7 days of real, pre-rolled weather.
+- `_on_day_changed(new_day)` pops the front into `current_weather` and pushes one new roll onto the back.
+- `_last_rolled_day` guards against save/load's refresh-emits of `day_changed` double-popping.
+- Dropped `next_weather`, `_rolled_today`, `weather_duration_remaining` entirely.
+
+Signal-order coupling is gone: `day_changed` is the sole driver of daily advancement. What the weather vane shows is the literal upcoming queue, so forecasts now actually predict what will happen.
+
+Afternoon rain→storm escalation, storm fire extinguishing, hunger multipliers, and all damage logic are preserved.
+
+### Save Format
+
+Save now stores `forecast` (array of Weather ints), `last_rolled_day`, `weather_type`, `weather_enabled`. Old saves without `forecast` backfill from legacy `next_weather` and a fresh roll-fill, so existing saves keep working.
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/weather_manager.gd` | Full rewrite: rolling 7-day forecast queue, day_changed-driven rolls, `_last_rolled_day` guard |
+| `scripts/core/save_load.gd` | `_collect_weather_data`/`_apply_weather_data` save/load `forecast` array and `last_rolled_day`; backward-compat with old `next_weather` saves |
+| `tests/test_weather_forecast.gd` | 8 new tests: fill/pop behavior, idempotent refresh, sleep-from-dusk regression, 200-day distribution sanity check, backward-compat load |
+| `tests/test_bug_regressions.gd` | Updated 4 source-scanning tests for the new architecture; widened `_apply_weather_data` scan window |
+
+All 1220 regression tests pass.
+
+---
+
 ## Next Session
 
 ### Planned Tasks

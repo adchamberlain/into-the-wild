@@ -1,45 +1,41 @@
 extends Node
 class_name WeatherManager
-## Manages dynamic weather that affects gameplay and integrates with shelter/fire protection.
+## Manages daily weather via a rolling 7-day forecast queue.
+##
+## Each day's weather is pre-rolled into `forecast` and consumed on day_changed.
+## No signal-order coupling: the only subscription needed for rolls is day_changed.
 
 signal weather_changed(weather_type: String)
 
 enum Weather { CLEAR, RAIN, STORM, FOG, HEAT_WAVE, COLD_SNAP }
 
+const FORECAST_DAYS: int = 7
+
 # Weather state
 var current_weather: Weather = Weather.CLEAR
-var weather_duration_remaining: float = 0.0
-var weather_enabled: bool = true  # Can be toggled by ConfigMenu
+var forecast: Array[int] = []  # Next FORECAST_DAYS days (ints for JSON round-trip)
+var weather_enabled: bool = true
 
-# Forecast system - predicts next weather
-var next_weather: Weather = Weather.CLEAR
-var forecast_accuracy: float = 0.85  # 85% chance forecast is correct
+# Guard against re-emits of day_changed (e.g. during save/load) applying weather twice
+var _last_rolled_day: int = 0
 
 # Damage rates (per second)
 @export var storm_damage_rate: float = 2.0
 @export var cold_damage_rate: float = 1.5
 @export var heat_wave_hunger_multiplier: float = 2.0
 
-# Weather duration (in game hours, converted to real seconds)
-@export var min_weather_duration_hours: float = 6.0
-@export var max_weather_duration_hours: float = 18.0
-
-# Weather transition probabilities (daily roll at dawn)
-# Real-world inspired: clear weather dominates, bad weather is less common
+# Daily roll probabilities
 @export var rain_chance: float = 0.15
 @export var fog_chance: float = 0.08
 @export var heat_wave_chance: float = 0.05
 @export var cold_snap_chance: float = 0.05
 
-# Weather persistence - chance weather continues to next day
+# Chance a non-clear day repeats the following day
 @export var weather_persistence_chance: float = 0.4
-
-# Track if we've rolled for weather today
-var _rolled_today: bool = false
 
 # Fire effectiveness reduction during rain
 @export var rain_fire_effectiveness: float = 0.5
-@export var storm_fire_extinguish_time: float = 30.0  # Seconds before fire goes out in storm
+@export var storm_fire_extinguish_time: float = 30.0  # Seconds of neglect before fire extinguishes in a storm
 
 # Node references
 @export var time_manager_path: NodePath
@@ -58,22 +54,21 @@ var damage_check_timer: float = 0.0
 const DAMAGE_CHECK_INTERVAL: float = 0.5
 
 # Fire extinguish tracking
-var fire_storm_timers: Dictionary = {}  # fire_pit -> time_exposed
+var fire_storm_timers: Dictionary = {}
 
-# Performance: throttle storm fire checks
-const STORM_FIRE_CHECK_INTERVAL: float = 0.5  # Check twice per second, not every frame
+# Storm fire check throttle
+const STORM_FIRE_CHECK_INTERVAL: float = 0.5
 var storm_fire_check_timer: float = 0.0
 
 
 func _ready() -> void:
-	# Get node references
 	if time_manager_path:
 		time_manager = get_node_or_null(time_manager_path)
 		if time_manager:
-			if not time_manager.period_changed.is_connected(_on_period_changed):
-				time_manager.period_changed.connect(_on_period_changed)
 			if time_manager.has_signal("day_changed") and not time_manager.day_changed.is_connected(_on_day_changed):
 				time_manager.day_changed.connect(_on_day_changed)
+			if time_manager.has_signal("period_changed") and not time_manager.period_changed.is_connected(_on_period_changed):
+				time_manager.period_changed.connect(_on_period_changed)
 
 	if player_path:
 		player = get_node_or_null(player_path)
@@ -86,26 +81,23 @@ func _ready() -> void:
 	if environment_manager_path:
 		environment_manager = get_node_or_null(environment_manager_path)
 
-	# Start with clear weather
+	# Fresh new game: fill the forecast queue and mark today as already handled.
+	# SaveLoad overwrites both fields in _apply_weather_data when loading.
+	if forecast.is_empty():
+		_fill_forecast()
+	if time_manager and "current_day" in time_manager:
+		_last_rolled_day = time_manager.current_day
+
 	_set_weather(Weather.CLEAR)
-	print("[WeatherManager] Initialized with clear weather")
+	print("[WeatherManager] Initialized with clear weather, forecast: %s" % _forecast_debug_string())
 
 
 func _process(delta: float) -> void:
-	# Update weather duration
-	if weather_duration_remaining > 0:
-		weather_duration_remaining -= delta
-		if weather_duration_remaining <= 0:
-			# Weather expired, return to clear
-			_transition_to_clear()
-
-	# Apply weather effects
 	damage_check_timer += delta
 	if damage_check_timer >= DAMAGE_CHECK_INTERVAL:
 		damage_check_timer = 0.0
 		_apply_weather_effects(DAMAGE_CHECK_INTERVAL)
 
-	# Handle storm fire extinguishing (throttled for performance)
 	if current_weather == Weather.STORM:
 		storm_fire_check_timer += delta
 		if storm_fire_check_timer >= STORM_FIRE_CHECK_INTERVAL:
@@ -117,11 +109,9 @@ func _apply_weather_effects(delta: float) -> void:
 	if not is_instance_valid(player) or not is_instance_valid(player_stats):
 		return
 
-	# Don't apply damage effects if weather is disabled
 	if not weather_enabled:
 		return
 
-	# Check if weather damage is enabled in player stats
 	var weather_damage_enabled: bool = true
 	if "weather_damage_enabled" in player_stats:
 		weather_damage_enabled = player_stats.weather_damage_enabled
@@ -130,12 +120,10 @@ func _apply_weather_effects(delta: float) -> void:
 
 	match current_weather:
 		Weather.STORM:
-			# Damage if not in shelter (and weather damage enabled)
 			if weather_damage_enabled and campsite_manager and not campsite_manager.is_in_shelter(player_pos):
 				player_stats.take_damage(storm_damage_rate * delta)
 
 		Weather.COLD_SNAP:
-			# Damage if not near fire (and weather damage enabled)
 			if weather_damage_enabled and campsite_manager and not campsite_manager.is_near_fire(player_pos):
 				player_stats.take_damage(cold_damage_rate * delta)
 
@@ -151,7 +139,6 @@ func _update_storm_fire_effects(delta: float) -> void:
 	var fire_pits: Array[Node] = campsite_manager.get_fire_pits()
 	var player_pos: Vector3 = player.global_position if is_instance_valid(player) else Vector3.ZERO
 
-	# Clean up entries for freed fire nodes
 	for key: Variant in fire_storm_timers.keys():
 		if not is_instance_valid(key):
 			fire_storm_timers.erase(key)
@@ -160,19 +147,15 @@ func _update_storm_fire_effects(delta: float) -> void:
 		if not is_instance_valid(fire) or not "is_lit" in fire or not fire.is_lit:
 			continue
 
-		# Check if player is tending the fire (within interaction range)
 		var is_tending: bool = is_instance_valid(player) and fire.global_position.distance_to(player_pos) < 3.0
 
 		if is_tending:
-			# Reset extinguish timer
 			fire_storm_timers[fire] = 0.0
 		else:
-			# Increment timer
 			if not fire_storm_timers.has(fire):
 				fire_storm_timers[fire] = 0.0
 			fire_storm_timers[fire] += delta
 
-			# Check if fire should extinguish
 			if fire_storm_timers[fire] >= storm_fire_extinguish_time:
 				if fire.has_method("extinguish"):
 					fire.extinguish()
@@ -180,27 +163,28 @@ func _update_storm_fire_effects(delta: float) -> void:
 				fire_storm_timers.erase(fire)
 
 
-func _on_day_changed(_day: int) -> void:
-	# Reset daily roll flag when a new day starts, so weather can roll at dawn.
-	# This handles sleeping from Evening/Dusk which skips the Night period
-	# where _rolled_today was previously the only reset point.
-	_rolled_today = false
-
-
-func _on_period_changed(period: String) -> void:
-	# Don't change weather if disabled
+func _on_day_changed(new_day: int) -> void:
 	if not weather_enabled:
 		return
 
-	# Reset daily roll flag at night (so we can roll again at next dawn)
-	if period == "Night":
-		_rolled_today = false
+	# Skip re-emits (save/load fires day_changed as a refresh after _apply_time_data)
+	if new_day <= _last_rolled_day:
 		return
+	_last_rolled_day = new_day
 
-	# Only roll for weather change once per day at dawn
-	if period == "Dawn" and not _rolled_today:
-		_rolled_today = true
-		_daily_weather_roll()
+	var next: int = int(Weather.CLEAR)
+	if not forecast.is_empty():
+		next = forecast.pop_front()
+
+	# Keep the queue topped up to FORECAST_DAYS entries
+	_fill_forecast()
+
+	_set_weather(next)
+
+
+func _on_period_changed(period: String) -> void:
+	if not weather_enabled:
+		return
 
 	# Rain can escalate to storm during afternoon (building pressure)
 	if current_weather == Weather.RAIN and period == "Afternoon":
@@ -209,68 +193,66 @@ func _on_period_changed(period: String) -> void:
 			print("[WeatherManager] Rain escalated to storm!")
 
 
-func _daily_weather_roll() -> void:
-	# Apply the forecasted weather for today
-	_set_weather(next_weather)
-	if next_weather != Weather.CLEAR:
-		print("[WeatherManager] Today's weather: %s (from forecast)" % get_weather_name())
-	else:
-		print("[WeatherManager] Weather check: staying clear")
-
-	# Generate forecast for tomorrow
-	_generate_forecast()
+func _fill_forecast() -> void:
+	while forecast.size() < FORECAST_DAYS:
+		var prev: int = forecast.back() if not forecast.is_empty() else int(current_weather)
+		forecast.append(_roll_next(prev))
 
 
+func _roll_next(prev: int) -> int:
+	# Persistence: a non-clear day has a chance to repeat
+	if prev != int(Weather.CLEAR) and randf() < weather_persistence_chance:
+		return prev
 
-func _set_weather(weather: Weather) -> void:
-	var old_weather: Weather = current_weather
-	current_weather = weather
+	var roll: float = randf()
+	var cumulative: float = 0.0
 
-	# Calculate duration in real seconds
-	if weather != Weather.CLEAR:
-		var hours: float = randf_range(min_weather_duration_hours, max_weather_duration_hours)
-		# Convert game hours to real seconds (based on day_length_minutes)
-		if time_manager and "day_length_minutes" in time_manager:
-			var seconds_per_hour: float = (time_manager.day_length_minutes * 60.0) / 24.0
-			weather_duration_remaining = hours * seconds_per_hour
-		else:
-			# Default: 20 min day = 50 seconds per game hour
-			weather_duration_remaining = hours * 50.0
+	cumulative += rain_chance
+	if roll < cumulative:
+		return int(Weather.RAIN)
 
-	# Update hunger multiplier
+	cumulative += fog_chance
+	if roll < cumulative:
+		return int(Weather.FOG)
+
+	cumulative += heat_wave_chance
+	if roll < cumulative:
+		return int(Weather.HEAT_WAVE)
+
+	cumulative += cold_snap_chance
+	if roll < cumulative:
+		return int(Weather.COLD_SNAP)
+
+	return int(Weather.CLEAR)
+
+
+func _set_weather(weather: Variant) -> void:
+	var weather_int: int = int(weather)
+	current_weather = weather_int
+
 	if player_stats:
-		if weather == Weather.HEAT_WAVE:
+		if weather_int == int(Weather.HEAT_WAVE):
 			player_stats.hunger_multiplier = heat_wave_hunger_multiplier
 		else:
 			player_stats.hunger_multiplier = 1.0
 
-	# Update fire effectiveness
 	_update_fire_effectiveness()
 
-	# Update environment visuals
 	if environment_manager and environment_manager.has_method("set_weather_overlay"):
 		environment_manager.set_weather_overlay(get_weather_name())
 
-	# Emit signal
 	weather_changed.emit(get_weather_name())
-	if current_weather != Weather.CLEAR:
+
+	if weather_int != int(Weather.CLEAR):
 		var _hint_mgr: Node = get_node_or_null("/root/HintManager") if is_inside_tree() else null
 		if _hint_mgr and _hint_mgr.has_method("try_show"):
 			_hint_mgr.try_show("first_weather")
 
-	# Calculate hours for logging
-	var duration_hours: float = 0.0
-	if time_manager and "day_length_minutes" in time_manager:
-		var seconds_per_hour: float = (time_manager.day_length_minutes * 60.0) / 24.0
-		duration_hours = weather_duration_remaining / seconds_per_hour
-	else:
-		duration_hours = weather_duration_remaining / 50.0
-	print("[WeatherManager] Weather changed to: %s (duration: %.1f game hours)" % [get_weather_name(), duration_hours])
+	# Storm timers are scoped to the current weather
+	if weather_int != int(Weather.STORM):
+		fire_storm_timers.clear()
 
-
-func _transition_to_clear() -> void:
-	_set_weather(Weather.CLEAR)
-	fire_storm_timers.clear()
+	print("[WeatherManager] Weather: %s" % get_weather_name())
 
 
 func _update_fire_effectiveness() -> void:
@@ -291,25 +273,19 @@ func _update_fire_effectiveness() -> void:
 					fire.set_effectiveness(1.0)
 
 
+func _forecast_debug_string() -> String:
+	var names: Array[String] = []
+	for w: int in forecast:
+		names.append(_weather_to_string(w))
+	return "[%s]" % ", ".join(names)
+
+
 ## Get current weather as string.
 func get_weather_name() -> String:
-	match current_weather:
-		Weather.CLEAR:
-			return "Clear"
-		Weather.RAIN:
-			return "Rain"
-		Weather.STORM:
-			return "Storm"
-		Weather.FOG:
-			return "Fog"
-		Weather.HEAT_WAVE:
-			return "Heat Wave"
-		Weather.COLD_SNAP:
-			return "Cold Snap"
-	return "Unknown"
+	return _weather_to_string(current_weather)
 
 
-## Get weather icon (text-based for now).
+## Get weather icon (text-based).
 func get_weather_icon() -> String:
 	match current_weather:
 		Weather.CLEAR:
@@ -345,7 +321,7 @@ func is_player_protected() -> bool:
 		Weather.COLD_SNAP:
 			return campsite_manager.is_near_fire(player_pos)
 		_:
-			return true  # No protection needed
+			return true
 
 
 ## Get protection status text for HUD.
@@ -367,7 +343,7 @@ func get_protection_status() -> String:
 		return "Exposed"
 
 
-## Force a specific weather (for testing).
+## Force a specific weather (for testing/debug).
 func set_weather_debug(weather_name: String) -> void:
 	match weather_name.to_lower():
 		"clear":
@@ -384,119 +360,30 @@ func set_weather_debug(weather_name: String) -> void:
 			_set_weather(Weather.COLD_SNAP)
 
 
-## Generate a forecast for the next weather period.
-func _generate_forecast() -> void:
-	# Simulate what the next weather might be
-	var roll: float = randf()
-	var cumulative: float = 0.0
-
-	# If current weather is not clear, there's a chance it continues
-	if current_weather != Weather.CLEAR:
-		if randf() < weather_persistence_chance:
-			next_weather = current_weather
-			return
-
-	# Otherwise roll for new weather
-	cumulative += rain_chance
-	if roll < cumulative:
-		next_weather = Weather.RAIN
-		return
-
-	cumulative += fog_chance
-	if roll < cumulative:
-		next_weather = Weather.FOG
-		return
-
-	cumulative += heat_wave_chance
-	if roll < cumulative:
-		next_weather = Weather.HEAT_WAVE
-		return
-
-	cumulative += cold_snap_chance
-	if roll < cumulative:
-		next_weather = Weather.COLD_SNAP
-		return
-
-	next_weather = Weather.CLEAR
-
-
-## Get the current weather name (for weather vane).
+## Get the current weather name (for weather vane display).
 func get_current_weather_name() -> String:
 	return get_weather_name()
 
 
-## Get the forecast for the next weather period.
-## Note: forecast has ~85% accuracy, may be wrong!
-func get_next_weather() -> String:
-	# Slight chance the forecast is wrong
-	if randf() > forecast_accuracy:
-		# Return a random different weather
-		var weathers: Array[Weather] = [Weather.CLEAR, Weather.RAIN, Weather.FOG, Weather.STORM]
-		var wrong_weather: Weather = weathers[randi() % weathers.size()]
-		return _weather_to_string(wrong_weather)
-
-	return _weather_to_string(next_weather)
-
-
-## Get a multi-day forecast (array of weather name strings).
-## Uses a deterministic seed based on the current game day so the forecast
-## is consistent every time the player checks the weather vane on the same day.
+## Get the forecast as an array of weather name strings (capped at queue length).
 func get_forecast(days: int = 5) -> Array[String]:
-	var forecast: Array[String] = []
-
-	# Create a deterministic RNG seeded by the current game day
-	var current_day: int = 1
-	if time_manager and time_manager.has_method("get_current_day"):
-		current_day = time_manager.get_current_day()
-	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
-	rng.seed = current_day * 48271 + 12345  # Deterministic seed from day
-
-	# Day 1 is always the known next weather
-	forecast.append(_weather_to_string(next_weather))
-
-	# Subsequent days are simulated predictions using deterministic RNG
-	var prev: Weather = next_weather
-	for i: int in range(days - 1):
-		# Simulate: if previous was not clear, chance it persists
-		if prev != Weather.CLEAR and rng.randf() < weather_persistence_chance:
-			forecast.append(_weather_to_string(prev))
-		else:
-			# Roll for new weather
-			var roll: float = rng.randf()
-			var cumulative: float = 0.0
-			var predicted: Weather = Weather.CLEAR
-
-			cumulative += rain_chance
-			if roll < cumulative:
-				predicted = Weather.RAIN
-			else:
-				cumulative += fog_chance
-				if roll < cumulative:
-					predicted = Weather.FOG
-				else:
-					cumulative += heat_wave_chance
-					if roll < cumulative:
-						predicted = Weather.HEAT_WAVE
-					else:
-						cumulative += cold_snap_chance
-						if roll < cumulative:
-							predicted = Weather.COLD_SNAP
-
-			# Apply forecast inaccuracy (gets worse further out)
-			var accuracy: float = forecast_accuracy - i * 0.1
-			if rng.randf() > accuracy:
-				var weathers: Array[Weather] = [Weather.CLEAR, Weather.RAIN, Weather.FOG, Weather.STORM]
-				predicted = weathers[rng.randi() % weathers.size()]
-
-			forecast.append(_weather_to_string(predicted))
-			prev = predicted
-
-	return forecast
+	var result: Array[String] = []
+	var count: int = min(days, forecast.size())
+	for i: int in range(count):
+		result.append(_weather_to_string(forecast[i]))
+	return result
 
 
-## Convert Weather enum to string.
-func _weather_to_string(weather: Weather) -> String:
-	match weather:
+## Get tomorrow's weather (first entry of forecast). Kept for any legacy callers.
+func get_next_weather() -> String:
+	if forecast.is_empty():
+		return _weather_to_string(Weather.CLEAR)
+	return _weather_to_string(forecast[0])
+
+
+## Convert Weather enum or int to string.
+func _weather_to_string(weather: Variant) -> String:
+	match int(weather):
 		Weather.CLEAR:
 			return "Clear"
 		Weather.RAIN:

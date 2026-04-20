@@ -494,9 +494,8 @@ func _collect_time_data() -> Dictionary:
 func _collect_weather_data() -> Dictionary:
 	return {
 		"weather_type": weather_manager.current_weather,
-		"duration_remaining": weather_manager.weather_duration_remaining,
-		"next_weather": weather_manager.next_weather,
-		"rolled_today": weather_manager._rolled_today,
+		"forecast": weather_manager.forecast.duplicate(),
+		"last_rolled_day": weather_manager._last_rolled_day,
 		"weather_enabled": weather_manager.weather_enabled
 	}
 
@@ -796,11 +795,23 @@ func _apply_time_data(data: Dictionary) -> void:
 func _apply_weather_data(data: Dictionary) -> void:
 	var weather_type: int = int(data.get("weather_type", 0))
 	weather_manager.current_weather = weather_type
-	weather_manager.weather_duration_remaining = data.get("duration_remaining", 0.0)
-	if data.has("next_weather"):
-		weather_manager.next_weather = int(data["next_weather"])
-	if data.has("rolled_today"):
-		weather_manager._rolled_today = data["rolled_today"]
+
+	# Load the forecast queue. Old saves (pre-rolling-queue) won't have this field;
+	# in that case, seed from `next_weather` if present and fill the rest with fresh rolls.
+	weather_manager.forecast.clear()
+	if data.has("forecast"):
+		for entry: Variant in data["forecast"]:
+			weather_manager.forecast.append(int(entry))
+	elif data.has("next_weather"):
+		weather_manager.forecast.append(int(data["next_weather"]))
+	weather_manager._fill_forecast()
+
+	# Track the last day we rolled for, so refresh-emits of day_changed don't double-apply.
+	if data.has("last_rolled_day"):
+		weather_manager._last_rolled_day = int(data["last_rolled_day"])
+	elif time_manager:
+		weather_manager._last_rolled_day = time_manager.current_day
+
 	if data.has("weather_enabled"):
 		weather_manager.weather_enabled = data["weather_enabled"]
 
