@@ -27,10 +27,11 @@ var _last_rolled_day: int = 0
 # Daily roll probabilities
 @export var rain_chance: float = 0.15
 @export var fog_chance: float = 0.08
-@export var heat_wave_chance: float = 0.05
-@export var cold_snap_chance: float = 0.05
+@export var heat_wave_chance: float = 0.03
+@export var cold_snap_chance: float = 0.03
 
-# Chance a non-clear day repeats the following day
+# Chance a rain/fog day repeats the following day. Heat waves and cold snaps
+# are treated as one-day extreme events and never persist.
 @export var weather_persistence_chance: float = 0.4
 
 # Fire effectiveness reduction during rain
@@ -200,9 +201,12 @@ func _fill_forecast() -> void:
 
 
 func _roll_next(prev: int) -> int:
-	# Persistence: a non-clear day has a chance to repeat
-	if prev != int(Weather.CLEAR) and randf() < weather_persistence_chance:
-		return prev
+	# Persistence: rain and fog can linger into the next day. Heat waves and
+	# cold snaps are one-day events — chaining them produces unrealistic
+	# multi-day extreme-weather streaks.
+	if prev == int(Weather.RAIN) or prev == int(Weather.FOG) or prev == int(Weather.STORM):
+		if randf() < weather_persistence_chance:
+			return prev
 
 	var roll: float = randf()
 	var cumulative: float = 0.0

@@ -8069,6 +8069,34 @@ All 1226 regression tests pass.
 
 ---
 
+## Session 59 - Tune Extreme-Weather Distribution (2026-04-19)
+
+Player reported a fresh-game 5-day forecast showing 4 cold snaps in a row. The rolling-queue model was correct, but the probabilities weren't realistic.
+
+### Root Cause
+
+Two compounding issues:
+- `weather_persistence_chance = 0.4` applied equally to every non-clear weather, so Cold Snap → Cold Snap had the same 40% carry-over as Rain → Rain. Rainy/foggy periods feel natural, but multi-day cold snaps and heat waves do not.
+- `cold_snap_chance` and `heat_wave_chance` were 0.05 each, making rare extreme events more frequent than they should be.
+
+### Fix
+
+- `_roll_next` now only applies persistence when previous weather is Rain, Fog, or Storm. Heat Wave and Cold Snap always roll fresh the next day.
+- Reduced `heat_wave_chance` and `cold_snap_chance` from 0.05 to 0.03.
+
+Expected distribution per day (from Clear): Clear 71%, Rain 15%, Fog 8%, Heat Wave 3%, Cold Snap 3%.
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/weather_manager.gd` | `heat_wave_chance`/`cold_snap_chance` → 0.03; `_roll_next` restricts persistence to Rain/Fog/Storm |
+| `tests/test_weather_forecast.gd` | 2 new tests: extreme weather does not persist; rain/fog still persist |
+
+All 1230 regression tests pass.
+
+---
+
 ## Next Session
 
 ### Planned Tasks
