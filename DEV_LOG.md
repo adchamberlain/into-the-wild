@@ -8097,6 +8097,31 @@ All 1230 regression tests pass.
 
 ---
 
+## Session 60 - Weather Debug Instrumentation & Day-2 Rain Pin (2026-04-23)
+
+Player reported "Weather: Rain on the HUD but no raindrops and blue sky" during regular play. Investigation of the session 58 fix (previous_weather guard in `_on_weather_changed`) traced the full signal chain — WeatherParticles connects before WeatherManager emits the initial "Clear", and every code-path to a Rain transition should pass the guard. No obvious code regression found.
+
+To diagnose live, added a temporary debug forcing Rain on startup — the player confirmed rain particles and the grey/overcast sky render correctly on a fresh rainy game. The earlier "no rain" observation was likely a mistake (possibly confusing the forecast with the current weather, or being in a cave/house scene where WeatherParticles is not instantiated).
+
+### Changes Kept
+
+- **`weather_manager.gd`**: On fresh new games, pin `forecast[0] = RAIN` after `_fill_forecast()` so day 2 is always rainy. Day 1 stays Clear, day 3+ follows the normal roll chain. Save/load's `_apply_weather_data` clears and restores the forecast from disk, so loaded saves are unaffected. Makes rain trivially reproducible for repeated play-testing.
+
+- **`weather_particles.gd`**: Added `[WeatherParticles][DEBUG]` prints throughout the signal flow — `_ready` connection status, `_on_weather_changed` entry args + `previous_weather`, early-return path, `_transition_to_particles` new/active/rain state, fade-in tween start, and a 2-second `_process` tick logging `previous_weather`, `active_particles`, rain `emitting`/`amount_ratio`/`amount`, and camera position. Left in to capture evidence if the "no rain" symptom ever recurs.
+
+### Investigation Findings (not fixed)
+
+- `environment_manager._apply_weather_effects` lerps `sky_material.sky_top_color` with a weather color modifier, but `_update_environment` (called immediately after, and on every `_on_time_changed` minute tick) unconditionally overwrites `sky_top_color` with the pure time-of-day color. The weather sky tint is effectively a no-op — but fog density + haze alpha multiplier still produce a grey/overcast look visually, so the bug has no user-visible impact. Noted for a future cleanup pass.
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/weather_manager.gd` | Pin `forecast[0] = RAIN` on fresh game |
+| `scripts/world/weather_particles.gd` | Added debug prints + 2s status tick in `_process` |
+
+---
+
 ## Next Session
 
 ### Planned Tasks
