@@ -21,12 +21,17 @@ const TRANSITION_DURATION: float = 2.0
 
 
 func _ready() -> void:
+	print("[WeatherParticles][DEBUG] _ready() start; global_pos=%s" % str(global_position))
 	# Get weather manager reference
 	if weather_manager_path:
 		weather_manager = get_node_or_null(weather_manager_path)
 		if weather_manager:
 			weather_manager.weather_changed.connect(_on_weather_changed)
-			print("[WeatherParticles] Connected to WeatherManager")
+			print("[WeatherParticles] Connected to WeatherManager (current=%s)" % weather_manager.get_weather_name())
+		else:
+			print("[WeatherParticles][DEBUG] ERROR: weather_manager_path resolved to null: %s" % str(weather_manager_path))
+	else:
+		print("[WeatherParticles][DEBUG] ERROR: weather_manager_path is empty")
 
 	# Setup particle systems
 	_setup_rain_particles()
@@ -36,6 +41,7 @@ func _ready() -> void:
 
 	# Start with all disabled
 	_disable_all_particles()
+	print("[WeatherParticles][DEBUG] _ready() done; previous_weather='%s', rain.emitting=%s" % [previous_weather, str(rain_particles.emitting)])
 
 
 func _setup_rain_particles() -> void:
@@ -208,6 +214,22 @@ func _setup_dust_particles() -> void:
 	add_child(dust_particles)
 
 
+var _debug_log_timer: float = 0.0
+func _process(delta: float) -> void:
+	_debug_log_timer += delta
+	if _debug_log_timer >= 2.0:
+		_debug_log_timer = 0.0
+		var cam_pos: Vector3 = global_position
+		print("[WeatherParticles][DEBUG] tick: prev='%s' active=%s rain(emit=%s ratio=%.2f amount=%d) cam_pos=%s" % [
+			previous_weather,
+			active_particles.name if active_particles else "null",
+			str(rain_particles.emitting),
+			rain_particles.amount_ratio,
+			rain_particles.amount,
+			str(cam_pos.round())
+		])
+
+
 func _disable_all_particles() -> void:
 	rain_particles.emitting = false
 	rain_particles.amount_ratio = 0.0
@@ -220,11 +242,13 @@ func _disable_all_particles() -> void:
 
 
 func _on_weather_changed(weather_type: String) -> void:
+	print("[WeatherParticles][DEBUG] _on_weather_changed('%s') called; previous_weather='%s'" % [weather_type, previous_weather])
 	# Weather persistence (40% chance to repeat next day) and save/load refresh-emits
 	# both re-fire weather_changed with the same weather. Re-entering the transition
 	# flow resets amount_ratio to 0 and queues conflicting parallel tweens on the same
 	# property, which leaves active particles stuck invisible.
 	if weather_type == previous_weather:
+		print("[WeatherParticles][DEBUG] EARLY RETURN: weather_type == previous_weather")
 		return
 	previous_weather = weather_type
 
@@ -266,6 +290,9 @@ func _set_dust_color(color: Color) -> void:
 
 
 func _transition_to_particles(new_particles: GPUParticles3D) -> void:
+	var new_name: String = new_particles.name if new_particles else "null"
+	var active_name: String = active_particles.name if active_particles else "null"
+	print("[WeatherParticles][DEBUG] _transition_to_particles: new=%s active=%s rain.emitting=%s rain.ratio=%.2f" % [new_name, active_name, str(rain_particles.emitting), rain_particles.amount_ratio])
 	transition_tween = create_tween()
 	transition_tween.set_parallel(true)
 
@@ -287,6 +314,9 @@ func _transition_to_particles(new_particles: GPUParticles3D) -> void:
 		new_particles.emitting = true
 		new_particles.amount_ratio = 0.0
 		transition_tween.tween_property(new_particles, "amount_ratio", 1.0, TRANSITION_DURATION)
+		print("[WeatherParticles][DEBUG] started fade-in tween for %s; emitting=%s" % [new_particles.name, str(new_particles.emitting)])
+	elif new_particles:
+		print("[WeatherParticles][DEBUG] skipped fade-in (%s already active)" % new_particles.name)
 
 	# After transition, disable particles that are faded out
 	transition_tween.set_parallel(false)

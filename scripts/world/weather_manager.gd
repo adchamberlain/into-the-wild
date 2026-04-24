@@ -86,6 +86,11 @@ func _ready() -> void:
 	# SaveLoad overwrites both fields in _apply_weather_data when loading.
 	if forecast.is_empty():
 		_fill_forecast()
+		# Testing helper: pin day 2 to Rain on a fresh game so rain is easy to
+		# observe by sleeping/waiting one in-game day. Day 1 stays Clear via the
+		# Weather.CLEAR call below. Subsequent days follow the normal roll.
+		if forecast.size() > 0:
+			forecast[0] = int(Weather.RAIN)
 	if time_manager and "current_day" in time_manager:
 		_last_rolled_day = time_manager.current_day
 
