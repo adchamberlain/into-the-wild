@@ -8122,6 +8122,39 @@ To diagnose live, added a temporary debug forcing Rain on startup — the player
 
 ---
 
+## Session 61 - Fix Storm Death-Loop Regression (2026-05-02)
+
+Player (testing the macOS 1.2.0 build with their son) reported health draining rapidly during a storm, with the player dying and respawning at camp over and over until the run was unplayable.
+
+### Root Cause
+
+Two compounding regressions from the 1.2.0 weather work:
+
+1. **Session 57's rewrite removed the duration cap.** The old design tracked `weather_duration_remaining` so storms (and other bad weather) lasted 6–18 game hours, then transitioned to Clear. The rolling-queue rewrite dropped that field entirely — whatever weather pops on `day_changed` now sticks for the full game day, and `_roll_next` allowed STORM to chain day-to-day at 40% via the persistence list.
+
+2. **Session 60's "testing helper" pinned day 2 to RAIN in production.** A `forecast[0] = int(Weather.RAIN)` line in `_ready()` (with a comment literally calling itself a "testing helper") forced every fresh game to be rainy on day 2. Combined with the existing 25% afternoon RAIN→STORM escalation, ~1-in-4 new players hit a full-day storm on day 2 — when they typically have no shelter built yet.
+
+The damage path (`_apply_weather_effects` → `take_damage(2.0 * 0.5)`) does 2 HP/sec to exposed players. With no duration cap, an unsheltered player dies in ~50s, respawns at the spawn point with 50% HP/hunger (`_on_player_died`), and dies again in ~25s. Loop repeats until day_changed.
+
+### Fix
+
+Three small surgical changes in `scripts/world/weather_manager.gd`:
+
+1. Removed the `forecast[0] = int(Weather.RAIN)` testing helper from `_ready()`.
+2. Removed `Weather.STORM` from the `_roll_next` persistence list, so storms no longer chain day-to-day.
+3. Added a STORM→RAIN revert in `_on_period_changed` when the period changes to "Evening", capping a storm's dangerous window to one period (~5 game hours / ~4 real minutes max) instead of the rest of the game day.
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/weather_manager.gd` | Removed day-2 RAIN pin; removed STORM from persistence; storm reverts to RAIN at Evening |
+| `tests/test_weather_forecast.gd` | 3 new regression tests: STORM doesn't persist day-to-day; STORM reverts to RAIN at Evening; weather_manager.gd does not pin forecast[0] to RAIN |
+
+All 1235 regression tests pass.
+
+---
+
 ## Next Session
 
 ### Planned Tasks

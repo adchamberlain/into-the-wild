@@ -245,6 +245,11 @@ func run_tests() -> Dictionary:
 	test_ng_plus_diamond_arrows_granted_as_ten()
 	test_new_game_plus_bundles_compass_and_lodestone()
 
+	# Round 12 regression tests (storm death-loop reported on macOS 1.2.0)
+	test_weather_no_day_2_rain_pin()
+	test_storm_does_not_persist_in_roll_next()
+	test_storm_reverts_to_rain_at_evening()
+
 	return get_results()
 
 
@@ -4769,3 +4774,61 @@ func test_new_game_plus_bundles_compass_and_lodestone() -> void:
 	var depart_section: String = source.substr(depart_idx, 1500)
 	assert_true(depart_section.find("items_to_grant.append(\"lodestone\")") != -1,
 		"_actually_depart appends lodestone when compass is selected")
+
+
+func test_weather_no_day_2_rain_pin() -> void:
+	## Bug: a "testing helper" hardcoded forecast[0] = RAIN on every fresh game
+	## so day 2 was always rainy. With a 25% afternoon escalation to storm and
+	## no shelter on day 2, ~1-in-4 new players hit a death loop.
+	var file: FileAccess = FileAccess.open("res://scripts/world/weather_manager.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open weather_manager.gd")
+		return
+	var source: String = file.get_as_text()
+	assert_true(source.find("forecast[0] = int(Weather.RAIN)") == -1,
+		"weather_manager.gd does not pin forecast[0] to RAIN on fresh games")
+	assert_true(source.find("Testing helper: pin day 2 to Rain") == -1,
+		"weather_manager.gd does not contain the day-2 RAIN testing helper comment")
+
+
+func test_storm_does_not_persist_in_roll_next() -> void:
+	## Bug: STORM was in the _roll_next persistence list alongside RAIN and FOG,
+	## so a single afternoon storm could chain day-to-day at 40% — extending the
+	## death-loop window across multiple game days.
+	var file: FileAccess = FileAccess.open("res://scripts/world/weather_manager.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open weather_manager.gd")
+		return
+	var source: String = file.get_as_text()
+	var roll_idx: int = source.find("func _roll_next(")
+	assert_true(roll_idx != -1, "_roll_next function exists")
+	var roll_end: int = source.find("\nfunc ", roll_idx + 1)
+	if roll_end == -1:
+		roll_end = source.length()
+	var roll_body: String = source.substr(roll_idx, roll_end - roll_idx)
+	assert_true(roll_body.find("Weather.STORM") == -1,
+		"_roll_next does not include STORM in the persistence list")
+
+
+func test_storm_reverts_to_rain_at_evening() -> void:
+	## Bug: storms used to last from afternoon escalation through midnight (~12
+	## game hours / ~10 real minutes), trapping unsheltered players in a 25-second
+	## respawn-and-die loop. Storms must subside to RAIN when Evening starts so
+	## the dangerous window is one period (~5 game hours / ~4 real minutes max).
+	var file: FileAccess = FileAccess.open("res://scripts/world/weather_manager.gd", FileAccess.READ)
+	if not file:
+		assert_true(false, "Could not open weather_manager.gd")
+		return
+	var source: String = file.get_as_text()
+	var period_idx: int = source.find("func _on_period_changed(")
+	assert_true(period_idx != -1, "_on_period_changed function exists")
+	var period_end: int = source.find("\nfunc ", period_idx + 1)
+	if period_end == -1:
+		period_end = source.length()
+	var period_body: String = source.substr(period_idx, period_end - period_idx)
+	assert_true(period_body.find("Weather.STORM") != -1,
+		"_on_period_changed handles the STORM case")
+	assert_true(period_body.find("\"Evening\"") != -1,
+		"_on_period_changed reacts to the Evening period")
+	assert_true(period_body.find("_set_weather(Weather.RAIN)") != -1,
+		"_on_period_changed reverts STORM to RAIN")

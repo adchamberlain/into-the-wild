@@ -86,11 +86,6 @@ func _ready() -> void:
 	# SaveLoad overwrites both fields in _apply_weather_data when loading.
 	if forecast.is_empty():
 		_fill_forecast()
-		# Testing helper: pin day 2 to Rain on a fresh game so rain is easy to
-		# observe by sleeping/waiting one in-game day. Day 1 stays Clear via the
-		# Weather.CLEAR call below. Subsequent days follow the normal roll.
-		if forecast.size() > 0:
-			forecast[0] = int(Weather.RAIN)
 	if time_manager and "current_day" in time_manager:
 		_last_rolled_day = time_manager.current_day
 
@@ -198,6 +193,12 @@ func _on_period_changed(period: String) -> void:
 			_set_weather(Weather.STORM)
 			print("[WeatherManager] Rain escalated to storm!")
 
+	# Storm subsides to rain at Evening so it can't trap an exposed player in a
+	# multi-period death loop (storm deals 2 HP/sec; respawn is 50% HP).
+	if current_weather == Weather.STORM and period == "Evening":
+		_set_weather(Weather.RAIN)
+		print("[WeatherManager] Storm subsided to rain.")
+
 
 func _fill_forecast() -> void:
 	while forecast.size() < FORECAST_DAYS:
@@ -206,10 +207,10 @@ func _fill_forecast() -> void:
 
 
 func _roll_next(prev: int) -> int:
-	# Persistence: rain and fog can linger into the next day. Heat waves and
-	# cold snaps are one-day events — chaining them produces unrealistic
-	# multi-day extreme-weather streaks.
-	if prev == int(Weather.RAIN) or prev == int(Weather.FOG) or prev == int(Weather.STORM):
+	# Persistence: rain and fog can linger into the next day. Storms, heat waves,
+	# and cold snaps are one-day events — storms can't be allowed to chain
+	# day-to-day or an unsheltered player gets trapped in a death loop.
+	if prev == int(Weather.RAIN) or prev == int(Weather.FOG):
 		if randf() < weather_persistence_chance:
 			return prev
 
