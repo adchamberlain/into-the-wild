@@ -8155,12 +8155,50 @@ All 1235 regression tests pass.
 
 ---
 
+## Session 62 - Fix Trailhead Signpost Buried in Terrain (2026-11-22)
+
+GitHub issue #17 (macOS, DualSense): the trailhead signpost that ends the game spawned inside terrain blocks, so it could not be interacted with and the game could not be finished.
+
+### Root Cause
+
+`trail_signpost_position` (and `carved_tree_position`) were snapped with `roundf(v / cell_size) * cell_size`, which lands on a cell **corner** — the point shared by four 3x3 terrain box columns. `get_height_at()` floors to the +X/+Z cell, so the landmark was placed at that one column's height while physically overlapping the other three. Whenever a neighbouring column was taller (common in the hills/mountain/rocky terrain near (480, -480)), the post and its collision were buried in the block.
+
+The stone cairn had exactly this bug and was fixed in commit 7cb7b33 by adding `+ cell_size / 2.0`; the other two landmarks were never updated.
+
+Measured with a headless probe that builds real `ChunkManager` worlds: across 200 seeds the signpost was buried in **62 (31%)**, up to 12 units deep; the carved tree in **59 (30%)**; the cell-centered cairn in **0**. With the signpost cell-centered, 0/200 seeds leave it in an unclimbable pit.
+
+### Fix
+
+- `scripts/world/chunk_manager.gd` — carved tree and signpost positions now get `+ cell_size / 2.0`, matching the cairn. Every part of the signpost (max arm reach ~1.32) and carved tree (canopy ~1.22) fits inside a single 3-unit cell at any rotation, so neither can overlap a neighbouring column.
+- Positions are derived from the world seed (not saved), so **existing saves are fixed on load** — a player stuck at a buried signpost will find it standing on open ground after updating.
+
+### Test Infrastructure
+
+- `tests/run_all_tests.gd` now runs from `_initialize()` instead of `_init()`. In `_init()` autoload singletons (e.g. `HintManager`) are not registered yet, so `chunk_manager.gd` could not even compile in tests. This also activated 6 previously skipped assertions in BugRegressions (all pass).
+- New `tests/test_trail_landmarks.gd` builds 60 seeded worlds and asserts every landmark is cell-centered, never overlaps a taller neighbour cell, and that the signpost footprint fits within half a cell. Verified red (3 failures: 14/60 signposts and 18/60 carved trees buried) before the fix, green after.
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `scripts/world/chunk_manager.gd` | Center carved tree and signpost in their terrain cells |
+| `tests/run_all_tests.gd` | Run suite from `_initialize()` so autoload-dependent scripts can be instantiated; register new test |
+| `tests/test_trail_landmarks.gd` | New: seeded-world landmark placement regression tests |
+| `export_presets.cfg` | iOS version 1.2.1 → 1.2.2 |
+
+All 1254 regression tests pass. Released as v1.2.2.
+
+### Known Issues
+- Test runner prints a pre-existing "4 resources still in use at exit" engine warning (present before this session).
+
+---
+
 ## Next Session
 
 ### Planned Tasks
-1. Continue iOS play-testing — verify cave entry, tool hints, tent camera
-2. Continue play-testing end-of-game trail sequence with new clues and compass
-3. Review and fix any bugs filed via GitHub Issues
+1. Play-test the v1.2.2 trail ending on macOS/iOS: confirm signpost and carved tree stand on open ground
+2. Continue iOS play-testing — verify cave entry, tool hints, tent camera
+3. Review and fix any remaining bugs filed via GitHub Issues
 
 ### Known Issues
 - None

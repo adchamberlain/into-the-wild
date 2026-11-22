@@ -1292,21 +1292,25 @@ func _generate_desert_sinkhole() -> void:
 
 	print("[ChunkManager] Generated desert sinkhole at (%.0f, %.0f) in pocket desert" % [snapped_x, snapped_z])
 
-	# Trail home landmark positions (far-out, with slight seed-based variation)
+	# Trail home landmark positions (far-out, with slight seed-based variation).
+	# Every landmark is centered in its terrain cell (+ cell_size / 2). Snapping to a
+	# multiple of cell_size puts it on a cell CORNER shared by four box columns; it is
+	# then placed at one column's height and gets buried in any taller neighbour
+	# (GitHub issue #17: signpost spawned inside blocks, blocking the ending).
 	var trail_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	trail_rng.seed = noise_seed + 7777
 
 	carved_tree_position = Vector2(
-		roundf((trail_rng.randf_range(-20, 20)) / cell_size) * cell_size,
-		roundf((-430.0 + trail_rng.randf_range(-15, 15)) / cell_size) * cell_size
+		roundf((trail_rng.randf_range(-20, 20)) / cell_size) * cell_size + cell_size / 2.0,
+		roundf((-430.0 + trail_rng.randf_range(-15, 15)) / cell_size) * cell_size + cell_size / 2.0
 	)
 	stone_cairn_position = Vector2(
 		roundf((410.0 + trail_rng.randf_range(-20, 20)) / cell_size) * cell_size + cell_size / 2.0,
 		roundf((-410.0 + trail_rng.randf_range(-15, 15)) / cell_size) * cell_size + cell_size / 2.0
 	)
 	trail_signpost_position = Vector2(
-		roundf((480.0 + trail_rng.randf_range(-15, 15)) / cell_size) * cell_size,
-		roundf((-480.0 + trail_rng.randf_range(-15, 15)) / cell_size) * cell_size
+		roundf((480.0 + trail_rng.randf_range(-15, 15)) / cell_size) * cell_size + cell_size / 2.0,
+		roundf((-480.0 + trail_rng.randf_range(-15, 15)) / cell_size) * cell_size + cell_size / 2.0
 	)
 
 	print("[ChunkManager] Trail landmarks: tree=(%.0f,%.0f) cairn=(%.0f,%.0f) signpost=(%.0f,%.0f)" % [
